@@ -256,5 +256,6 @@ Para que el **botón de deploy** aparezca correctamente, sigue estos pasos:
    npm run dev
    ```
 
+-----
 
 ✅ **Listo:** el botón de deploy debería estar visible y funcional.
