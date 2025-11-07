@@ -344,7 +344,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/personal/novedades/reporte-diario"
+              path="/admin/novedades/reporte-diario"
               element={
                 <ProtectedRoute>
                   <DailyReportPage />
@@ -352,7 +352,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/personal/novedades/vacaciones"
+              path="/admin/pedidos/vacaciones"
               element={
                 <ProtectedRoute>
                   <VacationsPage />
@@ -360,7 +360,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/personal/novedades/otras-solicitudes"
+              path="/admin/pedidos/otras-solicitudes"
               element={
                 <ProtectedRoute>
                   <OtherRequestsPage />
@@ -416,7 +416,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/administracion/vacaciones-pendientes"
+              path="/admin/administracion/aprobaciones/vacaciones-pendientes"
               element={
                 <ProtectedRoute>
                   <PendingVacationsPage />
@@ -424,7 +424,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/administracion/pedidos-pendientes"
+              path="/admin/administracion/aprobaciones/pedidos-pendientes"
               element={
                 <ProtectedRoute>
                   <PendingRequestsPage />

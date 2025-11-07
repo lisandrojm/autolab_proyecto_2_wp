@@ -254,9 +254,9 @@ export const MobileNavbar: React.FC = () => {
         { path: "/admin", icon: faIdCard, label: "Panel de Personal", scope: "global" },
         { path: "/admin/personal/perfil", icon: faUser, label: "Mi Perfil", scope: "global" },
         { path: "/admin/personal/equipo", icon: faUsers, label: "Mi Equipo", scope: "global" },
-        { path: "/admin/personal/novedades/reporte-diario", icon: faCalendarCheck, label: "Reporte Diario", scope: "global" },
-        { path: "/admin/personal/novedades/vacaciones", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" },
-        { path: "/admin/personal/novedades/otras-solicitudes", icon: faClipboardList, label: "Otras Solicitudes", scope: "global" },
+        { path: "/admin/novedades/reporte-diario", icon: faCalendarCheck, label: "Reporte Diario", scope: "global" },
+        { path: "/admin/pedidos/vacaciones", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" },
+        { path: "/admin/pedidos/otras-solicitudes", icon: faClipboardList, label: "Otras Solicitudes", scope: "global" },
         { path: "/admin/personal/documentos", icon: faFileLines, label: "Documentos", scope: "global" },
         { path: "/admin/personal/notificaciones", icon: faBell, label: "Notificaciones", scope: "global" },
         { path: "/admin/personal/tareas", icon: faListCheck, label: "Tareas", scope: "global" }
@@ -266,8 +266,8 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:read") || hasPermission("users:manage")) {
         base.push(
           { path: "/admin/administracion/empleados", icon: faUsers, label: "Gestión de Empleados", scope: "global" },
-          { path: "/admin/administracion/vacaciones-pendientes", icon: faUmbrellaBeach, label: "Vacaciones Pendientes", scope: "global" },
-          { path: "/admin/administracion/pedidos-pendientes", icon: faClipboardList, label: "Pedidos Pendientes", scope: "global" }
+          { path: "/admin/administracion/aprobaciones/vacaciones-pendientes", icon: faUmbrellaBeach, label: "Vacaciones Pendientes", scope: "global" },
+          { path: "/admin/administracion/aprobaciones/pedidos-pendientes", icon: faClipboardList, label: "Pedidos Pendientes", scope: "global" }
         );
       }
 
