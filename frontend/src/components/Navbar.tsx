@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faUmbrellaBeach, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -248,6 +248,29 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("tenants:read")) base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants });
       if (hasPermission("roles:read")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles });
       if (hasPermission("users:read")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios del Sistema", scope: "global", count: adminCounts.users });
+
+      // Personnel Module menu items (accessible to all roles)
+      base.push(
+        { path: "/admin", icon: faIdCard, label: "Panel de Personal", scope: "global" },
+        { path: "/admin/personal/perfil", icon: faUser, label: "Mi Perfil", scope: "global" },
+        { path: "/admin/personal/equipo", icon: faUsers, label: "Mi Equipo", scope: "global" },
+        { path: "/admin/personal/novedades/reporte-diario", icon: faCalendarCheck, label: "Reporte Diario", scope: "global" },
+        { path: "/admin/personal/novedades/vacaciones", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" },
+        { path: "/admin/personal/novedades/otras-solicitudes", icon: faClipboardList, label: "Otras Solicitudes", scope: "global" },
+        { path: "/admin/personal/documentos", icon: faFileLines, label: "Documentos", scope: "global" },
+        { path: "/admin/personal/notificaciones", icon: faBell, label: "Notificaciones", scope: "global" },
+        { path: "/admin/personal/tareas", icon: faListCheck, label: "Tareas", scope: "global" }
+      );
+
+      // Admin-only Personnel items
+      if (hasPermission("users:read") || hasPermission("users:manage")) {
+        base.push(
+          { path: "/admin/administracion/empleados", icon: faUsers, label: "Gestión de Empleados", scope: "global" },
+          { path: "/admin/administracion/vacaciones-pendientes", icon: faUmbrellaBeach, label: "Vacaciones Pendientes", scope: "global" },
+          { path: "/admin/administracion/pedidos-pendientes", icon: faClipboardList, label: "Pedidos Pendientes", scope: "global" }
+        );
+      }
+
       /*       if (hasPermission("tasks:view")) base.push({ path: "/tasks", icon: faSquareCheck, label: "Tareas", scope: "global" }); */
       /*       if (hasPermission("assistant:view")) base.push({ path: "/assistant", icon: faRobot, label: "Asistente IA", scope: "global" }); */
       /*       if (hasPermission("settings:view")) base.push({ path: "#", icon: faCog, label: "Settings", scope: "global" }); */

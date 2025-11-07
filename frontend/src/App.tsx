@@ -36,6 +36,19 @@ import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
 import { AIAssistantModal } from "./components/AIAssistantModal";
 import { AssistantRedirect } from "./pages/AssistantRedirect";
+import { PersonnelHomePage } from "./pages/PersonnelHomePage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { TeamPage } from "./pages/TeamPage";
+import { DailyReportPage } from "./pages/DailyReportPage";
+import { VacationsPage } from "./pages/VacationsPage";
+import { OtherRequestsPage } from "./pages/OtherRequestsPage";
+import { DocumentsPage } from "./pages/DocumentsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { ActivityPage } from "./pages/ActivityPage";
+import { TasksPersonnelPage } from "./pages/TasksPersonnelPage";
+import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
+import { PendingVacationsPage } from "./pages/PendingVacationsPage";
+import { PendingRequestsPage } from "./pages/PendingRequestsPage";
 
 // --- DashboardRouter para centralizar la lógica de roles ---
 const DashboardRouter: React.FC = () => {
@@ -301,6 +314,120 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AssistantRedirect />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Personnel Module Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <PersonnelHomePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/perfil"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/equipo"
+              element={
+                <ProtectedRoute>
+                  <TeamPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/novedades/reporte-diario"
+              element={
+                <ProtectedRoute>
+                  <DailyReportPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/novedades/vacaciones"
+              element={
+                <ProtectedRoute>
+                  <VacationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/novedades/otras-solicitudes"
+              element={
+                <ProtectedRoute>
+                  <OtherRequestsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/documentos"
+              element={
+                <ProtectedRoute>
+                  <DocumentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/calendario"
+              element={
+                <ProtectedRoute>
+                  <CalendarPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/notificaciones"
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/actividad"
+              element={
+                <ProtectedRoute>
+                  <ActivityPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/personal/tareas"
+              element={
+                <ProtectedRoute>
+                  <TasksPersonnelPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/administracion/empleados"
+              element={
+                <ProtectedRoute>
+                  <EmployeesAdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/administracion/vacaciones-pendientes"
+              element={
+                <ProtectedRoute>
+                  <PendingVacationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/administracion/pedidos-pendientes"
+              element={
+                <ProtectedRoute>
+                  <PendingRequestsPage />
                 </ProtectedRoute>
               }
             />
