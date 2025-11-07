@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-// USANDO MOCKS - API real comentada
-// import { personnelAPI, VacationRequest } from '../api/personnel';
-import { mockPersonnelAPI } from '../mocks';
+import { mockVacationsService } from '../services';
 import type { VacationRequestAPI as VacationRequest } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -21,9 +19,7 @@ export const PendingVacationsPage: React.FC = () => {
   const fetchPendingVacations = async () => {
     try {
       setLoading(true);
-      // USANDO MOCKS - API real comentada
-      // const data = await personnelAPI.getPendingVacations();
-      const data = await mockPersonnelAPI.getPendingVacations();
+      const data = await mockVacationsService.getPendingVacations();
       setVacations(data);
     } catch (error) {
       console.error('Error fetching pending vacations:', error);
@@ -41,9 +37,7 @@ export const PendingVacationsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.approveVacation(vacation._id);
-      await mockPersonnelAPI.approveVacation(vacation._id);
+      await mockVacationsService.approveVacation(vacation._id);
       sweetAlert.success('Solicitud aprobada', 'La solicitud de vacaciones fue aprobada');
       fetchPendingVacations();
     } catch (error) {
@@ -60,9 +54,7 @@ export const PendingVacationsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.rejectVacation(vacation._id);
-      await mockPersonnelAPI.rejectVacation(vacation._id);
+      await mockVacationsService.rejectVacation(vacation._id);
       sweetAlert.success('Solicitud rechazada', 'La solicitud de vacaciones fue rechazada');
       fetchPendingVacations();
     } catch (error) {

@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-// USANDO MOCKS - API real comentada
-// import { personnelAPI } from '../api/personnel';
-import { mockPersonnelAPI } from '../mocks';
+import { mockOrdersService } from '../services';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardList, faCheck, faTimes, faTruck } from '@fortawesome/free-solid-svg-icons';
@@ -29,9 +27,7 @@ export const PendingRequestsPage: React.FC = () => {
   const fetchPendingOrders = async () => {
     try {
       setLoading(true);
-      // USANDO MOCKS - API real comentada
-      // const data = await personnelAPI.getPendingOrders();
-      const data = await mockPersonnelAPI.getPendingOrders();
+      const data = await mockOrdersService.getPendingOrders();
       setOrders(data);
     } catch (error) {
       console.error('Error fetching pending orders:', error);
@@ -46,9 +42,7 @@ export const PendingRequestsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.approveOrder(order._id);
-      await mockPersonnelAPI.approveOrder(order._id);
+      await mockOrdersService.approveOrder(order._id);
       sweetAlert.success('Solicitud aprobada', 'La solicitud fue aprobada');
       fetchPendingOrders();
     } catch (error) {
@@ -61,9 +55,7 @@ export const PendingRequestsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.rejectOrder(order._id);
-      await mockPersonnelAPI.rejectOrder(order._id);
+      await mockOrdersService.rejectOrder(order._id);
       sweetAlert.success('Solicitud rechazada', 'La solicitud fue rechazada');
       fetchPendingOrders();
     } catch (error) {
@@ -76,9 +68,7 @@ export const PendingRequestsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.deliverOrder(order._id);
-      await mockPersonnelAPI.deliverOrder(order._id);
+      await mockOrdersService.deliverOrder(order._id);
       sweetAlert.success('Pedido entregado', 'El pedido fue marcado como entregado');
       fetchPendingOrders();
     } catch (error) {

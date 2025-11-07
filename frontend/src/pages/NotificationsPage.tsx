@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-// USANDO MOCKS - API real comentada
-// import { personnelAPI, Notification } from '../api/personnel';
-import { mockPersonnelAPI } from '../mocks';
+import { mockNotificationsService } from '../services';
 import type { NotificationAPI as Notification } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -21,9 +19,7 @@ export const NotificationsPage: React.FC = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      // USANDO MOCKS - API real comentada
-      // const data = await personnelAPI.getNotifications();
-      const data = await mockPersonnelAPI.getNotifications();
+      const data = await mockNotificationsService.getNotifications();
       setNotifications(data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -35,9 +31,7 @@ export const NotificationsPage: React.FC = () => {
 
   const handleMarkRead = async (id: string) => {
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.markNotificationRead(id);
-      await mockPersonnelAPI.markNotificationRead(id);
+      await mockNotificationsService.markNotificationRead(id);
       setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
     } catch (error) {
       sweetAlert.error('Error', 'No se pudo marcar como leída');
@@ -46,9 +40,7 @@ export const NotificationsPage: React.FC = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.markAllNotificationsRead();
-      await mockPersonnelAPI.markAllNotificationsRead();
+      await mockNotificationsService.markAllNotificationsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       sweetAlert.success('Notificaciones', 'Todas las notificaciones fueron marcadas como leídas');
     } catch (error) {
@@ -58,9 +50,7 @@ export const NotificationsPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.deleteNotification(id);
-      await mockPersonnelAPI.deleteNotification(id);
+      await mockNotificationsService.deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n._id !== id));
     } catch (error) {
       sweetAlert.error('Error', 'No se pudo eliminar la notificación');
