@@ -1,0 +1,54 @@
+import { CalendarEvent } from './types';
+
+export const mockCalendarEvents: CalendarEvent[] = [
+  {
+    id: '1',
+    titulo: 'Reunión de Equipo',
+    descripcion: 'Reunión semanal del equipo de desarrollo',
+    tipo: 'reunion',
+    fechaInicio: '2025-01-27T10:00:00',
+    fechaFin: '2025-01-27T11:00:00',
+    ubicacion: 'Sala de Conferencias B',
+    participantes: ['Carlos Rodríguez', 'Ana Martínez', 'Luis Fernández'],
+    todoElDia: false
+  },
+  {
+    id: '2',
+    titulo: 'Capacitación: React Avanzado',
+    descripcion: 'Workshop sobre hooks avanzados y patrones de React',
+    tipo: 'capacitacion',
+    fechaInicio: '2025-02-05T14:00:00',
+    fechaFin: '2025-02-05T17:00:00',
+    ubicacion: 'Auditorio Principal',
+    participantes: ['Todo el equipo de Frontend'],
+    todoElDia: false
+  },
+  {
+    id: '3',
+    titulo: 'Vacaciones',
+    descripcion: 'Vacaciones de verano',
+    tipo: 'vacaciones',
+    fechaInicio: '2025-02-10',
+    fechaFin: '2025-02-21',
+    todoElDia: true
+  },
+  {
+    id: '4',
+    titulo: 'Deadline: Proyecto Alpha',
+    descripcion: 'Entrega final del proyecto Alpha',
+    tipo: 'deadline',
+    fechaInicio: '2025-01-31',
+    fechaFin: '2025-01-31',
+    todoElDia: true
+  },
+  {
+    id: '5',
+    titulo: 'Aniversario de la Empresa',
+    descripcion: 'Celebración del 15º aniversario',
+    tipo: 'evento',
+    fechaInicio: '2025-03-15',
+    fechaFin: '2025-03-15',
+    ubicacion: 'Salón de eventos',
+    todoElDia: true
+  }
+];
