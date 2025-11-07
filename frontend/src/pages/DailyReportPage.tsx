@@ -3,6 +3,8 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarCheck, faSave, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { sweetAlert } from '../utils/sweetAlert';
+import { mockTeamMembers } from '../mocks';
+import { mockDailyReportService } from '../services';
 
 interface EmployeeRecord {
   id: string;
@@ -31,13 +33,12 @@ const ABSENCE_REASONS = [
   'Otro',
 ];
 
-const MOCK_EMPLOYEES = [
-  { id: '1', name: 'Juan Pérez' },
-  { id: '2', name: 'María García' },
-  { id: '3', name: 'Carlos López' },
-  { id: '4', name: 'Ana Martínez' },
-  { id: '5', name: 'Pedro Sánchez' },
-];
+const MOCK_EMPLOYEES = mockTeamMembers
+  .filter(member => member.status === 'active')
+  .map(member => ({
+    id: member._id,
+    name: `${member.firstName} ${member.lastName}`
+  }));
 
 export const DailyReportPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);

@@ -4,6 +4,7 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
 import { personnelAPI } from '../api/personnel';
+import { mockProfileService, mockVacationsService, mockNotificationsService, mockActivityService, mockOrdersService } from '../services';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarDays, faFileLines, faBell, faClipboardList, faUmbrellaBeach, faChartLine } from '@fortawesome/free-solid-svg-icons';
 
@@ -24,21 +25,21 @@ export const PersonnelHomePage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [profileData, profileStats, vacBalance, vacStats, notifCount, activity] = await Promise.allSettled([
-        personnelAPI.getProfile(),
-        personnelAPI.getProfileStats(),
-        personnelAPI.getVacationAvailable(),
-        personnelAPI.getVacationStats(),
-        personnelAPI.getNotificationCount(),
-        personnelAPI.getRecentActivity(),
+      const [profileData, profileStats, vacBalance, vacStats, notifCount, activity] = await Promise.all([
+        mockProfileService.getProfile().catch(() => personnelAPI.getProfile()),
+        mockProfileService.getProfileStats().catch(() => personnelAPI.getProfileStats()),
+        mockVacationsService.getVacationAvailable().catch(() => personnelAPI.getVacationAvailable()),
+        mockVacationsService.getVacationStats().catch(() => personnelAPI.getVacationStats()),
+        mockNotificationsService.getNotificationCount().catch(() => personnelAPI.getNotificationCount()),
+        mockActivityService.getRecentActivity().catch(() => personnelAPI.getRecentActivity()),
       ]);
 
-      if (profileData.status === 'fulfilled') setProfile(profileData.value);
-      if (profileStats.status === 'fulfilled') setStats(profileStats.value);
-      if (vacBalance.status === 'fulfilled') setVacationBalance(vacBalance.value);
-      if (vacStats.status === 'fulfilled') setVacationStats(vacStats.value);
-      if (notifCount.status === 'fulfilled') setNotificationCount(notifCount.value.count);
-      if (activity.status === 'fulfilled') setRecentActivity(activity.value.slice(0, 5));
+      setProfile(profileData);
+      setStats(profileStats);
+      setVacationBalance(vacBalance);
+      setVacationStats(vacStats);
+      setNotificationCount(notifCount.count);
+      setRecentActivity(activity.slice(0, 5));
     } catch (error) {
       console.error('Error fetching personnel home data:', error);
     } finally {
@@ -58,7 +59,7 @@ export const PersonnelHomePage: React.FC = () => {
       icon: faUmbrellaBeach,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      onClick: () => navigate('/admin/personal/novedades/vacaciones'),
+      onClick: () => navigate('/admin/pedidos/vacaciones'),
     },
     {
       title: 'Solicitudes Pendientes',
@@ -67,7 +68,7 @@ export const PersonnelHomePage: React.FC = () => {
       icon: faClipboardList,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      onClick: () => navigate('/admin/personal/novedades/vacaciones'),
+      onClick: () => navigate('/admin/pedidos/vacaciones'),
     },
     {
       title: 'Notificaciones',
@@ -91,7 +92,7 @@ export const PersonnelHomePage: React.FC = () => {
 
   const quickLinks = [
     { title: 'Mi Perfil', icon: faChartLine, path: '/admin/personal/perfil' },
-    { title: 'Vacaciones', icon: faUmbrellaBeach, path: '/admin/personal/novedades/vacaciones' },
+    { title: 'Vacaciones', icon: faUmbrellaBeach, path: '/admin/pedidos/vacaciones' },
     { title: 'Documentos', icon: faFileLines, path: '/admin/personal/documentos' },
     { title: 'Calendario', icon: faCalendarDays, path: '/admin/personal/calendario' },
   ];
