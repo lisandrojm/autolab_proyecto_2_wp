@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { personnelAPI, ActivityRecord } from '../api/personnel';
+// USANDO MOCKS - API real comentada
+// import { personnelAPI, ActivityRecord } from '../api/personnel';
+import { mockPersonnelAPI } from '../mocks';
+import type { ActivityRecordAPI as ActivityRecord } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHistory, faList } from '@fortawesome/free-solid-svg-icons';
@@ -18,7 +21,9 @@ export const ActivityPage: React.FC = () => {
   const fetchActivity = async () => {
     try {
       setLoading(true);
-      const data = showAll ? await personnelAPI.getAllActivity() : await personnelAPI.getRecentActivity();
+      // USANDO MOCKS - API real comentada
+      // const data = showAll ? await personnelAPI.getAllActivity() : await personnelAPI.getRecentActivity();
+      const data = showAll ? await mockPersonnelAPI.getAllActivity() : await mockPersonnelAPI.getRecentActivity();
       setActivity(data);
     } catch (error) {
       console.error('Error fetching activity:', error);

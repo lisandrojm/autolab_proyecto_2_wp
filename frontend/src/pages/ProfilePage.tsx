@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { personnelAPI, ProfileData, ProfileStats } from '../api/personnel';
+// USANDO MOCKS - API real comentada
+// import { personnelAPI, ProfileData, ProfileStats } from '../api/personnel';
+import { mockPersonnelAPI } from '../mocks';
+import type { ProfileData, ProfileStats } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSave, faCamera } from '@fortawesome/free-solid-svg-icons';
@@ -21,9 +24,14 @@ export const ProfilePage: React.FC = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      // USANDO MOCKS - API real comentada
+      // const [profileData, statsData] = await Promise.all([
+      //   personnelAPI.getProfile(),
+      //   personnelAPI.getProfileStats(),
+      // ]);
       const [profileData, statsData] = await Promise.all([
-        personnelAPI.getProfile(),
-        personnelAPI.getProfileStats(),
+        mockPersonnelAPI.getProfile(),
+        mockPersonnelAPI.getProfileStats(),
       ]);
       setProfile(profileData);
       setStats(statsData);
@@ -40,7 +48,9 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     try {
       setSaving(true);
-      const updated = await personnelAPI.updateProfile(formData);
+      // USANDO MOCKS - API real comentada
+      // const updated = await personnelAPI.updateProfile(formData);
+      const updated = await mockPersonnelAPI.updateProfile(formData);
       setProfile(updated);
       setIsEditing(false);
       sweetAlert.success('Perfil actualizado', 'Los cambios se guardaron correctamente');
@@ -57,7 +67,9 @@ export const ProfilePage: React.FC = () => {
     if (!file) return;
 
     try {
-      const result = await personnelAPI.updateProfilePhoto(file);
+      // USANDO MOCKS - API real comentada
+      // const result = await personnelAPI.updateProfilePhoto(file);
+      const result = await mockPersonnelAPI.updateProfilePhoto(file);
       setProfile((prev) => (prev ? { ...prev, photoUrl: result.photoUrl } : null));
       sweetAlert.success('Foto actualizada', 'La foto de perfil se actualizó correctamente');
     } catch (error) {

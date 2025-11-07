@@ -106,3 +106,107 @@ export interface PendingApproval {
   fechaSolicitud: string;
   urgencia: 'baja' | 'media' | 'alta';
 }
+
+export interface ProfileData {
+  _id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  address?: string;
+  emergencyContact?: string;
+  position?: string;
+  department?: string;
+  photoUrl?: string;
+}
+
+export interface ProfileStats {
+  daysWorked: number;
+  vacationDaysAvailable: number;
+  vacationDaysUsed: number;
+  pendingRequests: number;
+}
+
+export interface VacationRequestAPI {
+  _id: string;
+  employeeId: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+export interface VacationStats {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+}
+
+export interface DocumentAPI {
+  _id: string;
+  employeeId: string;
+  type: 'contract' | 'payslip' | 'certificate' | 'other';
+  title: string;
+  fileName: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface CalendarEventAPI {
+  _id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  type: 'holiday' | 'meeting' | 'deadline' | 'other';
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface NotificationAPI {
+  _id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  read: boolean;
+  createdAt: string;
+}
+
+export interface ActivityRecordAPI {
+  _id: string;
+  userId: string;
+  action: string;
+  description: string;
+  type: string;
+  createdAt: string;
+}
+
+export interface EmployeeDataAPI {
+  _id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  position?: string;
+  department?: string;
+  status: 'active' | 'inactive';
+  photoUrl?: string;
+}
+
+export interface OrderRequestAPI {
+  _id: string;
+  employeeId: string;
+  type: 'equipment' | 'software' | 'supplies' | 'other';
+  description: string;
+  quantity: number;
+  urgency: 'low' | 'medium' | 'high';
+  status: 'pending' | 'approved' | 'rejected' | 'delivered';
+  createdAt: string;
+  deliveredAt?: string;
+  requestedBy?: string;
+}

@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-import { personnelAPI, EmployeeData } from '../api/personnel';
+// USANDO MOCKS - API real comentada
+// import { personnelAPI, EmployeeData } from '../api/personnel';
+import { mockPersonnelAPI } from '../mocks';
+import type { EmployeeDataAPI as EmployeeData } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faEdit, faTrash, faUser } from '@fortawesome/free-solid-svg-icons';
@@ -23,7 +26,9 @@ export const EmployeesAdminPage: React.FC = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const data = await personnelAPI.getEmployees();
+      // USANDO MOCKS - API real comentada
+      // const data = await personnelAPI.getEmployees();
+      const data = await mockPersonnelAPI.getEmployees();
       setEmployees(data);
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -35,7 +40,9 @@ export const EmployeesAdminPage: React.FC = () => {
 
   const handleViewEmployee = async (employee: EmployeeData) => {
     try {
-      const detailed = await personnelAPI.getEmployee(employee._id);
+      // USANDO MOCKS - API real comentada
+      // const detailed = await personnelAPI.getEmployee(employee._id);
+      const detailed = await mockPersonnelAPI.getEmployee(employee._id);
       setSelectedEmployee(detailed);
       setFormData(detailed);
       setIsEditing(false);
@@ -49,7 +56,9 @@ export const EmployeesAdminPage: React.FC = () => {
     if (!selectedEmployee) return;
 
     try {
-      await personnelAPI.updateEmployee(selectedEmployee._id, formData);
+      // USANDO MOCKS - API real comentada
+      // await personnelAPI.updateEmployee(selectedEmployee._id, formData);
+      await mockPersonnelAPI.updateEmployee(selectedEmployee._id, formData);
       sweetAlert.success('Empleado actualizado', 'Los cambios se guardaron correctamente');
       setIsEditing(false);
       fetchEmployees();
@@ -63,7 +72,9 @@ export const EmployeesAdminPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await personnelAPI.deleteEmployee(employee._id);
+      // USANDO MOCKS - API real comentada
+      // await personnelAPI.deleteEmployee(employee._id);
+      await mockPersonnelAPI.deleteEmployee(employee._id);
       sweetAlert.success('Empleado eliminado', 'El empleado se eliminó correctamente');
       fetchEmployees();
     } catch (error) {

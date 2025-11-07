@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-import { personnelAPI, VacationRequest } from '../api/personnel';
+// USANDO MOCKS - API real comentada
+// import { personnelAPI, VacationRequest } from '../api/personnel';
+import { mockPersonnelAPI } from '../mocks';
+import type { VacationRequestAPI as VacationRequest } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUmbrellaBeach, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
@@ -18,7 +21,9 @@ export const PendingVacationsPage: React.FC = () => {
   const fetchPendingVacations = async () => {
     try {
       setLoading(true);
-      const data = await personnelAPI.getPendingVacations();
+      // USANDO MOCKS - API real comentada
+      // const data = await personnelAPI.getPendingVacations();
+      const data = await mockPersonnelAPI.getPendingVacations();
       setVacations(data);
     } catch (error) {
       console.error('Error fetching pending vacations:', error);
@@ -36,7 +41,9 @@ export const PendingVacationsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await personnelAPI.approveVacation(vacation._id);
+      // USANDO MOCKS - API real comentada
+      // await personnelAPI.approveVacation(vacation._id);
+      await mockPersonnelAPI.approveVacation(vacation._id);
       sweetAlert.success('Solicitud aprobada', 'La solicitud de vacaciones fue aprobada');
       fetchPendingVacations();
     } catch (error) {
@@ -53,7 +60,9 @@ export const PendingVacationsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await personnelAPI.rejectVacation(vacation._id);
+      // USANDO MOCKS - API real comentada
+      // await personnelAPI.rejectVacation(vacation._id);
+      await mockPersonnelAPI.rejectVacation(vacation._id);
       sweetAlert.success('Solicitud rechazada', 'La solicitud de vacaciones fue rechazada');
       fetchPendingVacations();
     } catch (error) {

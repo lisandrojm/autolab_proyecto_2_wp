@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-import { personnelAPI, DocumentData } from '../api/personnel';
+// USANDO MOCKS - API real comentada
+// import { personnelAPI, DocumentData } from '../api/personnel';
+import { mockPersonnelAPI } from '../mocks';
+import type { DocumentAPI as DocumentData } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { useAuthStore } from '../stores/authStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -47,7 +50,9 @@ export const DocumentsPage: React.FC = () => {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const data = await personnelAPI.getDocuments();
+      // USANDO MOCKS - API real comentada
+      // const data = await personnelAPI.getDocuments();
+      const data = await mockPersonnelAPI.getDocuments();
       setDocuments(data);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -59,7 +64,9 @@ export const DocumentsPage: React.FC = () => {
 
   const handleDownload = async (doc: DocumentData) => {
     try {
-      const blob = await personnelAPI.downloadDocument(doc._id);
+      // USANDO MOCKS - API real comentada
+      // const blob = await personnelAPI.downloadDocument(doc._id);
+      const blob = await mockPersonnelAPI.downloadDocument(doc._id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -82,7 +89,9 @@ export const DocumentsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await personnelAPI.deleteDocument(doc._id);
+      // USANDO MOCKS - API real comentada
+      // await personnelAPI.deleteDocument(doc._id);
+      await mockPersonnelAPI.deleteDocument(doc._id);
       sweetAlert.success('Documento eliminado', 'El documento se eliminó correctamente');
       fetchDocuments();
     } catch (error) {
@@ -96,7 +105,9 @@ export const DocumentsPage: React.FC = () => {
 
     try {
       setUploading(true);
-      await personnelAPI.uploadDocument(uploadForm.file, uploadForm.type, uploadForm.title);
+      // USANDO MOCKS - API real comentada
+      // await personnelAPI.uploadDocument(uploadForm.file, uploadForm.type, uploadForm.title);
+      await mockPersonnelAPI.uploadDocument(uploadForm.file, uploadForm.type, uploadForm.title);
       sweetAlert.success('Documento subido', 'El documento se subió correctamente');
       setShowUploadModal(false);
       setUploadForm({ file: null, type: 'contract', title: '' });

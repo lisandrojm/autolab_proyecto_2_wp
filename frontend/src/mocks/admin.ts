@@ -1,4 +1,4 @@
-import { Employee, PendingApproval } from './types';
+import { Employee, PendingApproval, EmployeeDataAPI } from './types';
 
 export const mockEmployees: Employee[] = [
   {
@@ -103,5 +103,68 @@ export const mockPendingApprovals: PendingApproval[] = [
     descripcion: 'Solicitud de 10 días de vacaciones',
     fechaSolicitud: '2025-01-21',
     urgencia: 'alta'
+  }
+];
+
+export const mockEmployeesAPI: EmployeeDataAPI[] = [
+  {
+    _id: 'user_001',
+    email: 'maria.gonzalez@empresa.com',
+    firstName: 'María',
+    lastName: 'González',
+    position: 'Desarrolladora Senior',
+    department: 'Tecnología',
+    status: 'active',
+    photoUrl: 'https://ui-avatars.com/api/?name=Maria+Gonzalez&background=3b82f6&color=fff'
+  },
+  {
+    _id: 'user_002',
+    email: 'carlos.rodriguez@empresa.com',
+    firstName: 'Carlos',
+    lastName: 'Rodríguez',
+    position: 'Líder de Equipo',
+    department: 'Tecnología',
+    status: 'active',
+    photoUrl: 'https://ui-avatars.com/api/?name=Carlos+Rodriguez&background=10b981&color=fff'
+  },
+  {
+    _id: 'user_003',
+    email: 'ana.martinez@empresa.com',
+    firstName: 'Ana',
+    lastName: 'Martínez',
+    position: 'Diseñadora UX/UI',
+    department: 'Diseño',
+    status: 'active',
+    photoUrl: 'https://ui-avatars.com/api/?name=Ana+Martinez&background=f59e0b&color=fff'
+  },
+  {
+    _id: 'user_004',
+    email: 'luis.fernandez@empresa.com',
+    firstName: 'Luis',
+    lastName: 'Fernández',
+    position: 'Desarrollador Junior',
+    department: 'Tecnología',
+    status: 'active',
+    photoUrl: 'https://ui-avatars.com/api/?name=Luis+Fernandez&background=8b5cf6&color=fff'
+  },
+  {
+    _id: 'user_005',
+    email: 'laura.perez@empresa.com',
+    firstName: 'Laura',
+    lastName: 'Pérez',
+    position: 'Gerente de Recursos Humanos',
+    department: 'RRHH',
+    status: 'active',
+    photoUrl: 'https://ui-avatars.com/api/?name=Laura+Perez&background=ef4444&color=fff'
+  },
+  {
+    _id: 'user_006',
+    email: 'jorge.sanchez@empresa.com',
+    firstName: 'Jorge',
+    lastName: 'Sánchez',
+    position: 'Analista de Marketing',
+    department: 'Marketing',
+    status: 'inactive',
+    photoUrl: 'https://ui-avatars.com/api/?name=Jorge+Sanchez&background=6b7280&color=fff'
   }
 ];

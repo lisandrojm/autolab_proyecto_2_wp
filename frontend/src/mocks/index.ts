@@ -7,3 +7,4 @@ export * from './calendar';
 export * from './notifications';
 export * from './activity';
 export * from './admin';
+export * from './mockPersonnelAPI';
