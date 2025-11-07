@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
+import { mockOtherRequests } from '../mocks';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardList, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 
@@ -41,6 +42,9 @@ export const OtherRequestsPage: React.FC = () => {
       } catch (error) {
         console.error('Error loading requests:', error);
       }
+    } else {
+      setRequests(mockOtherRequests);
+      localStorage.setItem('otherRequests', JSON.stringify(mockOtherRequests));
     }
   }, []);
 

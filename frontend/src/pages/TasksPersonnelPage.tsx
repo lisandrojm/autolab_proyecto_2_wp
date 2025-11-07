@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
+import { mockPersonnelTasks } from '../mocks';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faListCheck, faPlus, faCheck, faClock, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 
@@ -37,6 +38,9 @@ export const TasksPersonnelPage: React.FC = () => {
       } catch (error) {
         console.error('Error loading tasks:', error);
       }
+    } else {
+      setTasks(mockPersonnelTasks);
+      localStorage.setItem('personnelTasks', JSON.stringify(mockPersonnelTasks));
     }
   }, []);
 
