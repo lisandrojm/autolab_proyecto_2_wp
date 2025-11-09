@@ -25,7 +25,7 @@ interface AuthState {
   token: string | null;
   tenantId: string;
   isAuthenticated: boolean;
-  login: (email: string, password: string, tenantSlug?: string, clientId?: string) => Promise<{ requiresTenantSelection?: boolean; tenants?: Tenant[] }>;
+  login: (email: string, password: string, tenantSlug?: string, clientId?: string) => Promise<{ requiresTenantSelection?: boolean; tenants?: Tenant[]; redirectTo?: string; user?: User }>;
   checkTenants: (email: string) => Promise<Tenant[]>;
   logout: () => void;
   setTenantId: (tenantId: string) => void;
@@ -139,6 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Éxito
       const token = data?.token;
       const user = data?.user as User | undefined;
+      const redirectTo = data?.redirectTo;
 
       if (!token) {
         const err = {
@@ -167,7 +168,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: user || null,
       });
 
-      return {};
+      return { redirectTo, user };
     } catch (error: any) {
       // Propagamos un error estructurado para que el componente lo muestre bien
       if (error?.__api) {

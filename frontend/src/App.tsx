@@ -49,6 +49,7 @@ import { TasksPersonnelPage } from "./pages/TasksPersonnelPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 import { PendingVacationsPage } from "./pages/PendingVacationsPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
+import { MobilePage } from "./pages/MobilePage";
 
 // --- DashboardRouter para centralizar la lógica de roles ---
 const DashboardRouter: React.FC = () => {
@@ -314,6 +315,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AssistantRedirect />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Mobile App Route */}
+            <Route
+              path="/mobile"
+              element={
+                <ProtectedRoute>
+                  <MobilePage />
                 </ProtectedRoute>
               }
             />

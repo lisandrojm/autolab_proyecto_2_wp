@@ -11,7 +11,7 @@ import { WorkflowTask } from "../models/WorkflowTask.js";
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { Asset } from "../models/Asset.js";
-import { ensureDefaultRoles } from "../services/roleInitService.js";
+import { ensureDefaultRoles, ensureMobileRoles } from "../services/roleInitService.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -399,6 +399,10 @@ export async function ensureSuperAdmin() {
 
     const superAdminTenantId = new Types.ObjectId(superAdminTenant._id as any);
 
+    // ROLES MOBILE para superadmin tenant
+    await ensureMobileRoles(superAdminTenantId);
+    console.log(`📱 Mobile roles ensured for superadmin tenant`);
+
     const superAdminUser = await ensureUser({
       tenantId: superAdminTenantId,
       email: "superadmin@example.com",
@@ -442,6 +446,10 @@ export async function seedOnStart() {
     });
     const tenantId = new Types.ObjectId(tenant._id as any);
     console.log(`🏢 Tenant found/created - Slug: ${tenantSlug}, ObjectId: ${String(tenantId)}`);
+
+    // ROLES MOBILE
+    await ensureMobileRoles(tenantId);
+    console.log(`📱 Mobile roles ensured for tenant: ${tenantSlug}`);
 
     // USERS
     const adminUser = await ensureUser({

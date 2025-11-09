@@ -60,6 +60,26 @@ const ADMIN_PERMISSIONS = [
 ];
 
 /**
+ * ═══════════════════════════════════════════════════════════════════════
+ * PERMISOS PARA MÓDULO MOBILE
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Permisos específicos para el acceso a la aplicación mobile:
+ * - mobile:access - Permiso base para acceder a /mobile
+ * - mobile:collaborator - Permisos de colaborador en la app mobile
+ * - mobile:coordinator - Permisos de coordinador en la app mobile
+ */
+const MOBILE_COLLABORATOR_PERMISSIONS = [
+  "mobile:access",       // Acceso base a la app mobile
+  "mobile:collaborator", // Permisos de colaborador mobile
+];
+
+const MOBILE_COORDINATOR_PERMISSIONS = [
+  "mobile:access",       // Acceso base a la app mobile
+  "mobile:coordinator",  // Permisos de coordinador mobile
+];
+
+/**
  * Asegura que un tenant tenga los roles admin y user configurados correctamente
  */
 export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Promise<{
@@ -231,6 +251,86 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
 }
 
 /**
+ * Asegura que un tenant tenga los roles mobile configurados correctamente
+ */
+export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Promise<{
+  collaboratorRole: any;
+  coordinatorRole: any;
+}> {
+  const tid = new Types.ObjectId(tenantId);
+
+  console.log(`[RoleInit] Ensuring mobile roles for tenant: ${tid}`);
+
+  // ════════ CREAR/VERIFICAR ROL MOBILE COLABORADOR ════════
+  let collaboratorRole = await Role.findOne({
+    tenantId: tid,
+    name: { $regex: /^Mobile - Colaborador$/i },
+  });
+
+  if (!collaboratorRole) {
+    console.log(`[RoleInit] Creating MOBILE COLLABORATOR role for tenant: ${tid}`);
+    collaboratorRole = await Role.create({
+      tenantId: tid,
+      name: "Mobile - Colaborador",
+      description: "Colaborador de la app mobile - Acceso a funciones básicas",
+      permissions: MOBILE_COLLABORATOR_PERMISSIONS,
+      isDefault: false,
+    });
+    console.log(`[RoleInit] ✅ MOBILE COLLABORATOR role created: ${collaboratorRole._id}`);
+  } else {
+    console.log(`[RoleInit] ✔️ MOBILE COLLABORATOR role already exists: ${collaboratorRole._id}`);
+
+    // Actualizar permisos si han cambiado
+    const currentPerms = new Set(collaboratorRole.permissions);
+    const expectedPerms = new Set(MOBILE_COLLABORATOR_PERMISSIONS);
+    const permsMatch =
+      currentPerms.size === expectedPerms.size &&
+      Array.from(currentPerms).every((p) => expectedPerms.has(p));
+
+    if (!permsMatch) {
+      collaboratorRole.permissions = MOBILE_COLLABORATOR_PERMISSIONS;
+      await collaboratorRole.save();
+      console.log(`[RoleInit] ♻️ Updated MOBILE COLLABORATOR role permissions`);
+    }
+  }
+
+  // ════════ CREAR/VERIFICAR ROL MOBILE COORDINADOR ════════
+  let coordinatorRole = await Role.findOne({
+    tenantId: tid,
+    name: { $regex: /^Mobile - Coordinador$/i },
+  });
+
+  if (!coordinatorRole) {
+    console.log(`[RoleInit] Creating MOBILE COORDINATOR role for tenant: ${tid}`);
+    coordinatorRole = await Role.create({
+      tenantId: tid,
+      name: "Mobile - Coordinador",
+      description: "Coordinador de la app mobile - Acceso a funciones avanzadas de gestión",
+      permissions: MOBILE_COORDINATOR_PERMISSIONS,
+      isDefault: false,
+    });
+    console.log(`[RoleInit] ✅ MOBILE COORDINATOR role created: ${coordinatorRole._id}`);
+  } else {
+    console.log(`[RoleInit] ✔️ MOBILE COORDINATOR role already exists: ${coordinatorRole._id}`);
+
+    // Actualizar permisos si han cambiado
+    const currentPerms = new Set(coordinatorRole.permissions);
+    const expectedPerms = new Set(MOBILE_COORDINATOR_PERMISSIONS);
+    const permsMatch =
+      currentPerms.size === expectedPerms.size &&
+      Array.from(currentPerms).every((p) => expectedPerms.has(p));
+
+    if (!permsMatch) {
+      coordinatorRole.permissions = MOBILE_COORDINATOR_PERMISSIONS;
+      await coordinatorRole.save();
+      console.log(`[RoleInit] ♻️ Updated MOBILE COORDINATOR role permissions`);
+    }
+  }
+
+  return { collaboratorRole, coordinatorRole };
+}
+
+/**
  * Verifica que todos los tenants existentes tengan los roles correctos
  */
 export async function ensureAllTenantsHaveDefaultRoles(): Promise<void> {
@@ -249,6 +349,7 @@ export async function ensureAllTenantsHaveDefaultRoles(): Promise<void> {
       const rolesBefore = await Role.countDocuments({ tenantId });
 
       await ensureDefaultRoles(tenantId);
+      await ensureMobileRoles(tenantId);
       await migrateRolePermissions(tenantId);
 
       const rolesAfter = await Role.countDocuments({ tenantId });

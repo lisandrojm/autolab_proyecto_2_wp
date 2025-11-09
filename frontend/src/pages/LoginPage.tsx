@@ -192,7 +192,14 @@ export const LoginPage: React.FC = () => {
         return;
       }
 
-      // === Redirección según rol ===
+      // === Redirección automática ===
+      // Si el backend envía redirectTo, usar ese valor
+      if (result?.redirectTo) {
+        window.location.href = result.redirectTo;
+        return;
+      }
+
+      // === Redirección según rol (fallback) ===
       // Intentamos tomar del resultado y, si no, del estado actual del store
       const rolesFromResult: any[] = (result?.user?.roles as any[]) || (useAuthStore.getState().user?.roles as any[]) || [];
 

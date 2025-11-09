@@ -13,6 +13,7 @@ import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
 import { z } from "zod";
 import { Types } from "mongoose";
+import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 
 const registerClientSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -141,6 +142,12 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
     // Eliminar duplicados
     const permissions = [...new Set(rolePermissions)];
 
+    // Calcular redirectTo basado en permisos
+    let redirectTo = "/dashboard"; // Ruta por defecto
+    if (permissions.includes("mobile:access")) {
+      redirectTo = "/mobile";
+    }
+
     const payload = {
       sub: String(user._id),
       email: user.email,
@@ -157,6 +164,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
 
     res.json({
       token,
+      redirectTo,
       user: {
         id: user._id,
         email: user.email,
@@ -180,6 +188,53 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
     console.error("Login error:", err);
     res.status(500).json({ error: "Internal server error" });
     return;
+  }
+});
+
+// GET /auth/me - Obtener datos del usuario autenticado
+router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.user?.sub;
+    const tenantId = req.tenantObjectId!;
+
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const user = await User.findOne({ _id: userId, tenantId, isActive: true })
+      .populate("roles", "name permissions")
+      .populate("tenantId", "_id name slug");
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Obtener permisos agregados de todos los roles del usuario
+    const rolePermissions = user.roles ? (user.roles as any[]).flatMap((role) => role.permissions || []) : [];
+    const permissions = [...new Set(rolePermissions)];
+
+    // Obtener nombre del primer rol
+    const primaryRoleName = user.roles && user.roles.length > 0 ? (user.roles[0] as any).name || "" : "";
+
+    res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.roles ? user.roles.map((r: any) => r.name || "user") : [],
+        primaryRole: primaryRoleName || null,
+        clientIds: user.clientIds ? user.clientIds.map((c: any) => c.toString()) : [],
+        permissions,
+        tenantId: (user.tenantId as any)._id,
+        tenantSlug: (user.tenantId as any).slug,
+      },
+    });
+  } catch (err) {
+    console.error("Get current user error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
