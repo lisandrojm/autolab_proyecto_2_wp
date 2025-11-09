@@ -473,16 +473,24 @@ export const MobileNavbar: React.FC = () => {
     return (
       <div>
         {/* Creative Suite (si existe) */}
-        {/*         {creativeSuiteItem && <div className="border-t border-b border-gray-200 dark:border-gray-700 py-1 mb-3">{renderMenuItem(creativeSuiteItem)}</div>} */}
+        {creativeSuiteItem && <div className="border-t border-gray-200 dark:border-gray-700 py-2">{renderMenuItem(creativeSuiteItem)}</div>}
+        {/* Administración (global / plataforma, como ya tenías) */}
+        <div className="px-2">
+          <button onClick={() => setAdminAccordionOpen(!adminAccordionOpen)} aria-expanded={adminAccordionOpen} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors border-t border-gray-200 dark:border-gray-700 mb-3 py-2 pt-3">
+            <span>{user?.tenantSlug === "superadmin" ? "Administración global" : "Administración"}</span>
+            <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform duration-200 ease-in-out ${adminAccordionOpen ? "rotate-180" : "rotate-0"}`} />
+          </button>
+          {adminAccordionOpen && <nav className="lg:space-y-1 pb-2">{adminItems.map((item) => renderMenuItem(item))}</nav>}
+        </div>
 
         {/* Panel de Personal */}
         <div className="px-2 mb-4">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 border-t pt-2">Panel de Personal</div>
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-t border-gray-200 dark:border-gray-700 mb-3 py-2">Panel de Personal</div>
           {renderMenuItem(personnelRootItem)}
 
           {personnelGroups.map((group) => (
             <div key={group.title} className="mt-3">
-              <div className="px-1 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1 border-t pt-2">{group.title}</div>
+              <div className="px-1 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 mb-3 py-2">{group.title}</div>
               <div className="space-y-1">
                 {group.items.map((item) => (
                   <React.Fragment key={item.path}>{renderMenuItem(item)}</React.Fragment>
@@ -493,11 +501,11 @@ export const MobileNavbar: React.FC = () => {
 
           {adminPersonnelGroup && (
             <div className="mt-3">
-              <div className="px-1 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">{adminPersonnelGroup.title}</div>
+              <div className="px-1 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 mb-3 py-2">{adminPersonnelGroup.title}</div>
               <div className="space-y-1">
                 {adminPersonnelGroup.items.map((item) =>
                   item.isSubheader ? (
-                    <div key={item.title} className="px-2 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-1 mb-1 border-t pt-2">
+                    <div key={item.title} className="px-2 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-1 mb-1 border-t border-gray-200 dark:border-gray-700 mb-3 py-2">
                       {item.title}
                     </div>
                   ) : (
@@ -508,15 +516,6 @@ export const MobileNavbar: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* Administración (global / plataforma, como ya tenías) */}
-        {/*         <div className="px-2">
-          <button onClick={() => setAdminAccordionOpen(!adminAccordionOpen)} aria-expanded={adminAccordionOpen} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
-            <span>{user?.tenantSlug === "superadmin" ? "Administración Global" : "Administración Plataforma"}</span>
-            <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform duration-200 ease-in-out ${adminAccordionOpen ? "rotate-180" : "rotate-0"}`} />
-          </button>
-          {adminAccordionOpen && <nav className="lg:space-y-1">{adminItems.map((item) => renderMenuItem(item))}</nav>}
-        </div> */}
       </div>
     );
   };
@@ -598,13 +597,9 @@ export const MobileNavbar: React.FC = () => {
               )}
 
               {/* 🤖 Robot (por ahora oculto) */}
-              {/* <button
-                onClick={() => openAssistant?.()}
-                className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                title="Asistente IA"
-              >
+              <button onClick={() => openAssistant?.()} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
                 <FontAwesomeIcon icon={faRobot} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </button> */}
+              </button>
 
               <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
@@ -629,7 +624,7 @@ export const MobileNavbar: React.FC = () => {
             </div>
           </div>
 
-          {/*           <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4 pt-1 space-y-3 mb-40 ">
               {showClientContext && (
                 <div className="bg-white dark:bg-gray-800">
@@ -646,7 +641,7 @@ export const MobileNavbar: React.FC = () => {
                 <NavMenu onItemClick={() => setOpen(false)} />
               </div>
             </div>
-          </div> */}
+          </div>
 
           <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-end">
             <div className="block lg:hidden">
@@ -662,7 +657,7 @@ export const MobileNavbar: React.FC = () => {
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:dark:bg-gray-800 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto mt-12">
-            {/*             {showClientContext && (
+            {showClientContext && (
               <div className="px-2">
                 <div className="bg-white dark:bg-gray-800 dark:border-gray-700 p-2 pb-2">
                   <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 pb-2">Cliente</div>
@@ -670,7 +665,7 @@ export const MobileNavbar: React.FC = () => {
                   <ClientContextMenu />
                 </div>
               </div>
-            )} */}
+            )}
             <div className="px-3 mb-4">
               <div className={`bg-white dark:bg-gray-800 py-2`}>
                 <NavMenu onItemClick={() => setOpen(false)} />
