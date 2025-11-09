@@ -1,5 +1,5 @@
 // apps/web/src/App.tsx
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { useAuthStore } from "./stores/authStore";
 import { useThemeStore } from "./stores/themeStore";
@@ -49,7 +49,8 @@ import { TasksPersonnelPage } from "./pages/TasksPersonnelPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 import { PendingVacationsPage } from "./pages/PendingVacationsPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
-import { MobilePage } from "./pages/MobilePage";
+
+const AppMobile = lazy(() => import("./apps/mobile/AppMobile"));
 
 // --- DashboardRouter para centralizar la lógica de roles ---
 const DashboardRouter: React.FC = () => {
@@ -321,10 +322,19 @@ function App() {
 
             {/* Mobile App Route */}
             <Route
-              path="/mobile"
+              path="/mobile/*"
               element={
                 <ProtectedRoute>
-                  <MobilePage />
+                  <Suspense fallback={
+                    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                      <div className="text-center">
+                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+                        <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando aplicación mobile...</p>
+                      </div>
+                    </div>
+                  }>
+                    <AppMobile />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
