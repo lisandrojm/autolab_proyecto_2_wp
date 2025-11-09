@@ -240,11 +240,12 @@ export const MobileNavbar: React.FC = () => {
     if (isSuperAdminTenant) {
       base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
     } else {
-      if (hasPermission("dashboard:view")) base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" });
-      if (hasPermission("clients:read") || hasPermission("clients:view")) {
+      /*       if (hasPermission("dashboard:view")) base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }); */
+      /*       if (hasPermission("clients:read") || hasPermission("clients:view")) 
+        {
         base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
-      }
-      if (hasPermission("calendar:view")) base.push({ path: "/calendar", icon: faCalendar, label: "Calendario", scope: "global" });
+      } */
+      /*       if (hasPermission("calendar:view")) base.push({ path: "/calendar", icon: faCalendar, label: "Calendario", scope: "global" }); */
       if (hasPermission("tenants:read")) base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants });
       if (hasPermission("roles:read")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles });
       if (hasPermission("users:read")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios del Sistema", scope: "global", count: adminCounts.users });
@@ -398,11 +399,14 @@ export const MobileNavbar: React.FC = () => {
       }
 
       return (
-        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? "page" : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded-lg transition-all ${isActive(item.path) ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-l-4 border-primary-600 dark:border-primary-400" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"}`}>
+        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? "page" : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded-lg transition-all ${isActive(item.path) ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-blue-300 dark:border-blue-800" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"}`}>
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <FontAwesomeIcon icon={item.icon} className="h-5 w-5 flex-shrink-0" />
+            <div className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${isActive(item.path) ? "bg-primary-600 text-white dark:bg-primary-700/30" : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800"}`}>
+              <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+            </div>
             <span className="font-medium truncate">{item.label}</span>
           </div>
+
           {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
         </Link>
       );
@@ -473,10 +477,10 @@ export const MobileNavbar: React.FC = () => {
     return (
       <div>
         {/* Creative Suite (si existe) */}
-        {creativeSuiteItem && <div className="border-t border-gray-200 dark:border-gray-700 py-2">{renderMenuItem(creativeSuiteItem)}</div>}
+        {/*         {creativeSuiteItem && <div className="border-t border-gray-200 dark:border-gray-700 py-2">{renderMenuItem(creativeSuiteItem)}</div>} */}
         {/* Administración (global / plataforma, como ya tenías) */}
         <div className="px-2">
-          <button onClick={() => setAdminAccordionOpen(!adminAccordionOpen)} aria-expanded={adminAccordionOpen} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors border-t border-gray-200 dark:border-gray-700 mb-3 py-2 pt-3">
+          <button onClick={() => setAdminAccordionOpen(!adminAccordionOpen)} aria-expanded={adminAccordionOpen} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors mb-3 pb-2 pt-2">
             <span>{user?.tenantSlug === "superadmin" ? "Administración global" : "Administración"}</span>
             <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform duration-200 ease-in-out ${adminAccordionOpen ? "rotate-180" : "rotate-0"}`} />
           </button>
@@ -657,7 +661,7 @@ export const MobileNavbar: React.FC = () => {
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:dark:bg-gray-800 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto mt-12">
-            {showClientContext && (
+            {/*             {showClientContext && (
               <div className="px-2">
                 <div className="bg-white dark:bg-gray-800 dark:border-gray-700 p-2 pb-2">
                   <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 pb-2">Cliente</div>
@@ -665,7 +669,7 @@ export const MobileNavbar: React.FC = () => {
                   <ClientContextMenu />
                 </div>
               </div>
-            )}
+            )} */}
             <div className="px-3 mb-4">
               <div className={`bg-white dark:bg-gray-800 py-2`}>
                 <NavMenu onItemClick={() => setOpen(false)} />

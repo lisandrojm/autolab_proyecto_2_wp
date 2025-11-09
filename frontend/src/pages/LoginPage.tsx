@@ -198,7 +198,7 @@ export const LoginPage: React.FC = () => {
 
       const isSuperadmin = Array.isArray(rolesFromResult) ? rolesFromResult.some((r) => (typeof r === "string" ? r : r?.name)?.toLowerCase() === "superadmin") : false;
 
-      navigate(isSuperadmin ? "/tenants" : "/clients");
+      navigate(isSuperadmin ? "/tenants" : "/users");
     } catch (err: any) {
       console.error("[login:error]", err);
       setLastErrorObj(err);
