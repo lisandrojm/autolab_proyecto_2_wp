@@ -415,6 +415,7 @@ export async function ensureSuperAdmin() {
 
     console.log("✅ SuperAdmin ready: superadmin@example.com / superadmin123");
     console.log("🏢 SuperAdmin tenant slug: superadmin (isSystem: true)");
+    console.log("📱 Mobile roles created for superadmin tenant");
     return superAdminUser;
   } catch (error) {
     console.error("❌ Error ensuring superadmin:", error);
@@ -492,6 +493,75 @@ export async function seedOnStart() {
       lastName: "Demo",
     });
     const clientUserId = String(clientUser._id);
+
+    // USUARIOS MOBILE
+    const mobileCollaboratorRole = await Role.findOne({
+      tenantId,
+      name: { $regex: /^Mobile - Colaborador$/i },
+    });
+
+    const mobileCoordinatorRole = await Role.findOne({
+      tenantId,
+      name: { $regex: /^Mobile - Coordinador$/i },
+    });
+
+    let mobileCollaboratorUser;
+    if (mobileCollaboratorRole) {
+      const mobileCollabEmail = "colaborador@mobile.com";
+      let mobileCollabUser = await User.findOne({ tenantId, email: mobileCollabEmail });
+
+      if (!mobileCollabUser) {
+        mobileCollabUser = new User({
+          tenantId,
+          email: mobileCollabEmail,
+          password: "colaborador123",
+          roles: [mobileCollaboratorRole._id],
+          firstName: "Juan",
+          lastName: "Colaborador",
+          isActive: true,
+        });
+        await mobileCollabUser.save();
+
+        await Tenant.findByIdAndUpdate(tenantId, {
+          $addToSet: { userIds: mobileCollabUser._id },
+          $inc: { "usage.users.current": 1 },
+        });
+
+        console.log(`✅ ensureUser: created ${mobileCollabEmail} [Mobile - Colaborador]`);
+      } else {
+        console.log(`✔️ ensureUser: exists ${mobileCollabEmail}`);
+      }
+      mobileCollaboratorUser = mobileCollabUser;
+    }
+
+    let mobileCoordinatorUser;
+    if (mobileCoordinatorRole) {
+      const mobileCoordEmail = "coordinador@mobile.com";
+      let mobileCoordUser = await User.findOne({ tenantId, email: mobileCoordEmail });
+
+      if (!mobileCoordUser) {
+        mobileCoordUser = new User({
+          tenantId,
+          email: mobileCoordEmail,
+          password: "coordinador123",
+          roles: [mobileCoordinatorRole._id],
+          firstName: "María",
+          lastName: "Coordinadora",
+          isActive: true,
+        });
+        await mobileCoordUser.save();
+
+        await Tenant.findByIdAndUpdate(tenantId, {
+          $addToSet: { userIds: mobileCoordUser._id },
+          $inc: { "usage.users.current": 1 },
+        });
+
+        console.log(`✅ ensureUser: created ${mobileCoordEmail} [Mobile - Coordinador]`);
+      } else {
+        console.log(`✔️ ensureUser: exists ${mobileCoordEmail}`);
+      }
+      mobileCoordinatorUser = mobileCoordUser;
+    }
 
     // CLIENTES
     // ARCOR (antes TechCorp)
@@ -1457,7 +1527,9 @@ export async function seedOnStart() {
     console.log("👤 Manager: manager@example.com / manager123");
     console.log("👤 User: user@example.com / user123");
     console.log("👤 Client user:", seedClientEmail, "/", seedClientPass);
-    console.log("🔐 Roles: Administrador, Manager, Usuario, Cliente");
+    console.log("📱 Mobile Colaborador: colaborador@mobile.com / colaborador123");
+    console.log("📱 Mobile Coordinador: coordinador@mobile.com / coordinador123");
+    console.log("🔐 Roles: Administrador, Manager, Usuario, Cliente, Mobile - Colaborador, Mobile - Coordinador");
     console.log("🏢 Clients: Arcor, Puma Energy");
     console.log("📁 Projects: Lanzamiento Nueva Línea Snacks 2024, Programa Experiencia Estaciones Puma");
     console.log("🎯 Campaigns: Lanzamiento Snacks Saludables, Promoción Combustible + Beneficios Ruta");

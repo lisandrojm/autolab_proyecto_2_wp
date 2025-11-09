@@ -9,7 +9,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "roles" as const;
@@ -28,6 +28,9 @@ const ACTION_LABELS: Record<string, string> = {
   create: "Crear",
   edit: "Editar",
   delete: "Eliminar",
+  access: "Acceso",
+  collaborator: "Colaborador",
+  coordinator: "Coordinador",
 };
 
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
@@ -84,6 +87,12 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     icon: faPalette,
     description: "Acceso a herramientas creativas y de diseño",
     permissions: ["creative:view"],
+  },
+  mobile: {
+    label: "Mobile",
+    icon: faMobileAlt,
+    description: "Acceso a la aplicación móvil y sus funciones",
+    permissions: ["mobile:access", "mobile:collaborator", "mobile:coordinator"],
   },
 };
 
