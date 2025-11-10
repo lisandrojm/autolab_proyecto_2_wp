@@ -17,6 +17,8 @@ Plataforma simplificada de gestión de campañas de marketing con multi-tenancy.
 
 ### Backend
 
+--
+
 - **Node.js** con **Express**
 - **TypeScript** para tipado estático
 - **MongoDB** con **Mongoose**
@@ -176,49 +178,55 @@ El sistema soporta múltiples tenants. Cuando un usuario hace login:
 
 - También disponible `npm run vps` (frontend) para levantar el front en el VPS con Vite en modo producción, útil para debug rápido.
   .
-  
-
 
 ## PM2
 
 Comandos útiles para `brandme-api`:
 
 Iniciar:
+
 ```bash
 npx pm2 start brandme-api
 ```
 
 Ver lista de procesos:
+
 ```bash
 npx pm2 list
 ```
 
 Ver logs:
+
 ```bash
 npx pm2 logs brandme-api
 ```
 
 Reiniciar la app:
+
 ```bash
 npx pm2 restart brandme-api
 ```
 
 Detener la app:
+
 ```bash
 npx pm2 stop brandme-api
 ```
 
 Eliminar del monitoreo:
+
 ```bash
 npx pm2 delete brandme-api
 ```
 
 Guardar configuración:
+
 ```bash
 npx pm2 save
 ```
 
 Si el servidor se reinicia, restaurar con:
+
 ```bash
 npx pm2 resurrect
 ```
@@ -256,6 +264,6 @@ Para que el **botón de deploy** aparezca correctamente, sigue estos pasos:
    npm run dev
    ```
 
------
+---
 
 ✅ **Listo:** el botón de deploy debería estar visible y funcional.
