@@ -1,75 +1,75 @@
-import { useState, useEffect } from 'react';
-import { ViewType } from './types';
-import TopBar from './components/TopBar';
-import BottomNav from './components/BottomNav';
-import Home from './views/Home';
-import Calendar from './views/Calendar';
-import Documents from './views/Documents';
-import Profile from './views/Profile';
-import Vacations from './views/Vacations';
-import Orders from './views/Orders';
-import { useAuthStore } from '../../../stores/authStore';
-import { useThemeStore } from '../../../stores/themeStore';
+import { useState, useEffect } from "react";
+import { ViewType } from "./types";
+import TopBar from "./components/TopBar";
+import BottomNav from "./components/BottomNav";
+import Home from "./views/Home";
+import Calendar from "./views/Calendar";
+import Documents from "./views/Documents";
+import Profile from "./views/Profile";
+import Vacations from "./views/Vacations";
+import Orders from "./views/Orders";
+import { useAuthStore } from "../../../stores/authStore";
+import { useThemeStore } from "../../../stores/themeStore";
 
 function App() {
-  const [currentView, setCurrentView] = useState<ViewType>('home');
+  const [currentView, setCurrentView] = useState<ViewType>("home");
   const { user, hasPermission } = useAuthStore();
   const { theme } = useThemeStore();
 
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
   }, [theme]);
 
   const permissions = user?.permissions || [];
-  const hasMobileAccess = hasPermission('mobile:access');
-  const isMobileCollaborator = hasPermission('mobile:collaborator');
-  const isMobileCoordinator = hasPermission('mobile:coordinator');
+  const hasMobileAccess = hasPermission("mobile:access");
+  const isMobileCollaborator = hasPermission("mobile:collaborator");
+  const isMobileCoordinator = hasPermission("mobile:coordinator");
 
-  const userRole = isMobileCoordinator ? 'coordinator' : isMobileCollaborator ? 'collaborator' : null;
+  const userRole = isMobileCoordinator ? "coordinator" : isMobileCollaborator ? "collaborator" : null;
 
   const getTitle = (view: ViewType): string => {
     switch (view) {
-      case 'home':
-        return 'Inicio';
-      case 'calendar':
-        return 'Calendario';
-      case 'documents':
-        return 'Documentos';
-      case 'profile':
-        return 'Perfil';
-      case 'vacations':
-        return 'Vacaciones';
-      case 'orders':
-        return 'Pedidos';
+      case "home":
+        return "Inicio";
+      case "calendar":
+        return "Calendario";
+      case "documents":
+        return "Documentos";
+      case "profile":
+        return "Perfil";
+      case "vacations":
+        return "Vacaciones";
+      case "orders":
+        return "Pedidos";
       default:
-        return 'Inicio';
+        return "Inicio";
     }
   };
 
   const renderView = () => {
     switch (currentView) {
-      case 'home':
+      case "home":
         return <Home onNavigate={setCurrentView} />;
-      case 'calendar':
+      case "calendar":
         return <Calendar />;
-      case 'documents':
+      case "documents":
         return <Documents />;
-      case 'profile':
+      case "profile":
         return <Profile />;
-      case 'vacations':
+      case "vacations":
         return <Vacations onNavigate={setCurrentView} />;
-      case 'orders':
+      case "orders":
         return <Orders onNavigate={setCurrentView} />;
       default:
         return <Home onNavigate={setCurrentView} />;
     }
   };
 
-  const showTopBar = currentView === 'home' || currentView === 'calendar' || currentView === 'documents' || currentView === 'profile';
+  const showTopBar = currentView === "home" || currentView === "calendar" || currentView === "documents" || currentView === "profile";
 
   if (!hasMobileAccess) {
     return (
@@ -80,16 +80,9 @@ function App() {
               <span className="text-red-600 dark:text-red-400 text-3xl">⚠️</span>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Acceso Restringido
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            No tienes permisos para acceder a esta aplicación. Por favor, contacta con tu administrador si necesitas acceso.
-          </p>
-          <a
-            href="/dashboard"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200"
-          >
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Acceso Restringido</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">No tienes permisos para acceder a esta aplicación. Por favor, contacta con tu administrador si necesitas acceso.</p>
+          <a href="/dashboard" className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200">
             ← Volver al Dashboard
           </a>
         </div>
@@ -106,17 +99,9 @@ function App() {
               <span className="text-blue-600 dark:text-blue-400 text-3xl">📱</span>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Bienvenido a Mobile App
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Tienes acceso a la aplicación mobile, pero tu rol aún no está completamente configurado.
-            Por favor, contacta con tu administrador.
-          </p>
-          <a
-            href="/dashboard"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200"
-          >
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Bienvenido a Mobile App</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">Tienes acceso a la aplicación mobile, pero tu rol aún no está completamente configurado. Por favor, contacta con tu administrador.</p>
+          <a href="/dashboard" className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200">
             ← Volver al Dashboard
           </a>
         </div>
@@ -126,34 +111,28 @@ function App() {
 
   const roleColors = {
     coordinator: {
-      gradient: 'from-blue-500 to-indigo-600',
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
-      text: 'text-blue-600 dark:text-blue-400',
-      border: 'border-blue-200 dark:border-blue-800'
+      gradient: "from-blue-500 to-indigo-600",
+      bg: "bg-blue-50 dark:bg-blue-900/20",
+      text: "text-blue-600 dark:text-blue-400",
+      border: "border-blue-200 dark:border-blue-800",
     },
     collaborator: {
-      gradient: 'from-green-500 to-teal-600',
-      bg: 'bg-green-50 dark:bg-green-900/20',
-      text: 'text-green-600 dark:text-green-400',
-      border: 'border-green-200 dark:border-green-800'
-    }
+      gradient: "from-green-500 to-teal-600",
+      bg: "bg-green-50 dark:bg-green-900/20",
+      text: "text-green-600 dark:text-green-400",
+      border: "border-green-200 dark:border-green-800",
+    },
   };
 
   const currentRoleColors = roleColors[userRole];
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display">
-      {showTopBar && (
-        <TopBar
-          title={getTitle(currentView)}
-          hasNotifications={true}
-          onNotificationClick={() => alert('Notificaciones')}
-          userRole={userRole}
-          userName={user?.firstName || 'Usuario'}
-        />
-      )}
-      {renderView()}
-      <BottomNav currentView={currentView} onNavigate={setCurrentView} />
+    <div className="w-full dark:bg-gray-900 flex justify-center">
+      <div className="relative flex min-h-screen border dark:border-gray-800 flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display w-1/2">
+        {showTopBar && <TopBar title={getTitle(currentView)} hasNotifications={true} onNotificationClick={() => alert("Notificaciones")} userRole={userRole} userName={user?.firstName || "Usuario"} />}
+        {renderView()}
+        <BottomNav currentView={currentView} onNavigate={setCurrentView} />
+      </div>
     </div>
   );
 }
