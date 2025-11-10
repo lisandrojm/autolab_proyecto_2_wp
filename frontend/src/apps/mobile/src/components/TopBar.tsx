@@ -1,4 +1,7 @@
-import { Bell } from 'lucide-react';
+import { Bell, Sun, Moon, LogOut } from 'lucide-react';
+import { useThemeStore } from '../../../../stores/themeStore';
+import { useAuthStore } from '../../../../stores/authStore';
+import { useNavigate } from 'react-router-dom';
 
 interface TopBarProps {
   title: string;
@@ -9,6 +12,15 @@ interface TopBarProps {
 }
 
 export default function TopBar({ title, hasNotifications = false, onNotificationClick, userRole, userName }: TopBarProps) {
+  const { theme, toggleTheme } = useThemeStore();
+  const { logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/login';
+  };
+
   const roleConfig = {
     coordinator: {
       label: 'Coordinador',
@@ -39,14 +51,29 @@ export default function TopBar({ title, hasNotifications = false, onNotification
         <h2 className="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">
           {title}
         </h2>
-        <div className="flex w-12 items-center justify-end">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={toggleTheme}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Cambiar tema"
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
           <button
             onClick={onNotificationClick}
-            className="relative flex h-12 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-transparent text-slate-900 dark:text-slate-100 min-w-0 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Notificaciones"
           >
-            <Bell className="w-6 h-6" />
+            <Bell className="w-5 h-5" />
             {hasNotifications && (
-              <span className="absolute right-3 top-3 flex h-2 w-2">
+              <span className="absolute right-2 top-2 flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
               </span>

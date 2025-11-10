@@ -9,10 +9,20 @@ import Profile from './views/Profile';
 import Vacations from './views/Vacations';
 import Orders from './views/Orders';
 import { useAuthStore } from '../../../stores/authStore';
+import { useThemeStore } from '../../../stores/themeStore';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>('home');
   const { user, hasPermission } = useAuthStore();
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   const permissions = user?.permissions || [];
   const hasMobileAccess = hasPermission('mobile:access');
