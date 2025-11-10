@@ -50,7 +50,7 @@ import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 import { PendingVacationsPage } from "./pages/PendingVacationsPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
 
-const AppMobile = lazy(() => import("./apps/mobile/AppMobile"));
+const AppMobile = lazy(() => import("./apps/mobile_/AppMobile"));
 
 // --- DashboardRouter para centralizar la lógica de roles ---
 const DashboardRouter: React.FC = () => {
@@ -68,6 +68,19 @@ const ClientContextWrapper: React.FC = () => (
     <Outlet />
   </>
 );
+
+// --- Layout principal que incluye el MobileNavbar ---
+// Esto se aplica a TODAS las rutas "normales", excepto /mobile/*
+const AppLayout: React.FC = () => {
+  const { isAuthenticated } = useAuthStore();
+
+  return (
+    <>
+      {isAuthenticated && <MobileNavbar />}
+      <Outlet />
+    </>
+  );
+};
 
 function App() {
   const { isAuthenticated, token, user } = useAuthStore();
@@ -131,379 +144,384 @@ function App() {
     <div className={theme}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <Router>
-          {isAuthenticated && <MobileNavbar />}
           <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/register-client" element={<RegisterClientPage />} />
+            {/* Rutas que usan el layout principal (con MobileNavbar) */}
+            <Route element={<AppLayout />}>
+              {/* Public Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/register-client" element={<RegisterClientPage />} />
 
-            {/* Dashboard */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <DashboardRouter />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardRouter />
-                </ProtectedRoute>
-              }
-            />
+              {/* Dashboard */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <DashboardRouter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardRouter />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Client Routes */}
-            <Route
-              path="/client/dashboard"
-              element={
-                <ProtectedRoute>
-                  <ClientDashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/gestion"
-              element={
-                <ProtectedRoute>
-                  <ClientProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/solicitudes"
-              element={
-                <ProtectedRoute>
-                  <ClientRequestsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/aprobaciones"
-              element={
-                <ProtectedRoute>
-                  <ClientApprovalsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/client/campañas"
-              element={
-                <ProtectedRoute>
-                  <ClientCampaignsPage />
-                </ProtectedRoute>
-              }
-            />
+              {/* Client Routes */}
+              <Route
+                path="/client/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <ClientDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/gestion"
+                element={
+                  <ProtectedRoute>
+                    <ClientProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/solicitudes"
+                element={
+                  <ProtectedRoute>
+                    <ClientRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/aprobaciones"
+                element={
+                  <ProtectedRoute>
+                    <ClientApprovalsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/campañas"
+                element={
+                  <ProtectedRoute>
+                    <ClientCampaignsPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* General Routes */}
-            <Route
-              path="/clients"
-              element={
-                <ProtectedRoute>
-                  <ClientsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clients/:clientId"
-              element={
-                <ProtectedRoute>
-                  <ClientDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clients/:clientId/projects"
-              element={
-                <ProtectedRoute>
-                  <ClientProjectsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects/:projectId"
-              element={
-                <ProtectedRoute>
-                  <ProjectDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects/:projectId/campaigns/:campaignId"
-              element={
-                <ProtectedRoute>
-                  <CampaignDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/posts/:postId"
-              element={
-                <ProtectedRoute>
-                  <PostDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <ProtectedRoute>
-                  <TasksPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tenants"
-              element={
-                <ProtectedRoute>
-                  <TenantsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/platform/usage"
-              element={
-                <ProtectedRoute>
-                  <PlatformUsagePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/platform/settings"
-              element={
-                <ProtectedRoute>
-                  <PlatformSettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/roles"
-              element={
-                <ProtectedRoute>
-                  <RolesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute>
-                  <UsersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/calendar"
-              element={
-                <ProtectedRoute>
-                  <CalendarPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/assistant"
-              element={
-                <ProtectedRoute>
-                  <AssistantRedirect />
-                </ProtectedRoute>
-              }
-            />
+              {/* General Routes */}
+              <Route
+                path="/clients"
+                element={
+                  <ProtectedRoute>
+                    <ClientsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clients/:clientId"
+                element={
+                  <ProtectedRoute>
+                    <ClientDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clients/:clientId/projects"
+                element={
+                  <ProtectedRoute>
+                    <ClientProjectsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:projectId"
+                element={
+                  <ProtectedRoute>
+                    <ProjectDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:projectId/campaigns/:campaignId"
+                element={
+                  <ProtectedRoute>
+                    <CampaignDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/posts/:postId"
+                element={
+                  <ProtectedRoute>
+                    <PostDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <ProtectedRoute>
+                    <TasksPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <AnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tenants"
+                element={
+                  <ProtectedRoute>
+                    <TenantsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/platform/usage"
+                element={
+                  <ProtectedRoute>
+                    <PlatformUsagePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/platform/settings"
+                element={
+                  <ProtectedRoute>
+                    <PlatformSettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/roles"
+                element={
+                  <ProtectedRoute>
+                    <RolesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute>
+                    <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/assistant"
+                element={
+                  <ProtectedRoute>
+                    <AssistantRedirect />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Mobile App Route */}
+              {/* Personnel Module Routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <PersonnelHomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/perfil"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/equipo"
+                element={
+                  <ProtectedRoute>
+                    <TeamPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/novedades/reporte-diario"
+                element={
+                  <ProtectedRoute>
+                    <DailyReportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/vacaciones"
+                element={
+                  <ProtectedRoute>
+                    <VacationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/otras-solicitudes"
+                element={
+                  <ProtectedRoute>
+                    <OtherRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/documentos"
+                element={
+                  <ProtectedRoute>
+                    <DocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/calendario"
+                element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/notificaciones"
+                element={
+                  <ProtectedRoute>
+                    <NotificationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/actividad"
+                element={
+                  <ProtectedRoute>
+                    <ActivityPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/tareas"
+                element={
+                  <ProtectedRoute>
+                    <TasksPersonnelPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/administracion/empleados"
+                element={
+                  <ProtectedRoute>
+                    <EmployeesAdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/administracion/aprobaciones/vacaciones-pendientes"
+                element={
+                  <ProtectedRoute>
+                    <PendingVacationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/administracion/aprobaciones/pedidos-pendientes"
+                element={
+                  <ProtectedRoute>
+                    <PendingRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Client Context Routes */}
+              <Route
+                path="/cliente/:id"
+                element={
+                  <ProtectedRoute>
+                    <ClientContextWrapper />
+                  </ProtectedRoute>
+                }
+              >
+                <Route
+                  path="info-basica"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextInfoPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="brand-kit"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextBrandKitPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="campanas"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextCampaignsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="posts"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextPostsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="usuarios"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextUsersPage />
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
+            </Route>
+
+            {/* Mobile App Route SIN MobileNavbar (no está dentro de AppLayout) */}
             <Route
               path="/mobile/*"
               element={
                 <ProtectedRoute>
-                  <Suspense fallback={
-                    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                      <div className="text-center">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-                        <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando aplicación mobile...</p>
+                  <Suspense
+                    fallback={
+                      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                        <div className="text-center">
+                          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+                          <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando aplicación mobile...</p>
+                        </div>
                       </div>
-                    </div>
-                  }>
+                    }
+                  >
                     <AppMobile />
                   </Suspense>
                 </ProtectedRoute>
               }
             />
-
-            {/* Personnel Module Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <PersonnelHomePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/personal/perfil"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/personal/equipo"
-              element={
-                <ProtectedRoute>
-                  <TeamPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/novedades/reporte-diario"
-              element={
-                <ProtectedRoute>
-                  <DailyReportPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/pedidos/vacaciones"
-              element={
-                <ProtectedRoute>
-                  <VacationsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/pedidos/otras-solicitudes"
-              element={
-                <ProtectedRoute>
-                  <OtherRequestsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/personal/documentos"
-              element={
-                <ProtectedRoute>
-                  <DocumentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/personal/calendario"
-              element={
-                <ProtectedRoute>
-                  <CalendarPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/personal/notificaciones"
-              element={
-                <ProtectedRoute>
-                  <NotificationsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/personal/actividad"
-              element={
-                <ProtectedRoute>
-                  <ActivityPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/personal/tareas"
-              element={
-                <ProtectedRoute>
-                  <TasksPersonnelPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/administracion/empleados"
-              element={
-                <ProtectedRoute>
-                  <EmployeesAdminPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/administracion/aprobaciones/vacaciones-pendientes"
-              element={
-                <ProtectedRoute>
-                  <PendingVacationsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/administracion/aprobaciones/pedidos-pendientes"
-              element={
-                <ProtectedRoute>
-                  <PendingRequestsPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Client Context Routes */}
-            <Route
-              path="/cliente/:id"
-              element={
-                <ProtectedRoute>
-                  <ClientContextWrapper />
-                </ProtectedRoute>
-              }
-            >
-              <Route
-                path="info-basica"
-                element={
-                  <ProtectedRoute>
-                    <ClientContextInfoPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="brand-kit"
-                element={
-                  <ProtectedRoute>
-                    <ClientContextBrandKitPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="campanas"
-                element={
-                  <ProtectedRoute>
-                    <ClientContextCampaignsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="posts"
-                element={
-                  <ProtectedRoute>
-                    <ClientContextPostsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="usuarios"
-                element={
-                  <ProtectedRoute>
-                    <ClientContextUsersPage />
-                  </ProtectedRoute>
-                }
-              />
-            </Route>
           </Routes>
+
           <ServerStatusCard />
           <AIAssistantModal />
         </Router>

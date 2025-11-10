@@ -235,6 +235,8 @@ export const LoginPage: React.FC = () => {
       "manager@example.com": "manager123",
       "user@example.com": "user123",
       "cliente@example.com": "changeme",
+      "coordinador@mobile.com": "coordinador123",
+      "colaborador@mobile.com": "colaborador123",
     };
     const password = demoPasswords[user.email] || "tenant123";
     setValue("password", password, { shouldValidate: true });
