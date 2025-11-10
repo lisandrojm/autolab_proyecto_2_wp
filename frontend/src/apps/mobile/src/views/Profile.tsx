@@ -1,15 +1,24 @@
-import { Mail, Phone, MapPin, Briefcase, Calendar, LogOut, Settings, Shield } from 'lucide-react';
+import { Mail, Phone, MapPin, Briefcase, Calendar, LogOut, Settings, Shield, UserCheck } from 'lucide-react';
+import { useAuthStore } from '../../../../stores/authStore';
 
 export default function Profile() {
+  const { user, hasPermission } = useAuthStore();
+
+  const isMobileCoordinator = hasPermission('mobile:coordinator');
+  const isMobileCollaborator = hasPermission('mobile:collaborator');
+
+  const userRole = isMobileCoordinator ? 'Coordinador' : isMobileCollaborator ? 'Colaborador' : 'Usuario';
+  const roleColor = isMobileCoordinator ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
+
   const userInfo = {
-    name: 'Carlos Rodríguez',
+    name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || 'Usuario',
     position: 'Desarrollador Senior',
     department: 'Tecnología',
-    email: 'carlos.rodriguez@empresa.com',
+    email: user?.email || 'usuario@empresa.com',
     phone: '+34 612 345 678',
     location: 'Madrid, España',
     startDate: '2020-03-15',
-    employeeId: 'EMP-2024-001',
+    employeeId: user?.id?.slice(-8).toUpperCase() || 'EMP-001',
   };
 
   const stats = [
@@ -53,8 +62,14 @@ export default function Profile() {
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">{userInfo.name}</h2>
             <p className="text-base text-slate-500 dark:text-slate-400 mb-1">{userInfo.position}</p>
             <p className="text-sm text-slate-400 dark:text-slate-500">{userInfo.department}</p>
-            <div className="mt-4 px-3 py-1 bg-primary/10 rounded-full">
-              <p className="text-sm font-medium text-primary">ID: {userInfo.employeeId}</p>
+            <div className="flex gap-2 mt-4">
+              <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 ${roleColor}`}>
+                <UserCheck className="w-4 h-4" />
+                <p className="text-sm font-semibold">{userRole}</p>
+              </div>
+              <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">ID: {userInfo.employeeId}</p>
+              </div>
             </div>
           </div>
 

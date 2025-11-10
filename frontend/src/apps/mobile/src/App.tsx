@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ViewType } from './types';
 import TopBar from './components/TopBar';
 import BottomNav from './components/BottomNav';
@@ -8,9 +8,18 @@ import Documents from './views/Documents';
 import Profile from './views/Profile';
 import Vacations from './views/Vacations';
 import Orders from './views/Orders';
+import { useAuthStore } from '../../../stores/authStore';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>('home');
+  const { user, hasPermission } = useAuthStore();
+
+  const permissions = user?.permissions || [];
+  const hasMobileAccess = hasPermission('mobile:access');
+  const isMobileCollaborator = hasPermission('mobile:collaborator');
+  const isMobileCoordinator = hasPermission('mobile:coordinator');
+
+  const userRole = isMobileCoordinator ? 'coordinator' : isMobileCollaborator ? 'collaborator' : null;
 
   const getTitle = (view: ViewType): string => {
     switch (view) {
@@ -52,13 +61,85 @@ function App() {
 
   const showTopBar = currentView === 'home' || currentView === 'calendar' || currentView === 'documents' || currentView === 'profile';
 
+  if (!hasMobileAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+          <div className="mb-6">
+            <div className="mx-auto w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <span className="text-red-600 dark:text-red-400 text-3xl">⚠️</span>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Acceso Restringido
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            No tienes permisos para acceder a esta aplicación. Por favor, contacta con tu administrador si necesitas acceso.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200"
+          >
+            ← Volver al Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userRole) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+          <div className="mb-6">
+            <div className="mx-auto w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 dark:text-blue-400 text-3xl">📱</span>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Bienvenido a Mobile App
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Tienes acceso a la aplicación mobile, pero tu rol aún no está completamente configurado.
+            Por favor, contacta con tu administrador.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200"
+          >
+            ← Volver al Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const roleColors = {
+    coordinator: {
+      gradient: 'from-blue-500 to-indigo-600',
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      text: 'text-blue-600 dark:text-blue-400',
+      border: 'border-blue-200 dark:border-blue-800'
+    },
+    collaborator: {
+      gradient: 'from-green-500 to-teal-600',
+      bg: 'bg-green-50 dark:bg-green-900/20',
+      text: 'text-green-600 dark:text-green-400',
+      border: 'border-green-200 dark:border-green-800'
+    }
+  };
+
+  const currentRoleColors = roleColors[userRole];
+
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 font-display">
+    <div className="relative flex min-h-screen w-full flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display">
       {showTopBar && (
         <TopBar
           title={getTitle(currentView)}
           hasNotifications={true}
           onNotificationClick={() => alert('Notificaciones')}
+          userRole={userRole}
+          userName={user?.firstName || 'Usuario'}
         />
       )}
       {renderView()}

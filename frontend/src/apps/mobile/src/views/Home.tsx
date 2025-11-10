@@ -1,37 +1,67 @@
-import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File } from 'lucide-react';
+import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File, Users, BarChart3 } from 'lucide-react';
 import { ViewType } from '../types';
+import { useAuthStore } from '../../../../stores/authStore';
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
 }
 
 export default function Home({ onNavigate }: HomeProps) {
-  const quickActions = [
+  const { user, hasPermission } = useAuthStore();
+
+  const isMobileCoordinator = hasPermission('mobile:coordinator');
+  const isMobileCollaborator = hasPermission('mobile:collaborator');
+  const baseActions = [
     {
       icon: ShoppingCart,
       title: 'Mis Pedidos',
       description: 'Gestiona tus pedidos',
       view: 'orders' as ViewType,
+      roles: ['coordinator', 'collaborator']
     },
     {
       icon: Umbrella,
       title: 'Solicitar Vacaciones',
       description: 'Solicita tus días libres',
       view: 'vacations' as ViewType,
+      roles: ['coordinator', 'collaborator']
     },
     {
       icon: FileText,
       title: 'Mis Contratos',
       description: 'Consulta tus documentos',
       view: 'documents' as ViewType,
+      roles: ['coordinator', 'collaborator']
     },
     {
       icon: Receipt,
       title: 'Mis Recibos',
       description: 'Accede a tus nóminas',
       view: 'documents' as ViewType,
+      roles: ['coordinator', 'collaborator']
     },
   ];
+
+  const coordinatorActions = [
+    {
+      icon: Users,
+      title: 'Gestión de Equipo',
+      description: 'Administra tu equipo',
+      view: 'home' as ViewType,
+      roles: ['coordinator']
+    },
+    {
+      icon: BarChart3,
+      title: 'Reportes',
+      description: 'Ver métricas y estadísticas',
+      view: 'home' as ViewType,
+      roles: ['coordinator']
+    },
+  ];
+
+  const quickActions = isMobileCoordinator
+    ? [...baseActions, ...coordinatorActions]
+    : baseActions;
 
   const recentActivities = [
     {
@@ -53,7 +83,7 @@ export default function Home({ onNavigate }: HomeProps) {
   return (
     <div className="flex-1 pb-24">
       <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">
-        Hola, Carlos
+        Hola, {user?.firstName || 'Usuario'}
       </h1>
 
       <div className="p-4">
@@ -80,16 +110,21 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 p-4">
+      <div className={`grid ${isMobileCoordinator ? 'grid-cols-2' : 'grid-cols-2'} gap-4 p-4`}>
         {quickActions.map((action, index) => {
           const Icon = action.icon;
+          const isCoordinatorOnly = action.roles?.includes('coordinator') && !action.roles?.includes('collaborator');
           return (
             <button
               key={index}
               onClick={() => onNavigate(action.view)}
-              className="flex flex-col flex-1 gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] text-left"
+              className={`flex flex-col flex-1 gap-3 rounded-xl border bg-white dark:bg-slate-900/70 p-4 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] text-left ${
+                isCoordinatorOnly
+                  ? 'border-blue-200 dark:border-blue-800'
+                  : 'border-slate-200 dark:border-slate-800'
+              }`}
             >
-              <Icon className="w-6 h-6 text-primary" />
+              <Icon className={`w-6 h-6 ${isCoordinatorOnly ? 'text-blue-600 dark:text-blue-400' : 'text-primary'}`} />
               <div className="flex flex-col gap-1">
                 <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">
                   {action.title}

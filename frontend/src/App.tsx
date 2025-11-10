@@ -50,7 +50,7 @@ import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 import { PendingVacationsPage } from "./pages/PendingVacationsPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
 
-const AppMobile = lazy(() => import("./apps/mobile_/AppMobile"));
+const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
 // --- DashboardRouter para centralizar la lógica de roles ---
 const DashboardRouter: React.FC = () => {
