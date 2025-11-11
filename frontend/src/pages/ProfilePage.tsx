@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { mockProfileService } from '../services';
-import type { ProfileData, ProfileStats } from '../mocks';
+import { personnelAPI } from '../api/personnel';
+import type { ProfileData } from '../api/personnel';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSave, faCamera } from '@fortawesome/free-solid-svg-icons';
@@ -11,7 +11,7 @@ export const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [stats, setStats] = useState<ProfileStats | null>(null);
+  const [stats, setStats] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<ProfileData>>({});
 
@@ -23,8 +23,8 @@ export const ProfilePage: React.FC = () => {
     try {
       setLoading(true);
       const [profileData, statsData] = await Promise.all([
-        mockProfileService.getProfile(),
-        mockProfileService.getProfileStats(),
+        personnelAPI.getProfile(),
+        personnelAPI.getProfileStats(),
       ]);
       setProfile(profileData);
       setStats(statsData);
@@ -41,7 +41,7 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     try {
       setSaving(true);
-      const updated = await mockProfileService.updateProfile(formData);
+      const updated = await personnelAPI.updateProfile(formData);
       setProfile(updated);
       setIsEditing(false);
       sweetAlert.success('Perfil actualizado', 'Los cambios se guardaron correctamente');
@@ -58,7 +58,7 @@ export const ProfilePage: React.FC = () => {
     if (!file) return;
 
     try {
-      const result = await mockProfileService.updateProfilePhoto(file);
+      const result = await personnelAPI.updateProfilePhoto(file);
       setProfile((prev) => (prev ? { ...prev, photoUrl: result.photoUrl } : null));
       sweetAlert.success('Foto actualizada', 'La foto de perfil se actualizó correctamente');
     } catch (error) {
@@ -115,19 +115,19 @@ export const ProfilePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Días Trabajados</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.daysWorked}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.daysWorked || 0}</p>
               </div>
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Vacaciones Disponibles</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.vacationDaysAvailable}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.vacations?.available || 0}</p>
               </div>
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Vacaciones Usadas</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.vacationDaysUsed}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.vacations?.used || 0}</p>
               </div>
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Solicitudes Pendientes</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pendingRequests}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Vacaciones Totales</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.vacations?.total || 0}</p>
               </div>
             </div>
           )}

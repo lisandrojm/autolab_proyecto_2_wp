@@ -2,115 +2,122 @@ import React, { useState, useEffect } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
-import { mockOtherRequests } from '../mocks';
+import { personnelAPI } from '../api/personnel';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardList, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 interface OtherRequest {
-  id: string;
-  type: 'compensatorio' | 'licencia_especial' | 'cambio_turno' | 'extraordinario';
-  startDate: string;
-  endDate?: string;
+  _id: string;
+  title: string;
   description: string;
-  status: 'pending' | 'approved' | 'rejected';
+  category: string;
+  amount?: number;
+  status: 'pending' | 'approved' | 'rejected' | 'delivered' | 'cancelled';
   createdAt: string;
 }
 
 const REQUEST_TYPES = [
-  { value: 'compensatorio', label: 'Compensatorio' },
-  { value: 'licencia_especial', label: 'Licencia Especial' },
-  { value: 'cambio_turno', label: 'Cambio de Turno' },
-  { value: 'extraordinario', label: 'Pedido Extraordinario' },
+  { value: 'equipment', label: 'Equipamiento' },
+  { value: 'supplies', label: 'Suministros' },
+  { value: 'software', label: 'Software' },
+  { value: 'other', label: 'Otro' },
 ];
 
 export const OtherRequestsPage: React.FC = () => {
+  const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<OtherRequest[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingRequest, setEditingRequest] = useState<OtherRequest | null>(null);
   const [formData, setFormData] = useState({
-    type: 'compensatorio' as OtherRequest['type'],
-    startDate: '',
-    endDate: '',
+    title: '',
+    category: 'equipment',
     description: '',
+    amount: 0,
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem('otherRequests');
-    if (stored) {
-      try {
-        setRequests(JSON.parse(stored));
-      } catch (error) {
-        console.error('Error loading requests:', error);
-      }
-    } else {
-      setRequests(mockOtherRequests);
-      localStorage.setItem('otherRequests', JSON.stringify(mockOtherRequests));
-    }
+    fetchData();
   }, []);
 
-  const saveToStorage = (data: OtherRequest[]) => {
-    localStorage.setItem('otherRequests', JSON.stringify(data));
-    setRequests(data);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingRequest) {
-      const updated = requests.map((req) =>
-        req.id === editingRequest.id
-          ? { ...req, ...formData }
-          : req
-      );
-      saveToStorage(updated);
-      sweetAlert.success('Solicitud actualizada', 'La solicitud se actualizó correctamente');
-    } else {
-      const newRequest: OtherRequest = {
-        id: Date.now().toString(),
-        ...formData,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      };
-      saveToStorage([newRequest, ...requests]);
-      sweetAlert.success('Solicitud creada', 'La solicitud se creó correctamente');
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [ordersData, statsData] = await Promise.allSettled([
+        personnelAPI.getOrders(),
+        personnelAPI.getOrderStats(),
+      ]);
+      if (ordersData.status === 'fulfilled') setRequests(ordersData.value);
+      if (statsData.status === 'fulfilled') setStats(statsData.value);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      sweetAlert.error('Error', 'No se pudieron cargar los pedidos');
+    } finally {
+      setLoading(false);
     }
-    setShowModal(false);
-    setEditingRequest(null);
-    setFormData({ type: 'compensatorio', startDate: '', endDate: '', description: '' });
   };
 
-  const handleDelete = (request: OtherRequest) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingRequest) {
+        await personnelAPI.updateOrder(editingRequest._id, formData);
+        sweetAlert.success('Pedido actualizado', 'El pedido se actualizó correctamente');
+      } else {
+        await personnelAPI.createOrder(formData);
+        sweetAlert.success('Pedido creado', 'El pedido se creó correctamente');
+      }
+      setShowModal(false);
+      setEditingRequest(null);
+      setFormData({ title: '', category: 'equipment', description: '', amount: 0 });
+      fetchData();
+    } catch (error: any) {
+      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo procesar el pedido');
+    }
+  };
+
+  const handleDelete = async (request: OtherRequest) => {
     if (request.status !== 'pending') {
-      sweetAlert.error('Error', 'Solo se pueden eliminar solicitudes pendientes');
+      sweetAlert.error('Error', 'Solo se pueden eliminar pedidos pendientes');
       return;
     }
-    sweetAlert.confirm('¿Eliminar solicitud?', '¿Estás seguro de eliminar esta solicitud?').then((result) => {
-      if (result.isConfirmed) {
-        saveToStorage(requests.filter((req) => req.id !== request.id));
-        sweetAlert.success('Solicitud eliminada', 'La solicitud se eliminó correctamente');
-      }
-    });
+    const result = await sweetAlert.confirm('¿Eliminar pedido?', '¿Estás seguro de eliminar este pedido?');
+    if (!result.isConfirmed) return;
+
+    try {
+      await personnelAPI.deleteOrder(request._id);
+      sweetAlert.success('Pedido eliminado', 'El pedido se eliminó correctamente');
+      fetchData();
+    } catch (error) {
+      sweetAlert.error('Error', 'No se pudo eliminar el pedido');
+    }
   };
 
   const openEdit = (request: OtherRequest) => {
     if (request.status !== 'pending') {
-      sweetAlert.error('Error', 'Solo se pueden editar solicitudes pendientes');
+      sweetAlert.error('Error', 'Solo se pueden editar pedidos pendientes');
       return;
     }
     setEditingRequest(request);
     setFormData({
-      type: request.type,
-      startDate: request.startDate.split('T')[0],
-      endDate: request.endDate?.split('T')[0] || '',
+      title: request.title,
+      category: request.category,
       description: request.description,
+      amount: request.amount || 0,
     });
     setShowModal(true);
   };
 
   const openCreate = () => {
     setEditingRequest(null);
-    setFormData({ type: 'compensatorio', startDate: '', endDate: '', description: '' });
+    setFormData({ title: '', category: 'equipment', description: '', amount: 0 });
     setShowModal(true);
   };
+
+  if (loading) {
+    return <LoadingSpinner message="Cargando pedidos..." />;
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -127,10 +134,25 @@ export const OtherRequestsPage: React.FC = () => {
     return REQUEST_TYPES.find((t) => t.value === type)?.label || type;
   };
 
+  const getStatusBadgeForOrders = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return { variant: 'success' as const, text: 'Aprobado' };
+      case 'rejected':
+        return { variant: 'blue' as const, text: 'Rechazado' };
+      case 'delivered':
+        return { variant: 'info' as const, text: 'Entregado' };
+      case 'cancelled':
+        return { variant: 'secondary' as const, text: 'Cancelado' };
+      default:
+        return { variant: 'warning' as const, text: 'Pendiente' };
+    }
+  };
+
   return (
     <PageLayout
-      title="Otras Solicitudes"
-      subtitle="Compensatorios, licencias especiales y más"
+      title="Pedidos del Personal"
+      subtitle="Equipamiento, suministros y software"
       faIcon={{ icon: faClipboardList }}
       headerActions={
         <button onClick={openCreate} className="btn-primary">
@@ -161,11 +183,22 @@ export const OtherRequestsPage: React.FC = () => {
         content: (
           <form id="request-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Título *</label>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="input-field"
+                placeholder="Título del pedido"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoría *</label>
               <select
                 required
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as OtherRequest['type'] })}
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="input-field"
               >
                 {REQUEST_TYPES.map((type) => (
@@ -177,29 +210,6 @@ export const OtherRequestsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Fecha de Inicio *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Fecha de Fin (opcional)
-              </label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Descripción *
               </label>
               <textarea
@@ -208,7 +218,20 @@ export const OtherRequestsPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
                 className="input-field"
-                placeholder="Describe tu solicitud..."
+                placeholder="Describe tu pedido..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Monto (opcional)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                className="input-field"
+                placeholder="0"
               />
             </div>
           </form>
@@ -216,15 +239,36 @@ export const OtherRequestsPage: React.FC = () => {
       }}
     >
       <div className="space-y-6">
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Pendientes</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.pending || 0}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Aprobados</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.approved || 0}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Rechazados</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.rejected || 0}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Entregados</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.delivered || 0}</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {requests.map((request) => {
-            const badge = getStatusBadge(request.status);
+            const badge = getStatusBadgeForOrders(request.status);
             return (
               <Card
-                key={request.id}
+                key={request._id}
                 header={{
-                  title: getTypeLabel(request.type),
-                  subtitle: new Date(request.startDate).toLocaleDateString(),
+                  title: request.title,
+                  subtitle: getTypeLabel(request.category),
                   icon: faClipboardList,
                   badges: [{ text: badge.text, variant: badge.variant }],
                 }}
@@ -252,6 +296,11 @@ export const OtherRequestsPage: React.FC = () => {
                 }}
               >
                 <p className="text-sm text-gray-600 dark:text-gray-400">{request.description}</p>
+                {request.amount && request.amount > 0 && (
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mt-2">
+                    ${request.amount.toLocaleString()}
+                  </p>
+                )}
               </Card>
             );
           })}
@@ -260,18 +309,12 @@ export const OtherRequestsPage: React.FC = () => {
         {requests.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
             <FontAwesomeIcon icon={faClipboardList} className="h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 mb-4">No hay solicitudes</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">No hay pedidos</p>
             <button onClick={openCreate} className="btn-primary">
-              Crear Primera Solicitud
+              Crear Primer Pedido
             </button>
           </div>
         )}
-
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-          <p className="text-sm text-blue-800 dark:text-blue-300">
-            Las solicitudes se guardan localmente. Preparado para conectar a una API en el futuro.
-          </p>
-        </div>
       </div>
     </PageLayout>
   );

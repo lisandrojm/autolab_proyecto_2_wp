@@ -253,60 +253,96 @@ export const personnelAPI = {
     return data;
   },
 
+  // Activity stats
+  getActivityStats: async (): Promise<any> => {
+    const { data } = await axios.get('/activity/stats');
+    return data;
+  },
+
   // Admin endpoints
   getEmployees: async (): Promise<EmployeeData[]> => {
-    const { data } = await axios.get('/admin/users');
+    const { data } = await axios.get('/hr-admin/users');
     return data;
   },
 
   getEmployee: async (id: string): Promise<EmployeeData> => {
-    const { data } = await axios.get(`/admin/users/${id}`);
+    const { data } = await axios.get(`/hr-admin/users/${id}`);
     return data;
   },
 
   updateEmployee: async (id: string, employeeData: Partial<EmployeeData>): Promise<EmployeeData> => {
-    const { data } = await axios.put(`/admin/users/${id}`, employeeData);
+    const { data } = await axios.put(`/hr-admin/users/${id}`, employeeData);
     return data;
   },
 
   deleteEmployee: async (id: string): Promise<void> => {
-    await axios.delete(`/admin/users/${id}`);
+    await axios.delete(`/hr-admin/users/${id}`);
   },
 
   // Admin vacation endpoints
   getPendingVacations: async (): Promise<VacationRequest[]> => {
-    const { data } = await axios.get('/admin/vacations/pending');
+    const { data } = await axios.get('/hr-admin/vacations/pending');
     return data;
   },
 
-  approveVacation: async (id: string): Promise<VacationRequest> => {
-    const { data } = await axios.put(`/admin/vacations/${id}/approve`);
+  approveVacation: async (id: string, managerComment?: string): Promise<VacationRequest> => {
+    const { data } = await axios.put(`/hr-admin/vacations/${id}/approve`, { managerComment });
     return data;
   },
 
-  rejectVacation: async (id: string): Promise<VacationRequest> => {
-    const { data } = await axios.put(`/admin/vacations/${id}/reject`);
+  rejectVacation: async (id: string, managerComment: string): Promise<VacationRequest> => {
+    const { data } = await axios.put(`/hr-admin/vacations/${id}/reject`, { managerComment });
+    return data;
+  },
+
+  // Order endpoints
+  getOrders: async (): Promise<any[]> => {
+    const { data } = await axios.get('/orders');
+    return data;
+  },
+
+  getOrder: async (id: string): Promise<any> => {
+    const { data } = await axios.get(`/orders/${id}`);
+    return data;
+  },
+
+  createOrder: async (orderData: { title: string; description: string; category?: string; amount?: number }): Promise<any> => {
+    const { data } = await axios.post('/orders', orderData);
+    return data;
+  },
+
+  updateOrder: async (id: string, orderData: Partial<any>): Promise<any> => {
+    const { data } = await axios.put(`/orders/${id}`, orderData);
+    return data;
+  },
+
+  deleteOrder: async (id: string): Promise<void> => {
+    await axios.delete(`/orders/${id}`);
+  },
+
+  getOrderStats: async (): Promise<any> => {
+    const { data } = await axios.get('/orders/stats');
     return data;
   },
 
   // Admin orders endpoints
   getPendingOrders: async (): Promise<any[]> => {
-    const { data } = await axios.get('/admin/orders/pending');
+    const { data } = await axios.get('/hr-admin/orders/pending');
     return data;
   },
 
   approveOrder: async (id: string): Promise<any> => {
-    const { data } = await axios.put(`/admin/orders/${id}/approve`);
+    const { data } = await axios.put(`/hr-admin/orders/${id}/approve`);
     return data;
   },
 
   rejectOrder: async (id: string): Promise<any> => {
-    const { data } = await axios.put(`/admin/orders/${id}/reject`);
+    const { data } = await axios.put(`/hr-admin/orders/${id}/reject`);
     return data;
   },
 
   deliverOrder: async (id: string): Promise<any> => {
-    const { data } = await axios.put(`/admin/orders/${id}/deliver`);
+    const { data } = await axios.put(`/hr-admin/orders/${id}/deliver`);
     return data;
   },
 };
