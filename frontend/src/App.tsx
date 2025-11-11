@@ -50,6 +50,12 @@ import { TasksPersonnelPage } from "./pages/TasksPersonnelPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 import { PendingVacationsPage } from "./pages/PendingVacationsPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
+import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
+import { ManageCalendarEventsPage } from "./pages/ManageCalendarEventsPage";
+import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
+import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
+import { ManageOrdersPage } from "./pages/ManageOrdersPage";
+import { ManageVacationRequestsPage } from "./pages/ManageVacationRequestsPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -445,6 +451,56 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <PendingRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* HR Management Routes */}
+              <Route
+                path="/hr/activity-logs"
+                element={
+                  <ProtectedRoute>
+                    <ManageActivityLogsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/calendar-events"
+                element={
+                  <ProtectedRoute>
+                    <ManageCalendarEventsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/employee-profiles"
+                element={
+                  <ProtectedRoute>
+                    <ManageEmployeeProfilesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/documents"
+                element={
+                  <ProtectedRoute>
+                    <ManageHRDocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/orders"
+                element={
+                  <ProtectedRoute>
+                    <ManageOrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/vacation-requests"
+                element={
+                  <ProtectedRoute>
+                    <ManageVacationRequestsPage />
                   </ProtectedRoute>
                 }
               />
