@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-import { personnelAPI } from '../api/personnel';
-import type { DocumentData } from '../api/personnel';
+import { mockDocumentsService } from '../services';
+import type { DocumentAPI as DocumentData } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { useAuthStore } from '../stores/authStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -48,7 +48,7 @@ export const DocumentsPage: React.FC = () => {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const data = await personnelAPI.getDocuments();
+      const data = await mockDocumentsService.getDocuments();
       setDocuments(data);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -60,7 +60,15 @@ export const DocumentsPage: React.FC = () => {
 
   const handleDownload = async (doc: DocumentData) => {
     try {
-      await personnelAPI.downloadDocument(doc._id);
+      const blob = await mockDocumentsService.downloadDocument(doc._id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
       sweetAlert.error('Error', 'No se pudo descargar el documento');
     }
@@ -75,7 +83,7 @@ export const DocumentsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await personnelAPI.deleteDocument(doc._id);
+      await mockDocumentsService.deleteDocument(doc._id);
       sweetAlert.success('Documento eliminado', 'El documento se eliminó correctamente');
       fetchDocuments();
     } catch (error) {
@@ -89,7 +97,7 @@ export const DocumentsPage: React.FC = () => {
 
     try {
       setUploading(true);
-      await personnelAPI.uploadDocument(uploadForm.file, uploadForm.type, uploadForm.title);
+      await mockDocumentsService.uploadDocument(uploadForm.file, uploadForm.type, uploadForm.title);
       sweetAlert.success('Documento subido', 'El documento se subió correctamente');
       setShowUploadModal(false);
       setUploadForm({ file: null, type: 'contract', title: '' });

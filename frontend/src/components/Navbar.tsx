@@ -488,7 +488,7 @@ export const MobileNavbar: React.FC = () => {
         </div>
 
         {/* Panel de Personal */}
-        <div className="px-2 mb-4">
+        {/*         <div className="px-2 mb-4">
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-t border-gray-200 dark:border-gray-700 mb-3 py-2">Panel de Personal</div>
           {renderMenuItem(personnelRootItem)}
 
@@ -519,7 +519,7 @@ export const MobileNavbar: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
       </div>
     );
   };
