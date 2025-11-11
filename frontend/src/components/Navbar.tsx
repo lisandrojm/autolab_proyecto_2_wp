@@ -486,40 +486,6 @@ export const MobileNavbar: React.FC = () => {
           </button>
           {adminAccordionOpen && <nav className="lg:space-y-1 pb-2">{adminItems.map((item) => renderMenuItem(item))}</nav>}
         </div>
-
-        {/* Panel de Personal */}
-        {/*         <div className="px-2 mb-4">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-t border-gray-200 dark:border-gray-700 mb-3 py-2">Panel de Personal</div>
-          {renderMenuItem(personnelRootItem)}
-
-          {personnelGroups.map((group) => (
-            <div key={group.title} className="mt-3">
-              <div className="px-1 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 mb-3 py-2">{group.title}</div>
-              <div className="space-y-1">
-                {group.items.map((item) => (
-                  <React.Fragment key={item.path}>{renderMenuItem(item)}</React.Fragment>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {adminPersonnelGroup && (
-            <div className="mt-3">
-              <div className="px-1 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 mb-3 py-2">{adminPersonnelGroup.title}</div>
-              <div className="space-y-1">
-                {adminPersonnelGroup.items.map((item) =>
-                  item.isSubheader ? (
-                    <div key={item.title} className="px-2 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-1 mb-1 border-t border-gray-200 dark:border-gray-700 mb-3 py-2">
-                      {item.title}
-                    </div>
-                  ) : (
-                    <React.Fragment key={item.path}>{renderMenuItem(item)}</React.Fragment>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-        </div> */}
       </div>
     );
   };
@@ -560,45 +526,6 @@ export const MobileNavbar: React.FC = () => {
               <div className="hidden lg:block">
                 <UserCard />
               </div>
-
-              {/*               {isDeployButtonVisible() && (
-                <button onClick={handleRedeploy} onMouseEnter={loadDeployMeta} disabled={isDeploying} className="relative p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group">
-                  <FontAwesomeIcon icon={faRocket} className={`h-5 w-5 text-blue-600 dark:text-blue-400 ${isDeploying ? "animate-pulse" : ""}`} />
-                  <div className="absolute top-full left-1/2 mt-2 -translate-x-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
-                    <div className="w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800 dark:border-b-gray-700"></div>
-                    <span className="rounded-md bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 shadow-md whitespace-nowrap">
-                      <div className="font-semibold flex flex-col">Vercel Deploy</div>
-                      {deployMetaLoading ? (
-                        <span className="ml-2 opacity-80">cargando…</span>
-                      ) : deployMetaError ? (
-                        <span className="ml-2 opacity-80">sin datos</span>
-                      ) : deployMeta?.shortSha ? (
-                        <>
-                          <span className="ml-2">•</span>
-                          {deployMeta.url ? (
-                            <a href={`https://${deployMeta.url}`} target="_blank" rel="noopener noreferrer" className="ml-2 underline underline-offset-2" title={deployMeta.commitMessage || deployMeta.sha}>
-                              {deployMeta.shortSha}
-                            </a>
-                          ) : (
-                            <span className="ml-2" title={deployMeta.commitMessage || deployMeta.sha}>
-                              {deployMeta.shortSha}
-                            </span>
-                          )}
-                          {deployMeta.branch ? <span className="ml-2 opacity-80">({deployMeta.branch})</span> : null}
-                          {deployMeta.createdAt ? (
-                            <>
-                              <span className="ml-2">•</span>
-                              <span className="ml-2 opacity-80">{formatDateTime(deployMeta.createdAt)}</span>
-                            </>
-                          ) : null}
-                        </>
-                      ) : (
-                        <span className="ml-2 opacity-80">sin datos</span>
-                      )}
-                    </span>
-                  </div>
-                </button>
-              )} */}
 
               {/* 🤖 Robot (por ahora oculto) */}
               {/*               <button onClick={() => openAssistant?.()} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
@@ -661,15 +588,6 @@ export const MobileNavbar: React.FC = () => {
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:dark:bg-gray-800 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto mt-12">
-            {/*             {showClientContext && (
-              <div className="px-2">
-                <div className="bg-white dark:bg-gray-800 dark:border-gray-700 p-2 pb-2">
-                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 pb-2">Cliente</div>
-                  <ClientSelector />
-                  <ClientContextMenu />
-                </div>
-              </div>
-            )} */}
             <div className="px-3 mb-4">
               <div className={`bg-white dark:bg-gray-800 py-2`}>
                 <NavMenu onItemClick={() => setOpen(false)} />
