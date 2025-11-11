@@ -443,7 +443,7 @@ export const MobileNavbar: React.FC = () => {
         title: "Pedidos del Personal",
         items: [
           { path: "/admin/pedidos/vacaciones", icon: faUmbrellaBeach, label: "Vacaciones" },
-          { path: "/admin/pedidos/otras-solicitudes", icon: faClipboardList, label: "Otras Solicitudes" },
+          { path: "/admin/pedidos/otras-solicitudes", icon: faClipboardList, label: "Pedidos" },
         ],
       },
       {
@@ -476,16 +476,54 @@ export const MobileNavbar: React.FC = () => {
 
     return (
       <div>
-        {/* Creative Suite (si existe) */}
-        {/*         {creativeSuiteItem && <div className="border-t border-gray-200 dark:border-gray-700 py-2">{renderMenuItem(creativeSuiteItem)}</div>} */}
-        {/* Administración (global / plataforma, como ya tenías) */}
+        {/* Panel de Personal */}
         <div className="px-2">
-          <button onClick={() => setAdminAccordionOpen(!adminAccordionOpen)} aria-expanded={adminAccordionOpen} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors mb-3 pb-2 pt-2">
-            <span>{user?.tenantSlug === "superadmin" ? "Administración global" : "Administración"}</span>
-            <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform duration-200 ease-in-out ${adminAccordionOpen ? "rotate-180" : "rotate-0"}`} />
-          </button>
-          {adminAccordionOpen && <nav className="lg:space-y-1 pb-2">{adminItems.map((item) => renderMenuItem(item))}</nav>}
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 pb-2 pt-2">
+            Panel de Personal
+          </div>
+          <nav className="space-y-4">
+            {personnelGroups.map((group, idx) => (
+              <div key={idx}>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  {group.title}
+                </div>
+                <div className="space-y-1">
+                  {group.items.map((item) => renderMenuItem(item))}
+                </div>
+              </div>
+            ))}
+            {adminPersonnelGroup && (
+              <div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  {adminPersonnelGroup.title}
+                </div>
+                <div className="space-y-1">
+                  {adminPersonnelGroup.items.map((item, idx) => {
+                    if (item.isSubheader) {
+                      return (
+                        <div key={idx} className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mt-3 mb-2 pl-2">
+                          {item.title}
+                        </div>
+                      );
+                    }
+                    return renderMenuItem(item);
+                  })}
+                </div>
+              </div>
+            )}
+          </nav>
         </div>
+
+        {/* Administración (global / plataforma, como ya tenías) */}
+        {adminItems.length > 0 && (
+          <div className="px-2 mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <button onClick={() => setAdminAccordionOpen(!adminAccordionOpen)} aria-expanded={adminAccordionOpen} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors mb-3 pb-2 pt-2">
+              <span>{user?.tenantSlug === "superadmin" ? "Administración global" : "Administración"}</span>
+              <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform duration-200 ease-in-out ${adminAccordionOpen ? "rotate-180" : "rotate-0"}`} />
+            </button>
+            {adminAccordionOpen && <nav className="lg:space-y-1 pb-2">{adminItems.map((item) => renderMenuItem(item))}</nav>}
+          </div>
+        )}
       </div>
     );
   };
