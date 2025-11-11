@@ -36,7 +36,15 @@ import { clientAssetsRoutes } from "./routes/clientAssets.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import platformRoutes from "./routes/platform.js";
 import { vercelRoutes } from "./routes/vercel.js";
-import { envRoutes } from "./routes/env.js"; // ✅ NUEVO endpoint
+import { envRoutes } from "./routes/env.js";
+import { profileRoutes } from "./routes/profile.js";
+import { vacationRoutes } from "./routes/vacations.js";
+import { documentRoutes } from "./routes/documents.js";
+import { orderRoutes } from "./routes/orders.js";
+import { calendarRoutes } from "./routes/calendar.js";
+import { notificationRoutes } from "./routes/notifications.js";
+import { activityRoutes } from "./routes/activity.js";
+import { hrAdminRoutes } from "./routes/hr-admin.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -123,9 +131,17 @@ app.use("/api/v1/client-assets", clientAssetsRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/platform", platformRoutes);
 app.use("/api/v1", vercelRoutes);
-
-// ✅ NUEVO endpoint de entorno
 app.use("/api/v1", envRoutes);
+
+// ───────────────── HR Module Routes ─────────────────
+app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/vacations", vacationRoutes);
+app.use("/api/v1/documents", documentRoutes);
+app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/calendar", calendarRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/activity", activityRoutes);
+app.use("/api/v1/hr-admin", hrAdminRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

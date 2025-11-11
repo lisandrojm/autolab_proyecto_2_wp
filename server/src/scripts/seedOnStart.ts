@@ -13,6 +13,13 @@ import { Role } from "../models/Role.js";
 import { Asset } from "../models/Asset.js";
 import { ensureDefaultRoles, ensureMobileRoles } from "../services/roleInitService.js";
 import { Types } from "mongoose";
+import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { VacationRequest } from "../models/VacationRequest.js";
+import { HRDocument } from "../models/Document.js";
+import { Order } from "../models/Order.js";
+import { CalendarEvent } from "../models/CalendarEvent.js";
+import { Notification } from "../models/Notification.js";
+import { ActivityLog } from "../models/ActivityLog.js";
 
 /* ----------------------------- helpers ----------------------------- */
 
@@ -1521,6 +1528,385 @@ export async function seedOnStart() {
         notes: "24 páginas - Última actualización: " + new Date().toLocaleDateString(),
       },
     });
+
+    // ============ HR MODULE SEED DATA ============
+    console.log("👥 Seeding HR module data...");
+
+    // Create EmployeeProfile for demo users
+    const employeeProfilesCount = await EmployeeProfile.countDocuments({ tenantId, userId: adminId });
+
+    if (employeeProfilesCount === 0) {
+      // Admin profile
+      await EmployeeProfile.create({
+        tenantId,
+        userId: adminId,
+        firstName: "Admin",
+        lastName: "User",
+        email: adminEmail,
+        phone: "+1-555-0101",
+        position: "Platform Administrator",
+        department: "IT",
+        hireDate: new Date(2023, 0, 15),
+        address: {
+          street: "123 Tech Street",
+          city: "San Francisco",
+          state: "CA",
+          country: "USA",
+          zip: "94102",
+        },
+        vacationPolicy: {
+          annualDays: 25,
+          carryOverDays: 5,
+        },
+        isActive: true,
+      });
+      console.log("✅ Created EmployeeProfile for admin");
+
+      // Manager profile
+      const managerUser = await User.findOne({ tenantId, email: "manager@example.com" });
+      if (managerUser) {
+        await EmployeeProfile.create({
+          tenantId,
+          userId: managerUser._id,
+          firstName: "Manager",
+          lastName: "User",
+          email: "manager@example.com",
+          phone: "+1-555-0102",
+          position: "Project Manager",
+          department: "Operations",
+          hireDate: new Date(2023, 2, 10),
+          address: {
+            street: "456 Business Ave",
+            city: "San Francisco",
+            state: "CA",
+            country: "USA",
+            zip: "94103",
+          },
+          vacationPolicy: {
+            annualDays: 22,
+            carryOverDays: 3,
+          },
+          isActive: true,
+        });
+        console.log("✅ Created EmployeeProfile for manager");
+      }
+
+      // Regular user profile
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+      if (regularUser) {
+        await EmployeeProfile.create({
+          tenantId,
+          userId: regularUser._id,
+          firstName: "Regular",
+          lastName: "User",
+          email: "user@example.com",
+          phone: "+1-555-0103",
+          position: "Content Specialist",
+          department: "Marketing",
+          hireDate: new Date(2023, 5, 1),
+          address: {
+            street: "789 Creative Blvd",
+            city: "San Francisco",
+            state: "CA",
+            country: "USA",
+            zip: "94104",
+          },
+          vacationPolicy: {
+            annualDays: 20,
+            carryOverDays: 0,
+          },
+          isActive: true,
+        });
+        console.log("✅ Created EmployeeProfile for regular user");
+      }
+    }
+
+    // Create VacationRequests
+    const vacationsCount = await VacationRequest.countDocuments({ tenantId });
+
+    if (vacationsCount === 0) {
+      const managerUser = await User.findOne({ tenantId, email: "manager@example.com" });
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        // Approved vacation in the past
+        await VacationRequest.create({
+          tenantId,
+          userId: regularUser._id,
+          startDate: new Date(2024, 0, 15),
+          endDate: new Date(2024, 0, 19),
+          daysRequested: 5,
+          status: "approved",
+          reason: "Family vacation",
+          managerComment: "Approved - Enjoy your time off!",
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 0, 5),
+        });
+
+        // Pending vacation in the future
+        await VacationRequest.create({
+          tenantId,
+          userId: regularUser._id,
+          startDate: new Date(2024, 6, 10),
+          endDate: new Date(2024, 6, 20),
+          daysRequested: 11,
+          status: "pending",
+          reason: "Summer vacation",
+        });
+
+        // Rejected vacation
+        await VacationRequest.create({
+          tenantId,
+          userId: regularUser._id,
+          startDate: new Date(2024, 2, 1),
+          endDate: new Date(2024, 2, 3),
+          daysRequested: 3,
+          status: "rejected",
+          reason: "Personal matters",
+          managerComment: "Cannot approve due to project deadline",
+        });
+
+        console.log("✅ Created vacation requests for regular user");
+      }
+
+      if (managerUser) {
+        // Approved vacation for manager
+        await VacationRequest.create({
+          tenantId,
+          userId: managerUser._id,
+          startDate: new Date(2024, 3, 15),
+          endDate: new Date(2024, 3, 19),
+          daysRequested: 5,
+          status: "approved",
+          reason: "Conference attendance",
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 3, 1),
+        });
+
+        console.log("✅ Created vacation requests for manager");
+      }
+    }
+
+    // Create Orders
+    const ordersCount = await Order.countDocuments({ tenantId });
+
+    if (ordersCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        // Pending order
+        await Order.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "Standing Desk",
+          description: "Need an adjustable standing desk for better ergonomics",
+          category: "equipment",
+          status: "pending",
+          amount: 450,
+        });
+
+        // Approved order
+        await Order.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "External Monitor",
+          description: "27-inch 4K monitor for improved productivity",
+          category: "equipment",
+          status: "approved",
+          amount: 350,
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 1, 10),
+        });
+
+        // Delivered order
+        await Order.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "Office Supplies",
+          description: "Notebooks, pens, sticky notes",
+          category: "office_supplies",
+          status: "delivered",
+          amount: 45,
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 0, 15),
+          deliveredAt: new Date(2024, 0, 20),
+        });
+
+        console.log("✅ Created orders for regular user");
+      }
+    }
+
+    // Create Documents
+    const documentsCount = await HRDocument.countDocuments({ tenantId });
+
+    if (documentsCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+      const managerUser = await User.findOne({ tenantId, email: "manager@example.com" });
+
+      if (regularUser) {
+        await HRDocument.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "contract",
+          title: "Employment Contract 2023",
+          description: "Initial employment contract",
+          filePath: "storage/hr/documents/contract_user_2023.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        });
+
+        await HRDocument.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "payroll",
+          title: "Payroll Statement - February 2024",
+          description: "Monthly payroll statement",
+          filePath: "storage/hr/documents/payroll_user_202402.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        });
+
+        console.log("✅ Created documents for regular user");
+      }
+
+      if (managerUser) {
+        await HRDocument.create({
+          tenantId,
+          userId: managerUser._id,
+          type: "contract",
+          title: "Employment Contract 2023",
+          description: "Management employment contract",
+          filePath: "storage/hr/documents/contract_manager_2023.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        });
+
+        console.log("✅ Created documents for manager");
+      }
+    }
+
+    // Create CalendarEvents
+    const eventsCount = await CalendarEvent.countDocuments({ tenantId });
+
+    if (eventsCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        // Team meeting
+        await CalendarEvent.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "Team Weekly Sync",
+          description: "Weekly team status meeting",
+          start: new Date(2024, 2, 18, 10, 0),
+          end: new Date(2024, 2, 18, 11, 0),
+          isAllDay: false,
+          visibility: "team",
+          createdBy: adminId,
+        });
+
+        // Company event
+        await CalendarEvent.create({
+          tenantId,
+          userId: adminId,
+          title: "All Hands Meeting",
+          description: "Quarterly all hands meeting",
+          start: new Date(2024, 2, 25, 14, 0),
+          end: new Date(2024, 2, 25, 16, 0),
+          isAllDay: false,
+          visibility: "company",
+          createdBy: adminId,
+        });
+
+        console.log("✅ Created calendar events");
+      }
+    }
+
+    // Create Notifications
+    const notificationsCount = await Notification.countDocuments({ tenantId });
+
+    if (notificationsCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        await Notification.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "vacation",
+          title: "Vacation Request Approved",
+          message: "Your vacation request for January 15-19 has been approved.",
+          isRead: true,
+          readAt: new Date(2024, 0, 6),
+        });
+
+        await Notification.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "order",
+          title: "Order Delivered",
+          message: 'Your order "Office Supplies" has been delivered.',
+          isRead: true,
+          readAt: new Date(2024, 0, 21),
+        });
+
+        await Notification.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "system",
+          title: "Welcome to HR Portal",
+          message: "You now have access to the employee self-service portal.",
+          isRead: false,
+        });
+
+        console.log("✅ Created notifications for regular user");
+      }
+    }
+
+    // Create ActivityLog
+    const activityCount = await ActivityLog.countDocuments({ tenantId });
+
+    if (activityCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "vacation_request_created",
+          description: "Created vacation request for 11 days",
+          entityType: "VacationRequest",
+        });
+
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "vacation_request_approved",
+          description: "Vacation request approved by manager",
+          entityType: "VacationRequest",
+        });
+
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "order_created",
+          description: "Created order: Standing Desk",
+          entityType: "Order",
+        });
+
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "order_approved",
+          description: 'Order "External Monitor" approved by manager',
+          entityType: "Order",
+        });
+
+        console.log("✅ Created activity logs for regular user");
+      }
+    }
+
+    console.log("✅ HR module seed data completed");
+    // ============ END HR MODULE SEED DATA ============
 
     console.log("🎉 Seed completed successfully!");
     console.log("👤 Admin:", adminEmail, "/", adminPassword);
