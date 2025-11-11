@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-import { mockDocumentsService } from '../services';
-import type { DocumentAPI as DocumentData } from '../mocks';
+import { personnelAPI, DocumentData } from '../api/personnel';
 import { sweetAlert } from '../utils/sweetAlert';
 import { useAuthStore } from '../stores/authStore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -12,7 +11,7 @@ import { faFileLines, faPlus, faDownload, faTrash, faFilter } from '@fortawesome
 const DOCUMENT_TYPES = [
   { value: 'all', label: 'Todos' },
   { value: 'contract', label: 'Contratos' },
-  { value: 'payslip', label: 'Nóminas' },
+  { value: 'payroll', label: 'Nóminas' },
   { value: 'certificate', label: 'Certificados' },
   { value: 'other', label: 'Otros' },
 ];
@@ -27,7 +26,7 @@ export const DocumentsPage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     file: null as File | null,
-    type: 'contract' as 'contract' | 'payslip' | 'certificate' | 'other',
+    type: 'contract' as 'contract' | 'payroll' | 'certificate' | 'other',
     title: '',
   });
 
@@ -48,7 +47,7 @@ export const DocumentsPage: React.FC = () => {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const data = await mockDocumentsService.getDocuments();
+      const data = await personnelAPI.getDocuments();
       setDocuments(data);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -60,15 +59,8 @@ export const DocumentsPage: React.FC = () => {
 
   const handleDownload = async (doc: DocumentData) => {
     try {
-      const blob = await mockDocumentsService.downloadDocument(doc._id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = doc.fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const downloadUrl = await personnelAPI.downloadDocument(doc._id);
+      window.open(downloadUrl, '_blank');
     } catch (error) {
       sweetAlert.error('Error', 'No se pudo descargar el documento');
     }
@@ -83,11 +75,12 @@ export const DocumentsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await mockDocumentsService.deleteDocument(doc._id);
+      await personnelAPI.deleteDocumentAdmin(doc._id);
       sweetAlert.success('Documento eliminado', 'El documento se eliminó correctamente');
       fetchDocuments();
-    } catch (error) {
-      sweetAlert.error('Error', 'No se pudo eliminar el documento');
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.error || 'No se pudo eliminar el documento';
+      sweetAlert.error('Error', errorMsg);
     }
   };
 
@@ -97,11 +90,9 @@ export const DocumentsPage: React.FC = () => {
 
     try {
       setUploading(true);
-      await mockDocumentsService.uploadDocument(uploadForm.file, uploadForm.type, uploadForm.title);
-      sweetAlert.success('Documento subido', 'El documento se subió correctamente');
+      sweetAlert.info('Función no disponible', 'La subida de documentos está en desarrollo');
       setShowUploadModal(false);
       setUploadForm({ file: null, type: 'contract', title: '' });
-      fetchDocuments();
     } catch (error: any) {
       sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo subir el documento');
     } finally {
@@ -210,7 +201,7 @@ export const DocumentsPage: React.FC = () => {
                 icon: faFileLines,
               }}
               footer={{
-                leftContent: <span className="text-xs text-gray-500">{new Date(doc.createdAt).toLocaleDateString()}</span>,
+                leftContent: <span className="text-xs text-gray-500">{new Date(doc.uploadedAt).toLocaleDateString()}</span>,
                 actions: [
                   {
                     icon: faDownload,
@@ -231,7 +222,7 @@ export const DocumentsPage: React.FC = () => {
                 ],
               }}
             >
-              <p className="text-sm text-gray-600 dark:text-gray-400">{doc.fileName}</p>
+              {doc.description && <p className="text-sm text-gray-600 dark:text-gray-400">{doc.description}</p>}
             </Card>
           ))}
         </div>

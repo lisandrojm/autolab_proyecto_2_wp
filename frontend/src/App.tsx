@@ -42,6 +42,7 @@ import { TeamPage } from "./pages/TeamPage";
 import { DailyReportPage } from "./pages/DailyReportPage";
 import { VacationsPage } from "./pages/VacationsPage";
 import { OtherRequestsPage } from "./pages/OtherRequestsPage";
+import { OrdersPage } from "./pages/OrdersPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { ActivityPage } from "./pages/ActivityPage";
@@ -379,7 +380,7 @@ function App() {
                 path="/admin/pedidos/otras-solicitudes"
                 element={
                   <ProtectedRoute>
-                    <OtherRequestsPage />
+                    <OrdersPage />
                   </ProtectedRoute>
                 }
               />

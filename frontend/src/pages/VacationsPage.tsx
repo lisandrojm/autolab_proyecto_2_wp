@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
-// USANDO MOCKS - API real comentada
-// import { personnelAPI, VacationRequest } from '../api/personnel';
-import { mockPersonnelAPI } from '../mocks';
-import type { VacationRequestAPI as VacationRequest } from '../mocks';
+import { personnelAPI, VacationRequest } from '../api/personnel';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUmbrellaBeach, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
@@ -30,16 +27,10 @@ export const VacationsPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // USANDO MOCKS - API real comentada
-      // const [vacData, balanceData, statsData] = await Promise.allSettled([
-      //   personnelAPI.getVacations(),
-      //   personnelAPI.getVacationAvailable(),
-      //   personnelAPI.getVacationStats(),
-      // ]);
       const [vacData, balanceData, statsData] = await Promise.allSettled([
-        mockPersonnelAPI.getVacations(),
-        mockPersonnelAPI.getVacationAvailable(),
-        mockPersonnelAPI.getVacationStats(),
+        personnelAPI.getVacations(),
+        personnelAPI.getVacationAvailable(),
+        personnelAPI.getVacationStats(),
       ]);
 
       if (vacData.status === 'fulfilled') setVacations(vacData.value);
@@ -56,19 +47,11 @@ export const VacationsPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
-      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
       if (editingVacation) {
-        // USANDO MOCKS - API real comentada
-        // await personnelAPI.updateVacation(editingVacation._id, { ...formData, days });
-        await mockPersonnelAPI.updateVacation(editingVacation._id, { ...formData, days });
+        await personnelAPI.updateVacation(editingVacation._id, formData);
         sweetAlert.success('Solicitud actualizada', 'La solicitud se actualizó correctamente');
       } else {
-        // USANDO MOCKS - API real comentada
-        // await personnelAPI.createVacation({ ...formData, days });
-        await mockPersonnelAPI.createVacation({ ...formData, days });
+        await personnelAPI.createVacation(formData);
         sweetAlert.success('Solicitud creada', 'La solicitud se creó correctamente');
       }
       setShowModal(false);
@@ -89,13 +72,12 @@ export const VacationsPage: React.FC = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // USANDO MOCKS - API real comentada
-      // await personnelAPI.deleteVacation(vacation._id);
-      await mockPersonnelAPI.deleteVacation(vacation._id);
+      await personnelAPI.deleteVacation(vacation._id);
       sweetAlert.success('Solicitud eliminada', 'La solicitud se eliminó correctamente');
       fetchData();
-    } catch (error) {
-      sweetAlert.error('Error', 'No se pudo eliminar la solicitud');
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.error || 'No se pudo eliminar la solicitud';
+      sweetAlert.error('Error', errorMsg);
     }
   };
 
@@ -234,7 +216,7 @@ export const VacationsPage: React.FC = () => {
               <Card
                 key={vacation._id}
                 header={{
-                  title: `${vacation.days} días`,
+                  title: `${vacation.daysRequested} días`,
                   subtitle: `${new Date(vacation.startDate).toLocaleDateString()} - ${new Date(
                     vacation.endDate
                   ).toLocaleDateString()}`,
