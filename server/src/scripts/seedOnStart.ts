@@ -4,6 +4,13 @@ import { env } from "../config/env.js";
 import { User } from "../models/User.js";
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
+import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { VacationRequest } from "../models/VacationRequest.js";
+import { HRDocument } from "../models/Document.js";
+import { Order } from "../models/Order.js";
+import { Notification } from "../models/Notification.js";
+import { ActivityLog } from "../models/ActivityLog.js";
+import { CalendarEvent } from "../models/CalendarEvent.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -257,14 +264,15 @@ export async function seedOnStart() {
     const tenantId = new Types.ObjectId(tenant._id as any);
     console.log(`🏢 Tenant ready - Slug: ${tenantSlug}, ObjectId: ${String(tenantId)}`);
 
-    // ---- ROLES (solo los 4 permitidos) ----
+    // ---- ROLES ----
     const adminRole = await ensureRole(tenantId, "admin", [], "Administrador del tenant");
     const mobileCoordRole = await ensureRole(tenantId, "Mobile-Coordinador", ["mobile:access", "mobile:coordinator"], "Rol móvil (coordinador)");
     const mobileCollabRole = await ensureRole(tenantId, "Mobile-Colaborador", ["mobile:access", "mobile:collaborator"], "Rol móvil (colaborador)");
-    // NOTA: El rol superadmin solo existe en el tenant del sistema (ensureSuperAdmin)
+    void adminRole;
+    void mobileCoordRole;
+    void mobileCollabRole;
 
-    // ---- USUARIOS (solo los 3 del tenant de demo) ----
-    // Admin User
+    // ---- USUARIOS BASE ----
     const adminUser = await ensureUser({
       tenantId,
       email: adminEmail,
@@ -274,10 +282,10 @@ export async function seedOnStart() {
       lastName: "User",
       isActive: true,
     });
-    void adminRole; // usado implícitamente arriba
+    const adminId = String(adminUser._id);
 
-    // Juan Colaborador (Mobile-Colaborador)
-    await ensureUser({
+    // Colaborador móvil
+    const collab = await ensureUser({
       tenantId,
       email: "colaborador@mobile.com",
       password: "colaborador123",
@@ -286,10 +294,9 @@ export async function seedOnStart() {
       lastName: "Colaborador",
       isActive: true,
     });
-    void mobileCollabRole;
 
-    // María Coordinadora (Mobile-Coordinador)
-    await ensureUser({
+    // Coordinador móvil
+    const coord = await ensureUser({
       tenantId,
       email: "coordinador@mobile.com",
       password: "coordinador123",
@@ -298,17 +305,317 @@ export async function seedOnStart() {
       lastName: "Coordinadora",
       isActive: true,
     });
-    void mobileCoordRole;
 
-    // ---- Nada más se crea ----
-    // (Sin manager, user, client; sin clientes, proyectos, campañas, posts, assets ni HR.)
+    /* ============ SEED: MODELOS DEL NAVBAR (HR / MODELOS) ============ */
+    console.log("👥 Seeding HR/Models demo data...");
+
+    // ---- EmployeeProfile ----
+    const profilesCount = await EmployeeProfile.countDocuments({ tenantId });
+    if (profilesCount === 0) {
+      await EmployeeProfile.create([
+        {
+          tenantId,
+          userId: adminUser._id,
+          firstName: "Admin",
+          lastName: "User",
+          email: adminEmail,
+          phone: "+1-555-0101",
+          position: "Platform Administrator",
+          department: "IT",
+          hireDate: new Date(2023, 0, 15),
+          address: { street: "123 Tech Street", city: "San Francisco", state: "CA", country: "USA", zip: "94102" },
+          vacationPolicy: { annualDays: 25, carryOverDays: 5 },
+          isActive: true,
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          firstName: "Juan",
+          lastName: "Colaborador",
+          email: "colaborador@mobile.com",
+          phone: "+54-11-5555-0001",
+          position: "Asistente Operativo",
+          department: "Mobile",
+          hireDate: new Date(2023, 5, 1),
+          address: { street: "Av. Demo 100", city: "CABA", state: "BA", country: "AR", zip: "1000" },
+          vacationPolicy: { annualDays: 20, carryOverDays: 0 },
+          isActive: true,
+        },
+        {
+          tenantId,
+          userId: coord._id,
+          firstName: "María",
+          lastName: "Coordinadora",
+          email: "coordinador@mobile.com",
+          phone: "+54-11-5555-0002",
+          position: "Coordinadora de Equipo",
+          department: "Mobile",
+          hireDate: new Date(2022, 8, 10),
+          address: { street: "Calle Proyecto 200", city: "CABA", state: "BA", country: "AR", zip: "1001" },
+          vacationPolicy: { annualDays: 22, carryOverDays: 3 },
+          isActive: true,
+        },
+      ]);
+      console.log("✅ EmployeeProfile seeded");
+    } else {
+      console.log("✔️ EmployeeProfile already present");
+    }
+
+    // ---- VacationRequest ----
+    const vacationsCount = await VacationRequest.countDocuments({ tenantId });
+    if (vacationsCount === 0) {
+      await VacationRequest.create([
+        // Colaborador: aprobada pasado
+        {
+          tenantId,
+          userId: collab._id,
+          startDate: new Date(2024, 0, 15),
+          endDate: new Date(2024, 0, 19),
+          daysRequested: 5,
+          status: "approved",
+          reason: "Family vacation",
+          managerComment: "Approved - Enjoy your time off!",
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 0, 5),
+        },
+        // Colaborador: pendiente futuro
+        {
+          tenantId,
+          userId: collab._id,
+          startDate: new Date(2025, 11, 20),
+          endDate: new Date(2025, 11, 30),
+          daysRequested: 11,
+          status: "pending",
+          reason: "Summer vacation",
+        },
+        // Colaborador: rechazada
+        {
+          tenantId,
+          userId: collab._id,
+          startDate: new Date(2024, 2, 1),
+          endDate: new Date(2024, 2, 3),
+          daysRequested: 3,
+          status: "rejected",
+          reason: "Personal matters",
+          managerComment: "Cannot approve due to project deadline",
+        },
+        // Coordinadora: aprobada
+        {
+          tenantId,
+          userId: coord._id,
+          startDate: new Date(2024, 3, 15),
+          endDate: new Date(2024, 3, 19),
+          daysRequested: 5,
+          status: "approved",
+          reason: "Conference attendance",
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 3, 1),
+        },
+      ]);
+      console.log("✅ VacationRequest seeded");
+    } else {
+      console.log("✔️ VacationRequest already present");
+    }
+
+    // ---- Order ----
+    const ordersCount = await Order.countDocuments({ tenantId });
+    if (ordersCount === 0) {
+      await Order.create([
+        {
+          tenantId,
+          userId: collab._id,
+          title: "Standing Desk",
+          description: "Need an adjustable standing desk for better ergonomics",
+          category: "equipment",
+          status: "pending",
+          amount: 450,
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          title: "External Monitor",
+          description: "27-inch 4K monitor for improved productivity",
+          category: "equipment",
+          status: "approved",
+          amount: 350,
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 1, 10),
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          title: "Office Supplies",
+          description: "Notebooks, pens, sticky notes",
+          category: "office_supplies",
+          status: "delivered",
+          amount: 45,
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 0, 15),
+          deliveredAt: new Date(2024, 0, 20),
+        },
+      ]);
+      console.log("✅ Order seeded");
+    } else {
+      console.log("✔️ Order already present");
+    }
+
+    // ---- Document (HRDocument) ----
+    const documentsCount = await HRDocument.countDocuments({ tenantId });
+    if (documentsCount === 0) {
+      await HRDocument.create([
+        {
+          tenantId,
+          userId: collab._id,
+          type: "contract",
+          title: "Employment Contract 2023",
+          description: "Initial employment contract",
+          filePath: "storage/hr/documents/contract_user_2023.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          type: "payroll",
+          title: "Payroll Statement - February 2024",
+          description: "Monthly payroll statement",
+          filePath: "storage/hr/documents/payroll_user_202402.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        },
+        {
+          tenantId,
+          userId: coord._id,
+          type: "contract",
+          title: "Employment Contract 2023",
+          description: "Management employment contract",
+          filePath: "storage/hr/documents/contract_manager_2023.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        },
+      ]);
+      console.log("✅ Document (HRDocument) seeded");
+    } else {
+      console.log("✔️ Document already present");
+    }
+
+    // ---- Notification ----
+    const notificationsCount = await Notification.countDocuments({ tenantId });
+    if (notificationsCount === 0) {
+      await Notification.create([
+        {
+          tenantId,
+          userId: collab._id,
+          type: "vacation",
+          title: "Vacation Request Approved",
+          message: "Your vacation request for January 15-19 has been approved.",
+          isRead: true,
+          readAt: new Date(2024, 0, 6),
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          type: "order",
+          title: "Order Delivered",
+          message: 'Your order "Office Supplies" has been delivered.',
+          isRead: true,
+          readAt: new Date(2024, 0, 21),
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          type: "system",
+          title: "Welcome to HR Portal",
+          message: "You now have access to the employee self-service portal.",
+          isRead: false,
+        },
+      ]);
+      console.log("✅ Notification seeded");
+    } else {
+      console.log("✔️ Notification already present");
+    }
+
+    // ---- ActivityLog ----
+    const activityCount = await ActivityLog.countDocuments({ tenantId });
+    if (activityCount === 0) {
+      await ActivityLog.create([
+        {
+          tenantId,
+          userId: collab._id,
+          action: "vacation_request_created",
+          description: "Created vacation request for 11 days",
+          entityType: "VacationRequest",
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          action: "vacation_request_approved",
+          description: "Vacation request approved by manager",
+          entityType: "VacationRequest",
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          action: "order_created",
+          description: "Created order: Standing Desk",
+          entityType: "Order",
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          action: "order_approved",
+          description: 'Order "External Monitor" approved by manager',
+          entityType: "Order",
+        },
+      ]);
+      console.log("✅ ActivityLog seeded");
+      // ---- CalendarEvent ----
+      try {
+        const eventsCount = await CalendarEvent.countDocuments({ tenantId });
+        if (eventsCount === 0) {
+          await CalendarEvent.insertMany(
+            [
+              {
+                tenantId,
+                userId: collab._id, // evento para el colaborador
+                title: "Team Weekly Sync",
+                description: "Weekly team status meeting",
+                start: new Date(2024, 2, 18, 10, 0), // marzo (0-based)
+                end: new Date(2024, 2, 18, 11, 0),
+                isAllDay: false,
+                visibility: "team",
+                createdBy: adminUser._id,
+              },
+              {
+                tenantId,
+                userId: adminUser._id, // evento para el admin (company-wide)
+                title: "All Hands Meeting",
+                description: "Quarterly all hands meeting",
+                start: new Date(2024, 2, 25, 14, 0),
+                end: new Date(2024, 2, 25, 16, 0),
+                isAllDay: false,
+                visibility: "company",
+                createdBy: adminUser._id,
+              },
+            ],
+            { ordered: true }
+          );
+          console.log("✅ CalendarEvent seeded");
+        } else {
+          console.log(`✔️ CalendarEvent already present: ${eventsCount}`);
+        }
+      } catch (err) {
+        console.error("❌ Error seeding CalendarEvent:", err);
+      }
+    } else {
+      console.log("✔️ ActivityLog already present");
+    }
 
     console.log("🎉 Seed completed successfully!");
-    console.log("👤 Super Admin: superadmin@example.com / superadmin123  (en tenant 'superadmin')");
     console.log(`👤 Admin: ${adminEmail} / ${adminPassword}`);
     console.log("📱 Mobile Colaborador: colaborador@mobile.com / colaborador123");
     console.log("📱 Mobile Coordinador: coordinador@mobile.com / coordinador123");
-    console.log("🔐 Roles creados: admin, Mobile-Coordinador, Mobile-Colaborador (y superadmin en tenant del sistema)");
+    console.log("🔐 Roles: admin, Mobile-Coordinador (mobile:access + mobile:coordinator), Mobile-Colaborador (mobile:access + mobile:collaborator)");
   } catch (error) {
     console.error("❌ Seed error:", error);
     throw error;
