@@ -34,46 +34,136 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
+  dashboard: {
+    label: "🏠 Dashboard",
+    icon: faHouse,
+    description: "Vista principal del sistema",
+    permissions: ["dashboard:view"],
+  },
+  clients: {
+    label: "👥 Clientes",
+    icon: faUsers,
+    description: "Gestión de clientes",
+    permissions: ["clients:view", "clients:create", "clients:update", "clients:delete"],
+  },
+  calendar: {
+    label: "📅 Calendario",
+    icon: faCalendar,
+    description: "Gestión de eventos y calendario",
+    permissions: ["calendar:view", "calendar:create", "calendar:update", "calendar:delete"],
+  },
+  tasks: {
+    label: "✅ Tareas",
+    icon: faSquareCheck,
+    description: "Gestión de tareas y workflow",
+    permissions: ["tasks:view", "tasks:create", "tasks:update", "tasks:delete"],
+  },
+  assistant: {
+    label: "🤖 Asistente IA",
+    icon: faRobot,
+    description: "Acceso al asistente inteligente",
+    permissions: ["assistant:view"],
+  },
+  roles: {
+    label: "🛡️ Roles",
+    icon: faUserShield,
+    description: "Gestión de roles y permisos",
+    permissions: ["roles:view", "roles:create", "roles:update", "roles:delete"],
+  },
+  users: {
+    label: "👤 Usuarios del Sistema",
+    icon: faUserGear,
+    description: "Gestión de usuarios",
+    permissions: ["users:view", "users:create", "users:update", "users:delete"],
+  },
+  creative: {
+    label: "🎨 Creative Suite",
+    icon: faPalette,
+    description: "Herramientas creativas",
+    permissions: ["creative:view"],
+  },
+  settings: {
+    label: "⚙️ Configuración",
+    icon: faCog,
+    description: "Configuración del sistema",
+    permissions: ["settings:view"],
+  },
+  campaigns: {
+    label: "📢 Campañas",
+    icon: faBullhorn,
+    description: "Gestión de campañas",
+    permissions: ["campaigns:view", "campaigns:create", "campaigns:update", "campaigns:delete"],
+  },
+  projects: {
+    label: "📁 Proyectos",
+    icon: faRocket,
+    description: "Gestión de proyectos",
+    permissions: ["projects:view", "projects:create", "projects:update", "projects:delete"],
+  },
+  posts: {
+    label: "📝 Posts",
+    icon: faFileText,
+    description: "Gestión de publicaciones",
+    permissions: ["posts:view", "posts:create", "posts:update", "posts:delete"],
+  },
+  briefs: {
+    label: "📋 Briefs",
+    icon: faFileLines,
+    description: "Gestión de briefs",
+    permissions: ["briefs:view", "briefs:create", "briefs:update", "briefs:delete"],
+  },
+  assets: {
+    label: "🖼️ Assets",
+    icon: faImage,
+    description: "Gestión de recursos multimedia",
+    permissions: ["assets:view", "assets:create", "assets:update", "assets:delete"],
+  },
+  analytics: {
+    label: "📊 Analíticas",
+    icon: faChartBar,
+    description: "Ver analíticas y métricas",
+    permissions: ["analytics:view"],
+  },
   activityLogs: {
     label: "📋 Registro de Actividades",
     icon: faFileText,
-    description: "Activity logs viewer",
+    description: "Registro de actividades del sistema",
     permissions: ["activityLogs:view"],
   },
   calendarEvents: {
-    label: "📅 Calendario",
-    icon: faCalendar,
-    description: "Calendar events",
+    label: "📅 Eventos de Calendario",
+    icon: faCalendarCheck,
+    description: "Eventos del calendario",
     permissions: ["calendarEvents:view"],
   },
   employeeProfiles: {
     label: "👔 Perfiles de Empleados",
-    icon: faUsers,
-    description: "Employee profiles",
+    icon: faIdCard,
+    description: "Perfiles de empleados",
     permissions: ["employeeProfiles:view"],
   },
   hrDocuments: {
     label: "📄 Documentos RRHH",
     icon: faFileText,
-    description: "HR documents",
+    description: "Documentos de recursos humanos",
     permissions: ["hrDocuments:view"],
   },
   orders: {
     label: "📦 Pedidos",
     icon: faBox,
-    description: "Orders",
+    description: "Gestión de pedidos",
     permissions: ["orders:view"],
   },
   vacationRequests: {
     label: "🏖️ Solicitudes de Vacaciones",
     icon: faCalendar,
-    description: "Vacation requests",
+    description: "Solicitudes de vacaciones",
     permissions: ["vacationRequests:view"],
   },
   mobile: {
-    label: "Mobile",
+    label: "📱 Mobile",
     icon: faMobileAlt,
-    description: "Acceso a la aplicación móvil y sus funciones",
+    description: "Acceso a la aplicación móvil",
     permissions: ["mobile:access", "mobile:collaborator", "mobile:coordinator"],
   },
 };
@@ -156,7 +246,7 @@ export const RolesPage: React.FC = () => {
 
   /**
    * Expande permisos con comodines (*) en permisos específicos.
-   * Por ejemplo: "users:*" se expande a ["users:read", "users:write", "users:update", "users:delete"]
+   * Por ejemplo: "users:*" se expande a ["users:view", "users:create", "users:update", "users:delete"]
    */
   const expandWildcardPermissions = (permissions: string[]): string[] => {
     const expanded: string[] = [];
@@ -164,7 +254,7 @@ export const RolesPage: React.FC = () => {
 
     permissions.forEach((perm) => {
       if (perm === "*") {
-        // Permiso superadmin - agregar todos los permisos
+        // Permiso superadmin - agregar todos los permisos disponibles
         Object.values(allModules).forEach((mod) => {
           expanded.push(...mod.permissions);
         });
@@ -184,8 +274,8 @@ export const RolesPage: React.FC = () => {
       }
     });
 
-    // Eliminar duplicados
-    return [...new Set(expanded)];
+    // Eliminar duplicados y ordenar
+    return [...new Set(expanded)].sort();
   };
 
   const openCreate = () => {
