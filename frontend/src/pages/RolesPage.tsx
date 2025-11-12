@@ -34,7 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
-  dashboard: {
+  /*  dashboard: {
     label: "Dashboard",
     icon: faHouse,
     description: "Vista principal del sistema",
@@ -123,7 +123,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     icon: faChartBar,
     description: "Ver analíticas y métricas",
     permissions: ["analytics:view"],
-  },
+  }, */
   activityLogs: {
     label: "Registro de Actividades",
     icon: faFileText,
