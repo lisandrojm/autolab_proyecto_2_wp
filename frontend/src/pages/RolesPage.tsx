@@ -9,7 +9,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt, faBox } from "@fortawesome/free-solid-svg-icons";
+import { faIdCard, faFileLines, faRocket, faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt, faBox, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "roles" as const;
@@ -35,139 +35,138 @@ const ACTION_LABELS: Record<string, string> = {
 
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   dashboard: {
-    label: "🏠 Dashboard",
+    label: "Dashboard",
     icon: faHouse,
     description: "Vista principal del sistema",
     permissions: ["dashboard:view"],
   },
   clients: {
-    label: "👥 Clientes",
+    label: "Clientes",
     icon: faUsers,
     description: "Gestión de clientes",
     permissions: ["clients:view", "clients:create", "clients:update", "clients:delete"],
   },
   calendar: {
-    label: "📅 Calendario",
+    label: "Calendario",
     icon: faCalendar,
     description: "Gestión de eventos y calendario",
     permissions: ["calendar:view", "calendar:create", "calendar:update", "calendar:delete"],
   },
   tasks: {
-    label: "✅ Tareas",
+    label: "Tareas",
     icon: faSquareCheck,
     description: "Gestión de tareas y workflow",
     permissions: ["tasks:view", "tasks:create", "tasks:update", "tasks:delete"],
   },
   assistant: {
-    label: "🤖 Asistente IA",
+    label: "Asistente IA",
     icon: faRobot,
     description: "Acceso al asistente inteligente",
     permissions: ["assistant:view"],
   },
   roles: {
-    label: "🛡️ Roles",
+    label: "Roles",
     icon: faUserShield,
     description: "Gestión de roles y permisos",
     permissions: ["roles:view", "roles:create", "roles:update", "roles:delete"],
   },
   users: {
-    label: "👤 Usuarios del Sistema",
+    label: "Usuarios del Sistema",
     icon: faUserGear,
     description: "Gestión de usuarios",
     permissions: ["users:view", "users:create", "users:update", "users:delete"],
   },
   creative: {
-    label: "🎨 Creative Suite",
+    label: "Creative Suite",
     icon: faPalette,
     description: "Herramientas creativas",
     permissions: ["creative:view"],
   },
   settings: {
-    label: "⚙️ Configuración",
+    label: "Configuración",
     icon: faCog,
     description: "Configuración del sistema",
     permissions: ["settings:view"],
   },
   campaigns: {
-    label: "📢 Campañas",
+    label: "Campañas",
     icon: faBullhorn,
     description: "Gestión de campañas",
     permissions: ["campaigns:view", "campaigns:create", "campaigns:update", "campaigns:delete"],
   },
   projects: {
-    label: "📁 Proyectos",
+    label: "Proyectos",
     icon: faRocket,
     description: "Gestión de proyectos",
     permissions: ["projects:view", "projects:create", "projects:update", "projects:delete"],
   },
   posts: {
-    label: "📝 Posts",
+    label: "Posts",
     icon: faFileText,
     description: "Gestión de publicaciones",
     permissions: ["posts:view", "posts:create", "posts:update", "posts:delete"],
   },
   briefs: {
-    label: "📋 Briefs",
+    label: "Briefs",
     icon: faFileLines,
     description: "Gestión de briefs",
     permissions: ["briefs:view", "briefs:create", "briefs:update", "briefs:delete"],
   },
   assets: {
-    label: "🖼️ Assets",
+    label: "Assets",
     icon: faImage,
     description: "Gestión de recursos multimedia",
     permissions: ["assets:view", "assets:create", "assets:update", "assets:delete"],
   },
   analytics: {
-    label: "📊 Analíticas",
+    label: "Analíticas",
     icon: faChartBar,
     description: "Ver analíticas y métricas",
     permissions: ["analytics:view"],
   },
   activityLogs: {
-    label: "📋 Registro de Actividades",
+    label: "Registro de Actividades",
     icon: faFileText,
     description: "Registro de actividades del sistema",
     permissions: ["activityLogs:view"],
   },
   calendarEvents: {
-    label: "📅 Eventos de Calendario",
+    label: "Eventos de Calendario",
     icon: faCalendarCheck,
     description: "Eventos del calendario",
     permissions: ["calendarEvents:view"],
   },
   employeeProfiles: {
-    label: "👔 Perfiles de Empleados",
+    label: "Perfiles de Empleados",
     icon: faIdCard,
     description: "Perfiles de empleados",
     permissions: ["employeeProfiles:view"],
   },
   hrDocuments: {
-    label: "📄 Documentos RRHH",
+    label: "Documentos RRHH",
     icon: faFileText,
     description: "Documentos de recursos humanos",
     permissions: ["hrDocuments:view"],
   },
   orders: {
-    label: "📦 Pedidos",
+    label: "Pedidos",
     icon: faBox,
     description: "Gestión de pedidos",
     permissions: ["orders:view"],
   },
   vacationRequests: {
-    label: "🏖️ Solicitudes de Vacaciones",
+    label: "Solicitudes de Vacaciones",
     icon: faCalendar,
     description: "Solicitudes de vacaciones",
     permissions: ["vacationRequests:view"],
   },
   mobile: {
-    label: "📱 Mobile",
+    label: "Mobile",
     icon: faMobileAlt,
     description: "Acceso a la aplicación móvil",
     permissions: ["mobile:access", "mobile:collaborator", "mobile:coordinator"],
   },
 };
-
 
 const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
   tenants: {
