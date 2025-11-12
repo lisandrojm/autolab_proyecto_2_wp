@@ -95,14 +95,20 @@ async function ensureUser({ tenantId, email, password, roleName, firstName, last
     if (!role) {
       const permissionsMap: Record<string, string[]> = {
         superadmin: ["*"],
-        manager: ["dashboard:view", "clients:view", "clients:update", "campaigns:*", "projects:*", "briefs:*", "posts:*", "tasks:*", "assets:*", "analytics:view", "creative:view", "calendar:view", "settings:view"],
-        client: ["dashboard:view", "campaigns:view", "projects:view", "briefs:view", "posts:view", "assets:view"],
+        manager: [],
+        client: [],
+      };
+
+      const descriptions: Record<string, string> = {
+        superadmin: "Super Administrador - Acceso total ilimitado a toda la plataforma",
+        manager: "Manager - Sin permisos por defecto, deben asignarse manualmente",
+        client: "Cliente - Sin permisos por defecto, deben asignarse manualmente",
       };
 
       role = await Role.create({
         tenantId,
         name: roleName,
-        description: `${roleName.charAt(0).toUpperCase() + roleName.slice(1)} role`,
+        description: descriptions[roleName] || `${roleName.charAt(0).toUpperCase() + roleName.slice(1)} role`,
         permissions: permissionsMap[roleName] || [],
         isDefault: false,
       });

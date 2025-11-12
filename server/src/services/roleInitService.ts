@@ -6,57 +6,70 @@ import { Role } from "../models/Role.js";
  * PERMISOS PARA ROL USER - SISTEMA SIMPLIFICADO
  * ═══════════════════════════════════════════════════════════════════════
  *
- * El rol USER tiene acceso a TODO EXCEPTO:
- * - Usuarios del Sistema (users:view)
- * - Roles (roles:view)
- *
- * PERMISOS BASADOS EN ITEMS DEL NAVBAR:
- * - Dashboard: Vista principal
- * - Clientes: Gestión completa (incluye selector de contexto)
- * - Calendario: Vista de calendario
- * - Tareas: Gestión de tareas
- * - Asistente IA: Acceso al asistente inteligente
- * - Creative Suite: Acceso a herramientas creativas
- * - Settings: Configuración de preferencias del usuario
+ * El rol USER se crea sin permisos por defecto.
+ * Los permisos deben ser asignados manualmente según las necesidades.
  */
-const USER_PERMISSIONS = [
-  "dashboard:view",      // Dashboard
-  "clients:view",        // Clientes (incluye selector y contexto)
-  "calendar:view",       // Calendario
-  "tasks:view",          // Tareas
-  "assistant:view",      // Asistente IA
-  "creative:view",       // Creative Suite
-  "settings:view",       // Settings
-];
+const USER_PERMISSIONS: string[] = [];
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
- * PERMISOS PARA ROL ADMIN - SISTEMA SIMPLIFICADO
+ * PERMISOS PARA ROL ADMIN - ACCESO COMPLETO
  * ═══════════════════════════════════════════════════════════════════════
  *
- * El rol ADMIN tiene acceso completo a todos los items del navbar:
- * - Dashboard
- * - Clientes (incluye selector y contexto)
- * - Calendario
- * - Tareas
- * - Asistente IA
- * - Roles (exclusivo admin)
- * - Usuarios del Sistema (exclusivo admin)
- * - Creative Suite
- * - Settings (configuración de preferencias)
+ * El rol ADMIN tiene acceso completo a todos los módulos del sistema:
+ * - Dashboard, Clientes, Calendario, Tareas, Asistente IA
+ * - Roles y Usuarios del Sistema (gestión de accesos)
+ * - Creative Suite, Settings
+ * - Gestión completa de Campañas, Proyectos, Posts, Briefs, Assets
  *
- * NOTA: Tenants está excluido porque solo es visible para superadmin
+ * NOTA: Tenants es exclusivo para superadmin
  */
 const ADMIN_PERMISSIONS = [
   "dashboard:view",      // Dashboard
   "clients:view",        // Clientes (incluye selector y contexto)
+  "clients:create",      // Crear clientes
+  "clients:update",      // Actualizar clientes
+  "clients:delete",      // Eliminar clientes
   "calendar:view",       // Calendario
+  "calendar:create",     // Crear eventos
+  "calendar:update",     // Actualizar eventos
+  "calendar:delete",     // Eliminar eventos
   "tasks:view",          // Tareas
+  "tasks:create",        // Crear tareas
+  "tasks:update",        // Actualizar tareas
+  "tasks:delete",        // Eliminar tareas
   "assistant:view",      // Asistente IA
   "roles:view",          // Roles - SOLO ADMIN
+  "roles:create",        // Crear roles
+  "roles:update",        // Actualizar roles
+  "roles:delete",        // Eliminar roles
   "users:view",          // Usuarios del Sistema - SOLO ADMIN
+  "users:create",        // Crear usuarios
+  "users:update",        // Actualizar usuarios
+  "users:delete",        // Eliminar usuarios
   "creative:view",       // Creative Suite
   "settings:view",       // Settings
+  "campaigns:view",      // Ver campañas
+  "campaigns:create",    // Crear campañas
+  "campaigns:update",    // Actualizar campañas
+  "campaigns:delete",    // Eliminar campañas
+  "projects:view",       // Ver proyectos
+  "projects:create",     // Crear proyectos
+  "projects:update",     // Actualizar proyectos
+  "projects:delete",     // Eliminar proyectos
+  "posts:view",          // Ver posts
+  "posts:create",        // Crear posts
+  "posts:update",        // Actualizar posts
+  "posts:delete",        // Eliminar posts
+  "briefs:view",         // Ver briefs
+  "briefs:create",       // Crear briefs
+  "briefs:update",       // Actualizar briefs
+  "briefs:delete",       // Eliminar briefs
+  "assets:view",         // Ver assets
+  "assets:create",       // Crear assets
+  "assets:update",       // Actualizar assets
+  "assets:delete",       // Eliminar assets
+  "analytics:view",      // Ver analíticas
 ];
 
 /**
@@ -101,7 +114,7 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
     userRole = await Role.create({
       tenantId: tid,
       name: "user",
-      description: "Usuario estándar - Acceso completo excepto Usuarios y Roles del sistema",
+      description: "Usuario estándar - Sin permisos por defecto, deben asignarse manualmente",
       permissions: USER_PERMISSIONS,
       isDefault: true,
     });
@@ -147,7 +160,7 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
     adminRole = await Role.create({
       tenantId: tid,
       name: "admin",
-      description: "Administrador - Acceso total incluyendo gestión de usuarios y roles",
+      description: "Administrador - Acceso completo a todos los módulos del sistema",
       permissions: ADMIN_PERMISSIONS,
       isDefault: false,
     });
