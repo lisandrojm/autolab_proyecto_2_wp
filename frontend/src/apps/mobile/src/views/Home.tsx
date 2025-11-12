@@ -1,9 +1,6 @@
-import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File, Users, BarChart3, Bell } from "lucide-react";
+import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File, Users, BarChart3 } from "lucide-react";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
-import { useNotifications } from "../hooks/useNotifications";
-import { personnelAPI, ActivityRecord } from "../../../../api/personnel";
-import { useState, useEffect } from "react";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -11,30 +8,9 @@ interface HomeProps {
 
 export default function Home({ onNavigate }: HomeProps) {
   const { user, hasPermission } = useAuthStore();
-  const { notifications, unreadCount, loading: notifLoading } = useNotifications();
-  const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
-  const [activityLoading, setActivityLoading] = useState(true);
 
   const isMobileCoordinator = hasPermission("mobile:coordinator");
   const isMobileCollaborator = hasPermission("mobile:collaborator");
-
-  useEffect(() => {
-    const fetchActivity = async () => {
-      try {
-        setActivityLoading(true);
-        const data = await personnelAPI.getRecentActivity();
-        setRecentActivity(data.slice(0, 3));
-      } catch (error) {
-        console.error('Error fetching activity:', error);
-      } finally {
-        setActivityLoading(false);
-      }
-    };
-
-    fetchActivity();
-  }, []);
-
-  const latestNotification = notifications.find(n => !n.isRead);
 
   const baseActions = [
     {
@@ -86,64 +62,40 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const quickActions = isMobileCoordinator ? [...baseActions, ...coordinatorActions] : baseActions;
 
-  const getActivityIcon = (action: string) => {
-    if (action.includes('vacation')) return CheckCircle;
-    if (action.includes('order')) return ShoppingCart;
-    if (action.includes('document')) return File;
-    return CheckCircle;
-  };
-
-  const getActivityColor = (action: string) => {
-    if (action.includes('vacation')) return { bg: 'bg-green-100 dark:bg-green-900/50', icon: 'text-green-600 dark:text-green-400' };
-    if (action.includes('order')) return { bg: 'bg-blue-100 dark:bg-blue-900/50', icon: 'text-blue-600 dark:text-blue-400' };
-    if (action.includes('document')) return { bg: 'bg-purple-100 dark:bg-purple-900/50', icon: 'text-purple-600 dark:text-purple-400' };
-    return { bg: 'bg-slate-100 dark:bg-slate-800', icon: 'text-slate-600 dark:text-slate-400' };
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-
-    if (diffDays > 0) return `hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
-    if (diffHours > 0) return `hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-    if (diffMinutes > 0) return `hace ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
-    return 'hace un momento';
-  };
+  const recentActivities = [
+    {
+      icon: CheckCircle,
+      title: "Solicitud de días libres",
+      description: "Aprobada (hace 2 días)",
+      bgColor: "bg-green-100 dark:bg-green-900/50",
+      iconColor: "text-green-600 dark:text-green-400",
+    },
+    {
+      icon: File,
+      title: "Recibo de Noviembre 2023",
+      description: "Disponible para descargar",
+      bgColor: "bg-blue-100 dark:bg-blue-900/50",
+      iconColor: "text-blue-600 dark:text-blue-400",
+    },
+  ];
 
   return (
     <div className="flex-1 pb-24">
-      <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">
-        Hola, {user?.firstName || "Usuario"}
-      </h1>
+      <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
 
-      {!notifLoading && latestNotification && (
-        <div className="p-4">
-          <div className="flex items-start gap-3 rounded-xl border border-green-500 bg-green-50 p-4 shadow-sm dark:border-green-400 dark:bg-green-900/40">
-            <Bell className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-green-800 dark:text-green-100">{latestNotification.title}</p>
-              <p className="text-sm text-green-700 dark:text-green-300">{latestNotification.message}</p>
-            </div>
-            {unreadCount > 1 && (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600 dark:bg-green-500">
-                <span className="text-xs font-bold text-white">{unreadCount}</span>
-              </div>
-            )}
+      {/* ALERT TAILWIND */}
+      <div className="p-4">
+        <div className="flex items-start gap-3 rounded-xl border border-green-500 bg-green-50 p-4 shadow-sm dark:border-green-400 dark:bg-green-900/40">
+          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-green-800 dark:text-green-100">Tu solicitud de vacaciones fue aprobada</p>
+            <p className="text-sm text-green-700 dark:text-green-300">Notificación importante</p>
           </div>
+          <button className="flex h-9 min-w-[84px] max-w-[160px] cursor-pointer items-center justify-center overflow-hidden rounded-lg px-3 text-xs font-medium leading-normal text-white bg-primary shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50">
+            <span className="truncate">Ver detalles</span>
+          </button>
         </div>
-      )}
-
-      {notifLoading && (
-        <div className="p-4">
-          <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-            <div className="animate-pulse text-sm text-slate-500 dark:text-slate-400">Cargando notificaciones...</div>
-          </div>
-        </div>
-      )}
+      </div>
 
       <div className={`grid ${isMobileCoordinator ? "grid-cols-2" : "grid-cols-2"} gap-4 p-4`}>
         {quickActions.map((action, index) => {
@@ -162,47 +114,24 @@ export default function Home({ onNavigate }: HomeProps) {
         })}
       </div>
 
-      <h3 className="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">
-        Actividad Reciente
-      </h3>
+      <h3 className="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">Actividad Reciente</h3>
 
-      {activityLoading ? (
-        <div className="flex flex-col gap-3 px-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70 animate-pulse">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700" />
+      <div className="flex flex-col gap-3 px-4">
+        {recentActivities.map((activity, index) => {
+          const Icon = activity.icon;
+          return (
+            <div key={index} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${activity.bgColor}`}>
+                <Icon className={`h-5 w-5 ${activity.iconColor}`} />
+              </div>
               <div className="flex-1">
-                <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
-                <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                <p className="font-semibold text-slate-800 dark:text-slate-200">{activity.title}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{activity.description}</p>
               </div>
             </div>
-          ))}
-        </div>
-      ) : recentActivity.length > 0 ? (
-        <div className="flex flex-col gap-3 px-4">
-          {recentActivity.map((activity) => {
-            const Icon = getActivityIcon(activity.action);
-            const colors = getActivityColor(activity.action);
-            return (
-              <div key={activity._id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${colors.bg}`}>
-                  <Icon className={`h-5 w-5 ${colors.icon}`} />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{activity.description}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatTimeAgo(activity.createdAt)}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="px-4">
-          <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-700 dark:bg-slate-800/50">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No hay actividad reciente</p>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
