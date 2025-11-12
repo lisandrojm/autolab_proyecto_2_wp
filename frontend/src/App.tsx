@@ -64,7 +64,7 @@ const DashboardRouter: React.FC = () => {
   const { user } = useAuthStore();
   if (!user) return null;
   if (user.tenantSlug === "superadmin") return <DashboardPage />;
-  if (["admin", "manager"].includes(user.primaryRole)) return <DashboardPage />;
+  if (["admin", "manager"].includes(user.primaryRole)) return <UsersPage />;
   return <ClientDashboardPage />;
 };
 
