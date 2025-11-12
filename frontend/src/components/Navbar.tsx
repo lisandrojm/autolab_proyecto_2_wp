@@ -414,89 +414,21 @@ export const MobileNavbar: React.FC = () => {
 
     // --- Panel de Personal (jerarquía exacta) ---
 
-    const personnelRootItem = {
-      path: "/admin",
-      icon: faIdCard,
-      label: "Panel de Personal",
-    };
-
-    const personnelGroups: Array<{
-      title: string;
-      items: any[];
-    }> = [
-      {
-        title: "Mi Área",
-        items: [
-          { path: "/admin/personal/perfil", icon: faUser, label: "Mi Perfil" },
-          { path: "/admin/personal/equipo", icon: faUsers, label: "Mi Equipo" },
-          { path: "/admin/personal/documentos", icon: faFileLines, label: "Documentos" },
-          { path: "/admin/personal/calendario", icon: faCalendar, label: "Calendario" },
-          { path: "/admin/personal/actividad", icon: faListCheck, label: "Actividad Reciente" },
-          { path: "/admin/personal/notificaciones", icon: faBell, label: "Notificaciones" },
-        ],
-      },
-      {
-        title: "Novedades",
-        items: [{ path: "/admin/novedades/reporte-diario", icon: faCalendarCheck, label: "Reporte Diario" }],
-      },
-      {
-        title: "Pedidos del Personal",
-        items: [
-          { path: "/admin/pedidos/vacaciones", icon: faUmbrellaBeach, label: "Vacaciones" },
-          { path: "/admin/pedidos/otras-solicitudes", icon: faClipboardList, label: "Pedidos" },
-        ],
-      },
-      {
-        title: "Tareas",
-        items: [{ path: "/admin/personal/tareas", icon: faListCheck, label: "Mis Tareas" }],
-      },
-    ];
-
-    let adminPersonnelGroup: { title: string; items: any[] } | null = null;
-
-    if (hasPermission("users:read") || hasPermission("users:manage")) {
-      adminPersonnelGroup = {
-        title: "Administración",
-        items: [
-          { path: "/admin/administracion/empleados", icon: faUsers, label: "Gestión de Empleados" },
-          { isSubheader: true, title: "Aprobaciones" },
-          {
-            path: "/admin/administracion/aprobaciones/vacaciones-pendientes",
-            icon: faUmbrellaBeach,
-            label: "Vacaciones Pendientes",
-          },
-          {
-            path: "/admin/administracion/aprobaciones/pedidos-pendientes",
-            icon: faClipboardList,
-            label: "Pedidos Pendientes",
-          },
-        ],
-      };
-    }
-
     return (
       <div>
         {/* Panel de Personal */}
-        <div className="px-2">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 pb-2 pt-2">
-            Panel de Personal
-          </div>
+        {/*   <div className="px-2">
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 pb-2 pt-2">Panel de Personal</div>
           <nav className="space-y-4">
             {personnelGroups.map((group, idx) => (
               <div key={idx}>
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                  {group.title}
-                </div>
-                <div className="space-y-1">
-                  {group.items.map((item) => renderMenuItem(item))}
-                </div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{group.title}</div>
+                <div className="space-y-1">{group.items.map((item) => renderMenuItem(item))}</div>
               </div>
             ))}
             {adminPersonnelGroup && (
               <div>
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                  {adminPersonnelGroup.title}
-                </div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{adminPersonnelGroup.title}</div>
                 <div className="space-y-1">
                   {adminPersonnelGroup.items.map((item, idx) => {
                     if (item.isSubheader) {
@@ -512,11 +444,11 @@ export const MobileNavbar: React.FC = () => {
               </div>
             )}
           </nav>
-        </div>
+        </div> */}
 
         {/* Administración (global / plataforma, como ya tenías) */}
         {adminItems.length > 0 && (
-          <div className="px-2 mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="px-2">
             <button onClick={() => setAdminAccordionOpen(!adminAccordionOpen)} aria-expanded={adminAccordionOpen} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors mb-3 pb-2 pt-2">
               <span>{user?.tenantSlug === "superadmin" ? "Administración global" : "Administración"}</span>
               <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform duration-200 ease-in-out ${adminAccordionOpen ? "rotate-180" : "rotate-0"}`} />
