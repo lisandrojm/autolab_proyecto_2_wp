@@ -45,13 +45,21 @@ export const DocumentsPage: React.FC = () => {
   }, [filterType, documents]);
 
   const fetchDocuments = async () => {
+    const timeoutId = setTimeout(() => {
+      console.warn('Documents request taking longer than expected');
+    }, 5000);
+
     try {
       setLoading(true);
       const data = await personnelAPI.getDocuments();
-      setDocuments(data);
-    } catch (error) {
+      clearTimeout(timeoutId);
+      setDocuments(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error('Error fetching documents:', error);
-      sweetAlert.error('Error', 'No se pudieron cargar los documentos');
+      const errorMsg = error?.response?.data?.error || error?.message || 'No se pudieron cargar los documentos';
+      sweetAlert.error('Error', errorMsg);
+      setDocuments([]);
     } finally {
       setLoading(false);
     }

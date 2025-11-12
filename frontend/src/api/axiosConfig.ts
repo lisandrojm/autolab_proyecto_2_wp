@@ -5,6 +5,7 @@ const API_BASE = import.meta.env.VITE_API_URL;
 // Crear instancia de Axios con configuración base
 const axiosInstance = axios.create({
   baseURL: API_BASE,
+  timeout: 15000,
 });
 
 // Interceptor para añadir headers necesarios
@@ -46,12 +47,22 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout:', error.config?.url);
+      return Promise.reject(new Error('La solicitud tardó demasiado tiempo. Por favor, inténtalo de nuevo.'));
+    }
+
     if (error.response?.status === 401) {
-      // Token expirado o inválido
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      return Promise.reject(new Error('Error de conexión. Verifica tu conexión a internet.'));
+    }
+
     return Promise.reject(error);
   }
 );

@@ -20,18 +20,38 @@ export const ProfilePage: React.FC = () => {
   }, []);
 
   const fetchProfile = async () => {
+    const timeoutId = setTimeout(() => {
+      console.warn('Profile request taking longer than expected');
+    }, 5000);
+
     try {
       setLoading(true);
       const [profileData, statsData] = await Promise.all([
-        personnelAPI.getProfile(),
-        personnelAPI.getProfileStats(),
+        personnelAPI.getProfile().catch(err => {
+          console.error('Profile fetch error:', err);
+          return null;
+        }),
+        personnelAPI.getProfileStats().catch(err => {
+          console.error('Stats fetch error:', err);
+          return { daysWorked: 0, vacations: { total: 0, used: 0, available: 0 } };
+        }),
       ]);
-      setProfile(profileData);
+
+      clearTimeout(timeoutId);
+
+      if (profileData) {
+        setProfile(profileData);
+        setFormData(profileData);
+      } else {
+        sweetAlert.error('Error', 'No se pudo cargar el perfil');
+      }
+
       setStats(statsData);
-      setFormData(profileData);
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error('Error fetching profile:', error);
-      sweetAlert.error('Error', 'No se pudo cargar el perfil');
+      const errorMsg = error?.response?.data?.error || error?.message || 'No se pudo cargar el perfil';
+      sweetAlert.error('Error', errorMsg);
     } finally {
       setLoading(false);
     }

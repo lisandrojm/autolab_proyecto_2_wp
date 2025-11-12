@@ -31,10 +31,10 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     let profile = await EmployeeProfile.findOne({
       tenantId: req.tenantObjectId,
       userId,
-    });
+    }).lean();
 
     if (!profile) {
-      profile = new EmployeeProfile({
+      const newProfile = new EmployeeProfile({
         tenantId: req.tenantObjectId,
         userId,
         firstName: req.user!.email.split("@")[0],
@@ -45,13 +45,13 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
           carryOverDays: 0,
         },
       });
-      await profile.save();
+      profile = (await newProfile.save()).toObject();
     }
 
     res.json(profile);
   } catch (error) {
     console.error("Get profile error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 
@@ -116,15 +116,22 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const profile = await EmployeeProfile.findOne({
       tenantId: req.tenantObjectId,
       userId,
-    });
+    }).lean();
 
     if (!profile) {
-      res.status(404).json({ error: "Profile not found" });
+      res.json({
+        daysWorked: 0,
+        vacations: {
+          total: 20,
+          used: 0,
+          available: 20,
+        },
+      });
       return;
     }
 
     const daysWorked = profile.hireDate
-      ? Math.floor((Date.now() - profile.hireDate.getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.floor((Date.now() - new Date(profile.hireDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
     const currentYear = new Date().getFullYear();
@@ -136,22 +143,23 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       userId,
       status: "approved",
       startDate: { $gte: yearStart, $lte: yearEnd },
-    });
+    }).lean();
 
     const daysUsed = approvedVacations.reduce((sum, vac) => sum + vac.daysRequested, 0);
-    const daysAvailable = Math.max(0, profile.vacationPolicy.annualDays - daysUsed);
+    const annualDays = profile.vacationPolicy?.annualDays || 20;
+    const daysAvailable = Math.max(0, annualDays - daysUsed);
 
     res.json({
       daysWorked,
       vacations: {
-        total: profile.vacationPolicy.annualDays,
+        total: annualDays,
         used: daysUsed,
         available: daysAvailable,
       },
     });
   } catch (error) {
     console.error("Get stats error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 

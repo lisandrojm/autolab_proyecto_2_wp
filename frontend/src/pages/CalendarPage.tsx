@@ -107,6 +107,10 @@ export const CalendarPage: React.FC = () => {
   }, []);
 
   const fetchPosts = async () => {
+    const timeoutId = setTimeout(() => {
+      console.warn('Calendar posts request taking longer than expected');
+    }, 5000);
+
     try {
       setLoading(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/posts`, {
@@ -116,15 +120,18 @@ export const CalendarPage: React.FC = () => {
         },
       });
 
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         const data = await response.json();
-        setPosts(data);
+        setPosts(Array.isArray(data) ? data : []);
       } else {
-        console.error("Error fetching posts:", response.status);
+        console.error("Error fetching posts:", response.status, response.statusText);
         setPosts([]);
       }
-    } catch (error) {
-      console.error("Error fetching posts:", error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      console.error("Error fetching posts:", error?.message || error);
       setPosts([]);
     } finally {
       setLoading(false);

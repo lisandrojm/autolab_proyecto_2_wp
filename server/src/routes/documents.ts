@@ -23,12 +23,17 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       isVisibleToEmployee: true,
     })
       .sort({ uploadedAt: -1 })
-      .populate("uploadedBy", "firstName lastName email");
+      .populate({
+        path: "uploadedBy",
+        select: "firstName lastName email",
+        options: { strictPopulate: false }
+      })
+      .lean();
 
-    res.json(documents);
+    res.json(documents || []);
   } catch (error) {
     console.error("Get documents error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 
@@ -49,12 +54,17 @@ router.get("/filter", async (req: AuthenticatedRequest & TenantRequest, res) => 
 
     const documents = await HRDocument.find(filter)
       .sort({ uploadedAt: -1 })
-      .populate("uploadedBy", "firstName lastName email");
+      .populate({
+        path: "uploadedBy",
+        select: "firstName lastName email",
+        options: { strictPopulate: false }
+      })
+      .lean();
 
-    res.json(documents);
+    res.json(documents || []);
   } catch (error) {
     console.error("Filter documents error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 

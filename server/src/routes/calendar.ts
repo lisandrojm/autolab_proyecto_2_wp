@@ -16,12 +16,17 @@ router.get("/events", async (req: AuthenticatedRequest & TenantRequest, res) => 
       userId,
     })
       .sort({ start: 1 })
-      .populate("createdBy", "firstName lastName email");
+      .populate({
+        path: "createdBy",
+        select: "firstName lastName email",
+        options: { strictPopulate: false }
+      })
+      .lean();
 
-    res.json(events);
+    res.json(events || []);
   } catch (error) {
     console.error("Get calendar events error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 
