@@ -34,65 +34,62 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
-  dashboard: {
-    label: "Dashboard",
-    icon: faHouse,
-    description: "Acceso al panel con estadísticas y resumen general del sistema",
-    permissions: ["dashboard:view"],
+  activityLogs: {
+    label: "📋 Registro de Actividades",
+    icon: faClipboardUser,
+    description: "Activity logs viewer",
+    permissions: ["activityLogs:view"],
   },
-  clients: {
-    label: "Clientes",
-    icon: faUsers,
-    description: "Ver y gestionar clientes (incluye selector de contexto y menú contextual)",
-    permissions: ["clients:view"],
-  },
-  calendar: {
-    label: "Calendario",
+  calendarEvents: {
+    label: "📅 Calendario",
     icon: faCalendar,
-    description: "Ver y gestionar eventos, campañas y actividades en el calendario",
-    permissions: ["calendar:view"],
+    description: "Calendar events",
+    permissions: ["calendarEvents:view"],
   },
-  roles: {
-    label: "Roles",
-    icon: faShield,
-    description: "Ver y gestionar roles y permisos del sistema (exclusivo admin)",
-    permissions: ["roles:view"],
+  employeeProfiles: {
+    label: "👔 Perfiles de Empleados",
+    icon: faUserTie,
+    description: "Employee profiles",
+    permissions: ["employeeProfiles:view"],
   },
-  users: {
-    label: "Usuarios del Sistema",
-    icon: faUserGear,
-    description: "Ver y gestionar usuarios del sistema (exclusivo admin)",
-    permissions: ["users:view"],
+  hrDocuments: {
+    label: "📄 Documentos RRHH",
+    icon: faFileCircleCheck,
+    description: "HR documents",
+    permissions: ["hrDocuments:view"],
   },
-  tasks: {
-    label: "Tareas",
-    icon: faSquareCheck,
-    description: "Ver y gestionar tareas del sistema",
-    permissions: ["tasks:view"],
+  orders: {
+    label: "📦 Pedidos",
+    icon: faBoxArchive,
+    description: "Orders",
+    permissions: ["orders:view"],
   },
-  assistant: {
-    label: "Asistente IA",
-    icon: faRobot,
-    description: "Acceso al asistente de inteligencia artificial",
-    permissions: ["assistant:view"],
-  },
-  settings: {
-    label: "Settings",
-    icon: faCog,
-    description: "Acceso a configuración y preferencias del usuario",
-    permissions: ["settings:view"],
-  },
-  creative: {
-    label: "Creative Suite",
-    icon: faPalette,
-    description: "Acceso a herramientas creativas y de diseño",
-    permissions: ["creative:view"],
+  vacationRequests: {
+    label: "🏖️ Solicitudes de Vacaciones",
+    icon: faUmbrellaBeach,
+    description: "Vacation requests",
+    permissions: ["vacationRequests:view"],
   },
   mobile: {
     label: "Mobile",
     icon: faMobileAlt,
     description: "Acceso a la aplicación móvil y sus funciones",
     permissions: ["mobile:access", "mobile:collaborator", "mobile:coordinator"],
+  },
+};
+
+const ADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
+  roles: {
+    label: "Roles",
+    icon: faShield,
+    description: "Ver y gestionar roles y permisos del sistema (exclusivo admin y superadmin)",
+    permissions: ["roles:view"],
+  },
+  users: {
+    label: "Usuarios del Sistema",
+    icon: faUserGear,
+    description: "Ver y gestionar usuarios del sistema (exclusivo admin y superadmin)",
+    permissions: ["users:view"],
   },
 };
 
@@ -152,6 +149,7 @@ export const RolesPage: React.FC = () => {
 
   const canManage = hasPermission("roles:delete");
   const isSuperAdmin = user?.primaryRole === "superadmin";
+  const isAdmin = user?.primaryRole === "admin" || isSuperAdmin;
 
   useEffect(() => {
     fetchRoles();
@@ -176,7 +174,7 @@ export const RolesPage: React.FC = () => {
    */
   const expandWildcardPermissions = (permissions: string[]): string[] => {
     const expanded: string[] = [];
-    const allModules = { ...AVAILABLE_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS };
+    const allModules = { ...AVAILABLE_PERMISSIONS, ...ADMIN_ONLY_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS };
 
     permissions.forEach((perm) => {
       if (perm === "*") {
@@ -422,35 +420,26 @@ export const RolesPage: React.FC = () => {
                 <p className="text-sm text-gray-500">Sin permisos</p>
               ) : (
                 <div className="space-y-3">
-                  {Object.entries({ ...AVAILABLE_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS }).map(([moduleKey, moduleData]) => {
+                  {Object.entries({ ...AVAILABLE_PERMISSIONS, ...ADMIN_ONLY_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS }).map(([moduleKey, moduleData]) => {
                     const modulePermissions = moduleData.permissions.filter((p) => viewRole.permissions.includes(p));
                     if (modulePermissions.length === 0) return null;
 
                     const isSuperAdminModule = !!SUPERADMIN_ONLY_PERMISSIONS[moduleKey];
+                    const isAdminModule = !!ADMIN_ONLY_PERMISSIONS[moduleKey];
 
                     return (
-                      <div key={moduleKey} className={`border rounded-lg p-3 ${isSuperAdminModule ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"}`}>
+                      <div key={moduleKey} className={`border rounded-lg p-3 ${isSuperAdminModule ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20" : isAdminModule ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"}`}>
                         <div className="flex items-start gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSuperAdminModule ? "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50" : "bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50"}`}>
-                            <FontAwesomeIcon icon={moduleData.icon} className={`h-4 w-4 ${isSuperAdminModule ? "text-blue-600 dark:text-blue-400" : "text-primary-600 dark:text-primary-400"}`} />
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSuperAdminModule ? "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50" : isAdminModule ? "bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50" : "bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50"}`}>
+                            <FontAwesomeIcon icon={moduleData.icon} className={`h-4 w-4 ${isSuperAdminModule ? "text-blue-600 dark:text-blue-400" : isAdminModule ? "text-green-600 dark:text-green-400" : "text-primary-600 dark:text-primary-400"}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h5 className="font-semibold text-gray-900 dark:text-white text-sm">{moduleData.label}</h5>
                               {isSuperAdminModule && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>}
+                              {isAdminModule && <span className="text-xs px-2 py-0.5 rounded-full bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium">Admin/SuperAdmin</span>}
                             </div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{moduleData.description}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {/*            {modulePermissions.map((permission) => {
-                                const [, action] = permission.split(":");
-                                const actionLabel = ACTION_LABELS[action] || action;
-                                return (
-                                  <span key={permission} className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${isSuperAdminModule ? "bg-blue-100 dark:bg-blue-900/70 text-blue-800 dark:text-blue-200" : "bg-primary-100 dark:bg-primary-900/70 text-primary-800 dark:text-primary-200"}`}>
-                                    {actionLabel}
-                                  </span>
-                                );
-                              })} */}
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -525,6 +514,7 @@ export const RolesPage: React.FC = () => {
                   </button>
                 </div>
                 <div className="space-y-3">
+                  {/* Permisos Generales */}
                   {Object.entries(AVAILABLE_PERMISSIONS).map(([module, moduleData]) => {
                     return (
                       <div key={module} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
@@ -554,6 +544,42 @@ export const RolesPage: React.FC = () => {
                     );
                   })}
 
+                  {/* Permisos de Admin */}
+                  {isAdmin &&
+                    editingRole?.name.toLowerCase() !== "superadmin" &&
+                    Object.entries(ADMIN_ONLY_PERMISSIONS).map(([module, moduleData]) => {
+                      return (
+                        <div key={module} className="border-2 border-green-400 dark:border-green-600 rounded-lg p-4 bg-green-50 dark:bg-green-950/30">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 flex items-center justify-center flex-shrink-0">
+                              <FontAwesomeIcon icon={moduleData.icon} className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium">Admin/SuperAdmin</span>
+                              </div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
+                            {moduleData.permissions.map((permission) => {
+                              const [moduleName, action] = permission.split(":");
+                              const actionLabel = ACTION_LABELS[action] || action;
+
+                              return (
+                                <label key={permission} className="flex items-center gap-2 group cursor-pointer">
+                                  <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer" />
+                                  <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{actionLabel}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {/* Permisos de SuperAdmin */}
                   {isSuperAdmin &&
                     editingRole?.name.toLowerCase() !== "superadmin" &&
                     Object.entries(SUPERADMIN_ONLY_PERMISSIONS).map(([module, moduleData]) => {
@@ -803,16 +829,53 @@ export const RolesPage: React.FC = () => {
               <FontAwesomeIcon icon={faSquareCheck} className="h-4 w-4 text-primary-600 dark:text-primary-400" />
               Módulos disponibles
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {Object.entries(AVAILABLE_PERMISSIONS).map(([key, moduleData]) => (
-                <div key={key} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
-                  <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
-                    <div className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{moduleData.description}</div>
+
+            {/* Permisos generales */}
+            <div className="mb-4">
+              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Permisos Generales</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {Object.entries(AVAILABLE_PERMISSIONS).map(([key, moduleData]) => (
+                  <div key={key} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
+                    <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
+                      <div className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{moduleData.description}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Permisos de Admin */}
+            <div className="mb-4">
+              <h5 className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">Permisos de Admin/SuperAdmin</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {Object.entries(ADMIN_ONLY_PERMISSIONS).map(([key, moduleData]) => (
+                  <div key={key} className="flex items-start gap-2 p-2.5 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-700 rounded-lg hover:border-green-300 dark:hover:border-green-600 transition-colors">
+                    <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
+                      <div className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{moduleData.description}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Permisos de SuperAdmin */}
+            <div>
+              <h5 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">Permisos de SuperAdmin</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {Object.entries(SUPERADMIN_ONLY_PERMISSIONS).map(([key, moduleData]) => (
+                  <div key={key} className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-700 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+                    <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
+                      <div className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{moduleData.description}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
