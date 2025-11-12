@@ -6,7 +6,7 @@ import { mockVacationsService } from '../services';
 import type { VacationRequestAPI as VacationRequest } from '../mocks';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUmbrellaBeach, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faCalendar, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 export const PendingVacationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -70,7 +70,7 @@ export const PendingVacationsPage: React.FC = () => {
     <PageLayout
       title="Vacaciones Pendientes"
       subtitle="Solicitudes de vacaciones por aprobar"
-      faIcon={{ icon: faUmbrellaBeach }}
+      faIcon={{ icon: faCalendar }}
     >
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -80,7 +80,7 @@ export const PendingVacationsPage: React.FC = () => {
               header={{
                 title: `${vacation.days} días`,
                 subtitle: `${new Date(vacation.startDate).toLocaleDateString()} - ${new Date(vacation.endDate).toLocaleDateString()}`,
-                icon: faUmbrellaBeach,
+                icon: faCalendar,
                 badges: [{ text: 'Pendiente', variant: 'warning' }],
               }}
               footer={{
@@ -108,7 +108,7 @@ export const PendingVacationsPage: React.FC = () => {
 
         {vacations.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
-            <FontAwesomeIcon icon={faUmbrellaBeach} className="h-12 w-12 text-gray-400 mb-4" />
+            <FontAwesomeIcon icon={faCalendar} className="h-12 w-12 text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400">No hay solicitudes de vacaciones pendientes</p>
           </div>
         )}

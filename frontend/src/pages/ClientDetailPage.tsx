@@ -11,7 +11,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserTie, faEdit, faUsers, faLayerGroup, faPalette, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faUsers, faLayerGroup, faPalette, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { getClientStatusLabel, getClientStatusBadgeVariant } from "../utils/clientStatus";
 
@@ -171,7 +171,7 @@ export const ClientDetailPage: React.FC = () => {
   if (!clientId) {
     return (
       <EmptyState
-        icon={faUserTie}
+        icon={faUsers}
         title="Cliente no válido"
         description="El ID del cliente no es válido."
         action={{
@@ -187,7 +187,7 @@ export const ClientDetailPage: React.FC = () => {
   if (!client) {
     return (
       <EmptyState
-        icon={faUserTie}
+        icon={faUsers}
         title="Cliente no encontrado"
         description="No se pudo encontrar el cliente solicitado."
         action={{
@@ -204,7 +204,7 @@ export const ClientDetailPage: React.FC = () => {
     <PageLayout
       title={client.name}
       subtitle={`${(client as any).company || client.email} • ${getClientStatusLabel(client.status)}`}
-      faIcon={{ icon: faUserTie }}
+      faIcon={{ icon: faUsers }}
       clientMiniAvatar={{
         src: client.brandKit?.logos?.[0]?.url,
         alt: `${client.name} logo`,
@@ -297,7 +297,7 @@ export const ClientDetailPage: React.FC = () => {
         <Card
           header={{
             title: "Información",
-            icon: faUserTie,
+            icon: faUsers,
             badges: [],
           }}
           onClick={() => navigate(`/cliente/${clientId}/info-basica`)}
@@ -375,7 +375,7 @@ export const ClientDetailPage: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-4">
-                <FontAwesomeIcon icon={faUserTie} className="h-4 w-4 text-gray-500 dark:text-gray-500 " />
+                <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-gray-500 dark:text-gray-500 " />
                 <div className="text-xs text-gray-500 dark:text-gray-500 text-center py-2">Sin usuarios cliente</div>
               </div>
             )}

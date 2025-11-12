@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClone, faPlus, faTrash, faUserTie, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faClone, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { clientsAPI, type Client } from "../api/clients";
 import { customAlphabet } from "nanoid";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -454,7 +454,7 @@ export const ClientsPage: React.FC = () => {
             header={{
               title: client.name,
               subtitle: client.company || "",
-              icon: faUserTie,
+              icon: faUsers,
               avatar: {
                 src: client.brandKit?.logos?.[0]?.url,
                 fallback: client.name?.charAt(0)?.toUpperCase?.() || "?",
@@ -499,7 +499,7 @@ export const ClientsPage: React.FC = () => {
             header={{
               title: "Nuevo Cliente",
               subtitle: "Crear un nuevo cliente en el sistema",
-              icon: faUserTie,
+              icon: faUsers,
             }}
           />
         )}

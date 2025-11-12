@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faUmbrellaBeach, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -255,7 +255,7 @@ export const MobileNavbar: React.FC = () => {
         { path: "/admin/personal/perfil", icon: faUser, label: "Mi Perfil", scope: "global" },
         { path: "/admin/personal/equipo", icon: faUsers, label: "Mi Equipo", scope: "global" },
         { path: "/admin/novedades/reporte-diario", icon: faCalendarCheck, label: "Reporte Diario", scope: "global" },
-        { path: "/admin/pedidos/vacaciones", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" },
+        { path: "/admin/pedidos/vacaciones", icon: faCalendar, label: "Vacaciones", scope: "global" },
         { path: "/admin/pedidos/otras-solicitudes", icon: faClipboardList, label: "Otras Solicitudes", scope: "global" },
         { path: "/admin/personal/documentos", icon: faFileLines, label: "Documentos", scope: "global" },
         { path: "/admin/personal/notificaciones", icon: faBell, label: "Notificaciones", scope: "global" },
@@ -266,7 +266,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:read") || hasPermission("users:manage")) {
         base.push(
           { path: "/admin/administracion/empleados", icon: faUsers, label: "Gestión de Empleados", scope: "global" },
-          { path: "/admin/administracion/aprobaciones/vacaciones-pendientes", icon: faUmbrellaBeach, label: "Vacaciones Pendientes", scope: "global" },
+          { path: "/admin/administracion/aprobaciones/vacaciones-pendientes", icon: faCalendar, label: "Vacaciones Pendientes", scope: "global" },
           { path: "/admin/administracion/aprobaciones/pedidos-pendientes", icon: faClipboardList, label: "Pedidos Pendientes", scope: "global" }
         );
       }

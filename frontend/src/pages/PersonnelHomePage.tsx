@@ -6,7 +6,7 @@ import { Card } from '../components/ui/Card';
 import { personnelAPI } from '../api/personnel';
 import { mockProfileService, mockVacationsService, mockNotificationsService, mockActivityService, mockOrdersService } from '../services';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarDays, faFileLines, faBell, faClipboardList, faUmbrellaBeach, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays, faFileLines, faBell, faClipboardList, faCalendar, faChartLine } from '@fortawesome/free-solid-svg-icons';
 
 export const PersonnelHomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ export const PersonnelHomePage: React.FC = () => {
       title: 'Vacaciones Disponibles',
       value: vacationBalance?.available || 0,
       subtitle: `${vacationBalance?.used || 0} días usados`,
-      icon: faUmbrellaBeach,
+      icon: faCalendar,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
       onClick: () => navigate('/admin/pedidos/vacaciones'),
@@ -92,7 +92,7 @@ export const PersonnelHomePage: React.FC = () => {
 
   const quickLinks = [
     { title: 'Mi Perfil', icon: faChartLine, path: '/admin/personal/perfil' },
-    { title: 'Vacaciones', icon: faUmbrellaBeach, path: '/admin/pedidos/vacaciones' },
+    { title: 'Vacaciones', icon: faCalendar, path: '/admin/pedidos/vacaciones' },
     { title: 'Documentos', icon: faFileLines, path: '/admin/personal/documentos' },
     { title: 'Calendario', icon: faCalendarDays, path: '/admin/personal/calendario' },
   ];

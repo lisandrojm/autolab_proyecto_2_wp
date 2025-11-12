@@ -4,7 +4,7 @@ import { clientsAPI, Client } from "../api/clients";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faSearch, faUserTie, faXmark, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faSearch, faUsers, faXmark, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { getImageUrl } from "../utils/imageHelpers";
 
 export const ClientSelector: React.FC = () => {
@@ -117,7 +117,7 @@ export const ClientSelector: React.FC = () => {
             </>
           ) : (
             <>
-              <FontAwesomeIcon icon={faUserTie} className="h-4 w-4 text-gray-400" />
+              <FontAwesomeIcon icon={faUsers} className="h-4 w-4 text-gray-400" />
               <span className="text-gray-500 dark:text-gray-400">Seleccionar...</span>
             </>
           )}

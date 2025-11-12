@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faUmbrellaBeach, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faUserTie, faFileCircleCheck, faBoxArchive, faClipboardUser } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -243,12 +243,12 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("roles:read")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles });
       if (hasPermission("users:read")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios del Sistema", scope: "global", count: adminCounts.users });
 
-      base.push({ path: "/hr/activity-logs", icon: faClipboardUser, label: "Registro de Actividades", scope: "global", dividerTop: true });
+      base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
       base.push({ path: "/hr/calendar-events", icon: faCalendar, label: "Calendario", scope: "global" });
-      base.push({ path: "/hr/employee-profiles", icon: faUserTie, label: "Perfiles de Empleados", scope: "global" });
-      base.push({ path: "/hr/documents", icon: faFileCircleCheck, label: "Documentos RRHH", scope: "global" });
-      base.push({ path: "/hr/orders", icon: faBoxArchive, label: "Pedidos", scope: "global" });
-      base.push({ path: "/hr/vacation-requests", icon: faUmbrellaBeach, label: "Solicitudes de Vacaciones", scope: "global" });
+      base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
+      base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
+      base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global" });
+      base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global" });
 
       if (hasPermission("creative:view")) {
         base.push({

@@ -5,7 +5,7 @@ import { Card } from '../components/ui/Card';
 import { personnelAPI, VacationRequest } from '../api/personnel';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUmbrellaBeach, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faCalendar, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 export const VacationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -120,7 +120,7 @@ export const VacationsPage: React.FC = () => {
     <PageLayout
       title="Vacaciones"
       subtitle="Gestión de solicitudes de vacaciones"
-      faIcon={{ icon: faUmbrellaBeach }}
+      faIcon={{ icon: faCalendar }}
       headerActions={
         <button onClick={openCreate} className="btn-primary">
           <FontAwesomeIcon icon={faPlus} className="mr-2" />
@@ -220,7 +220,7 @@ export const VacationsPage: React.FC = () => {
                   subtitle: `${new Date(vacation.startDate).toLocaleDateString()} - ${new Date(
                     vacation.endDate
                   ).toLocaleDateString()}`,
-                  icon: faUmbrellaBeach,
+                  icon: faCalendar,
                   badges: [{ text: badge.text, variant: badge.variant }],
                 }}
                 footer={{
@@ -258,7 +258,7 @@ export const VacationsPage: React.FC = () => {
 
         {vacations.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
-            <FontAwesomeIcon icon={faUmbrellaBeach} className="h-12 w-12 text-gray-400 mb-4" />
+            <FontAwesomeIcon icon={faCalendar} className="h-12 w-12 text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400 mb-4">No hay solicitudes de vacaciones</p>
             <button onClick={openCreate} className="btn-primary">
               Crear Primera Solicitud

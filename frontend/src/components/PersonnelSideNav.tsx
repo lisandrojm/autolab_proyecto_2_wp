@@ -10,7 +10,6 @@ import {
   faBell,
   faClockRotateLeft,
   faCalendarCheck,
-  faUmbrellaBeach,
   faClipboardList,
   faListCheck,
   faUserGear,
@@ -144,7 +143,7 @@ export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = fa
   ];
 
   const requestsItems: MenuItem[] = [
-    { path: '/admin/pedidos/vacaciones', label: 'Vacaciones', icon: faUmbrellaBeach },
+    { path: '/admin/pedidos/vacaciones', label: 'Vacaciones', icon: faCalendar },
     { path: '/admin/pedidos/otras-solicitudes', label: 'Otras Solicitudes', icon: faClipboardList }
   ];
 
@@ -158,7 +157,7 @@ export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = fa
       label: 'Aprobaciones',
       icon: faCheckCircle,
       children: [
-        { path: '/admin/administracion/aprobaciones/vacaciones-pendientes', label: 'Vacaciones Pendientes', icon: faUmbrellaBeach },
+        { path: '/admin/administracion/aprobaciones/vacaciones-pendientes', label: 'Vacaciones Pendientes', icon: faCalendar },
         { path: '/admin/administracion/aprobaciones/pedidos-pendientes', label: 'Pedidos Pendientes', icon: faClipboardList }
       ]
     }

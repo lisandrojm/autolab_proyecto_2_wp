@@ -9,7 +9,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt, faClipboardUser, faUserTie, faFileCircleCheck, faBoxArchive, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt, faBox } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "roles" as const;
@@ -36,7 +36,7 @@ const ACTION_LABELS: Record<string, string> = {
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   activityLogs: {
     label: "📋 Registro de Actividades",
-    icon: faClipboardUser,
+    icon: faFileText,
     description: "Activity logs viewer",
     permissions: ["activityLogs:view"],
   },
@@ -48,25 +48,25 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   },
   employeeProfiles: {
     label: "👔 Perfiles de Empleados",
-    icon: faUserTie,
+    icon: faUsers,
     description: "Employee profiles",
     permissions: ["employeeProfiles:view"],
   },
   hrDocuments: {
     label: "📄 Documentos RRHH",
-    icon: faFileCircleCheck,
+    icon: faFileText,
     description: "HR documents",
     permissions: ["hrDocuments:view"],
   },
   orders: {
     label: "📦 Pedidos",
-    icon: faBoxArchive,
+    icon: faBox,
     description: "Orders",
     permissions: ["orders:view"],
   },
   vacationRequests: {
     label: "🏖️ Solicitudes de Vacaciones",
-    icon: faUmbrellaBeach,
+    icon: faCalendar,
     description: "Vacation requests",
     permissions: ["vacationRequests:view"],
   },
@@ -78,20 +78,6 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
   },
 };
 
-const ADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
-  roles: {
-    label: "Roles",
-    icon: faShield,
-    description: "Ver y gestionar roles y permisos del sistema (exclusivo admin y superadmin)",
-    permissions: ["roles:view"],
-  },
-  users: {
-    label: "Usuarios del Sistema",
-    icon: faUserGear,
-    description: "Ver y gestionar usuarios del sistema (exclusivo admin y superadmin)",
-    permissions: ["users:view"],
-  },
-};
 
 const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
   tenants: {
@@ -174,7 +160,7 @@ export const RolesPage: React.FC = () => {
    */
   const expandWildcardPermissions = (permissions: string[]): string[] => {
     const expanded: string[] = [];
-    const allModules = { ...AVAILABLE_PERMISSIONS, ...ADMIN_ONLY_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS };
+    const allModules = { ...AVAILABLE_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS };
 
     permissions.forEach((perm) => {
       if (perm === "*") {
@@ -420,12 +406,12 @@ export const RolesPage: React.FC = () => {
                 <p className="text-sm text-gray-500">Sin permisos</p>
               ) : (
                 <div className="space-y-3">
-                  {Object.entries({ ...AVAILABLE_PERMISSIONS, ...ADMIN_ONLY_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS }).map(([moduleKey, moduleData]) => {
+                  {Object.entries({ ...AVAILABLE_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS }).map(([moduleKey, moduleData]) => {
                     const modulePermissions = moduleData.permissions.filter((p) => viewRole.permissions.includes(p));
                     if (modulePermissions.length === 0) return null;
 
                     const isSuperAdminModule = !!SUPERADMIN_ONLY_PERMISSIONS[moduleKey];
-                    const isAdminModule = !!ADMIN_ONLY_PERMISSIONS[moduleKey];
+                    const isAdminModule = false;
 
                     return (
                       <div key={moduleKey} className={`border rounded-lg p-3 ${isSuperAdminModule ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20" : isAdminModule ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"}`}>
@@ -543,41 +529,6 @@ export const RolesPage: React.FC = () => {
                       </div>
                     );
                   })}
-
-                  {/* Permisos de Admin */}
-                  {isAdmin &&
-                    editingRole?.name.toLowerCase() !== "superadmin" &&
-                    Object.entries(ADMIN_ONLY_PERMISSIONS).map(([module, moduleData]) => {
-                      return (
-                        <div key={module} className="border-2 border-green-400 dark:border-green-600 rounded-lg p-4 bg-green-50 dark:bg-green-950/30">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 flex items-center justify-center flex-shrink-0">
-                              <FontAwesomeIcon icon={moduleData.icon} className="h-5 w-5 text-green-600 dark:text-green-400" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium">Admin/SuperAdmin</span>
-                              </div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
-                            {moduleData.permissions.map((permission) => {
-                              const [moduleName, action] = permission.split(":");
-                              const actionLabel = ACTION_LABELS[action] || action;
-
-                              return (
-                                <label key={permission} className="flex items-center gap-2 group cursor-pointer">
-                                  <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-green-600 focus:ring-green-500 focus:ring-offset-0 cursor-pointer" />
-                                  <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{actionLabel}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
 
                   {/* Permisos de SuperAdmin */}
                   {isSuperAdmin &&
@@ -789,7 +740,6 @@ export const RolesPage: React.FC = () => {
                 </p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ Verá en el navbar: Dashboard, Clientes, Calendario, Creative Suite</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ Verá el selector de clientes y podrá trabajar con ellos</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ NO verá Roles ni Usuarios del Sistema (exclusivos para Admin)</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">
                   → Podrá <strong>ver, crear, editar y eliminar</strong> dentro de cada módulo autorizado
                 </p>
@@ -798,10 +748,9 @@ export const RolesPage: React.FC = () => {
               <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3">
                 <p className="text-sm mb-2 font-semibold">Rol "Admin" (Administrador)</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
-                  <strong>Permisos asignados:</strong> Dashboard, Clientes, Calendario, Creative Suite, Roles, Usuarios del Sistema
+                  <strong>Permisos asignados:</strong> Dashboard, Clientes, Calendario, Creative Suite
                 </p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ Tiene todos los permisos de User + acceso a Roles y Usuarios</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ Puede gestionar usuarios y crear/modificar roles</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ Tiene acceso completo a todos los módulos generales</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ Control completo sobre la configuración del sistema</p>
               </div>
 
@@ -837,22 +786,6 @@ export const RolesPage: React.FC = () => {
                 {Object.entries(AVAILABLE_PERMISSIONS).map(([key, moduleData]) => (
                   <div key={key} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
                     <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
-                      <div className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{moduleData.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Permisos de Admin */}
-            <div className="mb-4">
-              <h5 className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">Permisos de Admin/SuperAdmin</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {Object.entries(ADMIN_ONLY_PERMISSIONS).map(([key, moduleData]) => (
-                  <div key={key} className="flex items-start gap-2 p-2.5 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-700 rounded-lg hover:border-green-300 dark:hover:border-green-600 transition-colors">
-                    <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
                       <div className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">{moduleData.description}</div>

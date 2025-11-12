@@ -5,7 +5,7 @@ import { dashboardAPI, DashboardStats } from "../api/dashboard";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBullseye, faUsers, faFileAlt, faUserTie, faChartLine, faFire, faChartPie } from "@fortawesome/free-solid-svg-icons";
+import { faBullseye, faUsers, faFileAlt, faChartLine, faFire, faChartPie } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { PlatformDashboardPage } from "./PlatformDashboardPage";
 
@@ -83,7 +83,7 @@ export const DashboardPage: React.FC = () => {
       value: stats?.clients.total || 0,
       subtitle: `${stats?.clients.active || 0} activos`,
       change: stats?.clients.change || 0,
-      icon: faUserTie,
+      icon: faUsers,
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-50 dark:bg-blue-900/20",
     },
