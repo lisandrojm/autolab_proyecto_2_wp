@@ -105,7 +105,7 @@ export const MobileNavbar: React.FC = () => {
   const SHOW_MENU_COUNTS = false;
 
   useEffect(() => {
-    if (!hasPermission("roles:read")) return;
+    if (!hasPermission("roles:view")) return;
     let mounted = true;
     (async () => {
       try {
@@ -130,16 +130,16 @@ export const MobileNavbar: React.FC = () => {
       try {
         const promises: Array<Promise<any>> = [];
 
-        if (hasPermission("clients:read")) promises.push(axios.get("/clients/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission("clients:view")) promises.push(axios.get("/clients/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("tasks:read")) promises.push(axios.get("/tasks/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission("tasks:view")) promises.push(axios.get("/tasks/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("tenants:read")) promises.push(axios.get("/tenants/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission("tenants:view")) promises.push(axios.get("/tenants/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        if (hasPermission("roles:read")) promises.push(axios.get("/roles/count").catch(() => ({ data: { count: 0 } })));
+        if (hasPermission("roles:view")) promises.push(axios.get("/roles/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
         // users con fallback a usuarios del cliente activo
@@ -171,7 +171,7 @@ export const MobileNavbar: React.FC = () => {
           return 0;
         };
 
-        if (hasPermission("users:read")) {
+        if (hasPermission("users:view")) {
           promises.push(axios.get("/users/count").catch(() => ({ data: { count: 0 } })));
         } else {
           promises.push(Promise.resolve({ data: { count: 0 } }));
@@ -185,7 +185,7 @@ export const MobileNavbar: React.FC = () => {
           tasks: tasksRes?.data?.count || 0,
           tenants: tenantsRes?.data?.count || 0,
           roles: rolesRes?.data?.count || 0,
-          users: hasPermission("users:read") ? usersRes?.data?.count || 0 : usersCount,
+          users: hasPermission("users:view") ? usersRes?.data?.count || 0 : usersCount,
         });
       } catch (error) {
         console.error("Error fetching admin counts:", error);
@@ -219,7 +219,7 @@ export const MobileNavbar: React.FC = () => {
   const isClientView = useMemo(() => {
     if (!user) return true;
     if (user.tenantSlug === "superadmin") return false;
-    const adminish = hasAnyPermission("clients:read", "clients:view", "users:read", "roles:read", "tenants:read", "platform:settings", "platform:usage") || false;
+    const adminish = hasAnyPermission("clients:view", "users:view", "roles:view", "tenants:view", "platform:settings", "platform:usage") || false;
     return !adminish;
   }, [user, hasPermission]);
 
@@ -240,15 +240,15 @@ export const MobileNavbar: React.FC = () => {
     if (isSuperAdminTenant) {
       base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
     } else {
-      if (hasPermission("roles:read")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles });
-      if (hasPermission("users:read")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios del Sistema", scope: "global", count: adminCounts.users });
+      if (hasPermission("roles:view")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles });
+      if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios del Sistema", scope: "global", count: adminCounts.users });
 
-      base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
-      base.push({ path: "/hr/calendar-events", icon: faCalendar, label: "Calendario", scope: "global" });
-      base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
-      base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
-      base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global" });
-      base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global" });
+      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
+      if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", icon: faCalendar, label: "Calendario", scope: "global" });
+      if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
+      if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global" });
+      if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global" });
 
       if (hasPermission("creative:view")) {
         base.push({
@@ -462,7 +462,7 @@ export const MobileNavbar: React.FC = () => {
 
   const showClientContext = useMemo(() => {
     const isSuperAdminTenant = user?.tenantSlug === "superadmin";
-    const hasClientsPermission = hasPermission("clients:read") || hasPermission("clients:view");
+    const hasClientsPermission = hasPermission("clients:view");
     return !isSuperAdminTenant && hasClientsPermission;
   }, [user?.tenantSlug, hasPermission]);
 

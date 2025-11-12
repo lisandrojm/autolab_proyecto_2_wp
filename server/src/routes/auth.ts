@@ -194,7 +194,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
 // GET /auth/me - Obtener datos del usuario autenticado
 router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const userId = req.user?.sub;
+    const userId = req.user?.userId;
     const tenantId = req.tenantObjectId!;
 
     if (!userId) {

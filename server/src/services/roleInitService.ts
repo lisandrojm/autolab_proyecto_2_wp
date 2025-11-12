@@ -21,15 +21,21 @@ const USER_PERMISSIONS: string[] = [];
  * - Roles y Usuarios del Sistema (gestión de accesos)
  * - Creative Suite, Settings
  * - Gestión completa de Campañas, Proyectos, Posts, Briefs, Assets
+ * - Módulos de Recursos Humanos (RRHH)
  *
  * NOTA: Tenants es exclusivo para superadmin
  */
 const ADMIN_PERMISSIONS = [
+  // ──────────── Core Modules ────────────
   "dashboard:view",      // Dashboard
+
+  // ──────────── Clientes ────────────
   "clients:view",        // Clientes (incluye selector y contexto)
   "clients:create",      // Crear clientes
   "clients:update",      // Actualizar clientes
   "clients:delete",      // Eliminar clientes
+
+  // ──────────── Calendario y Tareas ────────────
   "calendar:view",       // Calendario
   "calendar:create",     // Crear eventos
   "calendar:update",     // Actualizar eventos
@@ -38,17 +44,24 @@ const ADMIN_PERMISSIONS = [
   "tasks:create",        // Crear tareas
   "tasks:update",        // Actualizar tareas
   "tasks:delete",        // Eliminar tareas
+
+  // ──────────── Asistente y Herramientas ────────────
   "assistant:view",      // Asistente IA
-  "roles:view",          // Roles - SOLO ADMIN
+  "creative:view",       // Creative Suite
+  "settings:view",       // Settings
+  "analytics:view",      // Ver analíticas
+
+  // ──────────── Administración de Accesos (SOLO ADMIN) ────────────
+  "roles:view",          // Roles
   "roles:create",        // Crear roles
   "roles:update",        // Actualizar roles
   "roles:delete",        // Eliminar roles
-  "users:view",          // Usuarios del Sistema - SOLO ADMIN
+  "users:view",          // Usuarios del Sistema
   "users:create",        // Crear usuarios
   "users:update",        // Actualizar usuarios
   "users:delete",        // Eliminar usuarios
-  "creative:view",       // Creative Suite
-  "settings:view",       // Settings
+
+  // ──────────── Gestión de Campañas ────────────
   "campaigns:view",      // Ver campañas
   "campaigns:create",    // Crear campañas
   "campaigns:update",    // Actualizar campañas
@@ -69,7 +82,14 @@ const ADMIN_PERMISSIONS = [
   "assets:create",       // Crear assets
   "assets:update",       // Actualizar assets
   "assets:delete",       // Eliminar assets
-  "analytics:view",      // Ver analíticas
+
+  // ──────────── Módulos de Recursos Humanos (RRHH) ────────────
+  "activityLogs:view",       // Registro de Actividades del Sistema
+  "calendarEvents:view",     // Eventos de Calendario (RRHH)
+  "employeeProfiles:view",   // Perfiles de Empleados
+  "hrDocuments:view",        // Documentos de RRHH
+  "orders:view",             // Pedidos de Material/Equipamiento
+  "vacationRequests:view",   // Solicitudes de Vacaciones
 ];
 
 /**

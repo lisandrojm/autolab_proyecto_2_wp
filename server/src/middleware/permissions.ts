@@ -60,8 +60,18 @@ export const requirePermission = (perm: string) => {
       const lowerRoleNames = roles.map((r) => r.name.toLowerCase());
       const permissions = new Set(roles.flatMap((r) => r.permissions));
 
-      // ✅ SuperAdmin siempre tiene acceso total
+      // ✅ SuperAdmin y Admin siempre tienen acceso total (excepto a tenants que es solo superadmin)
       if (lowerRoleNames.includes("superadmin")) {
+        return next();
+      }
+
+      // Admin tiene acceso a todo excepto permisos específicos de superadmin (tenants)
+      if (lowerRoleNames.includes("admin")) {
+        const [module] = perm.split(":");
+        // Admin NO puede acceder a tenants (solo superadmin)
+        if (module === "tenants") {
+          return res.status(403).json({ error: "Insufficient permissions" });
+        }
         return next();
       }
 

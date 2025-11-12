@@ -94,7 +94,7 @@ async function ensureUser({ tenantId, email, password, roleName, firstName, last
     });
     if (!role) {
       const permissionsMap: Record<string, string[]> = {
-        superadmin: ["*"],
+        superadmin: ["*"], // Wildcard: acceso total a todo el sistema
         manager: [],
         client: [],
       };
@@ -112,7 +112,7 @@ async function ensureUser({ tenantId, email, password, roleName, firstName, last
         permissions: permissionsMap[roleName] || [],
         isDefault: false,
       });
-      console.log(`✅ Created role: ${roleName}`);
+      console.log(`✅ Created role: ${roleName} with permissions:`, permissionsMap[roleName]);
     }
   }
 
@@ -415,6 +415,23 @@ export async function ensureSuperAdmin() {
     // ROLES MOBILE para superadmin tenant
     await ensureMobileRoles(superAdminTenantId);
     console.log(`📱 Mobile roles ensured for superadmin tenant`);
+
+    // Asegurar que el rol superadmin tenga el permiso wildcard "*"
+    let superAdminRole = await Role.findOne({
+      tenantId: superAdminTenantId,
+      name: { $regex: /^superadmin$/i },
+    });
+
+    if (superAdminRole) {
+      // Verificar si tiene el permiso "*"
+      if (!superAdminRole.permissions.includes("*")) {
+        superAdminRole.permissions = ["*"];
+        await superAdminRole.save();
+        console.log(`♻️ Updated superadmin role with wildcard permission "*"`);
+      } else {
+        console.log(`✔️ Superadmin role already has wildcard permission`);
+      }
+    }
 
     const superAdminUser = await ensureUser({
       tenantId: superAdminTenantId,

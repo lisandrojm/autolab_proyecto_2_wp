@@ -203,6 +203,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) return false;
 
+    // SuperAdmin siempre tiene acceso total
+    if (user.primaryRole?.toLowerCase() === "superadmin") {
+      return true;
+    }
+
+    // Admin tiene acceso total excepto a tenants (solo superadmin)
+    if (user.primaryRole?.toLowerCase() === "admin") {
+      const [module] = permission.split(":");
+      // Admin NO puede acceder a tenants
+      if (module === "tenants") {
+        return false;
+      }
+      return true;
+    }
+
     // Verificar permisos del usuario
     const permissions = user.permissions || [];
     const [module, action] = permission.split(":");
