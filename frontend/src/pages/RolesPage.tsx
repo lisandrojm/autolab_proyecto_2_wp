@@ -9,7 +9,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt, faClipboardUser, faUserTie, faFileCircleCheck, faBoxArchive, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "roles" as const;
