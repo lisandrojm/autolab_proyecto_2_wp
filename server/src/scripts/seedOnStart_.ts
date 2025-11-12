@@ -11,8 +11,15 @@ import { WorkflowTask } from "../models/WorkflowTask.js";
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { Asset } from "../models/Asset.js";
-import { ensureDefaultRoles } from "../services/roleInitService.js";
+import { ensureDefaultRoles, ensureMobileRoles } from "../services/roleInitService.js";
 import { Types } from "mongoose";
+import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { VacationRequest } from "../models/VacationRequest.js";
+import { HRDocument } from "../models/Document.js";
+import { Order } from "../models/Order.js";
+import { CalendarEvent } from "../models/CalendarEvent.js";
+import { Notification } from "../models/Notification.js";
+import { ActivityLog } from "../models/ActivityLog.js";
 
 /* ----------------------------- helpers ----------------------------- */
 
@@ -75,38 +82,52 @@ async function ensureTenant({ name, slug }: { name: string; slug: string }) {
 async function ensureUser({ tenantId, email, password, roleName, firstName, lastName, isActive = true }: { tenantId: Types.ObjectId; email: string; password: string; roleName: "admin" | "manager" | "user" | "client" | "superadmin"; firstName: string; lastName: string; isActive?: boolean }) {
   let user = await User.findOne({ tenantId, email });
 
-  // Para roles admin y user, usar el servicio centralizado
+  // roles base
   let role;
   if (roleName === "admin" || roleName === "user") {
     const roles = await ensureDefaultRoles(tenantId);
     role = roleName === "admin" ? roles.adminRole : roles.userRole;
   } else {
-    // Para otros roles (manager, client, superadmin), usar la lógica existente
-    role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${roleName}$`, "i") } });
+    role = await Role.findOne({
+      tenantId,
+      name: { $regex: new RegExp(`^${roleName}$`, "i") },
+    });
     if (!role) {
       const permissionsMap: Record<string, string[]> = {
-        superadmin: ["*"],
-        manager: ["dashboard:view", "clients:view", "clients:update", "campaigns:*", "projects:*", "briefs:*", "posts:*", "tasks:*", "assets:*", "analytics:view", "creative:view", "calendar:view", "settings:view"],
-        client: ["dashboard:view", "campaigns:view", "projects:view", "briefs:view", "posts:view", "assets:view"],
+        superadmin: ["*"], // Wildcard: acceso total a todo el sistema
+        manager: [],
+        client: [],
+      };
+
+      const descriptions: Record<string, string> = {
+        superadmin: "Super Administrador - Acceso total ilimitado a toda la plataforma",
+        manager: "Manager - Sin permisos por defecto, deben asignarse manualmente",
+        client: "Cliente - Sin permisos por defecto, deben asignarse manualmente",
       };
 
       role = await Role.create({
         tenantId,
         name: roleName,
-        description: `${roleName.charAt(0).toUpperCase() + roleName.slice(1)} role`,
+        description: descriptions[roleName] || `${roleName.charAt(0).toUpperCase() + roleName.slice(1)} role`,
         permissions: permissionsMap[roleName] || [],
         isDefault: false,
       });
-      console.log(`✅ Created role: ${roleName}`);
+      console.log(`✅ Created role: ${roleName} with permissions:`, permissionsMap[roleName]);
     }
   }
 
   if (!user) {
-    // No hasheamos aquí - el hook pre-save del modelo lo hace automáticamente
-    user = new User({ tenantId, email, password, roles: [role._id], firstName, lastName, isActive });
+    user = new User({
+      tenantId,
+      email,
+      password,
+      roles: [role._id],
+      firstName,
+      lastName,
+      isActive,
+    });
     await user.save();
 
-    // Agregar usuario al array userIds del tenant
     await Tenant.findByIdAndUpdate(tenantId, {
       $addToSet: { userIds: user._id },
       $inc: { "usage.users.current": 1 },
@@ -115,7 +136,6 @@ async function ensureUser({ tenantId, email, password, roleName, firstName, last
     console.log(`✅ ensureUser: created ${email} [${roleName}] with role ID: ${role._id}`);
   } else {
     const updates: any = {};
-    // Asegurar que el usuario tiene el rol correcto
     const userRoles = user.roles.map((r) => r.toString());
     if (!userRoles.includes((role._id as any).toString())) {
       updates.roles = [role._id as any];
@@ -136,14 +156,15 @@ async function ensureUser({ tenantId, email, password, roleName, firstName, last
 async function ensureClient({ tenantId, name, email, data }: { tenantId: Types.ObjectId; name: string; email: string; data?: Record<string, any> }) {
   let client = await Client.findOne({ tenantId, email });
 
-  // Si el cliente no existe, crearlo con un usuario automático
   if (!client) {
-    // Verificar si ya existe usuario con este email
+    // usuario cliente auto
     let clientUser = await User.findOne({ tenantId, email });
 
-    // Si no existe, crear usuario
     if (!clientUser) {
-      const clientRole = await Role.findOne({ tenantId, name: { $regex: /^(client|cliente)$/i } });
+      const clientRole = await Role.findOne({
+        tenantId,
+        name: { $regex: /^(client|cliente)$/i },
+      });
       const nameParts = name.split(" ").filter((p) => p.trim());
       const firstName = nameParts[0] || name;
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
@@ -159,7 +180,6 @@ async function ensureClient({ tenantId, name, email, data }: { tenantId: Types.O
       });
       await clientUser.save();
 
-      // Agregar usuario al array userIds del tenant
       await Tenant.findByIdAndUpdate(tenantId, {
         $addToSet: { userIds: clientUser._id },
         $inc: { "usage.users.current": 1 },
@@ -168,7 +188,6 @@ async function ensureClient({ tenantId, name, email, data }: { tenantId: Types.O
       console.log(`✅ ensureUser (auto): created ${email} for client ${name}`);
     }
 
-    // Crear cliente con el usuario en el array usuarios
     client = new Client({
       tenantId,
       name,
@@ -184,7 +203,6 @@ async function ensureClient({ tenantId, name, email, data }: { tenantId: Types.O
     });
     await client.save();
 
-    // Actualizar clientIds del usuario
     clientUser.clientIds = [client._id as any];
     await clientUser.save();
 
@@ -204,27 +222,22 @@ async function ensureClient({ tenantId, name, email, data }: { tenantId: Types.O
   return client!;
 }
 
-/** Agrega/asegura la relación en Client.usuarios usando 'userId' como campo */
 async function addUserToClientUsuarios({ tenantId, clientId, userId, permiso = "editar" }: { tenantId: Types.ObjectId; clientId: Types.ObjectId | string; userId: Types.ObjectId | string; permiso?: "ver" | "editar" }) {
   const cid = new Types.ObjectId(clientId as any);
   const uid = new Types.ObjectId(userId as any);
 
-  // Verificar que el usuario existe
   const user = await User.findById(uid);
   if (!user) {
     console.warn(`⚠️  User ${uid} not found, skipping addUserToClientUsuarios`);
     return;
   }
 
-  // 1) Si no existe la relación, agregarla
   const res = await Client.updateOne({ _id: cid, tenantId, "usuarios.userId": { $ne: uid } }, { $addToSet: { usuarios: { userId: uid, permiso } } });
 
-  // 2) Si ya existía la relación, actualizar permiso
   if (res.matchedCount && !res.modifiedCount) {
     await Client.updateOne({ _id: cid, tenantId, "usuarios.userId": uid }, { $set: { "usuarios.$.permiso": permiso } });
   }
 
-  // 3) Actualizar clientIds en el usuario
   if (!user.clientIds.includes(cid)) {
     user.clientIds.push(cid);
     await user.save();
@@ -329,15 +342,10 @@ async function ensureAsset(data: any) {
 
 /* ----------------------------- seed main ---------------------------- */
 
-/**
- * Asegura que siempre exista un usuario superadmin en tenant dedicado
- * Se ejecuta independientemente de SEED_ON_START
- */
 export async function ensureSuperAdmin() {
   console.log("🔐 Ensuring superadmin user...");
 
   try {
-    // Crear tenant dedicado para superadmin con flag isSystem
     let superAdminTenant = await Tenant.findOne({ slug: "superadmin" });
     if (!superAdminTenant) {
       const now = new Date();
@@ -372,7 +380,11 @@ export async function ensureSuperAdmin() {
           clients: { current: 0, limit: 999999 },
           campaigns: { current: 0, limit: 999999 },
           storage: { usedMB: 0, limitMB: 999999 },
-          apiCalls: { current: 0, limit: 999999, resetDate: endOfPeriod },
+          apiCalls: {
+            current: 0,
+            limit: 999999,
+            resetDate: endOfPeriod,
+          },
         },
         billing: {
           currentPeriod: {
@@ -389,7 +401,6 @@ export async function ensureSuperAdmin() {
       await superAdminTenant.save();
       console.log(`✅ Created system tenant: superadmin with _id: ${superAdminTenant._id}`);
     } else {
-      // Asegurar que el tenant existente tenga isSystem = true
       if (!superAdminTenant.isSystem) {
         superAdminTenant.isSystem = true;
         await superAdminTenant.save();
@@ -401,7 +412,27 @@ export async function ensureSuperAdmin() {
 
     const superAdminTenantId = new Types.ObjectId(superAdminTenant._id as any);
 
-    // Crear o verificar superadmin
+    // ROLES MOBILE para superadmin tenant
+    await ensureMobileRoles(superAdminTenantId);
+    console.log(`📱 Mobile roles ensured for superadmin tenant`);
+
+    // Asegurar que el rol superadmin tenga el permiso wildcard "*"
+    let superAdminRole = await Role.findOne({
+      tenantId: superAdminTenantId,
+      name: { $regex: /^superadmin$/i },
+    });
+
+    if (superAdminRole) {
+      // Verificar si tiene el permiso "*"
+      if (!superAdminRole.permissions.includes("*")) {
+        superAdminRole.permissions = ["*"];
+        await superAdminRole.save();
+        console.log(`♻️ Updated superadmin role with wildcard permission "*"`);
+      } else {
+        console.log(`✔️ Superadmin role already has wildcard permission`);
+      }
+    }
+
     const superAdminUser = await ensureUser({
       tenantId: superAdminTenantId,
       email: "superadmin@example.com",
@@ -414,6 +445,7 @@ export async function ensureSuperAdmin() {
 
     console.log("✅ SuperAdmin ready: superadmin@example.com / superadmin123");
     console.log("🏢 SuperAdmin tenant slug: superadmin (isSystem: true)");
+    console.log("📱 Mobile roles created for superadmin tenant");
     return superAdminUser;
   } catch (error) {
     console.error("❌ Error ensuring superadmin:", error);
@@ -438,8 +470,7 @@ export async function seedOnStart() {
   try {
     console.log(`🌱 Ensuring seed data for tenant slug: ${tenantSlug}`);
 
-    // ========== TENANT ==========
-    // El tenant se busca/crea por slug y se usa su ObjectId automáticamente
+    // TENANT
     const tenant = await ensureTenant({
       name: "Demo Tenant",
       slug: tenantSlug,
@@ -447,7 +478,11 @@ export async function seedOnStart() {
     const tenantId = new Types.ObjectId(tenant._id as any);
     console.log(`🏢 Tenant found/created - Slug: ${tenantSlug}, ObjectId: ${String(tenantId)}`);
 
-    // ========== USUARIOS ==========
+    // ROLES MOBILE
+    await ensureMobileRoles(tenantId);
+    console.log(`📱 Mobile roles ensured for tenant: ${tenantSlug}`);
+
+    // USERS
     const adminUser = await ensureUser({
       tenantId,
       email: adminEmail,
@@ -489,112 +524,152 @@ export async function seedOnStart() {
     });
     const clientUserId = String(clientUser._id);
 
-    // ========== CLIENTES ==========
-    const techcorp = await ensureClient({
+    // USUARIOS MOBILE
+    const mobileCollaboratorRole = await Role.findOne({
       tenantId,
-      name: "TechCorp Solutions",
-      email: "contact@techcorp.com",
+      name: { $regex: /^Mobile - Colaborador$/i },
+    });
+
+    const mobileCoordinatorRole = await Role.findOne({
+      tenantId,
+      name: { $regex: /^Mobile - Coordinador$/i },
+    });
+
+    let mobileCollaboratorUser;
+    if (mobileCollaboratorRole) {
+      const mobileCollabEmail = "colaborador@mobile.com";
+      let mobileCollabUser = await User.findOne({ tenantId, email: mobileCollabEmail });
+
+      if (!mobileCollabUser) {
+        mobileCollabUser = new User({
+          tenantId,
+          email: mobileCollabEmail,
+          password: "colaborador123",
+          roles: [mobileCollaboratorRole._id],
+          firstName: "Juan",
+          lastName: "Colaborador",
+          isActive: true,
+        });
+        await mobileCollabUser.save();
+
+        await Tenant.findByIdAndUpdate(tenantId, {
+          $addToSet: { userIds: mobileCollabUser._id },
+          $inc: { "usage.users.current": 1 },
+        });
+
+        console.log(`✅ ensureUser: created ${mobileCollabEmail} [Mobile - Colaborador]`);
+      } else {
+        console.log(`✔️ ensureUser: exists ${mobileCollabEmail}`);
+      }
+      mobileCollaboratorUser = mobileCollabUser;
+    }
+
+    let mobileCoordinatorUser;
+    if (mobileCoordinatorRole) {
+      const mobileCoordEmail = "coordinador@mobile.com";
+      let mobileCoordUser = await User.findOne({ tenantId, email: mobileCoordEmail });
+
+      if (!mobileCoordUser) {
+        mobileCoordUser = new User({
+          tenantId,
+          email: mobileCoordEmail,
+          password: "coordinador123",
+          roles: [mobileCoordinatorRole._id],
+          firstName: "María",
+          lastName: "Coordinadora",
+          isActive: true,
+        });
+        await mobileCoordUser.save();
+
+        await Tenant.findByIdAndUpdate(tenantId, {
+          $addToSet: { userIds: mobileCoordUser._id },
+          $inc: { "usage.users.current": 1 },
+        });
+
+        console.log(`✅ ensureUser: created ${mobileCoordEmail} [Mobile - Coordinador]`);
+      } else {
+        console.log(`✔️ ensureUser: exists ${mobileCoordEmail}`);
+      }
+      mobileCoordinatorUser = mobileCoordUser;
+    }
+
+    // CLIENTES
+    // ARCOR (antes TechCorp)
+    const arcor = await ensureClient({
+      tenantId,
+      name: "Arcor",
+      email: "contacto@arcor.com",
       data: {
-        phone: "+34 600 123 456",
-        company: "TechCorp Solutions S.L.",
-        industry: "tecnologia",
-        website: "https://techcorp.com",
+        phone: "+54 11 4000 0000",
+        company: "Grupo Arcor",
+        industry: "alimentacion",
+        website: "https://www.arcor.com",
         socialMedia: {
-          instagram: "https://instagram.com/techcorp",
-          facebook: "https://facebook.com/techcorp",
-          linkedin: "https://linkedin.com/company/techcorp",
+          instagram: "https://instagram.com/arcor",
+          facebook: "https://facebook.com/arcor",
+          linkedin: "https://linkedin.com/company/arcor",
         },
         brandKit: {
-          logos: [
-            {
-              url: "https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg",
-              name: "Logo Principal",
-              fileName: "logo-principal.png",
-              uploadedAt: new Date(),
-            },
-            {
-              url: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg",
-              name: "Logo Fondo Oscuro",
-              fileName: "logo-dark.png",
-              uploadedAt: new Date(),
-            },
-            {
-              url: "https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg",
-              name: "Icono Cuadrado",
-              fileName: "icon-square.png",
-              uploadedAt: new Date(),
-            },
-          ],
-          colors: ["#3b82f6", "#1e40af", "#f8fafc"],
-          fonts: ["Inter", "Roboto"],
-          guidelines: "Marca moderna y tecnológica, enfoque en innovación",
+          logos: [], // <-- vacío, no inventamos logos
+          colors: ["#0054A6", "#F9C300", "#FFFFFF"], // azul corporativo, amarillo, blanco
+          fonts: ["Roboto", "Open Sans"],
+          guidelines: "Marca cercana y masiva, foco en disfrute y confianza familiar.",
         },
         status: "active",
         favorite: true,
       },
     });
-    const techcorpId = String(techcorp._id);
+    const arcorId = String(arcor._id);
 
-    const cafecentral = await ensureClient({
+    // PUMA ENERGY (antes Café Central)
+    const puma = await ensureClient({
       tenantId,
-      name: "Café Central",
-      email: "info@cafecentral.es",
+      name: "Puma Energy",
+      email: "info@pumaenergy.com",
       data: {
-        phone: "+34 600 789 012",
-        company: "Café Central",
-        industry: "gastronomia",
-        website: "https://cafecentral.es",
+        phone: "+598 2500 0000",
+        company: "Puma Energy International",
+        industry: "energia",
+        website: "https://pumaenergy.com",
         socialMedia: {
-          instagram: "https://instagram.com/cafecentral",
-          facebook: "https://facebook.com/cafecentral",
+          instagram: "https://instagram.com/pumaenergy",
+          facebook: "https://facebook.com/pumaenergy",
+          linkedin: "https://linkedin.com/company/puma-energy",
         },
         brandKit: {
-          logos: [
-            {
-              url: "https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg",
-              name: "Logo Principal",
-              fileName: "logo-principal.png",
-              uploadedAt: new Date(),
-            },
-            {
-              url: "https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg",
-              name: "Logo Versión Clara",
-              fileName: "logo-light.png",
-              uploadedAt: new Date(),
-            },
-          ],
-          colors: ["#8b4513", "#d2691e", "#f5deb3"],
-          fonts: ["Playfair Display", "Open Sans"],
-          guidelines: "Marca cálida y acogedora, enfoque en tradición y calidad",
+          logos: [], // <-- vacío, no inventamos logos
+          colors: ["#006D3C", "#FFFFFF", "#D91F26"], // verde Puma, blanco, rojo acento
+          fonts: ["Inter", "Montserrat"],
+          guidelines: "Energía accesible y confiable. Tono directo, profesional, enfocado en movilidad y servicio.",
         },
         status: "active",
         favorite: false,
       },
     });
-    const cafecentralId = String(cafecentral._id);
+    const pumaId = String(puma._id);
 
-    // Vincular usuario cliente al Client principal (TechCorp)
+    // Link usuario cliente al cliente principal (Arcor)
     await addUserToClientUsuarios({
       tenantId,
-      clientId: techcorp._id as any,
+      clientId: arcor._id as any,
       userId: clientUser._id as any,
       permiso: "editar",
     });
 
-    // Set owner
-    if (!techcorp.ownerUserId || !techcorp.ownerUserId.equals(clientUser._id as any)) {
-      await Client.updateOne({ _id: techcorp._id, tenantId }, { $set: { ownerUserId: clientUser._id } });
-      console.log("🔗 Linked client user as owner of TechCorp");
+    // Set owner en Arcor
+    if (!arcor.ownerUserId || !arcor.ownerUserId.equals(clientUser._id as any)) {
+      await Client.updateOne({ _id: arcor._id, tenantId }, { $set: { ownerUserId: clientUser._id } });
+      console.log("🔗 Linked client user as owner of Arcor");
     }
 
-    // ========== PROYECTOS ==========
+    // PROYECTOS
     const project1 = await ensureProject({
       tenantId,
-      clientId: techcorpId,
-      name: "Transformación Digital 2024",
-      description: "Proyecto integral de transformación digital y posicionamiento tecnológico",
-      objectives: ["Posicionar como líder tecnológico", "Generar 1000 leads cualificados", "Aumentar awareness 40%"],
-      targetAudience: "CTOs y directores de tecnología en empresas medianas y grandes",
+      clientId: arcorId,
+      name: "Lanzamiento Nueva Línea Snacks 2024",
+      description: "Posicionamiento de la nueva línea de snacks saludables Arcor en retail y digital.",
+      objectives: ["Aumentar reconocimiento de la nueva línea", "Generar 1000 leads calificados retail/B2B", "Subir awareness 40%"],
+      targetAudience: "Consumidores jóvenes y familias que buscan opciones prácticas y más saludables",
       budget: { total: 25000 },
       campaigns: [],
       usuarios: [
@@ -611,11 +686,11 @@ export async function seedOnStart() {
 
     const project2 = await ensureProject({
       tenantId,
-      clientId: cafecentralId,
-      name: "Experiencia Café Premium",
-      description: "Proyecto para posicionar la marca como referente en café de especialidad",
-      objectives: ["Aumentar ventas 30%", "Fidelizar clientes existentes", "Atraer nuevos segmentos premium"],
-      targetAudience: "Amantes del café premium, profesionales de 28-50 años con poder adquisitivo medio-alto",
+      clientId: pumaId,
+      name: "Programa Experiencia Estaciones Puma",
+      description: "Posicionar Puma Energy como la opción preferida en experiencia de servicio y beneficios en ruta.",
+      objectives: ["Incrementar ticket promedio 30%", "Fidelizar clientes actuales", "Captar nuevos conductores de flota"],
+      targetAudience: "Conductores diarios, transporte liviano/comercial, viajeros frecuentes en ruta",
       budget: { total: 8000 },
       campaigns: [],
       usuarios: [
@@ -630,25 +705,37 @@ export async function seedOnStart() {
     });
     const project2Id = String(project2._id);
 
-    // Actualizar clientes con proyectos
-    await Client.findByIdAndUpdate(techcorp._id, { $addToSet: { proyectos: project1._id } });
-    await Client.findByIdAndUpdate(cafecentral._id, { $addToSet: { proyectos: project2._id } });
+    // attach projects a los clientes
+    await Client.findByIdAndUpdate(arcor._id, {
+      $addToSet: { proyectos: project1._id },
+    });
+    await Client.findByIdAndUpdate(puma._id, {
+      $addToSet: { proyectos: project2._id },
+    });
 
-    // ========== CAMPAÑAS ==========
+    // CAMPAÑAS
     const camp1 = await ensureCampaign({
       tenantId,
-      clientId: techcorpId,
+      clientId: arcorId,
       projectId: project1Id,
-      name: "Lanzamiento Producto 2024",
-      description: "Campaña integral para el lanzamiento del nuevo producto tecnológico",
-      objectives: ["Generar 1000 leads", "Aumentar awareness 30%"],
-      targetAudience: "CTOs y desarrolladores de empresas medianas",
+      name: "Lanzamiento Snacks Saludables",
+      description: "Campaña integral para introducir la nueva línea de snacks Arcor en retail y digital.",
+      objectives: ["Generar 1000 leads B2B", "Aumentar awareness 30%"],
+      targetAudience: "Compradores retail, responsables de compra supermercados/regionales",
       budget: { total: 10000, allocated: 8000, spent: 2500 },
-      timeline: { startDate: new Date("2024-01-15"), endDate: new Date("2024-04-15") },
+      timeline: {
+        startDate: new Date("2024-01-15"),
+        endDate: new Date("2024-04-15"),
+      },
       status: "active",
       platforms: ["linkedin", "twitter", "google-ads"],
       kpis: [
-        { name: "Leads generados", target: 1000, current: 250, unit: "leads" },
+        {
+          name: "Leads generados",
+          target: 1000,
+          current: 250,
+          unit: "leads",
+        },
         { name: "CTR", target: 3.5, current: 2.8, unit: "%" },
       ],
       assignedUsers: [adminId],
@@ -665,19 +752,32 @@ export async function seedOnStart() {
 
     const camp2 = await ensureCampaign({
       tenantId,
-      clientId: cafecentralId,
+      clientId: pumaId,
       projectId: project2Id,
-      name: "Promoción Café de Temporada",
-      description: "Campaña para promocionar los nuevos cafés de temporada",
-      objectives: ["Aumentar ventas 20%", "Atraer nuevos clientes"],
-      targetAudience: "Amantes del café premium en la zona",
+      name: "Promoción Combustible + Beneficios Ruta",
+      description: "Campaña para posicionar la experiencia en estaciones Puma Energy: servicio rápido, beneficios y conveniencia.",
+      objectives: ["Aumentar ticket promedio 20%", "Atraer nuevos clientes"],
+      targetAudience: "Conductores particulares y comerciales en zonas de alto tránsito",
       budget: { total: 3000, allocated: 3000, spent: 800 },
-      timeline: { startDate: new Date("2024-02-01"), endDate: new Date("2024-03-31") },
+      timeline: {
+        startDate: new Date("2024-02-01"),
+        endDate: new Date("2024-03-31"),
+      },
       status: "active",
       platforms: ["instagram", "facebook"],
       kpis: [
-        { name: "Ventas", target: 20, current: 8, unit: "% incremento" },
-        { name: "Engagement", target: 5, current: 3.2, unit: "%" },
+        {
+          name: "Ventas tienda / estacion",
+          target: 20,
+          current: 8,
+          unit: "% incremento",
+        },
+        {
+          name: "Engagement",
+          target: 5,
+          current: 3.2,
+          unit: "%",
+        },
       ],
       assignedUsers: [adminId],
       usuarios: [
@@ -694,36 +794,43 @@ export async function seedOnStart() {
     const camp1Id = String(camp1._id);
     const camp2Id = String(camp2._id);
 
-    // Actualizar proyectos con campañas
-    await Project.findByIdAndUpdate(project1._id, { $addToSet: { campaigns: camp1._id } });
-    await Project.findByIdAndUpdate(project2._id, { $addToSet: { campaigns: camp2._id } });
+    // Projects <- campaigns
+    await Project.findByIdAndUpdate(project1._id, {
+      $addToSet: { campaigns: camp1._id },
+    });
+    await Project.findByIdAndUpdate(project2._id, {
+      $addToSet: { campaigns: camp2._id },
+    });
 
-    // ========== POSTS ==========
-    // Social Media Posts - LinkedIn & Twitter
+    // POSTS
+    // Para Arcor (antes TechCorp)
     await ensurePost({
       tenantId,
       campaignId: camp1Id,
-      clientId: techcorpId,
-      title: "Innovación que transforma tu negocio",
+      clientId: arcorId,
+      title: "Snacks que te acompañan siempre",
       postType: "social",
       contentFormat: "post",
-      channel: "linkedin_post",
-      content: {
-        copy: "Descubre cómo nuestra nueva solución tecnológica puede revolucionar tu empresa. #Innovación #Tecnología #Transformación",
-        hashtags: ["Innovación", "Tecnología", "Transformación", "B2B"],
-        mentions: ["@techcorp"],
-      },
-      media: [
-        {
-          type: "image",
-          urls: ["https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg"],
-          alt: "Equipo trabajando con tecnología",
-        },
-      ],
       platforms: ["linkedin", "twitter"],
-      scheduling: { publishAt: new Date("2024-02-15T10:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
+      content: {
+        copy: "Probá la nueva línea de snacks Arcor: sabor, practicidad y energía para tu día.",
+        hashtags: ["Arcor", "Snacks", "InnovaciónAlimentaria"],
+        mentions: ["@arcor"],
+      },
+      media: [],
+      usedAssets: [],
+      scheduling: {
+        publishAt: new Date("2024-02-15T10:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
       status: "approved",
-      analytics: { impressions: 5420, engagement: 324, clicks: 89, shares: 12 },
+      analytics: {
+        impressions: 5420,
+        engagement: 324,
+        clicks: 89,
+        shares: 12,
+      },
       usuarios: [
         {
           id: adminId,
@@ -735,31 +842,34 @@ export async function seedOnStart() {
       favorite: true,
     });
 
-    // Social Media - Instagram Post
+    // Para Puma Energy (antes Café Central)
     await ensurePost({
       tenantId,
       campaignId: camp2Id,
-      clientId: cafecentralId,
-      title: "Café de temporada disponible",
+      clientId: pumaId,
+      title: "Parada inteligente en Puma Energy",
       postType: "social",
       contentFormat: "post",
-      channel: "instagram_post",
-      content: {
-        copy: "☕ ¡Ya están aquí nuestros cafés de temporada! Sabores únicos que no puedes perderte. Ven y pruébalos. #CaféEspecial #Temporada",
-        hashtags: ["CaféEspecial", "Temporada", "SaborÚnico", "CaféCentral"],
-        mentions: ["@cafecentral"],
-      },
-      media: [
-        {
-          type: "image",
-          urls: ["https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg"],
-          alt: "Taza de café especial",
-        },
-      ],
       platforms: ["instagram", "facebook"],
-      scheduling: { publishAt: new Date("2024-02-10T08:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
+      content: {
+        copy: "Tanque lleno, café caliente y beneficios para tu viaje. Pasá por Puma Energy.",
+        hashtags: ["PumaEnergy", "EnRuta", "ParadaInteligente"],
+        mentions: ["@pumaenergy"],
+      },
+      media: [],
+      usedAssets: [],
+      scheduling: {
+        publishAt: new Date("2024-02-10T08:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
       status: "published",
-      analytics: { impressions: 2150, engagement: 186, clicks: 45, shares: 8 },
+      analytics: {
+        impressions: 2150,
+        engagement: 186,
+        clicks: 45,
+        shares: 8,
+      },
       usuarios: [
         {
           id: adminId,
@@ -771,31 +881,33 @@ export async function seedOnStart() {
       favorite: false,
     });
 
-    // Social Media - Instagram Reel
     await ensurePost({
       tenantId,
       campaignId: camp2Id,
-      clientId: cafecentralId,
-      title: "Cómo preparamos tu café perfecto",
+      clientId: pumaId,
+      title: "Así preparamos tu mejor parada",
       postType: "social",
       contentFormat: "reel",
-      channel: "instagram_reel",
-      content: {
-        copy: "✨ El arte de preparar el café perfecto. Cada taza cuenta una historia. #CaféArtesanal #Barista #CaféCentral",
-        hashtags: ["CaféArtesanal", "Barista", "CaféCentral", "Reel"],
-        mentions: ["@cafecentral"],
-      },
-      media: [
-        {
-          type: "video",
-          urls: ["https://example.com/video/cafe-preparation.mp4"],
-          alt: "Video de preparación de café artesanal",
-        },
-      ],
       platforms: ["instagram"],
-      scheduling: { publishAt: new Date("2024-02-12T17:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
+      content: {
+        copy: "Servicio rápido, productos frescos y estaciones listas para vos. Esto es Puma Energy.",
+        hashtags: ["PumaEnergy", "Ruta", "Servicio"],
+        mentions: ["@pumaenergy"],
+      },
+      media: [],
+      usedAssets: [],
+      scheduling: {
+        publishAt: new Date("2024-02-12T17:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
       status: "approved",
-      analytics: { impressions: 8940, engagement: 1247, clicks: 234, shares: 89 },
+      analytics: {
+        impressions: 8940,
+        engagement: 1247,
+        clicks: 234,
+        shares: 89,
+      },
       usuarios: [
         {
           id: adminId,
@@ -807,264 +919,33 @@ export async function seedOnStart() {
       favorite: true,
     });
 
-    // Social Media - Instagram Story
     await ensurePost({
       tenantId,
       campaignId: camp2Id,
-      clientId: cafecentralId,
-      title: "Oferta del día - Story",
+      clientId: pumaId,
+      title: "Promo del día en tienda",
       postType: "social",
       contentFormat: "story",
-      channel: "instagram_story",
-      content: {
-        copy: "🔥 OFERTA HOY: 2x1 en todos los cafés de temporada hasta las 6pm",
-        hashtags: [],
-        mentions: [],
-      },
-      media: [
-        {
-          type: "image",
-          urls: ["https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg"],
-          alt: "Oferta especial del día",
-        },
-      ],
       platforms: ["instagram"],
-      scheduling: { publishAt: new Date("2024-02-11T09:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
-      status: "published",
-      analytics: { impressions: 3450, engagement: 287, clicks: 156, shares: 23 },
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-      favorite: false,
-    });
-
-    // Social Media - YouTube Short
-    await ensurePost({
-      tenantId,
-      campaignId: camp1Id,
-      clientId: techcorpId,
-      title: "Tutorial rápido - Nueva función",
-      postType: "social",
-      contentFormat: "short",
-      channel: "youtube_short",
       content: {
-        copy: "🚀 Aprende a usar nuestra nueva función en 60 segundos #TechTutorial #Productividad #TechCorp",
-        hashtags: ["TechTutorial", "Productividad", "TechCorp", "Shorts"],
-        mentions: [],
-      },
-      media: [
-        {
-          type: "video",
-          urls: ["https://example.com/video/tutorial-short.mp4"],
-          alt: "Tutorial rápido de nueva funcionalidad",
-        },
-      ],
-      platforms: ["youtube"],
-      scheduling: { publishAt: new Date("2024-02-14T12:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
-      status: "approved",
-      analytics: { impressions: 12340, engagement: 876, clicks: 234, shares: 45 },
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-      favorite: true,
-    });
-
-    // Social Media - TikTok Post
-    await ensurePost({
-      tenantId,
-      campaignId: camp1Id,
-      clientId: techcorpId,
-      title: "Tech Hack del día",
-      postType: "social",
-      contentFormat: "post",
-      channel: "tiktok_post",
-      content: {
-        copy: "💡 3 trucos que aumentarán tu productividad hoy mismo #TechHacks #Productividad #TechLife",
-        hashtags: ["TechHacks", "Productividad", "TechLife", "FYP"],
-        mentions: ["@techcorp"],
-      },
-      media: [
-        {
-          type: "video",
-          urls: ["https://example.com/video/tech-hacks.mp4"],
-          alt: "Video de trucos tecnológicos",
-        },
-      ],
-      platforms: ["tiktok"],
-      scheduling: { publishAt: new Date("2024-02-13T19:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
-      status: "scheduled",
-      analytics: { impressions: 0, engagement: 0, clicks: 0, shares: 0 },
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-      favorite: false,
-    });
-
-    // Social Media - Facebook Reel
-    await ensurePost({
-      tenantId,
-      campaignId: camp2Id,
-      clientId: cafecentralId,
-      title: "Receta especial de café helado",
-      postType: "social",
-      contentFormat: "reel",
-      channel: "facebook_reel",
-      content: {
-        copy: "🧊☕ Receta perfecta para un café helado refrescante. ¡Pruébalo en casa! #CaféHelado #Receta #Verano",
-        hashtags: ["CaféHelado", "Receta", "Verano", "CaféCentral"],
-        mentions: ["@cafecentral"],
-      },
-      media: [
-        {
-          type: "video",
-          urls: ["https://example.com/video/cafe-helado.mp4"],
-          alt: "Video receta de café helado",
-        },
-      ],
-      platforms: ["facebook"],
-      scheduling: { publishAt: new Date("2024-02-16T15:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
-      status: "draft",
-      analytics: { impressions: 0, engagement: 0, clicks: 0, shares: 0 },
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-      favorite: false,
-    });
-
-    // Email Marketing - Newsletter
-    await ensurePost({
-      tenantId,
-      campaignId: camp1Id,
-      clientId: techcorpId,
-      title: "Newsletter Febrero - Novedades TechCorp",
-      postType: "email",
-      channel: "email",
-      channelConfig: {
-        subject: "🚀 Novedades de Febrero: Nuevas funcionalidades que amarás",
-        body: "Hola,\n\nEste mes tenemos grandes novedades para ti. Hemos lanzado tres nuevas funcionalidades que mejorarán tu productividad:\n\n1. Dashboard personalizable\n2. Integración con IA\n3. Reportes automáticos\n\nDescubre más en nuestro blog.\n\nSaludos,\nEquipo TechCorp",
-        bodyHtml: "<h1>Novedades de Febrero</h1><p>Hola,</p><p>Este mes tenemos grandes novedades para ti...</p>",
-        recipients: ["subscribers@techcorp.com"],
-        replyTo: "support@techcorp.com",
-      },
-      content: {
-        copy: "Newsletter mensual con novedades del producto",
-        hashtags: [],
-        mentions: [],
-      },
-      media: [
-        {
-          type: "image",
-          urls: ["https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg"],
-          alt: "Banner newsletter",
-        },
-      ],
-      platforms: [],
-      scheduling: { publishAt: new Date("2024-02-20T09:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
-      status: "approved",
-      analytics: { impressions: 8500, engagement: 680, clicks: 425, shares: 0 },
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-      favorite: true,
-    });
-
-    // Email Marketing - Promocional
-    await ensurePost({
-      tenantId,
-      campaignId: camp2Id,
-      clientId: cafecentralId,
-      title: "Email Promoción - Descuento 20%",
-      postType: "email",
-      channel: "email",
-      channelConfig: {
-        subject: "☕ ¡20% de descuento en cafés de temporada! Solo esta semana",
-        body: "Hola amante del café,\n\nEsta semana tenemos una oferta especial para ti: 20% de descuento en todos nuestros cafés de temporada.\n\nUsa el código: TEMP20 al momento de tu compra.\n\nVálido hasta el domingo.\n\n¡Te esperamos!\nCafé Central",
-        bodyHtml: "<h2>¡Oferta Especial!</h2><p>20% de descuento en cafés de temporada</p><p><strong>Código: TEMP20</strong></p>",
-        recipients: ["customers@cafecentral.es"],
-        replyTo: "info@cafecentral.es",
-      },
-      content: {
-        copy: "Email promocional con descuento especial",
-        hashtags: [],
-        mentions: [],
-      },
-      media: [
-        {
-          type: "image",
-          urls: ["https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg"],
-          alt: "Promoción café de temporada",
-        },
-      ],
-      platforms: [],
-      scheduling: { publishAt: new Date("2024-02-18T08:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
-      status: "scheduled",
-      analytics: { impressions: 0, engagement: 0, clicks: 0, shares: 0 },
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-      favorite: true,
-    });
-
-    // Push Notification - Producto
-    await ensurePost({
-      tenantId,
-      campaignId: camp1Id,
-      clientId: techcorpId,
-      title: "Push - Nueva función disponible",
-      postType: "push",
-      channel: "push_notification",
-      channelConfig: {
-        title: "🎉 Nueva función disponible",
-        body: "Descubre nuestra nueva integración con IA. Pruébala ahora.",
-        icon: "https://techcorp.com/icon.png",
-        imageUrl: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg",
-        clickAction: "/features/ai-integration",
-        deepLink: "techcorp://features/ai",
-        priority: "high",
-        segmentation: {
-          tags: ["premium_users", "early_adopters"],
-        },
-      },
-      content: {
-        copy: "Push notification para anuncio de nueva funcionalidad",
+        copy: "🔥 HOY: 2x1 en café y medialunas en tu estación Puma Energy más cercana. Solo hasta las 18hs.",
         hashtags: [],
         mentions: [],
       },
       media: [],
-      platforms: [],
-      scheduling: { publishAt: new Date("2024-02-21T10:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
-      status: "approved",
-      analytics: { impressions: 15200, engagement: 3840, clicks: 1824, shares: 0 },
+      usedAssets: [],
+      scheduling: {
+        publishAt: new Date("2024-02-11T09:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
+      status: "published",
+      analytics: {
+        impressions: 3450,
+        engagement: 287,
+        clicks: 156,
+        shares: 23,
+      },
       usuarios: [
         {
           id: adminId,
@@ -1076,35 +957,295 @@ export async function seedOnStart() {
       favorite: false,
     });
 
-    // Push Notification - Promoción
+    await ensurePost({
+      tenantId,
+      campaignId: camp1Id,
+      clientId: arcorId,
+      title: "Nuevo sabor en 60 segundos",
+      postType: "social",
+      contentFormat: "short",
+      platforms: ["youtube"],
+      content: {
+        copy: "Conocé el nuevo snack Arcor en 60 segundos. Ideal para el break del día.",
+        hashtags: ["Arcor", "Snacks", "BreakTime", "Shorts"],
+        mentions: [],
+      },
+      media: [],
+      usedAssets: [],
+      scheduling: {
+        publishAt: new Date("2024-02-14T12:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
+      status: "approved",
+      analytics: {
+        impressions: 12340,
+        engagement: 876,
+        clicks: 234,
+        shares: 45,
+      },
+      usuarios: [
+        {
+          id: adminId,
+          email: adminUser.email,
+          permiso: "editar",
+        },
+      ],
+      createdBy: adminId,
+      favorite: true,
+    });
+
+    await ensurePost({
+      tenantId,
+      campaignId: camp1Id,
+      clientId: arcorId,
+      title: "Tip rápido de consumo inteligente",
+      postType: "social",
+      contentFormat: "post",
+      platforms: ["tiktok"],
+      content: {
+        copy: "3 snacks Arcor que te salvan el día cuando no tenés tiempo. #VidaReal",
+        hashtags: ["Arcor", "SnackTime", "FYP"],
+        mentions: ["@arcor"],
+      },
+      media: [],
+      usedAssets: [],
+      scheduling: {
+        publishAt: new Date("2024-02-13T19:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
+      status: "scheduled",
+      analytics: {
+        impressions: 0,
+        engagement: 0,
+        clicks: 0,
+        shares: 0,
+      },
+      usuarios: [
+        {
+          id: adminId,
+          email: adminUser.email,
+          permiso: "editar",
+        },
+      ],
+      createdBy: adminId,
+      favorite: false,
+    });
+
     await ensurePost({
       tenantId,
       campaignId: camp2Id,
-      clientId: cafecentralId,
-      title: "Push - Oferta flash 2x1",
-      postType: "push",
-      channel: "push_notification",
+      clientId: pumaId,
+      title: "Recarga y seguí viaje",
+      postType: "social",
+      contentFormat: "reel",
+      platforms: ["facebook"],
+      content: {
+        copy: "Hacemos tu parada más fácil: carga rápida, beneficios, productos frescos. Eso es Puma Energy.",
+        hashtags: ["PumaEnergy", "ViajeSeguro", "Ruta"],
+        mentions: ["@pumaenergy"],
+      },
+      media: [],
+      usedAssets: [],
+      scheduling: {
+        publishAt: new Date("2024-02-16T15:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
+      status: "draft",
+      analytics: {
+        impressions: 0,
+        engagement: 0,
+        clicks: 0,
+        shares: 0,
+      },
+      usuarios: [
+        {
+          id: adminId,
+          email: adminUser.email,
+          permiso: "editar",
+        },
+      ],
+      createdBy: adminId,
+      favorite: false,
+    });
+
+    // Email Marketing - Arcor
+    await ensurePost({
+      tenantId,
+      campaignId: camp1Id,
+      clientId: arcorId,
+      title: "Newsletter Febrero - Novedades Arcor",
+      postType: "email",
       channelConfig: {
-        title: "🔥 Oferta Flash: 2x1 en cafés",
-        body: "Solo por 2 horas. ¡Corre!",
-        icon: "https://cafecentral.es/icon.png",
+        subject: "Nuevos sabores, nuevas opciones para vos 🍫 Descubrí lo último de Arcor",
+        body: "Hola,\n\nEste mes presentamos nuevas opciones de snacks pensadas para acompañarte todos los días.\n\n- Formatos individuales\n- Menos azúcar añadida\n- Más sabor\n\nLeé más en nuestro blog.\n\nEquipo Arcor",
+        bodyHtml: "<h1>Novedades de Febrero</h1><p>Este mes presentamos nuevas opciones de snacks pensadas para acompañarte todos los días...</p>",
+        recipients: ["contactos@arcor.com"],
+        replyTo: "soporte@arcor.com",
+      },
+      content: {
+        copy: "Newsletter mensual con lanzamientos y mensajes de marca",
+        hashtags: [],
+        mentions: [],
+      },
+      media: [],
+      usedAssets: [],
+      platforms: [],
+      scheduling: {
+        publishAt: new Date("2024-02-20T09:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
+      status: "approved",
+      analytics: {
+        impressions: 8500,
+        engagement: 680,
+        clicks: 425,
+        shares: 0,
+      },
+      usuarios: [
+        {
+          id: adminId,
+          email: adminUser.email,
+          permiso: "editar",
+        },
+      ],
+      createdBy: adminId,
+      favorite: true,
+    });
+
+    // Email Marketing - Puma Energy
+    await ensurePost({
+      tenantId,
+      campaignId: camp2Id,
+      clientId: pumaId,
+      title: "Beneficio Ruta - Descuento Especial",
+      postType: "email",
+      channelConfig: {
+        subject: "⛽ 20% OFF en tu próxima carga + café caliente de regalo ☕",
+        body: "Hola,\n\nTenemos una promo especial para vos en Puma Energy: 20% de descuento en tu próxima carga de combustible + café caliente de regalo.\n\nMostrá este correo en caja.\n\nVálido hasta el domingo.\n\nTe esperamos.\nPuma Energy",
+        bodyHtml: "<h2>Promo especial en ruta</h2><p>20% de descuento en tu próxima carga + café caliente de regalo.</p>",
+        recipients: ["clientes@pumaenergy.com"],
+        replyTo: "info@pumaenergy.com",
+      },
+      content: {
+        copy: "Email promocional con beneficio exclusivo por tiempo limitado",
+        hashtags: [],
+        mentions: [],
+      },
+      media: [],
+      usedAssets: [],
+      platforms: [],
+      scheduling: {
+        publishAt: new Date("2024-02-18T08:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
+      status: "scheduled",
+      analytics: {
+        impressions: 0,
+        engagement: 0,
+        clicks: 0,
+        shares: 0,
+      },
+      usuarios: [
+        {
+          id: adminId,
+          email: adminUser.email,
+          permiso: "editar",
+        },
+      ],
+      createdBy: adminId,
+      favorite: true,
+    });
+
+    // Push Notification - Producto (Arcor)
+    await ensurePost({
+      tenantId,
+      campaignId: camp1Id,
+      clientId: arcorId,
+      title: "Push - Nuevo snack disponible",
+      postType: "push",
+      channelConfig: {
+        title: "🎉 Nuevo snack Arcor",
+        body: "Probá nuestra nueva opción pensada para el día a día. Ideal para vos.",
+        clickAction: "/productos/snacks",
+        deepLink: "arcor://snacks",
+        priority: "high",
+        segmentation: {
+          tags: ["consumidor_frecuente", "alto_engagement"],
+        },
+      },
+      content: {
+        copy: "Push para anuncio de nuevo producto consumo masivo",
+        hashtags: [],
+        mentions: [],
+      },
+      media: [],
+      usedAssets: [],
+      platforms: [],
+      scheduling: {
+        publishAt: new Date("2024-02-21T10:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
+      status: "approved",
+      analytics: {
+        impressions: 15200,
+        engagement: 3840,
+        clicks: 1824,
+        shares: 0,
+      },
+      usuarios: [
+        {
+          id: adminId,
+          email: adminUser.email,
+          permiso: "editar",
+        },
+      ],
+      createdBy: adminId,
+      favorite: false,
+    });
+
+    // Push Notification - Promo (Puma)
+    await ensurePost({
+      tenantId,
+      campaignId: camp2Id,
+      clientId: pumaId,
+      title: "Push - Promo Flash Estación",
+      postType: "push",
+      channelConfig: {
+        title: "🔥 Promo Flash: 2x1 en combo ruta",
+        body: "Solo por 2 horas en tu Puma Energy más cercana.",
         clickAction: "/offers/flash-sale",
-        deepLink: "cafecentral://offers/flash",
+        deepLink: "pumaenergy://offers/flash",
         priority: "high",
         segmentation: {
           allUsers: true,
         },
       },
       content: {
-        copy: "Push notification para oferta flash limitada",
+        copy: "Push para promo limitada en tienda de estación",
         hashtags: [],
         mentions: [],
       },
       media: [],
+      usedAssets: [],
       platforms: [],
-      scheduling: { publishAt: new Date("2024-02-19T14:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
+      scheduling: {
+        publishAt: new Date("2024-02-19T14:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
       status: "published",
-      analytics: { impressions: 4230, engagement: 1689, clicks: 845, shares: 0 },
+      analytics: {
+        impressions: 4230,
+        engagement: 1689,
+        clicks: 845,
+        shares: 0,
+      },
       usuarios: [
         {
           id: adminId,
@@ -1116,35 +1257,43 @@ export async function seedOnStart() {
       favorite: false,
     });
 
-    // Push Notification - Recordatorio
+    // Push Notification - Fidelización (Puma)
     await ensurePost({
       tenantId,
       campaignId: camp2Id,
-      clientId: cafecentralId,
-      title: "Push - Recordatorio programa fidelidad",
+      clientId: pumaId,
+      title: "Push - Beneficio clientes frecuentes",
       postType: "push",
-      channel: "push_notification",
       channelConfig: {
-        title: "⭐ ¡Casi llegas a tu café gratis!",
-        body: "Te faltan solo 2 sellos. Visítanos pronto.",
-        icon: "https://cafecentral.es/icon.png",
+        title: "⭐ Estás cerca de tu beneficio Puma Energy",
+        body: "Te faltan 2 cargas para desbloquear tu premio. Pasá hoy.",
         clickAction: "/loyalty",
-        deepLink: "cafecentral://loyalty",
+        deepLink: "pumaenergy://loyalty",
         priority: "normal",
         segmentation: {
-          tags: ["loyalty_program"],
+          tags: ["fidelidad", "alta_frecuencia"],
         },
       },
       content: {
-        copy: "Push notification de recordatorio de programa de fidelidad",
+        copy: "Push recordatorio de programa de fidelidad / puntos en estaciones",
         hashtags: [],
         mentions: [],
       },
       media: [],
+      usedAssets: [],
       platforms: [],
-      scheduling: { publishAt: new Date("2024-02-22T11:00:00Z"), timezone: "Europe/Madrid", isScheduled: true },
+      scheduling: {
+        publishAt: new Date("2024-02-22T11:00:00Z"),
+        timezone: "Europe/Madrid",
+        isScheduled: true,
+      },
       status: "draft",
-      analytics: { impressions: 0, engagement: 0, clicks: 0, shares: 0 },
+      analytics: {
+        impressions: 0,
+        engagement: 0,
+        clicks: 0,
+        shares: 0,
+      },
       usuarios: [
         {
           id: adminId,
@@ -1156,50 +1305,94 @@ export async function seedOnStart() {
       favorite: false,
     });
 
-    // ========== BRIEFS ==========
+    // BRIEF (Arcor)
     await ensureBrief({
       tenantId,
-      clientId: techcorpId,
+      clientId: arcorId,
       campaignId: camp1Id,
-      title: "Brief - Lanzamiento Producto Tecnológico",
-      description: "Brief completo para el lanzamiento del nuevo producto B2B",
-      objectives: ["Posicionar el producto como líder", "Generar demanda inicial"],
+      title: "Brief - Lanzamiento Snacks Saludables",
+      description: "Brief para el lanzamiento de la nueva línea de snacks Arcor con foco salud + conveniencia.",
+      objectives: ["Posicionar la línea como opción rica y práctica", "Generar demanda inicial en retail"],
       targetAudience: {
-        demographics: { ageRange: "30-50 años", gender: "Todos", location: "España y LATAM", income: "Medio-alto" },
-        psychographics: { interests: ["Tecnología", "Innovación", "Productividad"], behaviors: ["Early adopters", "Decisores de compra"], values: ["Eficiencia", "Calidad", "ROI"] },
-        painPoints: ["Procesos manuales lentos", "Falta de integración", "Costos elevados"],
+        demographics: {
+          ageRange: "25-45 años",
+          gender: "Todos",
+          location: "Argentina / LATAM",
+          income: "Medio",
+        },
+        psychographics: {
+          interests: ["Vida activa", "Snacks rápidos", "Salud práctica"],
+          behaviors: ["Compra en kiosco/super", "Busca opciones cómodas", "Lee etiquetas"],
+          values: ["Confianza", "Calidad", "Precio justo"],
+        },
+        painPoints: ["Snacks poco prácticos", "Demasiado azúcar", "Pocas opciones en ruta/oficina"],
       },
       brandGuidelines: {
-        toneOfVoice: "Profesional, innovador y confiable",
-        keyMessages: ["Innovación que funciona", "Resultados medibles", "Soporte experto"],
-        dosDonts: { dos: ["Usar datos y métricas", "Mostrar casos de éxito", "Ser específicos"], donts: ["Promesas vagas", "Jerga técnica excesiva", "Comparaciones directas"] },
-        visualStyle: "Moderno, limpio, colores corporativos",
+        toneOfVoice: "Cercano, positivo, cotidiano",
+        keyMessages: ["Te acompaña en tu ritmo", "Rico y práctico", "La marca que conocés"],
+        dosDonts: {
+          dos: ["Hablar de momentos reales", "Mostrar consumo cotidiano", "Ser concretos"],
+          donts: ["Ser muy técnico", "Prometer 'salud perfecto'", "Comparar con la competencia directa"],
+        },
+        visualStyle: "Colorido, cercano, uso de colores de producto y packaging",
       },
-      deliverables: [{ type: "campaign", quantity: 1, format: ["Digital", "Social Media"], platforms: ["linkedin", "twitter", "google-ads"], deadline: new Date("2024-03-01") }],
+      deliverables: [
+        {
+          type: "campaign",
+          quantity: 1,
+          format: ["Digital", "Social Media"],
+          platforms: ["linkedin", "twitter", "google-ads"],
+          deadline: new Date("2024-03-01"),
+        },
+      ],
       budget: {
         total: 10000,
         breakdown: [
-          { category: "Publicidad digital", amount: 6000, description: "Google Ads y LinkedIn Ads" },
-          { category: "Contenido", amount: 2500, description: "Creación de posts y materiales" },
-          { category: "Gestión", amount: 1500, description: "Gestión de campaña" },
+          {
+            category: "Publicidad digital",
+            amount: 6000,
+            description: "Paid media / performance",
+          },
+          {
+            category: "Contenido",
+            amount: 2500,
+            description: "Creatividades y social",
+          },
+          {
+            category: "Gestión",
+            amount: 1500,
+            description: "Planificación y reporting",
+          },
         ],
       },
       timeline: {
         startDate: new Date("2024-01-15"),
         endDate: new Date("2024-04-15"),
         milestones: [
-          { name: "Kick-off", date: new Date("2024-01-15"), description: "Inicio de campaña" },
-          { name: "Review intermedio", date: new Date("2024-02-28"), description: "Evaluación de resultados" },
-          { name: "Optimización", date: new Date("2024-03-15"), description: "Ajustes basados en datos" },
+          {
+            name: "Kick-off",
+            date: new Date("2024-01-15"),
+            description: "Inicio de campaña",
+          },
+          {
+            name: "Review intermedio",
+            date: new Date("2024-02-28"),
+            description: "Evaluación inicial",
+          },
+          {
+            name: "Optimización",
+            date: new Date("2024-03-15"),
+            description: "Ajustes creativos / pauta",
+          },
         ],
       },
       requirements: {
         mandatory: ["Aprobación de cliente", "Métricas semanales", "Reportes mensuales"],
-        preferred: ["A/B testing", "Segmentación avanzada", "Retargeting"],
-        restrictions: ["No mencionar competidores", "Cumplir GDPR", "Presupuesto fijo"],
+        preferred: ["A/B testing", "Segmentación por momento de consumo"],
+        restrictions: ["No claims médicos", "Cumplir normativa etiquetado", "Presupuesto fijo"],
       },
       success_metrics: {
-        primary: ["Leads generados", "Costo por lead"],
+        primary: ["Leads comerciales", "Costo por lead"],
         secondary: ["Brand awareness", "Engagement rate"],
         kpis: [
           { name: "Leads cualificados", target: 1000, unit: "leads" },
@@ -1221,13 +1414,13 @@ export async function seedOnStart() {
       favorite: true,
     });
 
-    // ========== TAREAS ==========
+    // TASKS
     await ensureTask({
       tenantId,
       campaignId: camp1Id,
-      clientId: techcorpId,
+      clientId: arcorId,
       title: "Diseñar creatividades para LinkedIn",
-      description: "Crear 5 creatividades diferentes para la campaña de LinkedIn",
+      description: "Crear 5 creatividades diferentes para la campaña B2B de Arcor",
       type: "design",
       priority: "high",
       status: "in_progress",
@@ -1248,9 +1441,9 @@ export async function seedOnStart() {
     await ensureTask({
       tenantId,
       campaignId: camp2Id,
-      clientId: cafecentralId,
+      clientId: pumaId,
       title: "Redactar copy para posts de Instagram",
-      description: "Crear textos atractivos para 10 posts de Instagram sobre cafés de temporada",
+      description: "Crear textos atractivos para 10 posts de Instagram sobre beneficios en estaciones Puma Energy",
       type: "copy",
       priority: "medium",
       status: "todo",
@@ -1270,9 +1463,9 @@ export async function seedOnStart() {
     await ensureTask({
       tenantId,
       campaignId: camp1Id,
-      clientId: techcorpId,
+      clientId: arcorId,
       title: "Análisis de métricas Q1",
-      description: "Revisar y analizar todas las métricas del primer trimestre",
+      description: "Revisar y analizar todas las métricas del primer trimestre (reach, CPL, CTR)",
       type: "analysis",
       priority: "medium",
       status: "done",
@@ -1290,112 +1483,467 @@ export async function seedOnStart() {
       createdBy: adminId,
     });
 
-    // ========== ASSETS ==========
+    // ASSETS
     await ensureAsset({
       tenantId,
-      clientId: techcorpId,
+      clientId: arcorId,
       campaignId: camp1Id,
-      nombre: "Logo TechCorp Principal",
+      nombre: "Banner LinkedIn - Snacks Saludables",
       tipo: "imagen",
-      url: "https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg",
+      url: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg",
       scope: "campaigns",
       creadoPor: adminId,
-      tags: ["logo", "branding", "techcorp", "oficial"],
+      tags: ["banner", "linkedin", "arcor", "snacks"],
       permisos: {
         editores: [adminId],
         visores: [adminId],
       },
       metadata: {
-        name: "Logo TechCorp Principal",
-        title: "Logo TechCorp Principal",
-        description: "Logo oficial de TechCorp Solutions para uso en campañas",
-        category: "branding",
+        name: "Banner LinkedIn - Snacks Saludables",
+        title: "Banner LinkedIn - Snacks Saludables",
+        description: "Banner para awareness B2B sobre nueva línea de snacks Arcor",
+        category: "social-media",
         notes: "Imagen de Pexels - Free to use",
       },
     });
 
     await ensureAsset({
       tenantId,
-      clientId: techcorpId,
-      campaignId: camp1Id,
-      nombre: "Banner LinkedIn - Innovación",
-      tipo: "imagen",
-      url: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg",
-      scope: "campaigns",
-      creadoPor: adminId,
-      tags: ["linkedin", "banner", "innovación", "tecnología"],
-      permisos: {
-        editores: [adminId],
-        visores: [adminId],
-      },
-      metadata: {
-        name: "Banner LinkedIn - Innovación",
-        title: "Banner LinkedIn - Innovación",
-        description: "Banner para posts de LinkedIn sobre innovación tecnológica",
-        category: "social-media",
-        notes: "Optimizado para LinkedIn - Imagen de Pexels",
-      },
-    });
-
-    await ensureAsset({
-      tenantId,
-      clientId: cafecentralId,
+      clientId: pumaId,
       campaignId: camp2Id,
-      nombre: "Foto Café de Temporada",
+      nombre: "Foto Estación Puma Energy",
       tipo: "imagen",
       url: "https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg",
       scope: "campaigns",
       creadoPor: adminId,
-      tags: ["café", "temporada", "instagram", "producto"],
+      tags: ["puma", "estacion", "promo", "combustible"],
       permisos: {
         editores: [adminId],
         visores: [adminId],
       },
       metadata: {
-        name: "Foto Café de Temporada",
-        title: "Foto Café de Temporada",
-        description: "Imagen principal para promoción de cafés de temporada",
-        category: "producto",
+        name: "Foto Estación Puma Energy",
+        title: "Foto Estación Puma Energy",
+        description: "Imagen principal para promoción de estaciones y experiencia de servicio",
+        category: "branding",
         notes: "Optimizado para Instagram - Imagen de Pexels",
       },
     });
 
     await ensureAsset({
       tenantId,
-      clientId: cafecentralId,
-      nombre: "Guía de Brand Kit Café Central",
+      clientId: pumaId,
+      nombre: "Guía de Brand Puma Energy",
       tipo: "documento",
-      url: "https://example.com/brandkit-cafecentral.pdf",
+      url: "https://example.com/brandkit-puma.pdf",
       scope: "brandkit",
       creadoPor: adminId,
-      tags: ["brandkit", "guidelines", "documento", "marca"],
+      tags: ["brandkit", "guidelines", "marca", "puma"],
       permisos: {
         editores: [adminId],
         visores: [adminId],
       },
       metadata: {
-        name: "Guía de Brand Kit Café Central",
-        title: "Guía de Brand Kit Café Central",
-        description: "Documento con directrices de marca para Café Central",
+        name: "Guía de Brand Puma Energy",
+        title: "Guía de Brand Puma Energy",
+        description: "Documento con directrices de marca y lineamientos de comunicación para Puma Energy",
         category: "branding",
         notes: "24 páginas - Última actualización: " + new Date().toLocaleDateString(),
       },
     });
+
+    // ============ HR MODULE SEED DATA ============
+    console.log("👥 Seeding HR module data...");
+
+    // Create EmployeeProfile for demo users
+    const employeeProfilesCount = await EmployeeProfile.countDocuments({ tenantId, userId: adminId });
+
+    if (employeeProfilesCount === 0) {
+      // Admin profile
+      await EmployeeProfile.create({
+        tenantId,
+        userId: adminId,
+        firstName: "Admin",
+        lastName: "User",
+        email: adminEmail,
+        phone: "+1-555-0101",
+        position: "Platform Administrator",
+        department: "IT",
+        hireDate: new Date(2023, 0, 15),
+        address: {
+          street: "123 Tech Street",
+          city: "San Francisco",
+          state: "CA",
+          country: "USA",
+          zip: "94102",
+        },
+        vacationPolicy: {
+          annualDays: 25,
+          carryOverDays: 5,
+        },
+        isActive: true,
+      });
+      console.log("✅ Created EmployeeProfile for admin");
+
+      // Manager profile
+      const managerUser = await User.findOne({ tenantId, email: "manager@example.com" });
+      if (managerUser) {
+        await EmployeeProfile.create({
+          tenantId,
+          userId: managerUser._id,
+          firstName: "Manager",
+          lastName: "User",
+          email: "manager@example.com",
+          phone: "+1-555-0102",
+          position: "Project Manager",
+          department: "Operations",
+          hireDate: new Date(2023, 2, 10),
+          address: {
+            street: "456 Business Ave",
+            city: "San Francisco",
+            state: "CA",
+            country: "USA",
+            zip: "94103",
+          },
+          vacationPolicy: {
+            annualDays: 22,
+            carryOverDays: 3,
+          },
+          isActive: true,
+        });
+        console.log("✅ Created EmployeeProfile for manager");
+      }
+
+      // Regular user profile
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+      if (regularUser) {
+        await EmployeeProfile.create({
+          tenantId,
+          userId: regularUser._id,
+          firstName: "Regular",
+          lastName: "User",
+          email: "user@example.com",
+          phone: "+1-555-0103",
+          position: "Content Specialist",
+          department: "Marketing",
+          hireDate: new Date(2023, 5, 1),
+          address: {
+            street: "789 Creative Blvd",
+            city: "San Francisco",
+            state: "CA",
+            country: "USA",
+            zip: "94104",
+          },
+          vacationPolicy: {
+            annualDays: 20,
+            carryOverDays: 0,
+          },
+          isActive: true,
+        });
+        console.log("✅ Created EmployeeProfile for regular user");
+      }
+    }
+
+    // Create VacationRequests
+    const vacationsCount = await VacationRequest.countDocuments({ tenantId });
+
+    if (vacationsCount === 0) {
+      const managerUser = await User.findOne({ tenantId, email: "manager@example.com" });
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        // Approved vacation in the past
+        await VacationRequest.create({
+          tenantId,
+          userId: regularUser._id,
+          startDate: new Date(2024, 0, 15),
+          endDate: new Date(2024, 0, 19),
+          daysRequested: 5,
+          status: "approved",
+          reason: "Family vacation",
+          managerComment: "Approved - Enjoy your time off!",
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 0, 5),
+        });
+
+        // Pending vacation in the future
+        await VacationRequest.create({
+          tenantId,
+          userId: regularUser._id,
+          startDate: new Date(2024, 6, 10),
+          endDate: new Date(2024, 6, 20),
+          daysRequested: 11,
+          status: "pending",
+          reason: "Summer vacation",
+        });
+
+        // Rejected vacation
+        await VacationRequest.create({
+          tenantId,
+          userId: regularUser._id,
+          startDate: new Date(2024, 2, 1),
+          endDate: new Date(2024, 2, 3),
+          daysRequested: 3,
+          status: "rejected",
+          reason: "Personal matters",
+          managerComment: "Cannot approve due to project deadline",
+        });
+
+        console.log("✅ Created vacation requests for regular user");
+      }
+
+      if (managerUser) {
+        // Approved vacation for manager
+        await VacationRequest.create({
+          tenantId,
+          userId: managerUser._id,
+          startDate: new Date(2024, 3, 15),
+          endDate: new Date(2024, 3, 19),
+          daysRequested: 5,
+          status: "approved",
+          reason: "Conference attendance",
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 3, 1),
+        });
+
+        console.log("✅ Created vacation requests for manager");
+      }
+    }
+
+    // Create Orders
+    const ordersCount = await Order.countDocuments({ tenantId });
+
+    if (ordersCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        // Pending order
+        await Order.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "Standing Desk",
+          description: "Need an adjustable standing desk for better ergonomics",
+          category: "equipment",
+          status: "pending",
+          amount: 450,
+        });
+
+        // Approved order
+        await Order.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "External Monitor",
+          description: "27-inch 4K monitor for improved productivity",
+          category: "equipment",
+          status: "approved",
+          amount: 350,
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 1, 10),
+        });
+
+        // Delivered order
+        await Order.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "Office Supplies",
+          description: "Notebooks, pens, sticky notes",
+          category: "office_supplies",
+          status: "delivered",
+          amount: 45,
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 0, 15),
+          deliveredAt: new Date(2024, 0, 20),
+        });
+
+        console.log("✅ Created orders for regular user");
+      }
+    }
+
+    // Create Documents
+    const documentsCount = await HRDocument.countDocuments({ tenantId });
+
+    if (documentsCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+      const managerUser = await User.findOne({ tenantId, email: "manager@example.com" });
+
+      if (regularUser) {
+        await HRDocument.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "contract",
+          title: "Employment Contract 2023",
+          description: "Initial employment contract",
+          filePath: "storage/hr/documents/contract_user_2023.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        });
+
+        await HRDocument.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "payroll",
+          title: "Payroll Statement - February 2024",
+          description: "Monthly payroll statement",
+          filePath: "storage/hr/documents/payroll_user_202402.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        });
+
+        console.log("✅ Created documents for regular user");
+      }
+
+      if (managerUser) {
+        await HRDocument.create({
+          tenantId,
+          userId: managerUser._id,
+          type: "contract",
+          title: "Employment Contract 2023",
+          description: "Management employment contract",
+          filePath: "storage/hr/documents/contract_manager_2023.pdf",
+          uploadedBy: adminId,
+          isVisibleToEmployee: true,
+        });
+
+        console.log("✅ Created documents for manager");
+      }
+    }
+
+    // Create CalendarEvents
+    const eventsCount = await CalendarEvent.countDocuments({ tenantId });
+
+    if (eventsCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        // Team meeting
+        await CalendarEvent.create({
+          tenantId,
+          userId: regularUser._id,
+          title: "Team Weekly Sync",
+          description: "Weekly team status meeting",
+          start: new Date(2024, 2, 18, 10, 0),
+          end: new Date(2024, 2, 18, 11, 0),
+          isAllDay: false,
+          visibility: "team",
+          createdBy: adminId,
+        });
+
+        // Company event
+        await CalendarEvent.create({
+          tenantId,
+          userId: adminId,
+          title: "All Hands Meeting",
+          description: "Quarterly all hands meeting",
+          start: new Date(2024, 2, 25, 14, 0),
+          end: new Date(2024, 2, 25, 16, 0),
+          isAllDay: false,
+          visibility: "company",
+          createdBy: adminId,
+        });
+
+        console.log("✅ Created calendar events");
+      }
+    }
+
+    // Create Notifications
+    const notificationsCount = await Notification.countDocuments({ tenantId });
+
+    if (notificationsCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        await Notification.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "vacation",
+          title: "Vacation Request Approved",
+          message: "Your vacation request for January 15-19 has been approved.",
+          isRead: true,
+          readAt: new Date(2024, 0, 6),
+        });
+
+        await Notification.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "order",
+          title: "Order Delivered",
+          message: 'Your order "Office Supplies" has been delivered.',
+          isRead: true,
+          readAt: new Date(2024, 0, 21),
+        });
+
+        await Notification.create({
+          tenantId,
+          userId: regularUser._id,
+          type: "system",
+          title: "Welcome to HR Portal",
+          message: "You now have access to the employee self-service portal.",
+          isRead: false,
+        });
+
+        console.log("✅ Created notifications for regular user");
+      }
+    }
+
+    // Create ActivityLog
+    const activityCount = await ActivityLog.countDocuments({ tenantId });
+
+    if (activityCount === 0) {
+      const regularUser = await User.findOne({ tenantId, email: "user@example.com" });
+
+      if (regularUser) {
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "vacation_request_created",
+          description: "Created vacation request for 11 days",
+          entityType: "VacationRequest",
+        });
+
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "vacation_request_approved",
+          description: "Vacation request approved by manager",
+          entityType: "VacationRequest",
+        });
+
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "order_created",
+          description: "Created order: Standing Desk",
+          entityType: "Order",
+        });
+
+        await ActivityLog.create({
+          tenantId,
+          userId: regularUser._id,
+          action: "order_approved",
+          description: 'Order "External Monitor" approved by manager',
+          entityType: "Order",
+        });
+
+        console.log("✅ Created activity logs for regular user");
+      }
+    }
+
+    console.log("✅ HR module seed data completed");
+    // ============ END HR MODULE SEED DATA ============
 
     console.log("🎉 Seed completed successfully!");
     console.log("👤 Admin:", adminEmail, "/", adminPassword);
     console.log("👤 Manager: manager@example.com / manager123");
     console.log("👤 User: user@example.com / user123");
     console.log("👤 Client user:", seedClientEmail, "/", seedClientPass);
-    console.log("🔐 Roles: Administrador, Manager, Usuario, Cliente");
-    console.log("🏢 Clients: TechCorp Solutions, Café Central");
-    console.log("📁 Projects: Transformación Digital 2024, Experiencia Café Premium");
-    console.log("🎯 Campaigns: Lanzamiento Producto 2024, Promoción Café de Temporada");
-    console.log("📱 Posts: 12 posts created");
-    console.log("   - Social Media: 7 posts (Instagram, Facebook, LinkedIn, TikTok, YouTube)");
-    console.log("   - Email Marketing: 2 campaigns (Newsletter, Promotional)");
-    console.log("   - Push Notifications: 3 notifications (Product, Promotion, Reminder)");
-    console.log("📦 Assets: 4 assets created (logos, banners, documents)");
+    console.log("📱 Mobile Colaborador: colaborador@mobile.com / colaborador123");
+    console.log("📱 Mobile Coordinador: coordinador@mobile.com / coordinador123");
+    console.log("🔐 Roles: Administrador, Manager, Usuario, Cliente, Mobile - Colaborador, Mobile - Coordinador");
+    console.log("🏢 Clients: Arcor, Puma Energy");
+    console.log("📁 Projects: Lanzamiento Nueva Línea Snacks 2024, Programa Experiencia Estaciones Puma");
+    console.log("🎯 Campaigns: Lanzamiento Snacks Saludables, Promoción Combustible + Beneficios Ruta");
+    console.log("📱 Posts: contenidos sociales / email / push creados");
+    console.log("📦 Assets: imágenes y docs de marca cargados");
   } catch (error) {
     console.error("❌ Seed error:", error);
     throw error;
