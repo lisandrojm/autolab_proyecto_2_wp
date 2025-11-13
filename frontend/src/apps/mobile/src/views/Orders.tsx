@@ -1,7 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Package, CheckCircle, Clock, XCircle, Truck, AlertCircle, Camera, Image as ImageIcon, X } from "lucide-react";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
+import axios from "../../../../api/axiosConfig";
+
+interface OrderCategory {
+  _id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  sortOrder: number;
+}
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -11,6 +20,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const { orders, loading, error, createOrder, deleteOrder } = useOrders();
   const [showForm, setShowForm] = useState(false);
   const [product, setProduct] = useState("");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<OrderCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [quantity, setQuantity] = useState("1");
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -20,6 +32,24 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const { data } = await axios.get<OrderCategory[]>('/order-categories', { params: { isActive: true } });
+        setCategories(data.sort((a, b) => a.sortOrder - b.sortOrder));
+        if (data.length > 0) {
+          setCategory(data[0].name);
+        }
+      } catch (err) {
+        console.error('Error loading categories:', err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    loadCategories();
+  }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,11 +83,12 @@ export default function Orders({ onNavigate }: OrdersProps) {
       await createOrder({
         title: product,
         description,
-        category: "other",
+        category: category || "other",
         photo,
       });
       setShowForm(false);
       setProduct("");
+      setCategory(categories.length > 0 ? categories[0].name : "");
       setQuantity("1");
       setDescription("");
       setPhoto(null);
@@ -150,6 +181,31 @@ export default function Orders({ onNavigate }: OrdersProps) {
               </div>
             )}
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categoría</label>
+                {loadingCategories ? (
+                  <div className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-500 dark:text-slate-400">
+                    Cargando categorías...
+                  </div>
+                ) : categories.length > 0 ? (
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">
+                    No hay categorías disponibles. Contacta al administrador.
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Producto o artículo</label>
                 <input type="text" value={product} onChange={(e) => setProduct(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Ej: Laptop, Mouse, Material de oficina..." />

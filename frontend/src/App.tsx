@@ -55,6 +55,7 @@ import { ManageCalendarEventsPage } from "./pages/ManageCalendarEventsPage";
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
+import { ManageOrderCategoriesPage } from "./pages/ManageOrderCategoriesPage";
 import { ManageVacationRequestsPage } from "./pages/ManageVacationRequestsPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
@@ -536,6 +537,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ManageOrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/order-categories"
+                element={
+                  <ProtectedRoute>
+                    <ManageOrderCategoriesPage />
                   </ProtectedRoute>
                 }
               />
