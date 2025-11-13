@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory } from "../api/orderCategories";
@@ -19,6 +20,7 @@ const ICON_OPTIONS = [
 ];
 
 export const ManageOrderCategoriesPage: React.FC = () => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<OrderCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -144,6 +146,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       title="Categorías de Pedidos"
       subtitle="Administra las categorías que se muestran en el formulario de pedidos"
       faIcon={{ icon: faList }}
+      onBack={() => navigate('/hr/orders')}
       headerActions={
         <button
           onClick={openCreateModal}
