@@ -45,13 +45,15 @@ export const RequestRejectModal: React.FC<RequestRejectModalProps> = ({
               <div>
                 <span className="text-gray-600 dark:text-gray-400">Tipo:</span>{' '}
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {request.type === 'vacation'
+                  {request.typeKey === 'vacation'
                     ? 'Vacaciones'
-                    : request.type === 'compensatory'
+                    : request.typeKey === 'compensatory'
                     ? 'Compensatorio'
-                    : request.type === 'special_leave'
+                    : request.typeKey === 'special_leave'
                     ? 'Permiso Especial'
-                    : 'Extra'}
+                    : request.typeKey === 'extra'
+                    ? 'Extra'
+                    : request.typeKey}
                 </span>
               </div>
               <div>

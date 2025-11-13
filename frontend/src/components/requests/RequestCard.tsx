@@ -7,7 +7,6 @@ interface RequestCardProps {
   request: RequestData;
   onApprove?: (request: RequestData) => void;
   onReject?: (request: RequestData) => void;
-  onPostpone?: (request: RequestData) => void;
   onView?: (request: RequestData) => void;
   showActions?: boolean;
 }
@@ -16,7 +15,6 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   request,
   onApprove,
   onReject,
-  onPostpone,
   onView,
   showActions = true,
 }) => {
@@ -33,19 +31,14 @@ export const RequestCard: React.FC<RequestCardProps> = ({
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'vacation':
-        return 'Vacaciones';
-      case 'compensatory':
-        return 'Compensatorio';
-      case 'special_leave':
-        return 'Permiso Especial';
-      case 'extra':
-        return 'Extra';
-      default:
-        return type;
-    }
+  const getTypeLabel = (typeKey: string) => {
+    const labels: Record<string, string> = {
+      vacation: 'Vacaciones',
+      compensatory: 'Compensatorio',
+      special_leave: 'Permiso Especial',
+      extra: 'Extra',
+    };
+    return labels[typeKey] || typeKey;
   };
 
   const employee = typeof request.employeeId === 'object' ? request.employeeId : null;
@@ -63,7 +56,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {getTypeLabel(request.type)}
+              {getTypeLabel(request.typeKey)}
             </h3>
             {employee && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -93,12 +86,6 @@ export const RequestCard: React.FC<RequestCardProps> = ({
             <span className="line-clamp-2">{request.reason}</span>
           </div>
         )}
-        {request.postponeCount > 0 && (
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            <FontAwesomeIcon icon={faClock} className="mr-1" />
-            Pospuesta {request.postponeCount}/3 veces
-          </div>
-        )}
       </div>
 
       {showActions && request.status === 'pending' && (
@@ -113,18 +100,6 @@ export const RequestCard: React.FC<RequestCardProps> = ({
             >
               <FontAwesomeIcon icon={faCheck} className="mr-2" />
               Aprobar
-            </button>
-          )}
-          {onPostpone && request.postponeCount < 3 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPostpone(request);
-              }}
-              className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
-            >
-              <FontAwesomeIcon icon={faClock} className="mr-2" />
-              Posponer
             </button>
           )}
           {onReject && (

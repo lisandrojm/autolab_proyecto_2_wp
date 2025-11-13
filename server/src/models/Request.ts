@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export interface IRequest extends Document {
   tenantId: Types.ObjectId;
   employeeId: Types.ObjectId;
-  type: "vacation" | "compensatory" | "special_leave" | "extra";
+  typeKey: string;
   startDate: Date;
   endDate: Date;
   daysCount?: number;
@@ -13,8 +13,6 @@ export interface IRequest extends Document {
   approvedAt?: Date;
   rejectedAt?: Date;
   rejectionReason?: string;
-  postponeCount: number;
-  lastPostponedAt?: Date;
   replacementEmployeeId?: Types.ObjectId;
   notes?: string;
   source: "mobile" | "admin";
@@ -26,11 +24,11 @@ const requestSchema = new Schema<IRequest>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     employeeId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    type: {
+    typeKey: {
       type: String,
-      enum: ["vacation", "compensatory", "special_leave", "extra"],
       required: true,
       index: true,
+      trim: true,
     },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
@@ -46,8 +44,6 @@ const requestSchema = new Schema<IRequest>(
     approvedAt: { type: Date },
     rejectedAt: { type: Date },
     rejectionReason: { type: String, trim: true },
-    postponeCount: { type: Number, default: 0, min: 0, max: 3 },
-    lastPostponedAt: { type: Date },
     replacementEmployeeId: { type: Schema.Types.ObjectId, ref: "User" },
     notes: { type: String, trim: true },
     source: {
@@ -61,7 +57,7 @@ const requestSchema = new Schema<IRequest>(
 
 requestSchema.index({ tenantId: 1, employeeId: 1, status: 1 });
 requestSchema.index({ tenantId: 1, status: 1, createdAt: -1 });
-requestSchema.index({ tenantId: 1, type: 1, status: 1 });
+requestSchema.index({ tenantId: 1, typeKey: 1, status: 1 });
 requestSchema.index({ tenantId: 1, startDate: 1, endDate: 1 });
 
 requestSchema.pre("save", function (next) {

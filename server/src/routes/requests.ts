@@ -13,7 +13,7 @@ const router = Router();
 router.use(requireTenant, authenticateToken);
 
 const createRequestSchema = z.object({
-  type: z.enum(["vacation", "compensatory", "special_leave", "extra"]),
+  typeKey: z.string().min(1, "Type is required"),
   startDate: z.string().transform((str) => new Date(str)),
   endDate: z.string().transform((str) => new Date(str)),
   reason: z.string().optional(),
@@ -29,9 +29,6 @@ const rejectRequestSchema = z.object({
   rejectionReason: z.string().min(1, "Rejection reason is required"),
 });
 
-const postponeRequestSchema = z.object({
-  notes: z.string().optional(),
-});
 
 function calculateDays(start: Date, end: Date): number {
   const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -56,7 +53,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     }
 
     if (type && type !== "all") {
-      filter.type = type;
+      filter.typeKey = type;
     }
 
     if (employeeId) {
@@ -78,7 +75,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       requests = requests.filter((req) => {
         const employee = req.employeeId as any;
         const fullName = `${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase();
-        return fullName.includes(searchLower) || req.type.toLowerCase().includes(searchLower);
+        return fullName.includes(searchLower) || req.typeKey.toLowerCase().includes(searchLower);
       });
     }
 
@@ -185,7 +182,6 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       ...data,
       daysCount,
       status: "pending",
-      postponeCount: 0,
     });
 
     await request.save();
@@ -194,7 +190,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       tenantId: req.tenantObjectId,
       userId,
       action: "request_created",
-      description: `Created ${data.type} request for ${daysCount} days`,
+      description: `Created ${data.typeKey} request for ${daysCount} days`,
       entityType: "Request",
       entityId: request._id,
     });
@@ -210,7 +206,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
         userId: supervisor._id,
         type: "info",
         title: "Nueva solicitud de ausencia",
-        message: `Nueva solicitud de ${data.type} pendiente de aprobación`,
+        message: `Nueva solicitud de ${data.typeKey} pendiente de aprobación`,
         linkUrl: `/admin/requests/${request._id}`,
       });
     }
@@ -269,7 +265,7 @@ router.patch("/:id/approve", requireRole(["admin", "manager", "superadmin"]), as
       tenantId: req.tenantObjectId,
       userId,
       action: "request_approved",
-      description: `Approved ${request.type} request`,
+      description: `Approved ${request.typeKey} request`,
       entityType: "Request",
       entityId: request._id,
     });
@@ -279,7 +275,7 @@ router.patch("/:id/approve", requireRole(["admin", "manager", "superadmin"]), as
       userId: request.employeeId,
       type: "info",
       title: "Solicitud aprobada",
-      message: `Tu solicitud de ${request.type} ha sido aprobada`,
+      message: `Tu solicitud de ${request.typeKey} ha sido aprobada`,
       linkUrl: `/admin/requests/${request._id}`,
     });
 
@@ -330,7 +326,7 @@ router.patch("/:id/reject", requireRole(["admin", "manager", "superadmin"]), asy
       tenantId: req.tenantObjectId,
       userId,
       action: "request_rejected",
-      description: `Rejected ${request.type} request`,
+      description: `Rejected ${request.typeKey} request`,
       entityType: "Request",
       entityId: request._id,
     });
@@ -340,7 +336,7 @@ router.patch("/:id/reject", requireRole(["admin", "manager", "superadmin"]), asy
       userId: request.employeeId,
       type: "info",
       title: "Solicitud rechazada",
-      message: `Tu solicitud de ${request.type} ha sido rechazada`,
+      message: `Tu solicitud de ${request.typeKey} ha sido rechazada`,
       linkUrl: `/admin/requests/${request._id}`,
     });
 
@@ -360,73 +356,6 @@ router.patch("/:id/reject", requireRole(["admin", "manager", "superadmin"]), asy
   }
 });
 
-router.patch("/:id/postpone", requireRole(["admin", "manager", "superadmin"]), async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const userId = req.user!.userId;
-    const data = postponeRequestSchema.parse(req.body);
-
-    const request = await Request.findOne({
-      _id: req.params.id,
-      tenantId: req.tenantObjectId,
-    });
-
-    if (!request) {
-      res.status(404).json({ error: "Request not found" });
-      return;
-    }
-
-    if (request.status !== "pending") {
-      res.status(400).json({ error: "Only pending requests can be postponed" });
-      return;
-    }
-
-    if (request.postponeCount >= 3) {
-      res.status(400).json({ error: "Maximum postponement limit reached (3)" });
-      return;
-    }
-
-    request.postponeCount += 1;
-    request.lastPostponedAt = new Date();
-
-    if (data.notes) {
-      request.notes = data.notes;
-    }
-
-    await request.save();
-
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "request_postponed",
-      description: `Postponed ${request.type} request (${request.postponeCount}/3)`,
-      entityType: "Request",
-      entityId: request._id,
-    });
-
-    await Notification.create({
-      tenantId: req.tenantObjectId,
-      userId: request.employeeId,
-      type: "info",
-      title: "Solicitud pospuesta",
-      message: `Tu solicitud de ${request.type} ha sido pospuesta`,
-      linkUrl: `/admin/requests/${request._id}`,
-    });
-
-    const populatedRequest = await Request.findById(request._id)
-      .populate("employeeId", "firstName lastName email")
-      .populate("approverId", "firstName lastName email")
-      .populate("replacementEmployeeId", "firstName lastName email");
-
-    res.json(populatedRequest);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Invalid data", details: error.errors });
-      return;
-    }
-    console.error("Postpone request error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 router.patch("/:id/cancel", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -456,7 +385,7 @@ router.patch("/:id/cancel", async (req: AuthenticatedRequest & TenantRequest, re
       tenantId: req.tenantObjectId,
       userId,
       action: "request_cancelled",
-      description: `Cancelled ${request.type} request`,
+      description: `Cancelled ${request.typeKey} request`,
       entityType: "Request",
       entityId: request._id,
     });

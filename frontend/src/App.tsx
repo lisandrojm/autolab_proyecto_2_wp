@@ -58,6 +58,7 @@ import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageVacationRequestsPage } from "./pages/ManageVacationRequestsPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
+import { RequestTypesManagementPage } from "./pages/RequestTypesManagementPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -421,6 +422,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RequestDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/request-types"
+                element={
+                  <ProtectedRoute>
+                    <RequestTypesManagementPage />
                   </ProtectedRoute>
                 }
               />

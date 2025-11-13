@@ -4,7 +4,6 @@ import { PageLayout } from '../../components/ui/PageLayout';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { RequestApproveModal } from '../../components/requests/RequestApproveModal';
 import { RequestRejectModal } from '../../components/requests/RequestRejectModal';
-import { RequestPostponeModal } from '../../components/requests/RequestPostponeModal';
 import { requestsAPI, RequestData } from '../../api/requests';
 import { useAuthStore } from '../../stores/authStore';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -29,7 +28,6 @@ export const RequestDetailPage: React.FC = () => {
 
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [postponeModalOpen, setPostponeModalOpen] = useState(false);
 
   const canManage = hasPermission('users:manage');
 
@@ -95,17 +93,6 @@ export const RequestDetailPage: React.FC = () => {
     }
   };
 
-  const confirmPostpone = async (data: { notes?: string }) => {
-    if (!request) return;
-    try {
-      await requestsAPI.postponeRequest(request._id, data);
-      sweetAlert.success('Solicitud pospuesta', 'La solicitud ha sido pospuesta');
-      setPostponeModalOpen(false);
-      fetchRequest();
-    } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo posponer la solicitud');
-    }
-  };
 
   if (loading) {
     return <LoadingSpinner message="Cargando solicitud..." />;
@@ -135,19 +122,14 @@ export const RequestDetailPage: React.FC = () => {
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'vacation':
-        return 'Vacaciones';
-      case 'compensatory':
-        return 'Compensatorio';
-      case 'special_leave':
-        return 'Permiso Especial';
-      case 'extra':
-        return 'Extra';
-      default:
-        return type;
-    }
+  const getTypeLabel = (typeKey: string) => {
+    const labels: Record<string, string> = {
+      vacation: 'Vacaciones',
+      compensatory: 'Compensatorio',
+      special_leave: 'Permiso Especial',
+      extra: 'Extra',
+    };
+    return labels[typeKey] || typeKey;
   };
 
   const statusBadge = getStatusBadge(request.status);
@@ -170,7 +152,7 @@ export const RequestDetailPage: React.FC = () => {
           <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                {getTypeLabel(request.type)}
+                {getTypeLabel(request.typeKey)}
               </h2>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusBadge.bg} ${statusBadge.text}`}>
                 {statusBadge.label}
@@ -184,15 +166,6 @@ export const RequestDetailPage: React.FC = () => {
                       <FontAwesomeIcon icon={faCheck} className="mr-2" />
                       Aprobar
                     </button>
-                    {request.postponeCount < 3 && (
-                      <button
-                        onClick={() => setPostponeModalOpen(true)}
-                        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
-                      >
-                        <FontAwesomeIcon icon={faClock} className="mr-2" />
-                        Posponer
-                      </button>
-                    )}
                     <button
                       onClick={() => setRejectModalOpen(true)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
@@ -250,20 +223,6 @@ export const RequestDetailPage: React.FC = () => {
               </div>
             )}
 
-            {request.postponeCount > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Pospuestas</h3>
-                <p className="text-gray-900 dark:text-white">
-                  <FontAwesomeIcon icon={faClock} className="mr-2 text-yellow-500" />
-                  {request.postponeCount}/3 veces
-                </p>
-                {request.lastPostponedAt && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Última vez: {new Date(request.lastPostponedAt).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
-            )}
 
             {approver && (
               <div>
@@ -377,12 +336,6 @@ export const RequestDetailPage: React.FC = () => {
         request={request}
       />
 
-      <RequestPostponeModal
-        isOpen={postponeModalOpen}
-        onClose={() => setPostponeModalOpen(false)}
-        onConfirm={confirmPostpone}
-        request={request}
-      />
     </PageLayout>
   );
 };

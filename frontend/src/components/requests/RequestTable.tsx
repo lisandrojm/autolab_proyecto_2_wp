@@ -7,7 +7,6 @@ interface RequestTableProps {
   requests: RequestData[];
   onApprove?: (request: RequestData) => void;
   onReject?: (request: RequestData) => void;
-  onPostpone?: (request: RequestData) => void;
   onView?: (request: RequestData) => void;
   showActions?: boolean;
 }
@@ -16,7 +15,6 @@ export const RequestTable: React.FC<RequestTableProps> = ({
   requests,
   onApprove,
   onReject,
-  onPostpone,
   onView,
   showActions = true,
 }) => {
@@ -33,19 +31,14 @@ export const RequestTable: React.FC<RequestTableProps> = ({
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'vacation':
-        return 'Vacaciones';
-      case 'compensatory':
-        return 'Compensatorio';
-      case 'special_leave':
-        return 'Permiso Especial';
-      case 'extra':
-        return 'Extra';
-      default:
-        return type;
-    }
+  const getTypeLabel = (typeKey: string) => {
+    const labels: Record<string, string> = {
+      vacation: 'Vacaciones',
+      compensatory: 'Compensatorio',
+      special_leave: 'Permiso Especial',
+      extra: 'Extra',
+    };
+    return labels[typeKey] || typeKey;
   };
 
   return (
@@ -67,9 +60,6 @@ export const RequestTable: React.FC<RequestTableProps> = ({
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Estado
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Pospuestas
             </th>
             {showActions && (
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -96,7 +86,7 @@ export const RequestTable: React.FC<RequestTableProps> = ({
                   <div className="text-sm text-gray-500 dark:text-gray-400">{employee?.email || ''}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white">{getTypeLabel(request.type)}</div>
+                  <div className="text-sm text-gray-900 dark:text-white">{getTypeLabel(request.typeKey)}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900 dark:text-white">
@@ -113,9 +103,6 @@ export const RequestTable: React.FC<RequestTableProps> = ({
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
                     {statusBadge.label}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                  {request.postponeCount > 0 ? `${request.postponeCount}/3` : '-'}
                 </td>
                 {showActions && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -144,18 +131,6 @@ export const RequestTable: React.FC<RequestTableProps> = ({
                               title="Aprobar"
                             >
                               <FontAwesomeIcon icon={faCheck} />
-                            </button>
-                          )}
-                          {onPostpone && request.postponeCount < 3 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onPostpone(request);
-                              }}
-                              className="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300 transition-colors"
-                              title="Posponer"
-                            >
-                              <FontAwesomeIcon icon={faClock} />
                             </button>
                           )}
                           {onReject && (

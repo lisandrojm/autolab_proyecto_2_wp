@@ -9,7 +9,7 @@ export interface RequestData {
     lastName: string;
     email: string;
   };
-  type: 'vacation' | 'compensatory' | 'special_leave' | 'extra';
+  typeKey: string;
   startDate: string;
   endDate: string;
   daysCount?: number;
@@ -24,8 +24,6 @@ export interface RequestData {
   approvedAt?: string;
   rejectedAt?: string;
   rejectionReason?: string;
-  postponeCount: number;
-  lastPostponedAt?: string;
   replacementEmployeeId?: {
     _id: string;
     firstName: string;
@@ -39,7 +37,7 @@ export interface RequestData {
 }
 
 export interface CreateRequestPayload {
-  type: 'vacation' | 'compensatory' | 'special_leave' | 'extra';
+  typeKey: string;
   startDate: string;
   endDate: string;
   reason?: string;
@@ -53,10 +51,6 @@ export interface ApproveRequestPayload {
 
 export interface RejectRequestPayload {
   rejectionReason: string;
-}
-
-export interface PostponeRequestPayload {
-  notes?: string;
 }
 
 export const requestsAPI = {
@@ -99,11 +93,6 @@ export const requestsAPI = {
 
   rejectRequest: async (id: string, data: RejectRequestPayload): Promise<RequestData> => {
     const response = await axios.patch(`/requests/${id}/reject`, data);
-    return response.data;
-  },
-
-  postponeRequest: async (id: string, data: PostponeRequestPayload): Promise<RequestData> => {
-    const response = await axios.patch(`/requests/${id}/postpone`, data);
     return response.data;
   },
 

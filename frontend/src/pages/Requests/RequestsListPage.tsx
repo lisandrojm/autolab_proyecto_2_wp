@@ -6,7 +6,6 @@ import { RequestCard } from '../../components/requests/RequestCard';
 import { RequestTable } from '../../components/requests/RequestTable';
 import { RequestApproveModal } from '../../components/requests/RequestApproveModal';
 import { RequestRejectModal } from '../../components/requests/RequestRejectModal';
-import { RequestPostponeModal } from '../../components/requests/RequestPostponeModal';
 import { requestsAPI, RequestData } from '../../api/requests';
 import { useAuthStore } from '../../stores/authStore';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -27,7 +26,6 @@ export const RequestsListPage: React.FC = () => {
 
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [postponeModalOpen, setPostponeModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
 
   const canManage = hasPermission('users:manage');
@@ -70,7 +68,7 @@ export const RequestsListPage: React.FC = () => {
       filtered = filtered.filter((req) => {
         const employee = typeof req.employeeId === 'object' ? req.employeeId : null;
         const fullName = employee ? `${employee.firstName} ${employee.lastName}`.toLowerCase() : '';
-        return fullName.includes(searchLower) || req.type.toLowerCase().includes(searchLower);
+        return fullName.includes(searchLower) || req.typeKey.toLowerCase().includes(searchLower);
       });
     }
 
@@ -79,7 +77,7 @@ export const RequestsListPage: React.FC = () => {
     }
 
     if (typeFilter !== 'all') {
-      filtered = filtered.filter((req) => req.type === typeFilter);
+      filtered = filtered.filter((req) => req.typeKey === typeFilter);
     }
 
     setFilteredRequests(filtered);
@@ -95,10 +93,6 @@ export const RequestsListPage: React.FC = () => {
     setRejectModalOpen(true);
   };
 
-  const handlePostpone = (request: RequestData) => {
-    setSelectedRequest(request);
-    setPostponeModalOpen(true);
-  };
 
   const handleView = (request: RequestData) => {
     navigate(`/admin/requests/${request._id}`);
@@ -130,18 +124,6 @@ export const RequestsListPage: React.FC = () => {
     }
   };
 
-  const confirmPostpone = async (data: { notes?: string }) => {
-    if (!selectedRequest) return;
-    try {
-      await requestsAPI.postponeRequest(selectedRequest._id, data);
-      sweetAlert.success('Solicitud pospuesta', 'La solicitud ha sido pospuesta');
-      setPostponeModalOpen(false);
-      setSelectedRequest(null);
-      fetchRequests();
-    } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo posponer la solicitud');
-    }
-  };
 
   if (loading) {
     return <LoadingSpinner message="Cargando solicitudes..." />;
@@ -202,7 +184,6 @@ export const RequestsListPage: React.FC = () => {
               requests={filteredRequests}
               onApprove={canManage ? handleApprove : undefined}
               onReject={canManage ? handleReject : undefined}
-              onPostpone={canManage ? handlePostpone : undefined}
               onView={handleView}
               showActions={canManage}
             />
@@ -214,7 +195,6 @@ export const RequestsListPage: React.FC = () => {
                   request={request}
                   onApprove={canManage ? handleApprove : undefined}
                   onReject={canManage ? handleReject : undefined}
-                  onPostpone={canManage ? handlePostpone : undefined}
                   onView={handleView}
                   showActions={canManage}
                 />
@@ -251,15 +231,6 @@ export const RequestsListPage: React.FC = () => {
         request={selectedRequest}
       />
 
-      <RequestPostponeModal
-        isOpen={postponeModalOpen}
-        onClose={() => {
-          setPostponeModalOpen(false);
-          setSelectedRequest(null);
-        }}
-        onConfirm={confirmPostpone}
-        request={selectedRequest}
-      />
     </PageLayout>
   );
 };

@@ -11,6 +11,7 @@ import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
+import { RequestType } from "../models/RequestType.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -415,6 +416,52 @@ export async function seedOnStart() {
       console.log("✅ VacationRequest seeded");
     } else {
       console.log("✔️ VacationRequest already present");
+    }
+
+    // ---- RequestTypes ----
+    const requestTypesCount = await RequestType.countDocuments({ tenantId });
+    if (requestTypesCount === 0) {
+      await RequestType.create([
+        {
+          tenantId,
+          name: "Vacaciones",
+          key: "vacation",
+          description: "Solicitud de vacaciones anuales",
+          isSystem: true,
+          isDeletable: false,
+          isActive: true,
+        },
+        {
+          tenantId,
+          name: "Licencias especiales",
+          key: "special_leave",
+          description: "Licencias por motivos especiales (matrimonio, fallecimiento, etc.)",
+          isSystem: true,
+          isDeletable: true,
+          isActive: true,
+        },
+        {
+          tenantId,
+          name: "Compensatorios",
+          key: "compensatory",
+          description: "Días compensatorios por horas extras",
+          isSystem: true,
+          isDeletable: true,
+          isActive: true,
+        },
+        {
+          tenantId,
+          name: "Pedidos extraordinarios",
+          key: "extra",
+          description: "Otros tipos de pedidos no categorizado",
+          isSystem: true,
+          isDeletable: true,
+          isActive: true,
+        },
+      ]);
+      console.log("✅ RequestType seeded");
+    } else {
+      console.log("✔️ RequestType already present");
     }
 
     // ---- Order ----
