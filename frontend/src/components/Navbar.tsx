@@ -250,7 +250,6 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "Nuevo", badgeColor: "bg-green-500" });
-      if (hasPermission("orders:manage")) base.push({ path: "/hr/order-categories", icon: faList, label: "Categorías de Pedidos", scope: "global" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global" });
 
       if (hasPermission("creative:view")) {

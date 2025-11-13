@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faPlus, faEdit, faTrash, faImage, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faList, faImage } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
-import { ImageUploader } from "../components/ui/ImageUploader";
 import { ImageModal } from "../components/ui/ImageModal";
 
-const ORDER_CATEGORIES = [
-  { value: 'office_supplies', label: 'Materiales de Oficina' },
-  { value: 'equipment', label: 'Equipamiento' },
-  { value: 'software', label: 'Software' },
-  { value: 'training', label: 'Capacitación' },
-  { value: 'other', label: 'Otro' },
-];
-
 export const ManageOrdersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -24,18 +17,7 @@ export const ManageOrdersPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stats, setStats] = useState<any>({ pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
 
-  const [showModal, setShowModal] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: 'other',
-    amount: undefined as number | undefined,
-  });
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const loadOrders = async () => {
     try {
@@ -73,67 +55,6 @@ export const ManageOrdersPage: React.FC = () => {
     }
   };
 
-  const openCreateModal = () => {
-    setEditingOrder(null);
-    setFormData({ title: '', description: '', category: 'other', amount: undefined });
-    setPhoto(null);
-    setPhotoPreview(null);
-    setShowModal(true);
-  };
-
-  const openEditModal = (order: Order) => {
-    setEditingOrder(order);
-    setFormData({
-      title: order.title,
-      description: order.description,
-      category: order.category,
-      amount: order.amount,
-    });
-    setPhoto(null);
-    setPhotoPreview(order.photoUrl ? `${import.meta.env.VITE_API_URL}${order.photoUrl}` : null);
-    setShowModal(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      if (editingOrder) {
-        await hrManagementAPI.orders.update(editingOrder._id, {
-          ...formData,
-          photo,
-        });
-        sweetAlert.success('Pedido actualizado', 'El pedido se actualizó correctamente');
-      } else {
-        await hrManagementAPI.orders.create({
-          ...formData,
-          photo,
-        });
-        sweetAlert.success('Pedido creado', 'El pedido se creó correctamente');
-      }
-      setShowModal(false);
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo guardar el pedido');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (order: Order) => {
-    const result = await sweetAlert.confirm('¿Eliminar pedido?', `¿Estás seguro de eliminar el pedido "${order.title}"?`);
-    if (!result.isConfirmed) return;
-
-    try {
-      await hrManagementAPI.orders.delete(order._id);
-      sweetAlert.success('Pedido eliminado', 'El pedido se eliminó correctamente');
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo eliminar el pedido');
-    }
-  };
-
   const filteredOrders = orders.filter((order) => {
     const matchesSearch = !searchTerm ||
       order.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,7 +88,7 @@ export const ManageOrdersPage: React.FC = () => {
   };
 
   const getCategoryLabel = (category: string) => {
-    return ORDER_CATEGORIES.find((c) => c.value === category)?.label || category;
+    return category;
   };
 
   return (
@@ -178,11 +99,11 @@ export const ManageOrdersPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-2">
           <button
-            onClick={openCreateModal}
+            onClick={() => navigate('/hr/order-categories')}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
-            <FontAwesomeIcon icon={faPlus} />
-            <span>Crear Pedido</span>
+            <FontAwesomeIcon icon={faList} />
+            <span>Gestionar Categorías de Pedidos</span>
           </button>
         </div>
       }
@@ -291,20 +212,6 @@ export const ManageOrdersPage: React.FC = () => {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => openEditModal(order)}
-                              className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                              title="Editar"
-                            >
-                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(order)}
-                              className="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-colors"
-                              title="Eliminar"
-                            >
-                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                            </button>
                             {order.status === 'pending' && (
                               <>
                                 <button
@@ -375,124 +282,6 @@ export const ManageOrdersPage: React.FC = () => {
         )}
         </div>
       </div>
-
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {editingOrder ? 'Editar Pedido' : 'Crear Pedido'}
-              </h2>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Título *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder="Título del pedido"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Categoría *
-                </label>
-                <select
-                  required
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                >
-                  {ORDER_CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Monto (opcional)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.amount || ''}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value ? parseFloat(e.target.value) : undefined })}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Descripción *
-                </label>
-                <textarea
-                  required
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={4}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder="Describe el pedido en detalle..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Foto (opcional)
-                </label>
-                <ImageUploader
-                  value={photo || photoPreview || undefined}
-                  onChange={(file) => {
-                    setPhoto(file);
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => setPhotoPreview(reader.result as string);
-                      reader.readAsDataURL(file);
-                    } else {
-                      setPhotoPreview(null);
-                    }
-                  }}
-                  onRemove={() => {
-                    setPhoto(null);
-                    setPhotoPreview(null);
-                  }}
-                  acceptCamera={false}
-                  acceptGallery={true}
-                  showPreview={true}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? 'Guardando...' : editingOrder ? 'Actualizar' : 'Crear'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {viewingImage && (
         <ImageModal
