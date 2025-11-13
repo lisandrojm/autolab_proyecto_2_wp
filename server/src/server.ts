@@ -46,8 +46,6 @@ import { notificationRoutes } from "./routes/notifications.js";
 import { activityRoutes } from "./routes/activity.js";
 import { hrAdminRoutes } from "./routes/hr-admin.js";
 import { hrManagementRoutes } from "./routes/hr-management.js";
-import { areaRoutes } from "./routes/areas.js";
-import { absenceRequestRoutes } from "./routes/absenceRequests.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -146,8 +144,6 @@ app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/activity", activityRoutes);
 app.use("/api/v1/hr-admin", hrAdminRoutes);
 app.use("/api/v1/hr-management", hrManagementRoutes);
-app.use("/api/v1/areas", areaRoutes);
-app.use("/api/v1/absence-requests", absenceRequestRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);
