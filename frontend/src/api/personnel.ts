@@ -169,6 +169,7 @@ export interface OrderData {
   description: string;
   category: string;
   amount?: number;
+  photoUrl?: string;
   status: 'pending' | 'approved' | 'rejected' | 'delivered' | 'cancelled';
   requestedAt: string;
   approvedBy?: {
@@ -271,8 +272,19 @@ export const personnelAPI = {
     return data;
   },
 
-  createOrder: async (orderData: { title: string; description: string; category?: string; amount?: number }): Promise<OrderData> => {
-    const { data } = await axios.post('/orders', orderData);
+  createOrder: async (orderData: { title: string; description: string; category?: string; amount?: number; photo?: File | null }): Promise<OrderData> => {
+    const formData = new FormData();
+    formData.append('title', orderData.title);
+    formData.append('description', orderData.description);
+    if (orderData.category) formData.append('category', orderData.category);
+    if (orderData.amount !== undefined) formData.append('amount', orderData.amount.toString());
+    if (orderData.photo) formData.append('photo', orderData.photo);
+
+    const { data } = await axios.post('/orders', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return data;
   },
 

@@ -20,7 +20,7 @@ export const useOrders = () => {
     }
   };
 
-  const createOrder = async (orderData: { title: string; description: string; category?: string; amount?: number }) => {
+  const createOrder = async (orderData: { title: string; description: string; category?: string; amount?: number; photo?: File | null }) => {
     try {
       setError(null);
       const newOrder = await personnelAPI.createOrder(orderData);

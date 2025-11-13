@@ -12,6 +12,7 @@ export interface IOrder extends Document {
   approvedAt?: Date;
   deliveredAt?: Date;
   amount?: number;
+  photoUrl?: string;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +36,7 @@ const orderSchema = new Schema<IOrder>(
     approvedAt: { type: Date },
     deliveredAt: { type: Date },
     amount: { type: Number, min: 0 },
+    photoUrl: { type: String, trim: true },
     metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }

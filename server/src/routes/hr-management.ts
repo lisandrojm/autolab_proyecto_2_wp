@@ -1,4 +1,11 @@
 import { Router } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import { z } from "zod";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
@@ -10,7 +17,71 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
 const router = Router();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 router.use(requireTenant, authenticateToken);
+
+async function ensureDir(dir: string) {
+  try {
+    await fs.promises.mkdir(dir, { recursive: true });
+  } catch (err) {
+    console.error("Error creating directory:", dir, err);
+    throw err;
+  }
+}
+
+const orderStorage = multer.diskStorage({
+  destination: async (req: any, _file, cb) => {
+    try {
+      const tenantId = req.tenantId || "unknown_tenant";
+      const userId = req.user?.userId || "admin";
+      const dir = path.join(__dirname, "../../storage", tenantId, userId, "orders");
+      await ensureDir(dir);
+      cb(null, dir);
+    } catch (err) {
+      console.error("Error in multer destination:", err);
+      cb(err as any, "");
+    }
+  },
+  filename: (_req: any, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const orderId = new mongoose.Types.ObjectId();
+    const filename = `order_${orderId}${ext}`;
+    cb(null, filename);
+  },
+});
+
+const uploadOrderImage = multer({
+  storage: orderStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp)"));
+  },
+}).single("photo");
+
+const createOrderSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  category: z.string().default("other"),
+  amount: z.number().min(0).optional(),
+  photoUrl: z.string().optional(),
+});
+
+const updateOrderSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  category: z.string().optional(),
+  amount: z.number().min(0).optional(),
+  status: z.enum(["pending", "approved", "rejected", "delivered", "cancelled"]).optional(),
+  photoUrl: z.string().optional(),
+});
 
 router.get("/activitylogs", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -252,6 +323,138 @@ router.get("/orders/count", async (req: AuthenticatedRequest & TenantRequest, re
     res.json({ count });
   } catch (error) {
     console.error("Count orders error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+    let photoUrl: string | undefined;
+
+    if (req.file) {
+      const tenantId = req.tenantId || "unknown_tenant";
+      photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+    }
+
+    const data = createOrderSchema.parse({
+      ...req.body,
+      amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      photoUrl,
+    });
+
+    const order = new Order({
+      tenantId: req.tenantObjectId,
+      userId,
+      ...data,
+      status: "pending",
+      requestedAt: new Date(),
+    });
+
+    await order.save();
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId,
+      action: "order_created",
+      description: `Created order: ${order.title}`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "firstName lastName email")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.status(201).json(populatedOrder);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid data", details: error.errors });
+      return;
+    }
+    console.error("Create order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    let photoUrl: string | undefined = order.photoUrl;
+
+    if (req.file) {
+      if (order.photoUrl) {
+        const oldPath = path.join(__dirname, "../../", order.photoUrl);
+        try {
+          await fs.promises.unlink(oldPath);
+        } catch (err) {
+          console.error("Error deleting old photo:", err);
+        }
+      }
+      const tenantId = req.tenantId || "unknown_tenant";
+      const userId = req.user!.userId;
+      photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+    }
+
+    const data = updateOrderSchema.parse({
+      ...req.body,
+      amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      photoUrl,
+    });
+
+    Object.assign(order, data);
+    await order.save();
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "firstName lastName email")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(populatedOrder);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid data", details: error.errors });
+      return;
+    }
+    console.error("Update order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/orders/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (order.photoUrl) {
+      const photoPath = path.join(__dirname, "../../", order.photoUrl);
+      try {
+        await fs.promises.unlink(photoPath);
+      } catch (err) {
+        console.error("Error deleting photo:", err);
+      }
+    }
+
+    await Order.findByIdAndDelete(order._id);
+
+    res.json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error("Delete order error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

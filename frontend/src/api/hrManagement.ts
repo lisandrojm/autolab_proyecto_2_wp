@@ -93,6 +93,7 @@ export interface Order {
   approvedAt?: string;
   deliveredAt?: string;
   amount?: number;
+  photoUrl?: string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -211,6 +212,40 @@ export const hrManagementAPI = {
     count: async () => {
       const { data } = await axios.get<{ count: number }>("/hr-management/orders/count");
       return data.count;
+    },
+    create: async (orderData: { title: string; description: string; category?: string; amount?: number; photo?: File | null }) => {
+      const formData = new FormData();
+      formData.append('title', orderData.title);
+      formData.append('description', orderData.description);
+      if (orderData.category) formData.append('category', orderData.category);
+      if (orderData.amount !== undefined) formData.append('amount', orderData.amount.toString());
+      if (orderData.photo) formData.append('photo', orderData.photo);
+
+      const { data } = await axios.post<Order>("/hr-management/orders", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return data;
+    },
+    update: async (orderId: string, updates: Partial<Order> & { photo?: File | null }) => {
+      const formData = new FormData();
+      if (updates.title) formData.append('title', updates.title);
+      if (updates.description) formData.append('description', updates.description);
+      if (updates.category) formData.append('category', updates.category);
+      if (updates.amount !== undefined) formData.append('amount', updates.amount.toString());
+      if (updates.status) formData.append('status', updates.status);
+      if (updates.photo) formData.append('photo', updates.photo);
+
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return data;
+    },
+    delete: async (orderId: string) => {
+      await axios.delete(`/hr-management/orders/${orderId}`);
     },
   },
 

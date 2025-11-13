@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ArrowLeft, Package, CheckCircle, Clock, XCircle, Truck, AlertCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft, Package, CheckCircle, Clock, XCircle, Truck, AlertCircle, Camera, Image as ImageIcon, X } from "lucide-react";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 
@@ -13,8 +13,36 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [product, setProduct] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [description, setDescription] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setSubmitError("La imagen debe ser menor a 10MB");
+        return;
+      }
+      setPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhoto(null);
+    setPhotoPreview(null);
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +54,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
         title: product,
         description,
         category: "other",
+        photo,
       });
       setShowForm(false);
       setProduct("");
       setQuantity("1");
       setDescription("");
+      setPhoto(null);
+      setPhotoPreview(null);
     } catch (err: any) {
       setSubmitError(err.response?.data?.error || "Error al crear pedido");
     } finally {
@@ -131,6 +162,58 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descripción</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Especifica detalles del pedido..." />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Foto (opcional)</label>
+                {photoPreview ? (
+                  <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                    <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    >
+                      <Camera className="w-6 h-6 text-slate-400" />
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
+                    </button>
+
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    >
+                      <ImageIcon className="w-6 h-6 text-slate-400" />
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Imagen</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button type="submit" disabled={submitting} className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? "Enviando..." : "Enviar Pedido"}
               </button>
@@ -154,24 +237,37 @@ export default function Orders({ onNavigate }: OrdersProps) {
           <div className="space-y-3">
             {orders.map((order) => (
               <div key={order._id} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{order.title}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{order.description}</p>
-                  </div>
-                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getStatusBg(order.status)}`}>
-                    {getStatusIcon(order.status)}
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getStatusText(order.status)}</span>
+                <div className="flex items-start gap-3 mb-3">
+                  {order.photoUrl && (
+                    <div className="flex-shrink-0">
+                      <img
+                        src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`}
+                        alt={order.title}
+                        className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)}
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0 mr-2">
+                        <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{order.title}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{order.description}</p>
+                      </div>
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
+                        {getStatusIcon(order.status)}
+                        <span className="text-xs font-medium text-slate-900 dark:text-slate-100">{getStatusText(order.status)}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      {new Date(order.requestedAt).toLocaleDateString("es-ES", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Solicitado el{" "}
-                  {new Date(order.requestedAt).toLocaleDateString("es-ES", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
               </div>
             ))}
           </div>
@@ -181,6 +277,27 @@ export default function Orders({ onNavigate }: OrdersProps) {
           </div>
         )}
       </div>
+
+      {viewingImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+          onClick={() => setViewingImage(null)}
+        >
+          <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setViewingImage(null)}
+              className="absolute -top-4 -right-4 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={viewingImage}
+              alt="Order"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

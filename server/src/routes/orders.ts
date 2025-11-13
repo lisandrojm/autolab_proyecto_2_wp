@@ -1,5 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 import { Order } from "../models/Order.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -7,13 +13,61 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
 const router = Router();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 router.use(requireTenant, authenticateToken);
+
+async function ensureDir(dir: string) {
+  try {
+    await fs.promises.mkdir(dir, { recursive: true });
+  } catch (err) {
+    console.error("Error creating directory:", dir, err);
+    throw err;
+  }
+}
+
+const orderStorage = multer.diskStorage({
+  destination: async (req: any, _file, cb) => {
+    try {
+      const tenantId = req.tenantId || "unknown_tenant";
+      const userId = req.user?.userId || "unknown_user";
+      const dir = path.join(__dirname, "../../storage", tenantId, userId, "orders");
+      await ensureDir(dir);
+      cb(null, dir);
+    } catch (err) {
+      console.error("Error in multer destination:", err);
+      cb(err as any, "");
+    }
+  },
+  filename: (_req: any, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const orderId = new mongoose.Types.ObjectId();
+    const filename = `order_${orderId}${ext}`;
+    cb(null, filename);
+  },
+});
+
+const uploadOrderImage = multer({
+  storage: orderStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp)"));
+  },
+}).single("photo");
 
 const createOrderSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   category: z.string().default("other"),
   amount: z.number().min(0).optional(),
+  photoUrl: z.string().optional(),
 });
 
 const updateOrderSchema = z.object({
@@ -21,6 +75,7 @@ const updateOrderSchema = z.object({
   description: z.string().min(1).optional(),
   category: z.string().optional(),
   amount: z.number().min(0).optional(),
+  photoUrl: z.string().optional(),
 });
 
 router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -87,10 +142,21 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
-router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
-    const data = createOrderSchema.parse(req.body);
+    let photoUrl: string | undefined;
+
+    if (req.file) {
+      const tenantId = req.tenantId || "unknown_tenant";
+      photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+    }
+
+    const data = createOrderSchema.parse({
+      ...req.body,
+      amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      photoUrl,
+    });
 
     const order = new Order({
       tenantId: req.tenantObjectId,
@@ -122,10 +188,9 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
-router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
-    const data = updateOrderSchema.parse(req.body);
 
     const order = await Order.findOne({
       _id: req.params.id,
@@ -142,6 +207,27 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       res.status(400).json({ error: "Only pending orders can be updated" });
       return;
     }
+
+    let photoUrl: string | undefined = order.photoUrl;
+
+    if (req.file) {
+      if (order.photoUrl) {
+        const oldPath = path.join(__dirname, "../../", order.photoUrl);
+        try {
+          await fs.promises.unlink(oldPath);
+        } catch (err) {
+          console.error("Error deleting old photo:", err);
+        }
+      }
+      const tenantId = req.tenantId || "unknown_tenant";
+      photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+    }
+
+    const data = updateOrderSchema.parse({
+      ...req.body,
+      amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      photoUrl,
+    });
 
     Object.assign(order, data);
     await order.save();
@@ -175,6 +261,15 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
     if (order.status !== "pending") {
       res.status(400).json({ error: "Only pending orders can be deleted" });
       return;
+    }
+
+    if (order.photoUrl) {
+      const photoPath = path.join(__dirname, "../../", order.photoUrl);
+      try {
+        await fs.promises.unlink(photoPath);
+      } catch (err) {
+        console.error("Error deleting photo:", err);
+      }
     }
 
     await Order.findByIdAndDelete(order._id);
