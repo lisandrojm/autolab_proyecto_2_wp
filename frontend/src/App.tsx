@@ -56,6 +56,8 @@ import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageVacationRequestsPage } from "./pages/ManageVacationRequestsPage";
+import { RequestsListPage } from "./pages/Requests/RequestsListPage";
+import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -387,6 +389,30 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <OrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/ausencias"
+                element={
+                  <ProtectedRoute>
+                    <RequestsListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/requests"
+                element={
+                  <ProtectedRoute>
+                    <RequestsListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/requests/:id"
+                element={
+                  <ProtectedRoute>
+                    <RequestDetailPage />
                   </ProtectedRoute>
                 }
               />

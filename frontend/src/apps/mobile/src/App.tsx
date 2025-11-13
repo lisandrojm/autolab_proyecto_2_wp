@@ -8,6 +8,7 @@ import Documents from "./views/Documents";
 import Profile from "./views/Profile";
 import Vacations from "./views/Vacations";
 import Orders from "./views/Orders";
+import Requests from "./views/Requests";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 
@@ -45,6 +46,8 @@ function App() {
         return "Vacaciones";
       case "orders":
         return "Pedidos";
+      case "requests":
+        return "Ausencias";
       default:
         return "Inicio";
     }
@@ -64,6 +67,8 @@ function App() {
         return <Vacations onNavigate={setCurrentView} />;
       case "orders":
         return <Orders onNavigate={setCurrentView} />;
+      case "requests":
+        return <Requests onNavigate={setCurrentView} />;
       default:
         return <Home onNavigate={setCurrentView} />;
     }

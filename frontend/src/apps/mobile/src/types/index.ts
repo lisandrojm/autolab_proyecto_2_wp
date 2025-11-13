@@ -33,4 +33,4 @@ export interface Notification {
   type: 'info' | 'success' | 'warning';
 }
 
-export type ViewType = 'home' | 'calendar' | 'documents' | 'profile' | 'vacations' | 'orders';
+export type ViewType = 'home' | 'calendar' | 'documents' | 'profile' | 'vacations' | 'orders' | 'requests';
