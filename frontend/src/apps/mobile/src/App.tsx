@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { ViewType } from "./types";
 import TopBar from "./components/TopBar";
 import BottomNav from "./components/BottomNav";
@@ -8,13 +9,27 @@ import Documents from "./views/Documents";
 import Profile from "./views/Profile";
 import Vacations from "./views/Vacations";
 import Orders from "./views/Orders";
+import AbsenceRequests from "./views/AbsenceRequests";
+import NewAbsenceRequest from "./views/NewAbsenceRequest";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentView, setCurrentView] = useState<ViewType>("home");
   const { user, hasPermission } = useAuthStore();
   const { theme } = useThemeStore();
+
+  useEffect(() => {
+    const path = location.pathname.replace('/mobile', '');
+    if (path === '/' || path === '') setCurrentView('home');
+    else if (path.startsWith('/calendar')) setCurrentView('calendar');
+    else if (path.startsWith('/documents')) setCurrentView('documents');
+    else if (path.startsWith('/profile')) setCurrentView('profile');
+    else if (path.startsWith('/vacations')) setCurrentView('vacations');
+    else if (path.startsWith('/orders')) setCurrentView('orders');
+  }, [location]);
 
   useEffect(() => {
     if (theme === "dark") {
@@ -50,23 +65,9 @@ function App() {
     }
   };
 
-  const renderView = () => {
-    switch (currentView) {
-      case "home":
-        return <Home onNavigate={setCurrentView} />;
-      case "calendar":
-        return <Calendar />;
-      case "documents":
-        return <Documents />;
-      case "profile":
-        return <Profile />;
-      case "vacations":
-        return <Vacations onNavigate={setCurrentView} />;
-      case "orders":
-        return <Orders onNavigate={setCurrentView} />;
-      default:
-        return <Home onNavigate={setCurrentView} />;
-    }
+  const handleNavigate = (view: ViewType) => {
+    setCurrentView(view);
+    navigate(`/mobile/${view === 'home' ? '' : view}`);
   };
 
   const showTopBar = currentView === "home" || currentView === "calendar" || currentView === "documents" || currentView === "profile";
@@ -130,8 +131,17 @@ function App() {
     <div className="w-full dark:bg-gray-900 flex justify-center">
       <div className="relative flex min-h-screen border dark:border-gray-800 flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display xl:w-1/2">
         {showTopBar && <TopBar title={getTitle(currentView)} hasNotifications={true} onNotificationClick={() => alert("Notificaciones")} userRole={userRole} userName={user?.firstName || "Usuario"} />}
-        {renderView()}
-        <BottomNav currentView={currentView} onNavigate={setCurrentView} />
+        <Routes>
+          <Route path="/" element={<Home onNavigate={handleNavigate} />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/vacations" element={<Vacations onNavigate={handleNavigate} />} />
+          <Route path="/orders" element={<Orders onNavigate={handleNavigate} />} />
+          <Route path="/absence-requests" element={<AbsenceRequests />} />
+          <Route path="/absence-requests/new" element={<NewAbsenceRequest />} />
+        </Routes>
+        <BottomNav currentView={currentView} onNavigate={handleNavigate} />
       </div>
     </div>
   );
