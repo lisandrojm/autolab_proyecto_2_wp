@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -250,6 +250,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "Nuevo", badgeColor: "bg-green-500" });
+      if (hasPermission("orders:manage")) base.push({ path: "/hr/order-categories", icon: faList, label: "Categorías de Pedidos", scope: "global" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global" });
 
       if (hasPermission("creative:view")) {

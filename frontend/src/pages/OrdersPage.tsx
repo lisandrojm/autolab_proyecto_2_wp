@@ -3,34 +3,46 @@ import { PageLayout } from '../components/ui/PageLayout';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Card } from '../components/ui/Card';
 import { personnelAPI, OrderData } from '../api/personnel';
+import { orderCategoriesAPI, OrderCategory } from '../api/orderCategories';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShoppingCart, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
-
-const ORDER_CATEGORIES = [
-  { value: 'supplies', label: 'Suministros' },
-  { value: 'equipment', label: 'Equipamiento' },
-  { value: 'software', label: 'Software' },
-  { value: 'training', label: 'Capacitación' },
-  { value: 'other', label: 'Otro' },
-];
 
 export const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [categories, setCategories] = useState<OrderCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderData | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'other',
+    category: '',
     amount: undefined as number | undefined,
   });
 
   useEffect(() => {
     fetchData();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const data = await orderCategoriesAPI.getAll(true);
+      setCategories(data.sort((a, b) => a.sortOrder - b.sortOrder));
+      if (data.length > 0 && !formData.category) {
+        setFormData((prev) => ({ ...prev, category: data[0].name }));
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      sweetAlert.error('Error', 'No se pudieron cargar las categorías');
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -62,7 +74,7 @@ export const OrdersPage: React.FC = () => {
       }
       setShowModal(false);
       setEditingOrder(null);
-      setFormData({ title: '', description: '', category: 'other', amount: undefined });
+      setFormData({ title: '', description: '', category: categories.length > 0 ? categories[0].name : '', amount: undefined });
       fetchData();
     } catch (error: any) {
       sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo procesar el pedido');
@@ -104,7 +116,7 @@ export const OrdersPage: React.FC = () => {
 
   const openCreate = () => {
     setEditingOrder(null);
-    setFormData({ title: '', description: '', category: 'other', amount: undefined });
+    setFormData({ title: '', description: '', category: categories.length > 0 ? categories[0].name : '', amount: undefined });
     setShowModal(true);
   };
 
@@ -128,7 +140,7 @@ export const OrdersPage: React.FC = () => {
   };
 
   const getCategoryLabel = (category: string) => {
-    return ORDER_CATEGORIES.find((c) => c.value === category)?.label || category;
+    return categories.find((c) => c.name === category)?.name || category;
   };
 
   const getUserName = (user: any) => {
@@ -189,18 +201,28 @@ export const OrdersPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Categoría *
               </label>
-              <select
-                required
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="input-field"
-              >
-                {ORDER_CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
+              {loadingCategories ? (
+                <div className="input-field text-gray-500 dark:text-gray-400">
+                  Cargando categorías...
+                </div>
+              ) : categories.length > 0 ? (
+                <select
+                  required
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="input-field"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="input-field text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700">
+                  No hay categorías disponibles. Por favor, contacta al administrador.
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
