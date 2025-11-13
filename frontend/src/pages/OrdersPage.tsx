@@ -142,10 +142,13 @@ export const OrdersPage: React.FC = () => {
       subtitle="Solicitudes de suministros y equipamiento"
       faIcon={{ icon: faShoppingCart }}
       headerActions={
-        <button onClick={openCreate} className="btn-primary">
-          <FontAwesomeIcon icon={faPlus} className="mr-2" />
-          Nuevo Pedido
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-green-500 text-white uppercase animate-pulse">Nuevo</span>
+          <button onClick={openCreate} className="btn-primary">
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            Nuevo Pedido
+          </button>
+        </div>
       }
       modal={{
         isOpen: showModal,

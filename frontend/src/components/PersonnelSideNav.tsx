@@ -23,6 +23,8 @@ interface MenuItem {
   label: string;
   icon: any;
   children?: MenuItem[];
+  badge?: string;
+  badgeColor?: string;
 }
 
 interface MenuSectionProps {
@@ -100,15 +102,22 @@ const MenuSection: React.FC<MenuSectionProps> = ({ title, items, isAdmin = false
         <Link
           key={item.path}
           to={item.path}
-          className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+          className={`flex items-center justify-between gap-2 px-3 py-2 text-sm transition-colors ${
             itemActive
               ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 font-medium border-r-2 border-blue-600'
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
           style={{ paddingLeft }}
         >
-          <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
-          <span>{item.label}</span>
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
+            <span>{item.label}</span>
+          </div>
+          {item.badge && (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase animate-pulse`}>
+              {item.badge}
+            </span>
+          )}
         </Link>
       );
     }
@@ -144,7 +153,7 @@ export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = fa
 
   const requestsItems: MenuItem[] = [
     { path: '/admin/pedidos/vacaciones', label: 'Vacaciones', icon: faCalendar },
-    { path: '/admin/pedidos/otras-solicitudes', label: 'Otras Solicitudes', icon: faClipboardList }
+    { path: '/admin/pedidos/pedidos', label: 'Pedidos', icon: faClipboardList, badge: 'Nuevo', badgeColor: 'bg-green-500' }
   ];
 
   const tasksItems: MenuItem[] = [

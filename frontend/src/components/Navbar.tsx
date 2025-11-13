@@ -235,6 +235,8 @@ export const MobileNavbar: React.FC = () => {
       count?: number;
       dividerTop?: boolean;
       isCreativeSuite?: boolean;
+      badge?: string;
+      badgeColor?: string;
     }> = [];
 
     if (isSuperAdminTenant) {
@@ -247,7 +249,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
-      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global" });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "Nuevo", badgeColor: "bg-green-500" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global" });
 
       if (hasPermission("creative:view")) {
@@ -405,6 +407,11 @@ export const MobileNavbar: React.FC = () => {
               <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
             </div>
             <span className="font-medium truncate">{item.label}</span>
+            {item.badge && (
+              <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase animate-pulse`}>
+                {item.badge}
+              </span>
+            )}
           </div>
 
           {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}

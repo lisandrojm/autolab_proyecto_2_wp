@@ -6,7 +6,7 @@ import { Card } from '../components/ui/Card';
 import { personnelAPI } from '../api/personnel';
 import { mockProfileService, mockVacationsService, mockNotificationsService, mockActivityService, mockOrdersService } from '../services';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarDays, faFileLines, faBell, faClipboardList, faCalendar, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays, faFileLines, faBell, faClipboardList, faCalendar, faChartLine, faShoppingCart } from '@fortawesome/free-solid-svg-icons';
 
 export const PersonnelHomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ export const PersonnelHomePage: React.FC = () => {
   const [vacationStats, setVacationStats] = useState<any>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [orderStats, setOrderStats] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
@@ -25,13 +26,14 @@ export const PersonnelHomePage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [profileData, profileStats, vacBalance, vacStats, notifCount, activity] = await Promise.all([
+      const [profileData, profileStats, vacBalance, vacStats, notifCount, activity, ordersStats] = await Promise.all([
         mockProfileService.getProfile().catch(() => personnelAPI.getProfile()),
         mockProfileService.getProfileStats().catch(() => personnelAPI.getProfileStats()),
         mockVacationsService.getVacationAvailable().catch(() => personnelAPI.getVacationAvailable()),
         mockVacationsService.getVacationStats().catch(() => personnelAPI.getVacationStats()),
         mockNotificationsService.getNotificationCount().catch(() => personnelAPI.getNotificationCount()),
         mockActivityService.getRecentActivity().catch(() => personnelAPI.getRecentActivity()),
+        mockOrdersService.getOrderStats().catch(() => personnelAPI.getOrderStats()),
       ]);
 
       setProfile(profileData);
@@ -40,6 +42,7 @@ export const PersonnelHomePage: React.FC = () => {
       setVacationStats(vacStats);
       setNotificationCount(notifCount.count);
       setRecentActivity(activity.slice(0, 5));
+      setOrderStats(ordersStats);
     } catch (error) {
       console.error('Error fetching personnel home data:', error);
     } finally {
@@ -62,13 +65,14 @@ export const PersonnelHomePage: React.FC = () => {
       onClick: () => navigate('/admin/pedidos/vacaciones'),
     },
     {
-      title: 'Solicitudes Pendientes',
-      value: vacationStats?.pending || 0,
-      subtitle: `${vacationStats?.approved || 0} aprobadas`,
-      icon: faClipboardList,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      onClick: () => navigate('/admin/pedidos/vacaciones'),
+      title: 'Pedidos',
+      value: orderStats?.pending || 0,
+      subtitle: `${orderStats?.approved || 0} aprobados`,
+      icon: faShoppingCart,
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      onClick: () => navigate('/admin/pedidos/pedidos'),
+      badge: 'Nuevo'
     },
     {
       title: 'Notificaciones',
@@ -93,6 +97,7 @@ export const PersonnelHomePage: React.FC = () => {
   const quickLinks = [
     { title: 'Mi Perfil', icon: faChartLine, path: '/admin/personal/perfil' },
     { title: 'Vacaciones', icon: faCalendar, path: '/admin/pedidos/vacaciones' },
+    { title: 'Pedidos', icon: faShoppingCart, path: '/admin/pedidos/pedidos', badge: 'Nuevo' },
     { title: 'Documentos', icon: faFileLines, path: '/admin/personal/documentos' },
     { title: 'Calendario', icon: faCalendarDays, path: '/admin/personal/calendario' },
   ];
@@ -109,8 +114,13 @@ export const PersonnelHomePage: React.FC = () => {
             <div
               key={index}
               onClick={card.onClick}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 cursor-pointer"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 cursor-pointer relative"
             >
+              {(card as any).badge && (
+                <span className="absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold bg-green-500 text-white uppercase animate-pulse">
+                  {(card as any).badge}
+                </span>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{card.title}</p>
@@ -133,8 +143,13 @@ export const PersonnelHomePage: React.FC = () => {
                 <button
                   key={index}
                   onClick={() => navigate(link.path)}
-                  className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
                 >
+                  {(link as any).badge && (
+                    <span className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-green-500 text-white uppercase animate-pulse">
+                      {(link as any).badge}
+                    </span>
+                  )}
                   <FontAwesomeIcon icon={link.icon} className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2" />
                   <span className="text-sm font-medium text-gray-900 dark:text-white text-center">{link.title}</span>
                 </button>

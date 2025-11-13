@@ -385,10 +385,18 @@ function App() {
                 }
               />
               <Route
-                path="/admin/pedidos/otras-solicitudes"
+                path="/admin/pedidos/pedidos"
                 element={
                   <ProtectedRoute>
                     <OrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/otras-solicitudes"
+                element={
+                  <ProtectedRoute>
+                    <OtherRequestsPage />
                   </ProtectedRoute>
                 }
               />
