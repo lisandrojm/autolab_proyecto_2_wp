@@ -7,8 +7,18 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
 
+// 🔥 IMPORTAR HELP
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
 export const ManageOrdersPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // 🔥 DECLARAR LA CLAVE
+  const HELP_KEY = "orders" as const;
+
+  // 🔥 STATE PARA MODAL INFO
+  const [openInfo, setOpenInfo] = useState(false);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -18,6 +28,8 @@ export const ManageOrdersPage: React.FC = () => {
   const [stats, setStats] = useState<any>({ pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+
+  const helpEntry = getHelp(HELP_KEY);
 
   const loadOrders = async () => {
     try {
@@ -57,7 +69,9 @@ export const ManageOrdersPage: React.FC = () => {
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch = !searchTerm || order.title.toLowerCase().includes(searchTerm.toLowerCase()) || order.description.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -85,15 +99,23 @@ export const ManageOrdersPage: React.FC = () => {
     return { style: styles[status] || styles.pending, label: labels[status] || status };
   };
 
-  const getCategoryLabel = (category: string) => {
-    return category;
-  };
+  const getCategoryLabel = (category: string) => category;
 
   return (
     <PageLayout
       title="Gestión de Pedidos"
       subtitle="Administra todos los pedidos del personal"
       faIcon={{ icon: faShoppingCart }}
+      // 🔥 INFO MODAL (IGUAL QUE UsersPage)
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
           <button onClick={() => navigate("/hr/order-categories")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2">
@@ -112,9 +134,9 @@ export const ManageOrdersPage: React.FC = () => {
             { label: "Entregados", value: stats.delivered, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
             { label: "Cancelados", value: stats.cancelled, color: "bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400" },
           ].map((stat, index) => (
-            <div key={index} className={`rounded-xl shadow-sm p-4 ${stat.color}`}>
+            <div key={index} className={`rounded-xl shadow-sm p-4 flex items-center gap-3 ${stat.color}`}>
               <p className="text-sm font-medium opacity-80">{stat.label}</p>
-              <p className="text-2xl font-bold mt-1">{stat.value}</p>
+              <p className="text-lg font-bold">{stat.value}</p>
             </div>
           ))}
         </div>
