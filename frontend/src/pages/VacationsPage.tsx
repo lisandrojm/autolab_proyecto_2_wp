@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { PageLayout } from '../components/ui/PageLayout';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Card } from '../components/ui/Card';
-import { personnelAPI, VacationRequest } from '../api/personnel';
-import { sweetAlert } from '../utils/sweetAlert';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendar, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import React, { useEffect, useState } from "react";
+import { PageLayout } from "../components/ui/PageLayout";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
+import { personnelAPI, VacationRequest } from "../api/personnel";
+import { sweetAlert } from "../utils/sweetAlert";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendar, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export const VacationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -15,9 +15,9 @@ export const VacationsPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingVacation, setEditingVacation] = useState<VacationRequest | null>(null);
   const [formData, setFormData] = useState({
-    startDate: '',
-    endDate: '',
-    reason: '',
+    startDate: "",
+    endDate: "",
+    reason: "",
   });
 
   useEffect(() => {
@@ -27,18 +27,14 @@ export const VacationsPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [vacData, balanceData, statsData] = await Promise.allSettled([
-        personnelAPI.getVacations(),
-        personnelAPI.getVacationAvailable(),
-        personnelAPI.getVacationStats(),
-      ]);
+      const [vacData, balanceData, statsData] = await Promise.allSettled([personnelAPI.getVacations(), personnelAPI.getVacationAvailable(), personnelAPI.getVacationStats()]);
 
-      if (vacData.status === 'fulfilled') setVacations(vacData.value);
-      if (balanceData.status === 'fulfilled') setBalance(balanceData.value);
-      if (statsData.status === 'fulfilled') setStats(statsData.value);
+      if (vacData.status === "fulfilled") setVacations(vacData.value);
+      if (balanceData.status === "fulfilled") setBalance(balanceData.value);
+      if (statsData.status === "fulfilled") setStats(statsData.value);
     } catch (error) {
-      console.error('Error fetching vacation data:', error);
-      sweetAlert.error('Error', 'No se pudieron cargar las vacaciones');
+      console.error("Error fetching vacation data:", error);
+      sweetAlert.error("Error", "No se pudieron cargar las vacaciones");
     } finally {
       setLoading(false);
     }
@@ -49,55 +45,55 @@ export const VacationsPage: React.FC = () => {
     try {
       if (editingVacation) {
         await personnelAPI.updateVacation(editingVacation._id, formData);
-        sweetAlert.success('Solicitud actualizada', 'La solicitud se actualizó correctamente');
+        sweetAlert.success("Solicitud actualizada", "La solicitud se actualizó correctamente");
       } else {
         await personnelAPI.createVacation(formData);
-        sweetAlert.success('Solicitud creada', 'La solicitud se creó correctamente');
+        sweetAlert.success("Solicitud creada", "La solicitud se creó correctamente");
       }
       setShowModal(false);
       setEditingVacation(null);
-      setFormData({ startDate: '', endDate: '', reason: '' });
+      setFormData({ startDate: "", endDate: "", reason: "" });
       fetchData();
     } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo procesar la solicitud');
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo procesar la solicitud");
     }
   };
 
   const handleDelete = async (vacation: VacationRequest) => {
-    if (vacation.status !== 'pending') {
-      sweetAlert.error('Error', 'Solo se pueden eliminar solicitudes pendientes');
+    if (vacation.status !== "pending") {
+      sweetAlert.error("Error", "Solo se pueden eliminar solicitudes pendientes");
       return;
     }
-    const result = await sweetAlert.confirm('¿Eliminar solicitud?', '¿Estás seguro de eliminar esta solicitud?');
+    const result = await sweetAlert.confirm("¿Eliminar solicitud?", "¿Estás seguro de eliminar esta solicitud?");
     if (!result.isConfirmed) return;
 
     try {
       await personnelAPI.deleteVacation(vacation._id);
-      sweetAlert.success('Solicitud eliminada', 'La solicitud se eliminó correctamente');
+      sweetAlert.success("Solicitud eliminada", "La solicitud se eliminó correctamente");
       fetchData();
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.error || 'No se pudo eliminar la solicitud';
-      sweetAlert.error('Error', errorMsg);
+      const errorMsg = error?.response?.data?.error || "No se pudo eliminar la solicitud";
+      sweetAlert.error("Error", errorMsg);
     }
   };
 
   const openEdit = (vacation: VacationRequest) => {
-    if (vacation.status !== 'pending') {
-      sweetAlert.error('Error', 'Solo se pueden editar solicitudes pendientes');
+    if (vacation.status !== "pending") {
+      sweetAlert.error("Error", "Solo se pueden editar solicitudes pendientes");
       return;
     }
     setEditingVacation(vacation);
     setFormData({
-      startDate: vacation.startDate.split('T')[0],
-      endDate: vacation.endDate.split('T')[0],
-      reason: vacation.reason || '',
+      startDate: vacation.startDate.split("T")[0],
+      endDate: vacation.endDate.split("T")[0],
+      reason: vacation.reason || "",
     });
     setShowModal(true);
   };
 
   const openCreate = () => {
     setEditingVacation(null);
-    setFormData({ startDate: '', endDate: '', reason: '' });
+    setFormData({ startDate: "", endDate: "", reason: "" });
     setShowModal(true);
   };
 
@@ -107,12 +103,12 @@ export const VacationsPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'approved':
-        return { variant: 'success' as const, text: 'Aprobada' };
-      case 'rejected':
-        return { variant: 'blue' as const, text: 'Rechazada' };
+      case "approved":
+        return { variant: "success" as const, text: "Aprobada" };
+      case "rejected":
+        return { variant: "blue" as const, text: "Rechazada" };
       default:
-        return { variant: 'warning' as const, text: 'Pendiente' };
+        return { variant: "warning" as const, text: "Pendiente" };
     }
   };
 
@@ -133,55 +129,33 @@ export const VacationsPage: React.FC = () => {
           setShowModal(false);
           setEditingVacation(null);
         },
-        title: editingVacation ? 'Editar Solicitud' : 'Nueva Solicitud de Vacaciones',
-        subtitle: 'Completa los datos de tu solicitud',
-        size: 'md',
+        title: editingVacation ? "Editar Solicitud" : "Nueva Solicitud de Vacaciones",
+        subtitle: "Completa los datos de tu solicitud",
+        size: "md",
         actions: [
           {
-            label: editingVacation ? 'Actualizar' : 'Crear',
+            label: editingVacation ? "Actualizar" : "Crear",
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>('#vacation-form');
+              const form = document.querySelector<HTMLFormElement>("#vacation-form");
               form?.requestSubmit();
             },
-            variant: 'primary',
+            variant: "primary",
           },
-          { label: 'Cancelar', onClick: () => setShowModal(false), variant: 'ghost' },
+          { label: "Cancelar", onClick: () => setShowModal(false), variant: "ghost" },
         ],
         content: (
           <form id="vacation-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Fecha de Inicio *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="input-field"
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Inicio *</label>
+              <input type="date" required value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} className="input-field" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Fecha de Fin *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="input-field"
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Fin *</label>
+              <input type="date" required value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} className="input-field" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motivo</label>
-              <textarea
-                value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                rows={3}
-                className="input-field"
-                placeholder="Motivo de la solicitud..."
-              />
+              <textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} rows={3} className="input-field" placeholder="Motivo de la solicitud..." />
             </div>
           </form>
         ),
@@ -217,40 +191,32 @@ export const VacationsPage: React.FC = () => {
                 key={vacation._id}
                 header={{
                   title: `${vacation.daysRequested} días`,
-                  subtitle: `${new Date(vacation.startDate).toLocaleDateString()} - ${new Date(
-                    vacation.endDate
-                  ).toLocaleDateString()}`,
+                  subtitle: `${new Date(vacation.startDate).toLocaleDateString()} - ${new Date(vacation.endDate).toLocaleDateString()}`,
                   icon: faCalendar,
                   badges: [{ text: badge.text, variant: badge.variant }],
                 }}
                 footer={{
-                  leftContent: (
-                    <span className="text-xs text-gray-500">
-                      {new Date(vacation.createdAt).toLocaleDateString()}
-                    </span>
-                  ),
+                  leftContent: <span className="text-xs text-gray-500">{new Date(vacation.createdAt).toLocaleDateString()}</span>,
                   actions:
-                    vacation.status === 'pending'
+                    vacation.status === "pending"
                       ? [
                           {
                             icon: faEdit,
                             onClick: () => openEdit(vacation),
-                            title: 'Editar',
-                            variant: 'default',
+                            title: "Editar",
+                            variant: "default",
                           },
                           {
                             icon: faTrash,
                             onClick: () => handleDelete(vacation),
-                            title: 'Eliminar',
-                            variant: 'blue',
+                            title: "Eliminar",
+                            variant: "blue",
                           },
                         ]
                       : [],
                 }}
               >
-                {vacation.reason && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{vacation.reason}</p>
-                )}
+                {vacation.reason && <p className="text-sm text-gray-600 dark:text-gray-400">{vacation.reason}</p>}
               </Card>
             );
           })}
