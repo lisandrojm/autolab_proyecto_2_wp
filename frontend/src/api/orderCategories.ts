@@ -50,4 +50,8 @@ export const orderCategoriesAPI = {
   delete: async (id: string): Promise<void> => {
     await axios.delete(`/order-categories/${id}`);
   },
+
+  reorder: async (categories: Array<{ id: string; sortOrder: number }>): Promise<void> => {
+    await axios.put('/order-categories/reorder', { categories });
+  },
 };

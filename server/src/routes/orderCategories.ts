@@ -13,7 +13,6 @@ const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   isActive: z.boolean().default(true),
-  sortOrder: z.number().int().min(0).default(0),
 });
 
 const updateCategorySchema = z.object({
@@ -21,6 +20,15 @@ const updateCategorySchema = z.object({
   description: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
+});
+
+const reorderCategoriesSchema = z.object({
+  categories: z.array(
+    z.object({
+      id: z.string(),
+      sortOrder: z.number().int().min(0),
+    })
+  ).min(1),
 });
 
 router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -60,6 +68,47 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
+router.put("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+    const { categories } = reorderCategoriesSchema.parse(req.body);
+
+    const categoryIds = categories.map(c => c.id);
+    const existingCategories = await OrderCategory.find({
+      _id: { $in: categoryIds },
+      tenantId: req.tenantObjectId,
+    });
+
+    if (existingCategories.length !== categories.length) {
+      res.status(400).json({ error: "Una o más categorías no existen o no pertenecen a este tenant" });
+      return;
+    }
+
+    const updatePromises = categories.map(({ id, sortOrder }) =>
+      OrderCategory.findByIdAndUpdate(id, { sortOrder }, { new: true })
+    );
+
+    await Promise.all(updatePromises);
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId,
+      action: "order_categories_reordered",
+      description: `Reordered ${categories.length} order categories`,
+      entityType: "OrderCategory",
+    });
+
+    res.json({ message: "Categories reordered successfully" });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid data", details: error.errors });
+      return;
+    }
+    console.error("Reorder categories error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
@@ -75,9 +124,16 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       return;
     }
 
+    const maxOrderCategory = await OrderCategory.findOne({
+      tenantId: req.tenantObjectId,
+    }).sort({ sortOrder: -1 }).limit(1);
+
+    const nextSortOrder = maxOrderCategory ? maxOrderCategory.sortOrder + 1 : 1;
+
     const category = new OrderCategory({
       tenantId: req.tenantObjectId,
       ...data,
+      sortOrder: nextSortOrder,
     });
 
     await category.save();
