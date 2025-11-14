@@ -242,15 +242,14 @@ export const MobileNavbar: React.FC = () => {
     if (isSuperAdminTenant) {
       base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
     } else {
-      if (hasPermission("roles:view")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles });
-      if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios del Sistema", scope: "global", count: adminCounts.users });
-
+      if (hasPermission("roles:view")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles, badge: "Finish", badgeColor: "bg-blue-500" });
+      if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios del Sistema", scope: "global", count: adminCounts.users, badge: "Finish", badgeColor: "bg-blue-500" });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
+      if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global", badge: "Next", badgeColor: "bg-orange-400" });
       if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
       if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
-      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "Nuevo", badgeColor: "bg-green-500" });
-      if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faCalendar, label: "Solicitudes de Vacaciones", scope: "global" });
 
       if (hasPermission("creative:view")) {
         base.push({
