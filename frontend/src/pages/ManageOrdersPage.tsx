@@ -134,7 +134,7 @@ export const ManageOrdersPage: React.FC = () => {
             { label: "Entregados", value: stats.delivered, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
             { label: "Cancelados", value: stats.cancelled, color: "bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400" },
           ].map((stat, index) => (
-            <div key={index} className={`rounded-xl shadow-sm p-4 flex items-center gap-3 ${stat.color}`}>
+            <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 w- ${stat.color}`}>
               <p className="text-sm font-medium opacity-80">{stat.label}</p>
               <p className="text-lg font-bold">{stat.value}</p>
             </div>
