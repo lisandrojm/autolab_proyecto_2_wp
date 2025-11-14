@@ -427,49 +427,43 @@ export const ManageOrdersPage: React.FC = () => {
                         { value: "cancelled", label: "Cancelado", icon: faBan, color: "gray" }
                       ].map((status) => {
                         const isActive = selectedOrder.status === status.value;
-                        const colorClasses: Record<string, { bg: string; border: string; text: string; activeBg: string; activeBorder: string; activeText: string }> = {
+
+                        const inactiveClasses = "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-400";
+
+                        const activeColorClasses: Record<string, { bg: string; border: string; text: string; dotBg: string }> = {
                           yellow: {
-                            bg: "bg-yellow-50 dark:bg-yellow-900/20",
-                            border: "border-yellow-200 dark:border-yellow-700",
-                            text: "text-yellow-800 dark:text-yellow-400",
-                            activeBg: "bg-yellow-100 dark:bg-yellow-900/30",
-                            activeBorder: "border-yellow-500 dark:border-yellow-500",
-                            activeText: "text-yellow-900 dark:text-yellow-300"
+                            bg: "bg-yellow-100 dark:bg-yellow-900/30",
+                            border: "border-yellow-500 dark:border-yellow-500",
+                            text: "text-yellow-900 dark:text-yellow-300",
+                            dotBg: "bg-yellow-500"
                           },
                           blue: {
-                            bg: "bg-blue-50 dark:bg-blue-900/20",
-                            border: "border-blue-200 dark:border-blue-700",
-                            text: "text-blue-800 dark:text-blue-400",
-                            activeBg: "bg-blue-100 dark:bg-blue-900/30",
-                            activeBorder: "border-blue-500 dark:border-blue-500",
-                            activeText: "text-blue-900 dark:text-blue-300"
+                            bg: "bg-blue-100 dark:bg-blue-900/30",
+                            border: "border-blue-500 dark:border-blue-500",
+                            text: "text-blue-900 dark:text-blue-300",
+                            dotBg: "bg-blue-500"
                           },
                           red: {
-                            bg: "bg-red-50 dark:bg-red-900/20",
-                            border: "border-red-200 dark:border-red-700",
-                            text: "text-red-800 dark:text-red-400",
-                            activeBg: "bg-red-100 dark:bg-red-900/30",
-                            activeBorder: "border-red-500 dark:border-red-500",
-                            activeText: "text-red-900 dark:text-red-300"
+                            bg: "bg-red-100 dark:bg-red-900/30",
+                            border: "border-red-500 dark:border-red-500",
+                            text: "text-red-900 dark:text-red-300",
+                            dotBg: "bg-red-500"
                           },
                           green: {
-                            bg: "bg-green-50 dark:bg-green-900/20",
-                            border: "border-green-200 dark:border-green-700",
-                            text: "text-green-800 dark:text-green-400",
-                            activeBg: "bg-green-100 dark:bg-green-900/30",
-                            activeBorder: "border-green-500 dark:border-green-500",
-                            activeText: "text-green-900 dark:text-green-300"
+                            bg: "bg-green-100 dark:bg-green-900/30",
+                            border: "border-green-500 dark:border-green-500",
+                            text: "text-green-900 dark:text-green-300",
+                            dotBg: "bg-green-500"
                           },
                           gray: {
-                            bg: "bg-gray-50 dark:bg-gray-900/20",
-                            border: "border-gray-200 dark:border-gray-700",
-                            text: "text-gray-800 dark:text-gray-400",
-                            activeBg: "bg-gray-100 dark:bg-gray-900/30",
-                            activeBorder: "border-gray-500 dark:border-gray-500",
-                            activeText: "text-gray-900 dark:text-gray-300"
+                            bg: "bg-gray-100 dark:bg-gray-900/30",
+                            border: "border-gray-500 dark:border-gray-500",
+                            text: "text-gray-900 dark:text-gray-300",
+                            dotBg: "bg-gray-500"
                           }
                         };
-                        const colors = colorClasses[status.color];
+
+                        const activeColors = activeColorClasses[status.color];
 
                         return (
                           <button
@@ -478,22 +472,16 @@ export const ManageOrdersPage: React.FC = () => {
                             disabled={updatingStatus}
                             className={`w-full p-4 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                               isActive
-                                ? `${colors.activeBg} ${colors.activeBorder} ${colors.activeText} shadow-md`
-                                : `${colors.bg} ${colors.border} ${colors.text} hover:shadow-md hover:scale-[1.02]`
+                                ? `${activeColors.bg} ${activeColors.border} ${activeColors.text} shadow-md`
+                                : `${inactiveClasses} hover:shadow-md hover:scale-[1.02]`
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                isActive ? colors.activeBorder : colors.border
+                                isActive ? activeColors.border : "border-blue-300 dark:border-blue-600"
                               }`}>
                                 {isActive && (
-                                  <div className={`w-3 h-3 rounded-full ${
-                                    status.color === "yellow" ? "bg-yellow-500" :
-                                    status.color === "blue" ? "bg-blue-500" :
-                                    status.color === "red" ? "bg-red-500" :
-                                    status.color === "green" ? "bg-green-500" :
-                                    "bg-gray-500"
-                                  }`} />
+                                  <div className={`w-3 h-3 rounded-full ${activeColors.dotBg}`} />
                                 )}
                               </div>
                               <FontAwesomeIcon icon={status.icon} className="h-5 w-5" />
