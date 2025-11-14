@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faList, faImage } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -28,6 +28,9 @@ export const ManageOrdersPage: React.FC = () => {
   const [stats, setStats] = useState<any>({ pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const helpEntry = getHelp(HELP_KEY);
 
@@ -64,6 +67,57 @@ export const ManageOrdersPage: React.FC = () => {
       loadOrders();
     } catch (error: any) {
       sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!selectedOrder) return;
+
+    const statusMessages: Record<string, { title: string; text: string; success: string }> = {
+      pending: {
+        title: "¿Marcar como pendiente?",
+        text: `¿Estás seguro de marcar "${selectedOrder.title}" como pendiente?`,
+        success: "marcado como pendiente"
+      },
+      approved: {
+        title: "¿Aprobar este pedido?",
+        text: `¿Estás seguro de aprobar el pedido "${selectedOrder.title}"?`,
+        success: "aprobado"
+      },
+      rejected: {
+        title: "¿Rechazar este pedido?",
+        text: `¿Estás seguro de rechazar el pedido "${selectedOrder.title}"?`,
+        success: "rechazado"
+      },
+      delivered: {
+        title: "¿Marcar como entregado?",
+        text: `¿Estás seguro de marcar "${selectedOrder.title}" como entregado?`,
+        success: "marcado como entregado"
+      },
+      cancelled: {
+        title: "¿Cancelar este pedido?",
+        text: `¿Estás seguro de cancelar el pedido "${selectedOrder.title}"?`,
+        success: "cancelado"
+      }
+    };
+
+    const message = statusMessages[newStatus];
+    if (!message) return;
+
+    const result = await sweetAlert.confirm(message.title, message.text, "Sí, continuar", "Cancelar");
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      await hrManagementAPI.orders.update(selectedOrder._id, { status: newStatus });
+      sweetAlert.success("Estado actualizado", `El pedido ha sido ${message.success}`);
+
+      setSelectedOrder({ ...selectedOrder, status: newStatus as any });
+      loadOrders();
+    } catch (error: any) {
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -206,21 +260,9 @@ export const ManageOrdersPage: React.FC = () => {
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-center gap-2">
-                              {order.status === "pending" && (
-                                <>
-                                  <button onClick={() => handleUpdateStatus(order._id, "approved")} className="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors" title="Aprobar">
-                                    <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
-                                  </button>
-                                  <button onClick={() => handleUpdateStatus(order._id, "rejected")} className="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-colors" title="Rechazar">
-                                    <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                              {order.status === "approved" && (
-                                <button onClick={() => handleUpdateStatus(order._id, "delivered")} className="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-colors" title="Marcar como entregado">
-                                  <FontAwesomeIcon icon={faTruck} className="h-4 w-4" />
-                                </button>
-                              )}
+                              <button onClick={() => { setSelectedOrder(order); setShowDetailModal(true); }} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors" title="Ver detalles">
+                                <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -256,6 +298,225 @@ export const ManageOrdersPage: React.FC = () => {
       </div>
 
       {viewingImage && <ImageModal imageUrl={viewingImage} alt="Order Photo" isOpen={true} onClose={() => setViewingImage(null)} />}
+
+      {showDetailModal && selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDetailModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
+              <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información del Pedido</h3>
+
+                    {selectedOrder.photoUrl && (
+                      <div className="mb-4">
+                        <img
+                          src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`}
+                          alt={selectedOrder.title}
+                          className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)}
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faShoppingCart} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Título</p>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white">{selectedOrder.title}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Descripción</p>
+                          <p className="text-base text-gray-900 dark:text-white">{selectedOrder.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faTag} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Categoría</p>
+                          <p className="text-base text-gray-900 dark:text-white">{getCategoryLabel(selectedOrder.category)}</p>
+                        </div>
+                      </div>
+
+                      {selectedOrder.amount && (
+                        <div className="flex items-start gap-3">
+                          <FontAwesomeIcon icon={faDollarSign} className="h-5 w-5 text-green-600 dark:text-green-400 mt-1" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Monto</p>
+                            <p className="text-lg font-bold text-green-600 dark:text-green-400">${selectedOrder.amount.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Solicitante</p>
+                          <p className="text-base font-medium text-gray-900 dark:text-white">{getUserName(selectedOrder.userId)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faCalendar} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Solicitud</p>
+                          <p className="text-base text-gray-900 dark:text-white">{new Date(selectedOrder.requestedAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      {selectedOrder.approvedAt && (
+                        <div className="flex items-start gap-3">
+                          <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-600 dark:text-green-400 mt-1" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Aprobación</p>
+                            <p className="text-base text-gray-900 dark:text-white">{new Date(selectedOrder.approvedAt).toLocaleString()}</p>
+                            {selectedOrder.approvedBy && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Por: {getUserName(selectedOrder.approvedBy)}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedOrder.deliveredAt && (
+                        <div className="flex items-start gap-3">
+                          <FontAwesomeIcon icon={faTruck} className="h-5 w-5 text-green-600 dark:text-green-400 mt-1" />
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Entrega</p>
+                            <p className="text-base text-gray-900 dark:text-white">{new Date(selectedOrder.deliveredAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Control de Estado</h3>
+
+                    {selectedOrder.status === "approved" && (
+                      <button
+                        onClick={() => handleStatusChange("delivered")}
+                        disabled={updatingStatus}
+                        className="w-full mb-4 py-3 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FontAwesomeIcon icon={faTruck} />
+                        Marcar como Entregado
+                      </button>
+                    )}
+
+                    <div className="space-y-3">
+                      {[
+                        { value: "pending", label: "Pendiente", icon: faSpinner, color: "yellow" },
+                        { value: "approved", label: "Aprobado", icon: faCheckCircle, color: "blue" },
+                        { value: "rejected", label: "Rechazado", icon: faTimesCircle, color: "red" },
+                        { value: "delivered", label: "Entregado", icon: faTruck, color: "green" },
+                        { value: "cancelled", label: "Cancelado", icon: faBan, color: "gray" }
+                      ].map((status) => {
+                        const isActive = selectedOrder.status === status.value;
+                        const colorClasses: Record<string, { bg: string; border: string; text: string; activeBg: string; activeBorder: string; activeText: string }> = {
+                          yellow: {
+                            bg: "bg-yellow-50 dark:bg-yellow-900/20",
+                            border: "border-yellow-200 dark:border-yellow-700",
+                            text: "text-yellow-800 dark:text-yellow-400",
+                            activeBg: "bg-yellow-100 dark:bg-yellow-900/30",
+                            activeBorder: "border-yellow-500 dark:border-yellow-500",
+                            activeText: "text-yellow-900 dark:text-yellow-300"
+                          },
+                          blue: {
+                            bg: "bg-blue-50 dark:bg-blue-900/20",
+                            border: "border-blue-200 dark:border-blue-700",
+                            text: "text-blue-800 dark:text-blue-400",
+                            activeBg: "bg-blue-100 dark:bg-blue-900/30",
+                            activeBorder: "border-blue-500 dark:border-blue-500",
+                            activeText: "text-blue-900 dark:text-blue-300"
+                          },
+                          red: {
+                            bg: "bg-red-50 dark:bg-red-900/20",
+                            border: "border-red-200 dark:border-red-700",
+                            text: "text-red-800 dark:text-red-400",
+                            activeBg: "bg-red-100 dark:bg-red-900/30",
+                            activeBorder: "border-red-500 dark:border-red-500",
+                            activeText: "text-red-900 dark:text-red-300"
+                          },
+                          green: {
+                            bg: "bg-green-50 dark:bg-green-900/20",
+                            border: "border-green-200 dark:border-green-700",
+                            text: "text-green-800 dark:text-green-400",
+                            activeBg: "bg-green-100 dark:bg-green-900/30",
+                            activeBorder: "border-green-500 dark:border-green-500",
+                            activeText: "text-green-900 dark:text-green-300"
+                          },
+                          gray: {
+                            bg: "bg-gray-50 dark:bg-gray-900/20",
+                            border: "border-gray-200 dark:border-gray-700",
+                            text: "text-gray-800 dark:text-gray-400",
+                            activeBg: "bg-gray-100 dark:bg-gray-900/30",
+                            activeBorder: "border-gray-500 dark:border-gray-500",
+                            activeText: "text-gray-900 dark:text-gray-300"
+                          }
+                        };
+                        const colors = colorClasses[status.color];
+
+                        return (
+                          <button
+                            key={status.value}
+                            onClick={() => handleStatusChange(status.value)}
+                            disabled={updatingStatus}
+                            className={`w-full p-4 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                              isActive
+                                ? `${colors.activeBg} ${colors.activeBorder} ${colors.activeText} shadow-md`
+                                : `${colors.bg} ${colors.border} ${colors.text} hover:shadow-md hover:scale-[1.02]`
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                isActive ? colors.activeBorder : colors.border
+                              }`}>
+                                {isActive && (
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    status.color === "yellow" ? "bg-yellow-500" :
+                                    status.color === "blue" ? "bg-blue-500" :
+                                    status.color === "red" ? "bg-red-500" :
+                                    status.color === "green" ? "bg-green-500" :
+                                    "bg-gray-500"
+                                  }`} />
+                                )}
+                              </div>
+                              <FontAwesomeIcon icon={status.icon} className="h-5 w-5" />
+                              <span className="font-semibold">{status.label}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {updatingStatus && (
+                      <div className="mt-4 flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400">
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                        <span className="text-sm">Actualizando estado...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 };
