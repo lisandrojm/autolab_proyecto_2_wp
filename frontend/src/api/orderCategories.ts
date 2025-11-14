@@ -27,7 +27,6 @@ export const orderCategoriesAPI = {
   create: async (categoryData: {
     name: string;
     description?: string;
-    icon?: string;
     isActive?: boolean;
     sortOrder?: number;
   }): Promise<OrderCategory> => {
@@ -40,7 +39,6 @@ export const orderCategoriesAPI = {
     updates: {
       name?: string;
       description?: string;
-      icon?: string;
       isActive?: boolean;
       sortOrder?: number;
     }

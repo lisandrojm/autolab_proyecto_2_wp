@@ -6,19 +6,6 @@ import { orderCategoriesAPI, OrderCategory } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 
-const ICON_OPTIONS = [
-  { value: 'shopping-cart', label: '🛒 Carrito' },
-  { value: 'laptop', label: '💻 Laptop' },
-  { value: 'tools', label: '🔧 Herramientas' },
-  { value: 'book', label: '📚 Libro' },
-  { value: 'coffee', label: '☕ Café' },
-  { value: 'box', label: '📦 Caja' },
-  { value: 'pen', label: '✏️ Pluma' },
-  { value: 'phone', label: '📱 Teléfono' },
-  { value: 'chair', label: '🪑 Silla' },
-  { value: 'lightbulb', label: '💡 Idea' },
-];
-
 export const ManageOrderCategoriesPage: React.FC = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<OrderCategory[]>([]);
@@ -28,7 +15,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    icon: 'shopping-cart',
     isActive: true,
     sortOrder: 0,
   });
@@ -56,7 +42,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setFormData({
       name: '',
       description: '',
-      icon: 'shopping-cart',
       isActive: true,
       sortOrder: categories.length,
     });
@@ -68,7 +53,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setFormData({
       name: category.name,
       description: category.description || '',
-      icon: category.icon || 'shopping-cart',
       isActive: category.isActive,
       sortOrder: category.sortOrder,
     });
@@ -170,7 +154,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Icono</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Descripción</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
@@ -200,11 +183,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                               <FontAwesomeIcon icon={faArrowDown} className="h-3 w-3" />
                             </button>
                           </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-2xl">
-                            {ICON_OPTIONS.find(i => i.value === category.icon)?.label || '📦'}
-                          </span>
                         </td>
                         <td className="py-3 px-4">
                           <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
@@ -300,23 +278,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe la categoría..."
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Icono
-                </label>
-                <select
-                  value={formData.icon}
-                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                >
-                  {ICON_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               <div>

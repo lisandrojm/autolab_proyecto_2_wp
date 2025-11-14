@@ -12,7 +12,6 @@ router.use(requireTenant, authenticateToken);
 const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
-  icon: z.string().max(50).optional(),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().min(0).default(0),
 });
@@ -20,7 +19,6 @@ const createCategorySchema = z.object({
 const updateCategorySchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
-  icon: z.string().max(50).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
 });
