@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { Order } from "../models/Order.js";
+import { OrderCategory } from "../models/OrderCategory.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -66,6 +67,11 @@ const createOrderSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   category: z.string().default("other"),
+  categoryId: z.string().optional(),
+  subcategoryId: z.string().optional(),
+  subcategoryLabel: z.string().optional(),
+  actionCompleted: z.boolean().optional(),
+  dynamicValue: z.any().optional(),
   amount: z.number().min(0).optional(),
   photoUrl: z.string().optional(),
 });
@@ -87,7 +93,8 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       userId,
     })
       .sort({ requestedAt: -1 })
-      .populate("approvedBy", "firstName lastName email");
+      .populate("approvedBy", "firstName lastName email")
+      .populate("categoryId");
 
     res.json(orders);
   } catch (error) {
@@ -155,8 +162,32 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     const data = createOrderSchema.parse({
       ...req.body,
       amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      actionCompleted: req.body.actionCompleted === "true" || req.body.actionCompleted === true,
       photoUrl,
     });
+
+    if (data.categoryId) {
+      const category = await OrderCategory.findOne({
+        _id: data.categoryId,
+        tenantId: req.tenantObjectId,
+        isActive: true,
+      });
+
+      if (!category) {
+        res.status(400).json({ error: "Invalid or inactive category" });
+        return;
+      }
+
+      if (data.subcategoryId && category.config?.subtipos) {
+        const subtypeExists = category.config.subtipos.some(
+          (st: any) => st.id === data.subcategoryId
+        );
+        if (!subtypeExists) {
+          res.status(400).json({ error: "Invalid subcategory for this category" });
+          return;
+        }
+      }
+    }
 
     const order = new Order({
       tenantId: req.tenantObjectId,

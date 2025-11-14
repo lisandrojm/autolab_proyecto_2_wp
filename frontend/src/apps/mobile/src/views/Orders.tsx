@@ -3,14 +3,8 @@ import { ArrowLeft, Package, CheckCircle, Clock, XCircle, Truck, AlertCircle, Ca
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
-
-interface OrderCategory {
-  _id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  sortOrder: number;
-}
+import { OrderCategory } from "../../../../api/orderCategories";
+import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -20,10 +14,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const { orders, loading, error, createOrder, deleteOrder } = useOrders();
   const [showForm, setShowForm] = useState(false);
   const [product, setProduct] = useState("");
-  const [category, setCategory] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [categories, setCategories] = useState<OrderCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [quantity, setQuantity] = useState("1");
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -33,6 +26,12 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  const [subcategoryId, setSubcategoryId] = useState("");
+  const [dynamicValue, setDynamicValue] = useState<any>("");
+  const [actionCompleted, setActionCompleted] = useState(false);
+
+  const selectedCategory = categories.find(c => c._id === selectedCategoryId) || null;
+
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -40,7 +39,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         const { data } = await axios.get<OrderCategory[]>("/order-categories", { params: { isActive: true } });
         setCategories(data.sort((a, b) => a.sortOrder - b.sortOrder));
         if (data.length > 0) {
-          setCategory(data[0].name);
+          setSelectedCategoryId(data[0]._id);
         }
       } catch (err) {
         console.error("Error loading categories:", err);
@@ -50,6 +49,12 @@ export default function Orders({ onNavigate }: OrdersProps) {
     };
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    setSubcategoryId("");
+    setDynamicValue("");
+    setActionCompleted(false);
+  }, [selectedCategoryId]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,17 +85,25 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setSubmitError(null);
 
     try {
+      const subcategoryLabel = selectedCategory?.config?.subtipos?.find(s => s.id === subcategoryId)?.label;
+
       await createOrder({
         title: product,
         description,
-        category: category || "other",
+        category: selectedCategory?.name || "other",
+        categoryId: selectedCategoryId,
+        subcategoryId: subcategoryId || undefined,
+        subcategoryLabel: subcategoryLabel || undefined,
+        dynamicValue: dynamicValue || undefined,
+        actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
         photo,
       });
       setShowForm(false);
       setProduct("");
-      setCategory(categories.length > 0 ? categories[0].name : "");
-      setQuantity("1");
       setDescription("");
+      setSubcategoryId("");
+      setDynamicValue("");
+      setActionCompleted(false);
       setPhoto(null);
       setPhotoPreview(null);
     } catch (err: any) {
@@ -182,13 +195,13 @@ export default function Orders({ onNavigate }: OrdersProps) {
             )}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categoría</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categoría *</label>
                 {loadingCategories ? (
                   <div className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-500 dark:text-slate-400">Cargando categorías...</div>
                 ) : categories.length > 0 ? (
-                  <select value={category} onChange={(e) => setCategory(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none">
+                  <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none">
                     {categories.map((cat) => (
-                      <option key={cat._id} value={cat.name}>
+                      <option key={cat._id} value={cat._id}>
                         {cat.name}
                       </option>
                     ))}
@@ -197,18 +210,26 @@ export default function Orders({ onNavigate }: OrdersProps) {
                   <div className="w-full rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
                 )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Producto o artículo</label>
-                <input type="text" value={product} onChange={(e) => setProduct(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Ej: Laptop, Mouse, Material de oficina..." />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Título del pedido *</label>
+                <input type="text" value={product} onChange={(e) => setProduct(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Ej: Laptop para trabajo remoto" />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Cantidad</label>
-                <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} required min="1" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descripción *</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe tu solicitud..." />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descripción</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Especifica detalles del pedido..." />
-              </div>
+
+              <DynamicCategoryInput
+                category={selectedCategory}
+                subcategoryValue={subcategoryId}
+                onSubcategoryChange={setSubcategoryId}
+                dynamicValue={dynamicValue}
+                onDynamicValueChange={setDynamicValue}
+                actionCompleted={actionCompleted}
+                onActionCompletedChange={setActionCompleted}
+              />
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Foto (opcional)</label>

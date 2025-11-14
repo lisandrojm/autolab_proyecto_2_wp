@@ -12,6 +12,7 @@ import { Notification } from "../models/Notification.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { RequestType } from "../models/RequestType.js";
+import { OrderCategory } from "../models/OrderCategory.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -464,38 +465,151 @@ export async function seedOnStart() {
       console.log("✔️ RequestType already present");
     }
 
-    // ---- Order ----
-    const ordersCount = await Order.countDocuments({ tenantId });
-    if (ordersCount === 0) {
+    // ---- OrderCategory ----
+    const categoriesCount = await OrderCategory.countDocuments({ tenantId });
+    if (categoriesCount === 0) {
+      const catDias = await OrderCategory.create({
+        tenantId,
+        name: "Pedidos de Días",
+        description: "Solicitudes de días libres, licencias y permisos especiales",
+        categoryType: "fecha",
+        isActive: true,
+        sortOrder: 1,
+        config: {
+          subtipos: [
+            { id: "compensatorio", label: "Día Compensatorio", requiere_certificado: false },
+            { id: "mudanza", label: "Día de Mudanza", requiere_certificado: false },
+            { id: "enfermedad", label: "Día por Enfermedad", requiere_certificado: true },
+            { id: "maternidad", label: "Licencia por Maternidad", requiere_certificado: true },
+            { id: "personal", label: "Día Personal / Administrativo", requiere_certificado: false },
+          ],
+        },
+      });
+
+      const catMateriales = await OrderCategory.create({
+        tenantId,
+        name: "Pedidos de Materiales",
+        description: "Equipamiento y materiales de trabajo",
+        categoryType: "objeto",
+        isActive: true,
+        sortOrder: 2,
+        config: {
+          subtipos: [
+            { id: "notebook", label: "Notebook" },
+            { id: "monitor", label: "Monitor" },
+            { id: "mouse", label: "Mouse" },
+            { id: "teclado", label: "Teclado" },
+            { id: "silla", label: "Silla Ergonómica" },
+            { id: "celular", label: "Celular Corporativo" },
+          ],
+        },
+      });
+
+      const catAdelanto = await OrderCategory.create({
+        tenantId,
+        name: "Adelanto de Dinero",
+        description: "Solicitudes de adelantos de sueldo o gastos",
+        categoryType: "dinero",
+        isActive: true,
+        sortOrder: 3,
+        requiresAction: true,
+        actionText: "Confirmo que devolveré el monto en los próximos 3 meses",
+        config: {
+          subtipos: [
+            { id: "sueldo", label: "Adelanto de Sueldo" },
+            { id: "gastos", label: "Adelanto por Gastos" },
+          ],
+        },
+      });
+
+      const catReembolso = await OrderCategory.create({
+        tenantId,
+        name: "Reembolso de Gastos",
+        description: "Reembolsos por gastos realizados en nombre de la empresa",
+        categoryType: "dinero",
+        isActive: true,
+        sortOrder: 4,
+        requiresAction: true,
+        actionText: "Adjunto comprobantes de los gastos realizados",
+      });
+
+      const catOtros = await OrderCategory.create({
+        tenantId,
+        name: "Otros Pedidos",
+        description: "Pedidos generales que no entran en las categorías anteriores",
+        categoryType: "otros",
+        isActive: true,
+        sortOrder: 5,
+      });
+
+      console.log("✅ OrderCategory seeded");
+
+      // ---- Order (with new structure) ----
       await Order.create([
         {
           tenantId,
           userId: collab._id,
-          title: "Standing Desk",
-          description: "Need an adjustable standing desk for better ergonomics",
-          category: "equipment",
+          title: "Solicitud de día por enfermedad",
+          description: "Necesito el día 15 de marzo por consulta médica",
+          category: "Pedidos de Días",
+          categoryId: catDias._id,
+          subcategoryId: "enfermedad",
+          subcategoryLabel: "Día por Enfermedad",
+          dynamicValue: new Date(2025, 2, 15),
           status: "pending",
-          amount: 450,
         },
         {
           tenantId,
           userId: collab._id,
-          title: "External Monitor",
-          description: "27-inch 4K monitor for improved productivity",
-          category: "equipment",
+          title: "Notebook para trabajo remoto",
+          description: "Necesito una notebook con al menos 16GB RAM y procesador i7",
+          category: "Pedidos de Materiales",
+          categoryId: catMateriales._id,
+          subcategoryId: "notebook",
+          subcategoryLabel: "Notebook",
+          dynamicValue: "Lenovo ThinkPad X1 Carbon o similar",
           status: "approved",
-          amount: 350,
           approvedBy: adminId,
           approvedAt: new Date(2024, 1, 10),
         },
         {
           tenantId,
           userId: collab._id,
-          title: "Office Supplies",
-          description: "Notebooks, pens, sticky notes",
-          category: "office_supplies",
+          title: "Adelanto de sueldo urgente",
+          description: "Necesito un adelanto por emergencia familiar",
+          category: "Adelanto de Dinero",
+          categoryId: catAdelanto._id,
+          subcategoryId: "sueldo",
+          subcategoryLabel: "Adelanto de Sueldo",
+          dynamicValue: 50000,
+          actionCompleted: true,
+          status: "pending",
+        },
+        {
+          tenantId,
+          userId: coord._id,
+          title: "Reembolso viáticos conferencia",
+          description: "Gastos de hospedaje y alimentación en conferencia técnica",
+          category: "Reembolso de Gastos",
+          categoryId: catReembolso._id,
+          dynamicValue: 35000,
+          actionCompleted: true,
+          status: "approved",
+          amount: 35000,
+          approvedBy: adminId,
+          approvedAt: new Date(2024, 2, 5),
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          title: "Monitor adicional",
+          description: "27 pulgadas 4K para mejorar productividad",
+          category: "Pedidos de Materiales",
+          categoryId: catMateriales._id,
+          subcategoryId: "monitor",
+          subcategoryLabel: "Monitor",
+          dynamicValue: "Dell UltraSharp 27\" 4K",
           status: "delivered",
-          amount: 45,
           approvedBy: adminId,
           approvedAt: new Date(2024, 0, 15),
           deliveredAt: new Date(2024, 0, 20),
@@ -503,7 +617,7 @@ export async function seedOnStart() {
       ]);
       console.log("✅ Order seeded");
     } else {
-      console.log("✔️ Order already present");
+      console.log("✔️ OrderCategory and Order already present");
     }
 
     // ---- Document (HRDocument) ----

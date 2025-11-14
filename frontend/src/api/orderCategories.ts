@@ -1,5 +1,19 @@
 import axios from './axiosConfig';
 
+export interface Subtype {
+  id: string;
+  label: string;
+  requiere_certificado?: boolean;
+  [key: string]: any;
+}
+
+export interface CategoryConfig {
+  subtipos?: Subtype[];
+  [key: string]: any;
+}
+
+export type CategoryType = "fecha" | "dinero" | "objeto" | "otros";
+
 export interface OrderCategory {
   _id: string;
   tenantId: string;
@@ -8,6 +22,10 @@ export interface OrderCategory {
   icon?: string;
   isActive: boolean;
   sortOrder: number;
+  categoryType: CategoryType;
+  config?: CategoryConfig;
+  requiresAction?: boolean;
+  actionText?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +47,10 @@ export const orderCategoriesAPI = {
     description?: string;
     isActive?: boolean;
     sortOrder?: number;
+    categoryType?: CategoryType;
+    config?: CategoryConfig;
+    requiresAction?: boolean;
+    actionText?: string;
   }): Promise<OrderCategory> => {
     const { data } = await axios.post<OrderCategory>('/order-categories', categoryData);
     return data;
@@ -41,6 +63,10 @@ export const orderCategoriesAPI = {
       description?: string;
       isActive?: boolean;
       sortOrder?: number;
+      categoryType?: CategoryType;
+      config?: CategoryConfig;
+      requiresAction?: boolean;
+      actionText?: string;
     }
   ): Promise<OrderCategory> => {
     const { data } = await axios.put<OrderCategory>(`/order-categories/${id}`, updates);

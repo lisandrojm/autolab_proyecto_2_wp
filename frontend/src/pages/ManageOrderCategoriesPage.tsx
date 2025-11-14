@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical } from "@fortawesome/free-solid-svg-icons";
-import { orderCategoriesAPI, OrderCategory } from "../api/orderCategories";
+import { orderCategoriesAPI, OrderCategory, CategoryType, Subtype } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
@@ -69,10 +69,22 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<OrderCategory | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    isActive: boolean;
+    categoryType: CategoryType;
+    requiresAction: boolean;
+    actionText: string;
+    subtipos: Subtype[];
+  }>({
     name: "",
     description: "",
     isActive: true,
+    categoryType: "otros",
+    requiresAction: false,
+    actionText: "",
+    subtipos: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -108,6 +120,10 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       name: "",
       description: "",
       isActive: true,
+      categoryType: "otros",
+      requiresAction: false,
+      actionText: "",
+      subtipos: [],
     });
     setShowModal(true);
   };
@@ -118,6 +134,10 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       name: category.name,
       description: category.description || "",
       isActive: category.isActive,
+      categoryType: category.categoryType || "otros",
+      requiresAction: category.requiresAction || false,
+      actionText: category.actionText || "",
+      subtipos: category.config?.subtipos || [],
     });
     setShowModal(true);
   };
@@ -127,11 +147,27 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setSubmitting(true);
 
     try {
+      if (formData.requiresAction && !formData.actionText.trim()) {
+        sweetAlert.error("Error", "Debes especificar el texto de la acción requerida");
+        setSubmitting(false);
+        return;
+      }
+
+      const payload: any = {
+        name: formData.name,
+        description: formData.description,
+        isActive: formData.isActive,
+        categoryType: formData.categoryType,
+        requiresAction: formData.requiresAction,
+        actionText: formData.requiresAction ? formData.actionText : undefined,
+        config: formData.subtipos.length > 0 ? { subtipos: formData.subtipos } : undefined,
+      };
+
       if (editingCategory) {
-        await orderCategoriesAPI.update(editingCategory._id, formData);
+        await orderCategoriesAPI.update(editingCategory._id, payload);
         sweetAlert.success("Categoría actualizada", "La categoría se actualizó correctamente");
       } else {
-        await orderCategoriesAPI.create(formData);
+        await orderCategoriesAPI.create(payload);
         sweetAlert.success("Categoría creada", "La categoría se creó correctamente");
       }
       setShowModal(false);
@@ -306,6 +342,103 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción (opcional)</label>
                 <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Describe la categoría..." />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Categoría *</label>
+                <select required value={formData.categoryType} onChange={(e) => setFormData({ ...formData, categoryType: e.target.value as CategoryType })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                  <option value="fecha">Fecha</option>
+                  <option value="dinero">Dinero</option>
+                  <option value="objeto">Objeto/Texto</option>
+                  <option value="otros">Otros (Descripción larga)</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Define qué tipo de input se mostrará en el formulario móvil
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subcategorías (opcional)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newId = `sub_${Date.now()}`;
+                      setFormData({
+                        ...formData,
+                        subtipos: [...formData.subtipos, { id: newId, label: "" }],
+                      });
+                    }}
+                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                  >
+                    + Agregar Subcategoría
+                  </button>
+                </div>
+                {formData.subtipos.length > 0 && (
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-2">
+                    {formData.subtipos.map((subtipo, index) => (
+                      <div key={subtipo.id} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Nombre de subcategoría"
+                          value={subtipo.label}
+                          onChange={(e) => {
+                            const newSubtipos = [...formData.subtipos];
+                            newSubtipos[index].label = e.target.value;
+                            setFormData({ ...formData, subtipos: newSubtipos });
+                          }}
+                          className="flex-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              subtipos: formData.subtipos.filter((_, i) => i !== index),
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-800 text-sm px-2"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    id="requiresAction"
+                    checked={formData.requiresAction}
+                    onChange={(e) => setFormData({ ...formData, requiresAction: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="requiresAction" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Requiere acción/confirmación del usuario
+                  </label>
+                </div>
+
+                {formData.requiresAction && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Texto de la acción *
+                    </label>
+                    <input
+                      type="text"
+                      required={formData.requiresAction}
+                      value={formData.actionText}
+                      onChange={(e) => setFormData({ ...formData, actionText: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ej: Adjunto comprobantes de gastos"
+                    />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Este texto aparecerá junto a un checkbox que el usuario debe marcar
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">

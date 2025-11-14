@@ -1,5 +1,17 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
+export interface ISubtype {
+  id: string;
+  label: string;
+  requiere_certificado?: boolean;
+  [key: string]: any;
+}
+
+export interface ICategoryConfig {
+  subtipos?: ISubtype[];
+  [key: string]: any;
+}
+
 export interface IOrderCategory extends Document {
   tenantId: Types.ObjectId;
   name: string;
@@ -7,6 +19,10 @@ export interface IOrderCategory extends Document {
   icon?: string;
   isActive: boolean;
   sortOrder: number;
+  categoryType: "fecha" | "dinero" | "objeto" | "otros";
+  config?: ICategoryConfig;
+  requiresAction?: boolean;
+  actionText?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,11 +35,21 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     icon: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
+    categoryType: {
+      type: String,
+      enum: ["fecha", "dinero", "objeto", "otros"],
+      default: "otros",
+      index: true
+    },
+    config: { type: Schema.Types.Mixed },
+    requiresAction: { type: Boolean, default: false },
+    actionText: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
 orderCategorySchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
 orderCategorySchema.index({ tenantId: 1, name: 1 }, { unique: true });
+orderCategorySchema.index({ tenantId: 1, categoryType: 1 });
 
 export const OrderCategory = mongoose.model<IOrderCategory>("OrderCategory", orderCategorySchema);

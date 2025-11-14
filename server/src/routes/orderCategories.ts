@@ -9,18 +9,58 @@ const router = Router();
 
 router.use(requireTenant, authenticateToken);
 
+const subtypeSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  requiere_certificado: z.boolean().optional(),
+}).passthrough();
+
+const configSchema = z.object({
+  subtipos: z.array(subtypeSchema).optional(),
+}).passthrough();
+
 const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   isActive: z.boolean().default(true),
-});
+  categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).default("otros"),
+  config: configSchema.optional(),
+  requiresAction: z.boolean().default(false),
+  actionText: z.string().max(500).optional(),
+}).refine(
+  (data) => {
+    if (data.requiresAction && !data.actionText) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "actionText is required when requiresAction is true",
+    path: ["actionText"],
+  }
+);
 
 const updateCategorySchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
-});
+  categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).optional(),
+  config: configSchema.optional(),
+  requiresAction: z.boolean().optional(),
+  actionText: z.string().max(500).optional(),
+}).refine(
+  (data) => {
+    if (data.requiresAction && !data.actionText) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "actionText is required when requiresAction is true",
+    path: ["actionText"],
+  }
+);
 
 const reorderCategoriesSchema = z.object({
   categories: z.array(

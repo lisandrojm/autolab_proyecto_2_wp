@@ -168,6 +168,11 @@ export interface OrderData {
   title: string;
   description: string;
   category: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  subcategoryLabel?: string;
+  dynamicValue?: any;
+  actionCompleted?: boolean;
   amount?: number;
   photoUrl?: string;
   status: 'pending' | 'approved' | 'rejected' | 'delivered' | 'cancelled';
@@ -272,11 +277,27 @@ export const personnelAPI = {
     return data;
   },
 
-  createOrder: async (orderData: { title: string; description: string; category?: string; amount?: number; photo?: File | null }): Promise<OrderData> => {
+  createOrder: async (orderData: {
+    title: string;
+    description: string;
+    category?: string;
+    categoryId?: string;
+    subcategoryId?: string;
+    subcategoryLabel?: string;
+    dynamicValue?: any;
+    actionCompleted?: boolean;
+    amount?: number;
+    photo?: File | null;
+  }): Promise<OrderData> => {
     const formData = new FormData();
     formData.append('title', orderData.title);
     formData.append('description', orderData.description);
     if (orderData.category) formData.append('category', orderData.category);
+    if (orderData.categoryId) formData.append('categoryId', orderData.categoryId);
+    if (orderData.subcategoryId) formData.append('subcategoryId', orderData.subcategoryId);
+    if (orderData.subcategoryLabel) formData.append('subcategoryLabel', orderData.subcategoryLabel);
+    if (orderData.dynamicValue !== undefined) formData.append('dynamicValue', JSON.stringify(orderData.dynamicValue));
+    if (orderData.actionCompleted !== undefined) formData.append('actionCompleted', orderData.actionCompleted.toString());
     if (orderData.amount !== undefined) formData.append('amount', orderData.amount.toString());
     if (orderData.photo) formData.append('photo', orderData.photo);
 
