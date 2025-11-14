@@ -25,7 +25,7 @@ export default function Home({ onNavigate }: HomeProps) {
         const data = await personnelAPI.getRecentActivity();
         setRecentActivity(data.slice(0, 3));
       } catch (error) {
-        console.error('Error fetching activity:', error);
+        console.error("Error fetching activity:", error);
       } finally {
         setActivityLoading(false);
       }
@@ -34,7 +34,7 @@ export default function Home({ onNavigate }: HomeProps) {
     fetchActivity();
   }, []);
 
-  const latestNotification = notifications.find(n => !n.isRead);
+  const latestNotification = notifications.find((n) => !n.isRead);
 
   const baseActions = [
     {
@@ -88,17 +88,17 @@ export default function Home({ onNavigate }: HomeProps) {
   const quickActions = isMobileCoordinator ? [...baseActions, ...coordinatorActions] : baseActions;
 
   const getActivityIcon = (action: string) => {
-    if (action.includes('vacation')) return CheckCircle;
-    if (action.includes('order')) return ShoppingCart;
-    if (action.includes('document')) return File;
+    if (action.includes("vacation")) return CheckCircle;
+    if (action.includes("order")) return ShoppingCart;
+    if (action.includes("document")) return File;
     return CheckCircle;
   };
 
   const getActivityColor = (action: string) => {
-    if (action.includes('vacation')) return { bg: 'bg-green-100 dark:bg-green-900/50', icon: 'text-green-600 dark:text-green-400' };
-    if (action.includes('order')) return { bg: 'bg-blue-100 dark:bg-blue-900/50', icon: 'text-blue-600 dark:text-blue-400' };
-    if (action.includes('document')) return { bg: 'bg-purple-100 dark:bg-purple-900/50', icon: 'text-purple-600 dark:text-purple-400' };
-    return { bg: 'bg-slate-100 dark:bg-slate-800', icon: 'text-slate-600 dark:text-slate-400' };
+    if (action.includes("vacation")) return { bg: "bg-green-100 dark:bg-green-900/50", icon: "text-green-600 dark:text-green-400" };
+    if (action.includes("order")) return { bg: "bg-blue-100 dark:bg-blue-900/50", icon: "text-blue-600 dark:text-blue-400" };
+    if (action.includes("document")) return { bg: "bg-purple-100 dark:bg-purple-900/50", icon: "text-purple-600 dark:text-purple-400" };
+    return { bg: "bg-slate-100 dark:bg-slate-800", icon: "text-slate-600 dark:text-slate-400" };
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -109,17 +109,15 @@ export default function Home({ onNavigate }: HomeProps) {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-    if (diffDays > 0) return `hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
-    if (diffHours > 0) return `hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-    if (diffMinutes > 0) return `hace ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
-    return 'hace un momento';
+    if (diffDays > 0) return `hace ${diffDays} día${diffDays > 1 ? "s" : ""}`;
+    if (diffHours > 0) return `hace ${diffHours} hora${diffHours > 1 ? "s" : ""}`;
+    if (diffMinutes > 0) return `hace ${diffMinutes} minuto${diffMinutes > 1 ? "s" : ""}`;
+    return "hace un momento";
   };
 
   return (
     <div className="flex-1 pb-24">
-      <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">
-        Hola, {user?.firstName || "Usuario"}
-      </h1>
+      <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
 
       {!notifLoading && latestNotification && (
         <div className="p-4">
@@ -153,11 +151,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
           return (
             <button key={index} onClick={() => onNavigate(action.view)} className={`flex flex-col flex-1 gap-3 rounded-xl border bg-white p-4 text-left shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 relative ${isCoordinatorOnly ? "border-blue-200 dark:border-blue-800" : "border-slate-200 dark:border-slate-800"}`}>
-              {(action as any).badge && (
-                <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-green-500 text-white uppercase animate-pulse z-10">
-                  {(action as any).badge}
-                </span>
-              )}
+              {(action as any).badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-green-500 text-white uppercase z-10">{(action as any).badge}</span>}
               <Icon className={`h-6 w-6 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">
                 <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
@@ -168,14 +162,12 @@ export default function Home({ onNavigate }: HomeProps) {
         })}
       </div>
 
-      <h3 className="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">
-        Actividad Reciente
-      </h3>
+      <h3 className="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">Actividad Reciente</h3>
 
       {activityLoading ? (
         <div className="flex flex-col gap-3 px-4">
           {[1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70 animate-pulse">
+            <div key={i} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700" />
               <div className="flex-1">
                 <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />

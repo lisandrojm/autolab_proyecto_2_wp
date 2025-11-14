@@ -104,7 +104,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Días disponibles</p>
-              {loading ? <div className="h-9 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mt-1" /> : <p className="text-3xl font-bold text-primary">{availableDays?.available || 0}</p>}
+              {loading ? <div className="h-9 w-16 bg-slate-200 dark:bg-slate-700 rounded mt-1" /> : <p className="text-3xl font-bold text-primary">{availableDays?.available || 0}</p>}
             </div>
             <Calendar className="w-12 h-12 text-primary opacity-20" />
           </div>
@@ -147,7 +147,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm animate-pulse">
+              <div key={i} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
                 <div className="h-5 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
                 <div className="h-4 w-48 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
                 <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />

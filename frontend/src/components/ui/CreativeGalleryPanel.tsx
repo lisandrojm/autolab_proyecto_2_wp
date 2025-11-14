@@ -33,19 +33,7 @@ interface CreativeGalleryPanelProps {
   onRemoveFilter: (filterId: string) => void;
 }
 
-export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({
-  images,
-  selectedImages,
-  onImageSelect,
-  onOpenCreativeSuite,
-  loading = false,
-  totalCount,
-  pendingIncludeUserAssets,
-  onTogglePendingUserAssets,
-  onApplyFilters,
-  activeFilters,
-  onRemoveFilter,
-}) => {
+export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({ images, selectedImages, onImageSelect, onOpenCreativeSuite, loading = false, totalCount, pendingIncludeUserAssets, onTogglePendingUserAssets, onApplyFilters, activeFilters, onRemoveFilter }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -64,13 +52,13 @@ export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({
   const handleImageClick = (imageId: string) => onImageSelect(imageId);
 
   const handleImageError = (imageId: string, url: string) => {
-    console.error('[CreativeGalleryPanel] Image failed to load:', { imageId, url });
-    setFailedImages(prev => new Set(prev).add(imageId));
+    console.error("[CreativeGalleryPanel] Image failed to load:", { imageId, url });
+    setFailedImages((prev) => new Set(prev).add(imageId));
   };
 
   const handleImageLoad = (imageId: string) => {
-    console.log('[CreativeGalleryPanel] Image loaded successfully:', imageId);
-    setFailedImages(prev => {
+    console.log("[CreativeGalleryPanel] Image loaded successfully:", imageId);
+    setFailedImages((prev) => {
       const newSet = new Set(prev);
       newSet.delete(imageId);
       return newSet;
@@ -115,19 +103,9 @@ export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar imágenes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-            />
+            <input type="text" placeholder="Buscar imágenes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
           </div>
-          <button
-            onClick={() => setIsFilterModalOpen(true)}
-            className="p-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            title="Filtros"
-          >
+          <button onClick={() => setIsFilterModalOpen(true)} className="p-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Filtros">
             <Filter className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </button>
         </div>
@@ -135,7 +113,7 @@ export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({
         {/* Image Counter and Active Filters */}
         <div className="flex items-center gap-3">
           <div className="text-xs text-gray-600 dark:text-gray-400">
-            {filteredImages.length} imagen{filteredImages.length !== 1 ? 'es' : ''}
+            {filteredImages.length} imagen{filteredImages.length !== 1 ? "es" : ""}
           </div>
           <FilterBadges filters={activeFilters} onRemoveFilter={onRemoveFilter} />
         </div>
@@ -146,7 +124,7 @@ export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({
         {loading ? (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
+              <div key={i} className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-md" />
             ))}
           </div>
         ) : filteredImages.length === 0 ? (
@@ -168,14 +146,7 @@ export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({
                       <p className="text-xs text-gray-500 dark:text-gray-400 text-center px-2">Error al cargar</p>
                     </div>
                   ) : (
-                    <img
-                      src={image.thumbnail || image.url}
-                      alt={image.name}
-                      className="w-full h-full object-cover"
-                      onError={() => handleImageError(image.id, image.url)}
-                      onLoad={() => handleImageLoad(image.id)}
-                      loading="lazy"
-                    />
+                    <img src={image.thumbnail || image.url} alt={image.name} className="w-full h-full object-cover" onError={() => handleImageError(image.id, image.url)} onLoad={() => handleImageLoad(image.id)} loading="lazy" />
                   )}
 
                   {/* Overlay */}

@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { PageLayout } from '../components/ui/PageLayout';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Card } from '../components/ui/Card';
-import { personnelAPI, OrderData } from '../api/personnel';
-import { orderCategoriesAPI, OrderCategory } from '../api/orderCategories';
-import { sweetAlert } from '../utils/sweetAlert';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShoppingCart, faPlus, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import React, { useEffect, useState } from "react";
+import { PageLayout } from "../components/ui/PageLayout";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
+import { personnelAPI, OrderData } from "../api/personnel";
+import { orderCategoriesAPI, OrderCategory } from "../api/orderCategories";
+import { sweetAlert } from "../utils/sweetAlert";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faShoppingCart, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -17,9 +17,9 @@ export const OrdersPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderData | null>(null);
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: '',
+    title: "",
+    description: "",
+    category: "",
     amount: undefined as number | undefined,
   });
 
@@ -37,8 +37,8 @@ export const OrdersPage: React.FC = () => {
         setFormData((prev) => ({ ...prev, category: data[0].name }));
       }
     } catch (error) {
-      console.error('Error loading categories:', error);
-      sweetAlert.error('Error', 'No se pudieron cargar las categorías');
+      console.error("Error loading categories:", error);
+      sweetAlert.error("Error", "No se pudieron cargar las categorías");
     } finally {
       setLoadingCategories(false);
     }
@@ -47,16 +47,13 @@ export const OrdersPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [ordersData, statsData] = await Promise.allSettled([
-        personnelAPI.getOrders(),
-        personnelAPI.getOrderStats(),
-      ]);
+      const [ordersData, statsData] = await Promise.allSettled([personnelAPI.getOrders(), personnelAPI.getOrderStats()]);
 
-      if (ordersData.status === 'fulfilled') setOrders(ordersData.value);
-      if (statsData.status === 'fulfilled') setStats(statsData.value);
+      if (ordersData.status === "fulfilled") setOrders(ordersData.value);
+      if (statsData.status === "fulfilled") setStats(statsData.value);
     } catch (error) {
-      console.error('Error fetching orders data:', error);
-      sweetAlert.error('Error', 'No se pudieron cargar los pedidos');
+      console.error("Error fetching orders data:", error);
+      sweetAlert.error("Error", "No se pudieron cargar los pedidos");
     } finally {
       setLoading(false);
     }
@@ -67,41 +64,41 @@ export const OrdersPage: React.FC = () => {
     try {
       if (editingOrder) {
         await personnelAPI.updateOrder(editingOrder._id, formData);
-        sweetAlert.success('Pedido actualizado', 'El pedido se actualizó correctamente');
+        sweetAlert.success("Pedido actualizado", "El pedido se actualizó correctamente");
       } else {
         await personnelAPI.createOrder(formData);
-        sweetAlert.success('Pedido creado', 'El pedido se creó correctamente');
+        sweetAlert.success("Pedido creado", "El pedido se creó correctamente");
       }
       setShowModal(false);
       setEditingOrder(null);
-      setFormData({ title: '', description: '', category: categories.length > 0 ? categories[0].name : '', amount: undefined });
+      setFormData({ title: "", description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined });
       fetchData();
     } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo procesar el pedido');
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo procesar el pedido");
     }
   };
 
   const handleDelete = async (order: OrderData) => {
-    if (order.status !== 'pending') {
-      sweetAlert.error('Error', 'Solo se pueden eliminar pedidos pendientes');
+    if (order.status !== "pending") {
+      sweetAlert.error("Error", "Solo se pueden eliminar pedidos pendientes");
       return;
     }
-    const result = await sweetAlert.confirm('¿Eliminar pedido?', '¿Estás seguro de eliminar este pedido?');
+    const result = await sweetAlert.confirm("¿Eliminar pedido?", "¿Estás seguro de eliminar este pedido?");
     if (!result.isConfirmed) return;
 
     try {
       await personnelAPI.deleteOrder(order._id);
-      sweetAlert.success('Pedido eliminado', 'El pedido se eliminó correctamente');
+      sweetAlert.success("Pedido eliminado", "El pedido se eliminó correctamente");
       fetchData();
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.error || 'No se pudo eliminar el pedido';
-      sweetAlert.error('Error', errorMsg);
+      const errorMsg = error?.response?.data?.error || "No se pudo eliminar el pedido";
+      sweetAlert.error("Error", errorMsg);
     }
   };
 
   const openEdit = (order: OrderData) => {
-    if (order.status !== 'pending') {
-      sweetAlert.error('Error', 'Solo se pueden editar pedidos pendientes');
+    if (order.status !== "pending") {
+      sweetAlert.error("Error", "Solo se pueden editar pedidos pendientes");
       return;
     }
     setEditingOrder(order);
@@ -116,7 +113,7 @@ export const OrdersPage: React.FC = () => {
 
   const openCreate = () => {
     setEditingOrder(null);
-    setFormData({ title: '', description: '', category: categories.length > 0 ? categories[0].name : '', amount: undefined });
+    setFormData({ title: "", description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined });
     setShowModal(true);
   };
 
@@ -126,16 +123,16 @@ export const OrdersPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'approved':
-        return { variant: 'success' as const, text: 'Aprobado' };
-      case 'rejected':
-        return { variant: 'blue' as const, text: 'Rechazado' };
-      case 'delivered':
-        return { variant: 'default' as const, text: 'Entregado' };
-      case 'cancelled':
-        return { variant: 'warning' as const, text: 'Cancelado' };
+      case "approved":
+        return { variant: "success" as const, text: "Aprobado" };
+      case "rejected":
+        return { variant: "blue" as const, text: "Rechazado" };
+      case "delivered":
+        return { variant: "default" as const, text: "Entregado" };
+      case "cancelled":
+        return { variant: "warning" as const, text: "Cancelado" };
       default:
-        return { variant: 'warning' as const, text: 'Pendiente' };
+        return { variant: "warning" as const, text: "Pendiente" };
     }
   };
 
@@ -144,8 +141,8 @@ export const OrdersPage: React.FC = () => {
   };
 
   const getUserName = (user: any) => {
-    if (typeof user === 'string') return 'Usuario';
-    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Usuario';
+    if (typeof user === "string") return "Usuario";
+    return `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Usuario";
   };
 
   return (
@@ -155,7 +152,7 @@ export const OrdersPage: React.FC = () => {
       faIcon={{ icon: faShoppingCart }}
       headerActions={
         <div className="flex items-center gap-3">
-          <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-green-500 text-white uppercase animate-pulse">Nuevo</span>
+          <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-green-500 text-white uppercase">Nuevo</span>
           <button onClick={openCreate} className="btn-primary">
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Nuevo Pedido
@@ -168,50 +165,32 @@ export const OrdersPage: React.FC = () => {
           setShowModal(false);
           setEditingOrder(null);
         },
-        title: editingOrder ? 'Editar Pedido' : 'Nuevo Pedido',
-        subtitle: 'Completa los datos de tu pedido',
-        size: 'md',
+        title: editingOrder ? "Editar Pedido" : "Nuevo Pedido",
+        subtitle: "Completa los datos de tu pedido",
+        size: "md",
         actions: [
           {
-            label: editingOrder ? 'Actualizar' : 'Crear',
+            label: editingOrder ? "Actualizar" : "Crear",
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>('#order-form');
+              const form = document.querySelector<HTMLFormElement>("#order-form");
               form?.requestSubmit();
             },
-            variant: 'primary',
+            variant: "primary",
           },
-          { label: 'Cancelar', onClick: () => setShowModal(false), variant: 'ghost' },
+          { label: "Cancelar", onClick: () => setShowModal(false), variant: "ghost" },
         ],
         content: (
           <form id="order-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Título *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="input-field"
-                placeholder="Título del pedido"
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Título *</label>
+              <input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" placeholder="Título del pedido" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Categoría *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoría *</label>
               {loadingCategories ? (
-                <div className="input-field text-gray-500 dark:text-gray-400">
-                  Cargando categorías...
-                </div>
+                <div className="input-field text-gray-500 dark:text-gray-400">Cargando categorías...</div>
               ) : categories.length > 0 ? (
-                <select
-                  required
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="input-field"
-                >
+                <select required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="input-field">
                   {categories.map((cat) => (
                     <option key={cat._id} value={cat.name}>
                       {cat.name}
@@ -219,37 +198,16 @@ export const OrdersPage: React.FC = () => {
                   ))}
                 </select>
               ) : (
-                <div className="input-field text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700">
-                  No hay categorías disponibles. Por favor, contacta al administrador.
-                </div>
+                <div className="input-field text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700">No hay categorías disponibles. Por favor, contacta al administrador.</div>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Monto (opcional)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.amount || ''}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value ? parseFloat(e.target.value) : undefined })}
-                className="input-field"
-                placeholder="0.00"
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto (opcional)</label>
+              <input type="number" min="0" step="0.01" value={formData.amount || ""} onChange={(e) => setFormData({ ...formData, amount: e.target.value ? parseFloat(e.target.value) : undefined })} className="input-field" placeholder="0.00" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Descripción *
-              </label>
-              <textarea
-                required
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
-                className="input-field"
-                placeholder="Describe el pedido en detalle..."
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción *</label>
+              <textarea required value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} className="input-field" placeholder="Describe el pedido en detalle..." />
             </div>
           </form>
         ),
@@ -294,25 +252,21 @@ export const OrdersPage: React.FC = () => {
                   badges: [{ text: badge.text, variant: badge.variant }],
                 }}
                 footer={{
-                  leftContent: (
-                    <span className="text-xs text-gray-500">
-                      {new Date(order.requestedAt).toLocaleDateString()}
-                    </span>
-                  ),
+                  leftContent: <span className="text-xs text-gray-500">{new Date(order.requestedAt).toLocaleDateString()}</span>,
                   actions:
-                    order.status === 'pending'
+                    order.status === "pending"
                       ? [
                           {
                             icon: faEdit,
                             onClick: () => openEdit(order),
-                            title: 'Editar',
-                            variant: 'default',
+                            title: "Editar",
+                            variant: "default",
                           },
                           {
                             icon: faTrash,
                             onClick: () => handleDelete(order),
-                            title: 'Eliminar',
-                            variant: 'blue',
+                            title: "Eliminar",
+                            variant: "blue",
                           },
                         ]
                       : [],
@@ -320,11 +274,7 @@ export const OrdersPage: React.FC = () => {
               >
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 dark:text-gray-400">{order.description}</p>
-                  {order.amount && (
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      Monto: ${order.amount.toFixed(2)}
-                    </p>
-                  )}
+                  {order.amount && <p className="text-sm font-semibold text-gray-900 dark:text-white">Monto: ${order.amount.toFixed(2)}</p>}
                 </div>
               </Card>
             );

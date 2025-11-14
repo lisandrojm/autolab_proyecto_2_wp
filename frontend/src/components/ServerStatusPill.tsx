@@ -48,7 +48,7 @@ export const ServerStatusPill: React.FC<Props> = ({
   return (
     <div className={`${base} ${tone} ${className || ""}`} style={style}>
       {/* Icono */}
-      {loading ? <span className="h-3 w-3 rounded-full animate-pulse dark:bg-gray-300/70" /> : serverOk ? <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" /> : <FontAwesomeIcon icon={faServer} className="h-4 w-4" />}
+      {loading ? <span className="h-3 w-3 rounded-full dark:bg-gray-300/70" /> : serverOk ? <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" /> : <FontAwesomeIcon icon={faServer} className="h-4 w-4" />}
 
       {/* Label */}
       <span className={labelCls}>{loading ? "Chequeando…" : serverOk ? "Server:ON" : "Server:OFF"}</span>

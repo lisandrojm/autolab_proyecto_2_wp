@@ -407,11 +407,7 @@ export const MobileNavbar: React.FC = () => {
               <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
             </div>
             <span className="font-medium truncate">{item.label}</span>
-            {item.badge && (
-              <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase animate-pulse`}>
-                {item.badge}
-              </span>
-            )}
+            {item.badge && <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${item.badgeColor || "bg-green-500"} text-white uppercase`}>{item.badge}</span>}
           </div>
 
           {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
