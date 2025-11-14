@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faSave, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -26,19 +26,21 @@ import { CSS } from '@dnd-kit/utilities';
 interface SortableRowProps {
   category: OrderCategory;
   index: number;
-  isReorderMode: boolean;
+  isRowReordering: boolean;
   onEdit: (category: OrderCategory) => void;
   onDelete: (category: OrderCategory) => void;
   onToggleActive: (category: OrderCategory) => void;
+  onToggleReorder: (category: OrderCategory) => void;
 }
 
 const SortableRow: React.FC<SortableRowProps> = ({
   category,
   index,
-  isReorderMode,
+  isRowReordering,
   onEdit,
   onDelete,
   onToggleActive,
+  onToggleReorder,
 }) => {
   const {
     attributes,
@@ -47,7 +49,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: category._id });
+  } = useSortable({ id: category._id, disabled: !isRowReordering });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -60,13 +62,26 @@ const SortableRow: React.FC<SortableRowProps> = ({
       ref={setNodeRef}
       style={style}
       className={`border-b border-gray-100 dark:border-gray-700 ${
-        isReorderMode ? 'cursor-grab active:cursor-grabbing' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
-      } ${isDragging ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+        isRowReordering ? 'bg-blue-50 dark:bg-blue-900/20 cursor-grab active:cursor-grabbing' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+      }`}
     >
       <td className="py-3 px-4 text-center">
-        {isReorderMode ? (
-          <div {...attributes} {...listeners} className="flex items-center justify-center">
-            <FontAwesomeIcon icon={faGripVertical} className="text-gray-400 text-xl cursor-grab" />
+        <button
+          onClick={() => onToggleReorder(category)}
+          className={`p-2 rounded-lg transition-colors ${
+            isRowReordering
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400'
+          }`}
+          title={isRowReordering ? 'Desactivar reordenamiento' : 'Activar reordenamiento'}
+        >
+          <FontAwesomeIcon icon={faGripVertical} className="h-4 w-4" />
+        </button>
+      </td>
+      <td className="py-3 px-4 text-center">
+        {isRowReordering ? (
+          <div {...attributes} {...listeners} className="flex items-center justify-center cursor-grab">
+            <span className="text-sm font-medium">{index + 1}</span>
           </div>
         ) : (
           <span className="text-sm font-medium">{category.sortOrder}</span>
@@ -81,37 +96,41 @@ const SortableRow: React.FC<SortableRowProps> = ({
       <td className="py-3 px-4 text-center">
         <button
           onClick={() => onToggleActive(category)}
-          disabled={isReorderMode}
+          disabled={isRowReordering}
           className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
             category.isActive
               ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
               : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-          } ${isReorderMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${isRowReordering ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <FontAwesomeIcon icon={category.isActive ? faToggleOn : faToggleOff} className="mr-1" />
           {category.isActive ? 'Activa' : 'Inactiva'}
         </button>
       </td>
-      {!isReorderMode && (
-        <td className="py-3 px-4">
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={() => onEdit(category)}
-              className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-              title="Editar"
-            >
-              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onDelete(category)}
-              className="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-colors"
-              title="Eliminar"
-            >
-              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-            </button>
-          </div>
-        </td>
-      )}
+      <td className="py-3 px-4">
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => onEdit(category)}
+            disabled={isRowReordering}
+            className={`p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors ${
+              isRowReordering ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            title="Editar"
+          >
+            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onDelete(category)}
+            disabled={isRowReordering}
+            className={`p-1.5 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-colors ${
+              isRowReordering ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            title="Eliminar"
+          >
+            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+          </button>
+        </div>
+      </td>
     </tr>
   );
 };
@@ -128,9 +147,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     isActive: true,
   });
   const [submitting, setSubmitting] = useState(false);
-  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [reorderingCategoryId, setReorderingCategoryId] = useState<string | null>(null);
   const [tempCategories, setTempCategories] = useState<OrderCategory[]>([]);
-  const [savingOrder, setSavingOrder] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -222,14 +240,27 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     }
   };
 
-  const handleEnterReorderMode = () => {
-    setTempCategories([...categories]);
-    setIsReorderMode(true);
-  };
+  const handleToggleReorder = async (category: OrderCategory) => {
+    if (reorderingCategoryId === category._id) {
+      const reorderData = tempCategories.map((cat, index) => ({
+        id: cat._id,
+        sortOrder: index + 1,
+      }));
 
-  const handleCancelReorder = () => {
-    setIsReorderMode(false);
-    setTempCategories([]);
+      try {
+        await orderCategoriesAPI.reorder(reorderData);
+        sweetAlert.success('Orden guardado', 'El orden de las categorías se actualizó correctamente');
+        setReorderingCategoryId(null);
+        setTempCategories([]);
+        loadCategories();
+      } catch (error: any) {
+        sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo guardar el orden');
+        setTempCategories([...categories]);
+      }
+    } else {
+      setReorderingCategoryId(category._id);
+      setTempCategories([...categories]);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -244,26 +275,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     }
   };
 
-  const handleSaveOrder = async () => {
-    try {
-      setSavingOrder(true);
-      const reorderData = tempCategories.map((cat, index) => ({
-        id: cat._id,
-        sortOrder: index + 1,
-      }));
-
-      await orderCategoriesAPI.reorder(reorderData);
-      sweetAlert.success('Orden guardado', 'El orden de las categorías se actualizó correctamente');
-      setIsReorderMode(false);
-      setTempCategories([]);
-      loadCategories();
-    } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo guardar el orden');
-    } finally {
-      setSavingOrder(false);
-    }
-  };
-
 
   return (
     <PageLayout
@@ -272,55 +283,13 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       faIcon={{ icon: faList }}
       onBack={() => navigate('/hr/orders')}
       headerActions={
-        <div className="flex items-center gap-3">
-          {isReorderMode ? (
-            <>
-              <button
-                onClick={handleCancelReorder}
-                disabled={savingOrder}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <FontAwesomeIcon icon={faTimes} />
-                <span>Cancelar</span>
-              </button>
-              <button
-                onClick={handleSaveOrder}
-                disabled={savingOrder}
-                className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                {savingOrder ? (
-                  <>
-                    <FontAwesomeIcon icon={faSpinner} spin />
-                    <span>Guardando...</span>
-                  </>
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon={faSave} />
-                    <span>Guardar Orden</span>
-                  </>
-                )}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={handleEnterReorderMode}
-                disabled={categories.length === 0}
-                className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FontAwesomeIcon icon={faGripVertical} />
-                <span>Ordenar Categorías</span>
-              </button>
-              <button
-                onClick={openCreateModal}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <FontAwesomeIcon icon={faPlus} />
-                <span>Nueva Categoría</span>
-              </button>
-            </>
-          )}
-        </div>
+        <button
+          onClick={openCreateModal}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2"
+        >
+          <FontAwesomeIcon icon={faPlus} />
+          <span>Nueva Categoría</span>
+        </button>
       }
     >
       <div className="space-y-6">
@@ -340,31 +309,33 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">
+                          Ordenar
+                        </th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">
-                          {isReorderMode ? 'Arrastrar' : 'Orden'}
+                          Orden
                         </th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Descripción</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
-                        {!isReorderMode && (
-                          <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-48">Acciones</th>
-                        )}
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-48">Acciones</th>
                       </tr>
                     </thead>
                     <SortableContext
-                      items={(isReorderMode ? tempCategories : categories).map(c => c._id)}
+                      items={(reorderingCategoryId ? tempCategories : categories).map(c => c._id)}
                       strategy={verticalListSortingStrategy}
                     >
                       <tbody>
-                        {(isReorderMode ? tempCategories : categories).map((category, index) => (
+                        {(reorderingCategoryId ? tempCategories : categories).map((category, index) => (
                           <SortableRow
                             key={category._id}
                             category={category}
                             index={index}
-                            isReorderMode={isReorderMode}
+                            isRowReordering={reorderingCategoryId === category._id}
                             onEdit={openEditModal}
                             onDelete={handleDelete}
                             onToggleActive={handleToggleActive}
+                            onToggleReorder={handleToggleReorder}
                           />
                         ))}
                       </tbody>
