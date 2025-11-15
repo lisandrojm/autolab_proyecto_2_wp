@@ -135,6 +135,40 @@ const helpResources = {
       "clientContextOrders.description": "Vista filtrada que muestra únicamente los pedidos asociados al cliente actual.",
       "clientContextOrders.items": ["**Contexto**: Solo muestra las solicitudes generadas dentro del cliente en curso.", "**Filtros**: Búsqueda y filtrado por estado o categoría.", "**Acciones**: Según permisos: visualizar, aprobar, rechazar o marcar como entregado.", "**Orden cronológico**: Incluye fecha de solicitud y el estado actual.", "**Evidencia visual**: Previsualización de imágenes adjuntas."],
     },
+    // Agregar dentro de helpResources.es.help
+
+    futureActionType: {
+      title: "Tipo de Acción Futura",
+      size: "md",
+      content: (
+        <div className="space-y-3 text-sm">
+          <p>Define qué tipo de acción futura deberá completar el usuario después de crear el pedido.</p>
+
+          <ul className="list-disc ml-5 space-y-1">
+            <li>
+              <strong>Plazo en días:</strong> el sistema calcula una fecha futura sumando días.
+            </li>
+            <li>
+              <strong>Fecha específica:</strong> el usuario debe seleccionar una fecha fija.
+            </li>
+            <li>
+              <strong>Presentación de documento:</strong> el usuario debe subir o presentar algo.
+            </li>
+            <li>
+              <strong>Vencimiento del sistema:</strong> la fecha se genera automáticamente según reglas internas.
+            </li>
+            <li>
+              <strong>Vencimiento interno:</strong> vencimiento definido por procesos internos.
+            </li>
+            <li>
+              <strong>Sin vencimiento:</strong> solo marca la acción como realizada.
+            </li>
+          </ul>
+
+          <p>Esta acción se mostrará como un pendiente que el usuario deberá completar.</p>
+        </div>
+      ),
+    },
   },
 
   // --------------------------------------------------------------------
