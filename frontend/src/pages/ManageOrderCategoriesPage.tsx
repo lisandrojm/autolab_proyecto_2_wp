@@ -335,7 +335,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
                 <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Nombre de la categoría" />
               </div>
 
@@ -352,12 +352,12 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                   <option value="objeto">Objeto</option>
                   <option value="otros">Otros</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define qué tipo de input se mostrará en el formulario móvil</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">* Define qué tipo de input se mostrará en el formulario móvil</p>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subcategorías (opcional)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subcategorías (opcional) *</label>
                   <button
                     type="button"
                     onClick={() => {
@@ -372,6 +372,11 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                     + Agregar Subcategoría
                   </button>
                 </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  * Estas subcategorías aparecerán luego como un <strong>select obligatorio</strong> cuando el usuario elija esta categoría en el formulario móvil.
+                </p>
+
                 {formData.subtipos.length > 0 && (
                   <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-2">
                     {formData.subtipos.map((subtipo, index) => (
