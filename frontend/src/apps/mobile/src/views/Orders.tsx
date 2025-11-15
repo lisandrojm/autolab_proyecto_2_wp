@@ -55,7 +55,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   useEffect(() => {
     setSubcategoryId("");
-    setDynamicValue("");
+
+    // Initialize dynamicValue based on category type and date mode
+    if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
+      setDynamicValue({ fechaDesde: "", fechaHasta: "" });
+    } else {
+      setDynamicValue("");
+    }
+
     setActionCompleted(false);
     setFutureActionPlazoDias(undefined);
     setFutureActionFechaLimite("");
@@ -122,7 +129,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setProduct("");
       setDescription("");
       setSubcategoryId("");
-      setDynamicValue("");
+
+      // Reset dynamicValue based on current category type
+      if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
+        setDynamicValue({ fechaDesde: "", fechaHasta: "" });
+      } else {
+        setDynamicValue("");
+      }
+
       setActionCompleted(false);
       setFutureActionPlazoDias(undefined);
       setFutureActionFechaLimite("");
