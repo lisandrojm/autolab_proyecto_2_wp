@@ -31,6 +31,9 @@ export const useOrders = () => {
     actionCompleted?: boolean;
     amount?: number;
     photo?: File | null;
+    futureActionPlazoDias?: number;
+    futureActionFechaLimite?: string;
+    futureActionDocumento?: string;
   }) => {
     try {
       setError(null);

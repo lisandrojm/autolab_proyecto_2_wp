@@ -288,6 +288,9 @@ export const personnelAPI = {
     actionCompleted?: boolean;
     amount?: number;
     photo?: File | null;
+    futureActionPlazoDias?: number;
+    futureActionFechaLimite?: string;
+    futureActionDocumento?: string;
   }): Promise<OrderData> => {
     const formData = new FormData();
     formData.append('title', orderData.title);
@@ -299,6 +302,9 @@ export const personnelAPI = {
     if (orderData.dynamicValue !== undefined) formData.append('dynamicValue', JSON.stringify(orderData.dynamicValue));
     if (orderData.actionCompleted !== undefined) formData.append('actionCompleted', orderData.actionCompleted.toString());
     if (orderData.amount !== undefined) formData.append('amount', orderData.amount.toString());
+    if (orderData.futureActionPlazoDias !== undefined) formData.append('futureActionPlazoDias', orderData.futureActionPlazoDias.toString());
+    if (orderData.futureActionFechaLimite) formData.append('futureActionFechaLimite', orderData.futureActionFechaLimite);
+    if (orderData.futureActionDocumento) formData.append('futureActionDocumento', orderData.futureActionDocumento);
     if (orderData.photo) formData.append('photo', orderData.photo);
 
     const { data } = await axios.post('/orders', formData, {

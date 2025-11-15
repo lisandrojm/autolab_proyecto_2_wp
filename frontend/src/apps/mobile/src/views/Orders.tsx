@@ -29,6 +29,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [subcategoryId, setSubcategoryId] = useState("");
   const [dynamicValue, setDynamicValue] = useState<any>("");
   const [actionCompleted, setActionCompleted] = useState(false);
+  const [futureActionPlazoDias, setFutureActionPlazoDias] = useState<number | undefined>(undefined);
+  const [futureActionFechaLimite, setFutureActionFechaLimite] = useState("");
+  const [futureActionDocumento, setFutureActionDocumento] = useState("");
 
   const selectedCategory = categories.find(c => c._id === selectedCategoryId) || null;
 
@@ -54,6 +57,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setSubcategoryId("");
     setDynamicValue("");
     setActionCompleted(false);
+    setFutureActionPlazoDias(undefined);
+    setFutureActionFechaLimite("");
+    setFutureActionDocumento("");
   }, [selectedCategoryId]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +102,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
         subcategoryLabel: subcategoryLabel || undefined,
         dynamicValue: dynamicValue || undefined,
         actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
+        futureActionPlazoDias: futureActionPlazoDias || undefined,
+        futureActionFechaLimite: futureActionFechaLimite || undefined,
+        futureActionDocumento: futureActionDocumento || undefined,
         photo,
       });
       setShowForm(false);
@@ -104,6 +113,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setSubcategoryId("");
       setDynamicValue("");
       setActionCompleted(false);
+      setFutureActionPlazoDias(undefined);
+      setFutureActionFechaLimite("");
+      setFutureActionDocumento("");
       setPhoto(null);
       setPhotoPreview(null);
     } catch (err: any) {
@@ -229,6 +241,12 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 onDynamicValueChange={setDynamicValue}
                 actionCompleted={actionCompleted}
                 onActionCompletedChange={setActionCompleted}
+                futureActionPlazoDias={futureActionPlazoDias}
+                onFutureActionPlazoDiasChange={setFutureActionPlazoDias}
+                futureActionFechaLimite={futureActionFechaLimite}
+                onFutureActionFechaLimiteChange={setFutureActionFechaLimite}
+                futureActionDocumento={futureActionDocumento}
+                onFutureActionDocumentoChange={setFutureActionDocumento}
               />
 
               <div>

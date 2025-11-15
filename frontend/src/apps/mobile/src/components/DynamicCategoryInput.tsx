@@ -1,5 +1,6 @@
 import React from "react";
 import { OrderCategory } from "../../../../api/orderCategories";
+import { tipoAccionFuturaLabels } from "../../../../types/futureAction";
 
 interface DynamicCategoryInputProps {
   category: OrderCategory | null;
@@ -9,6 +10,12 @@ interface DynamicCategoryInputProps {
   onDynamicValueChange: (value: any) => void;
   actionCompleted: boolean;
   onActionCompletedChange: (value: boolean) => void;
+  futureActionPlazoDias?: number;
+  onFutureActionPlazoDiasChange?: (value: number) => void;
+  futureActionFechaLimite?: string;
+  onFutureActionFechaLimiteChange?: (value: string) => void;
+  futureActionDocumento?: string;
+  onFutureActionDocumentoChange?: (value: string) => void;
 }
 
 export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({
@@ -19,6 +26,12 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({
   onDynamicValueChange,
   actionCompleted,
   onActionCompletedChange,
+  futureActionPlazoDias,
+  onFutureActionPlazoDiasChange,
+  futureActionFechaLimite,
+  onFutureActionFechaLimiteChange,
+  futureActionDocumento,
+  onFutureActionDocumentoChange,
 }) => {
   if (!category) return null;
 
@@ -130,20 +143,138 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({
 
       {renderDynamicInput()}
 
-      {category.requiresAction && category.actionText && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={actionCompleted}
-              onChange={(e) => onActionCompletedChange(e.target.checked)}
-              required
-              className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-slate-700 dark:text-slate-200 flex-1">
-              {category.actionText}
-            </span>
-          </label>
+      {category.requiresAction && category.futureActionType && (
+        <div className="space-y-3">
+          <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Tipo de Acción Futura
+            </p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              {tipoAccionFuturaLabels[category.futureActionType]}
+            </p>
+          </div>
+
+          {category.futureActionType === "plazoDias" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Plazo en Días *
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="365"
+                value={futureActionPlazoDias || ""}
+                onChange={(e) => onFutureActionPlazoDiasChange?.(parseInt(e.target.value) || 0)}
+                required
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                placeholder="Ej: 10"
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                El sistema calculará automáticamente la fecha límite
+              </p>
+            </div>
+          )}
+
+          {category.futureActionType === "fechaEspecifica" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Fecha Límite *
+              </label>
+              <input
+                type="date"
+                value={futureActionFechaLimite || ""}
+                onChange={(e) => onFutureActionFechaLimiteChange?.(e.target.value)}
+                required
+                min={new Date().toISOString().split("T")[0]}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+              />
+            </div>
+          )}
+
+          {category.futureActionType === "presentacionDocumento" && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Documento Requerido *
+                </label>
+                <input
+                  type="text"
+                  value={futureActionDocumento || ""}
+                  onChange={(e) => onFutureActionDocumentoChange?.(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                  placeholder="Ej: DNI escaneado, Certificado médico..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Fecha Límite (Opcional)
+                </label>
+                <input
+                  type="date"
+                  value={futureActionFechaLimite || ""}
+                  onChange={(e) => onFutureActionFechaLimiteChange?.(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                />
+              </div>
+            </>
+          )}
+
+          {category.futureActionType === "vencimientoSistema" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Plazo Predefinido (Días) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="365"
+                value={futureActionPlazoDias || 7}
+                onChange={(e) => onFutureActionPlazoDiasChange?.(parseInt(e.target.value) || 7)}
+                required
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                El sistema define automáticamente este plazo según reglas internas
+              </p>
+            </div>
+          )}
+
+          {category.futureActionType === "vencimientoInterno" && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-sm text-slate-700 dark:text-slate-200">
+                Un área interna debe evaluar y asignar una fecha de vencimiento. El pedido
+                quedará en estado "En Revisión" hasta que se cargue la fecha límite.
+              </p>
+            </div>
+          )}
+
+          {category.futureActionType === "sinVencimiento" && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm text-slate-700 dark:text-slate-200">
+                No tiene fecha límite, pero debe ser gestionada y marcada como cumplida
+                manualmente.
+              </p>
+            </div>
+          )}
+
+          {category.actionText && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={actionCompleted}
+                  onChange={(e) => onActionCompletedChange(e.target.checked)}
+                  required
+                  className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-200 flex-1">
+                  {category.actionText}
+                </span>
+              </label>
+            </div>
+          )}
         </div>
       )}
     </div>
