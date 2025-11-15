@@ -81,7 +81,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     name: "",
     description: "",
     isActive: true,
-    categoryType: "otros",
+    categoryType: "fecha",
     requiresAction: false,
     actionText: "",
     subtipos: [],
@@ -120,7 +120,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       name: "",
       description: "",
       isActive: true,
-      categoryType: "otros",
+      categoryType: "fecha",
       requiresAction: false,
       actionText: "",
       subtipos: [],
@@ -134,7 +134,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       name: category.name,
       description: category.description || "",
       isActive: category.isActive,
-      categoryType: category.categoryType || "otros",
+      categoryType: category.categoryType || "fecha",
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
       subtipos: category.config?.subtipos || [],
@@ -349,8 +349,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 <select required value={formData.categoryType} onChange={(e) => setFormData({ ...formData, categoryType: e.target.value as CategoryType })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                   <option value="fecha">Fecha</option>
                   <option value="dinero">Dinero</option>
-                  <option value="objeto">Objeto/Texto</option>
-                  <option value="otros">Otros (Descripción larga)</option>
+                  <option value="objeto">Objeto</option>
+                  <option value="otros">Otros</option>
                 </select>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define qué tipo de input se mostrará en el formulario móvil</p>
               </div>
@@ -367,7 +367,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         subtipos: [...formData.subtipos, { id: newId, label: "" }],
                       });
                     }}
-                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                    className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-500 text-blue-700 dark:text-white rounded hover:bg-blue-200"
                   >
                     + Agregar Subcategoría
                   </button>
