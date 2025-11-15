@@ -30,6 +30,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [dynamicValue, setDynamicValue] = useState<any>("");
   const [actionCompleted, setActionCompleted] = useState(false);
 
+  const [requiereAccionFutura, setRequiereAccionFutura] = useState(false);
+
   const selectedCategory = categories.find(c => c._id === selectedCategoryId) || null;
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setSubcategoryId("");
     setDynamicValue("");
     setActionCompleted(false);
+    setRequiereAccionFutura(false);
   }, [selectedCategoryId]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +107,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setSubcategoryId("");
       setDynamicValue("");
       setActionCompleted(false);
+      setRequiereAccionFutura(false);
       setPhoto(null);
       setPhotoPreview(null);
     } catch (err: any) {
@@ -230,6 +234,25 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 actionCompleted={actionCompleted}
                 onActionCompletedChange={setActionCompleted}
               />
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={requiereAccionFutura}
+                    onChange={(e) => setRequiereAccionFutura(e.target.checked)}
+                    className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <span className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                      Requiere acción futura del usuario
+                    </span>
+                    <span className="block text-xs text-slate-600 dark:text-slate-300 mt-1">
+                      Marca esta opción si este pedido requiere que el usuario complete alguna acción posteriormente (presentar documentos, completar formularios, etc.)
+                    </span>
+                  </div>
+                </label>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Foto (opcional)</label>

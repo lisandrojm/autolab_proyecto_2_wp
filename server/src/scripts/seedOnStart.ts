@@ -13,6 +13,7 @@ import { ActivityLog } from "../models/ActivityLog.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { RequestType } from "../models/RequestType.js";
 import { OrderCategory } from "../models/OrderCategory.js";
+import { FutureAction } from "../models/FutureAction.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -616,6 +617,106 @@ export async function seedOnStart() {
         },
       ]);
       console.log("✅ Order seeded");
+
+      const futureActionsCount = await FutureAction.countDocuments({ tenantId });
+      if (futureActionsCount === 0) {
+        const orderForFA1 = await Order.findOne({ tenantId, title: "Adelanto de sueldo urgente" });
+        const orderForFA2 = await Order.findOne({ tenantId, title: "Reembolso viáticos conferencia" });
+        const orderForFA3 = await Order.findOne({ tenantId, title: "Solicitud de día por enfermedad" });
+
+        if (orderForFA1) {
+          const fa1 = await FutureAction.create({
+            tenantId,
+            orderId: orderForFA1._id,
+            requiereAccionFutura: true,
+            tipoAccionFutura: "plazoDias",
+            descripcionAccion: "El usuario tiene 10 días para completar el formulario de devolución",
+            responsableAccion: "usuario",
+            plazoDias: 10,
+            fechaCreacionAccion: orderForFA1.requestedAt,
+            estadoAccion: "pendiente",
+          });
+          orderForFA1.requiereAccionFutura = true;
+          orderForFA1.futureActionId = fa1._id as any;
+          await orderForFA1.save();
+        }
+
+        if (orderForFA2) {
+          const futureDate = new Date();
+          futureDate.setDate(futureDate.getDate() + 15);
+          const fa2 = await FutureAction.create({
+            tenantId,
+            orderId: orderForFA2._id,
+            requiereAccionFutura: true,
+            tipoAccionFutura: "fechaEspecifica",
+            descripcionAccion: "Presentar todos los comprobantes antes de la fecha límite",
+            responsableAccion: "usuario",
+            fechaLimite: futureDate,
+            fechaCreacionAccion: orderForFA2.requestedAt,
+            estadoAccion: "pendiente",
+          });
+          orderForFA2.requiereAccionFutura = true;
+          orderForFA2.futureActionId = fa2._id as any;
+          await orderForFA2.save();
+        }
+
+        if (orderForFA3) {
+          const fa3 = await FutureAction.create({
+            tenantId,
+            orderId: orderForFA3._id,
+            requiereAccionFutura: true,
+            tipoAccionFutura: "presentacionDocumento",
+            descripcionAccion: "Presentar certificado médico que justifique la ausencia",
+            responsableAccion: "usuario",
+            documentoRequerido: "Certificado médico escaneado",
+            fechaCreacionAccion: orderForFA3.requestedAt,
+            estadoAccion: "pendiente",
+          });
+          orderForFA3.requiereAccionFutura = true;
+          orderForFA3.futureActionId = fa3._id as any;
+          await orderForFA3.save();
+        }
+
+        await FutureAction.create({
+          tenantId,
+          orderId: new Types.ObjectId(),
+          requiereAccionFutura: true,
+          tipoAccionFutura: "vencimientoSistema",
+          descripcionAccion: "El sistema define automáticamente 7 días para completar encuesta de satisfacción",
+          responsableAccion: "usuario",
+          plazoDias: 7,
+          quienDefineVencimiento: "sistema",
+          fechaCreacionAccion: new Date(),
+          estadoAccion: "pendiente",
+        });
+
+        await FutureAction.create({
+          tenantId,
+          orderId: new Types.ObjectId(),
+          requiereAccionFutura: true,
+          tipoAccionFutura: "vencimientoInterno",
+          descripcionAccion: "El área de RRHH debe revisar y asignar fecha de vencimiento para capacitación",
+          responsableAccion: "area_interna",
+          quienDefineVencimiento: "area_interna",
+          fechaCreacionAccion: new Date(),
+          estadoAccion: "en_revision",
+        });
+
+        await FutureAction.create({
+          tenantId,
+          orderId: new Types.ObjectId(),
+          requiereAccionFutura: true,
+          tipoAccionFutura: "sinVencimiento",
+          descripcionAccion: "Seguimiento de proyecto especial - sin fecha límite pero requiere gestión",
+          responsableAccion: "cliente",
+          fechaCreacionAccion: new Date(),
+          estadoAccion: "pendiente",
+        });
+
+        console.log("✅ FutureAction seeded (6 examples covering all types)");
+      } else {
+        console.log("✔️ FutureAction already present");
+      }
     } else {
       console.log("✔️ OrderCategory and Order already present");
     }

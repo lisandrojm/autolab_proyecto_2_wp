@@ -18,6 +18,8 @@ export interface IOrder extends Document {
   photoUrl?: string;
   actionCompleted?: boolean;
   dynamicValue?: any;
+  requiereAccionFutura?: boolean;
+  futureActionId?: Types.ObjectId;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -47,6 +49,8 @@ const orderSchema = new Schema<IOrder>(
     photoUrl: { type: String, trim: true },
     actionCompleted: { type: Boolean },
     dynamicValue: { type: Schema.Types.Mixed },
+    requiereAccionFutura: { type: Boolean, default: false },
+    futureActionId: { type: Schema.Types.ObjectId, ref: "FutureAction" },
     metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }

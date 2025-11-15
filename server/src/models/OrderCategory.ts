@@ -7,8 +7,18 @@ export interface ISubtype {
   [key: string]: any;
 }
 
+export interface IFutureActionConfig {
+  enabled?: boolean;
+  tipoAccionPorDefecto?: string;
+  plazoDiasPorDefecto?: number;
+  responsablePorDefecto?: string;
+  requiereDocumento?: boolean;
+  documentoRequerido?: string;
+}
+
 export interface ICategoryConfig {
   subtipos?: ISubtype[];
+  futureActionConfig?: IFutureActionConfig;
   [key: string]: any;
 }
 
