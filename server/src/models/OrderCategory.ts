@@ -42,6 +42,9 @@ export interface IOrderCategory extends Document {
   requiresAction?: boolean;
   actionText?: string;
   futureActionType?: TipoAccionFutura;
+  plazoDias?: number;
+  fechaLimite?: string;
+  documentoRequerido?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +71,9 @@ const orderCategorySchema = new Schema<IOrderCategory>(
       enum: ["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"],
       trim: true
     },
+    plazoDias: { type: Number, min: 1, max: 365 },
+    fechaLimite: { type: String, trim: true },
+    documentoRequerido: { type: String, trim: true },
   },
   { timestamps: true }
 );

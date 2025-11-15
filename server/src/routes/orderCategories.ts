@@ -27,6 +27,10 @@ const createCategorySchema = z.object({
   config: configSchema.optional(),
   requiresAction: z.boolean().default(false),
   actionText: z.string().max(500).optional(),
+  futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).optional(),
+  plazoDias: z.number().int().min(1).max(365).optional(),
+  fechaLimite: z.string().optional(),
+  documentoRequerido: z.string().max(200).optional(),
 }).refine(
   (data) => {
     if (data.requiresAction && !data.actionText) {
@@ -37,6 +41,50 @@ const createCategorySchema = z.object({
   {
     message: "actionText is required when requiresAction is true",
     path: ["actionText"],
+  }
+).refine(
+  (data) => {
+    if (data.requiresAction && !data.futureActionType) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "futureActionType is required when requiresAction is true",
+    path: ["futureActionType"],
+  }
+).refine(
+  (data) => {
+    if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
+      return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
+    }
+    return true;
+  },
+  {
+    message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
+    path: ["plazoDias"],
+  }
+).refine(
+  (data) => {
+    if (data.futureActionType === "fechaEspecifica") {
+      return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "fechaLimite is required for fechaEspecifica type",
+    path: ["fechaLimite"],
+  }
+).refine(
+  (data) => {
+    if (data.futureActionType === "presentacionDocumento") {
+      return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "documentoRequerido is required for presentacionDocumento type",
+    path: ["documentoRequerido"],
   }
 );
 
@@ -49,6 +97,10 @@ const updateCategorySchema = z.object({
   config: configSchema.optional(),
   requiresAction: z.boolean().optional(),
   actionText: z.string().max(500).optional(),
+  futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).optional(),
+  plazoDias: z.number().int().min(1).max(365).optional(),
+  fechaLimite: z.string().optional(),
+  documentoRequerido: z.string().max(200).optional(),
 }).refine(
   (data) => {
     if (data.requiresAction && !data.actionText) {
@@ -59,6 +111,50 @@ const updateCategorySchema = z.object({
   {
     message: "actionText is required when requiresAction is true",
     path: ["actionText"],
+  }
+).refine(
+  (data) => {
+    if (data.requiresAction && !data.futureActionType) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "futureActionType is required when requiresAction is true",
+    path: ["futureActionType"],
+  }
+).refine(
+  (data) => {
+    if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
+      return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
+    }
+    return true;
+  },
+  {
+    message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
+    path: ["plazoDias"],
+  }
+).refine(
+  (data) => {
+    if (data.futureActionType === "fechaEspecifica") {
+      return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "fechaLimite is required for fechaEspecifica type",
+    path: ["fechaLimite"],
+  }
+).refine(
+  (data) => {
+    if (data.futureActionType === "presentacionDocumento") {
+      return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "documentoRequerido is required for presentacionDocumento type",
+    path: ["documentoRequerido"],
   }
 );
 

@@ -80,6 +80,9 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     actionText: string;
     futureActionType: TipoAccionFutura | "";
     subtipos: Subtype[];
+    plazoDias?: number;
+    fechaLimite?: string;
+    documentoRequerido?: string;
   }>({
     name: "",
     description: "",
@@ -89,6 +92,9 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     actionText: "",
     futureActionType: "",
     subtipos: [],
+    plazoDias: undefined,
+    fechaLimite: undefined,
+    documentoRequerido: undefined,
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -134,6 +140,9 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       actionText: "",
       futureActionType: "",
       subtipos: [],
+      plazoDias: undefined,
+      fechaLimite: undefined,
+      documentoRequerido: undefined,
     });
     setShowModal(true);
   };
@@ -149,6 +158,9 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       actionText: category.actionText || "",
       futureActionType: category.futureActionType || "",
       subtipos: category.config?.subtipos || [],
+      plazoDias: category.plazoDias,
+      fechaLimite: category.fechaLimite,
+      documentoRequerido: category.documentoRequerido,
     });
     setShowModal(true);
   };
@@ -170,6 +182,40 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         return;
       }
 
+      if (formData.requiresAction && formData.futureActionType) {
+        if (formData.futureActionType === "plazoDias" || formData.futureActionType === "vencimientoSistema") {
+          if (!formData.plazoDias || formData.plazoDias < 1 || formData.plazoDias > 365) {
+            sweetAlert.error("Error", "El plazo en días debe estar entre 1 y 365");
+            setSubmitting(false);
+            return;
+          }
+        }
+
+        if (formData.futureActionType === "fechaEspecifica") {
+          if (!formData.fechaLimite) {
+            sweetAlert.error("Error", "Debes especificar una fecha límite");
+            setSubmitting(false);
+            return;
+          }
+          const selectedDate = new Date(formData.fechaLimite);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (selectedDate < today) {
+            sweetAlert.error("Error", "La fecha límite no puede ser una fecha pasada");
+            setSubmitting(false);
+            return;
+          }
+        }
+
+        if (formData.futureActionType === "presentacionDocumento") {
+          if (!formData.documentoRequerido || !formData.documentoRequerido.trim()) {
+            sweetAlert.error("Error", "Debes especificar el documento requerido");
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+
       const payload: any = {
         name: formData.name,
         description: formData.description,
@@ -180,6 +226,30 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
         config: formData.subtipos.length > 0 ? { subtipos: formData.subtipos } : undefined,
       };
+
+      if (formData.requiresAction && formData.futureActionType) {
+        if (formData.futureActionType === "plazoDias" || formData.futureActionType === "vencimientoSistema") {
+          payload.plazoDias = formData.plazoDias;
+        } else {
+          payload.plazoDias = undefined;
+        }
+
+        if (formData.futureActionType === "fechaEspecifica" || (formData.futureActionType === "presentacionDocumento" && formData.fechaLimite)) {
+          payload.fechaLimite = formData.fechaLimite;
+        } else {
+          payload.fechaLimite = undefined;
+        }
+
+        if (formData.futureActionType === "presentacionDocumento") {
+          payload.documentoRequerido = formData.documentoRequerido;
+        } else {
+          payload.documentoRequerido = undefined;
+        }
+      } else {
+        payload.plazoDias = undefined;
+        payload.fechaLimite = undefined;
+        payload.documentoRequerido = undefined;
+      }
 
       if (editingCategory) {
         await orderCategoriesAPI.update(editingCategory._id, payload);
@@ -255,6 +325,136 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         const newIndex = items.findIndex((item) => item._id === over.id);
         return arrayMove(items, oldIndex, newIndex);
       });
+    }
+  };
+
+  const handleFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
+    setFormData({
+      ...formData,
+      futureActionType: newType,
+      plazoDias: undefined,
+      fechaLimite: undefined,
+      documentoRequerido: undefined,
+    });
+  };
+
+  const renderFutureActionConditionalFields = () => {
+    if (!formData.futureActionType) return null;
+
+    switch (formData.futureActionType) {
+      case "plazoDias":
+        return (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Plazo en Días *
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={formData.plazoDias || ""}
+              onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })}
+              required
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              placeholder="Ej: 10"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              El sistema calculará automáticamente la fecha límite
+            </p>
+          </div>
+        );
+
+      case "fechaEspecifica":
+        return (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Fecha Límite *
+            </label>
+            <input
+              type="date"
+              value={formData.fechaLimite || ""}
+              onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })}
+              required
+              min={new Date().toISOString().split("T")[0]}
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        );
+
+      case "presentacionDocumento":
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Documento Requerido *
+              </label>
+              <input
+                type="text"
+                value={formData.documentoRequerido || ""}
+                onChange={(e) => setFormData({ ...formData, documentoRequerido: e.target.value })}
+                required
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: DNI escaneado, Certificado médico..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Fecha Límite (Opcional)
+              </label>
+              <input
+                type="date"
+                value={formData.fechaLimite || ""}
+                onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })}
+                min={new Date().toISOString().split("T")[0]}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        );
+
+      case "vencimientoSistema":
+        return (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Plazo Predefinido (Días) *
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={formData.plazoDias || 7}
+              onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || 7 })}
+              required
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              El sistema define automáticamente este plazo según reglas internas
+            </p>
+          </div>
+        );
+
+      case "vencimientoInterno":
+        return (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              Un área interna debe evaluar y asignar una fecha de vencimiento. El pedido
+              quedará en estado "En Revisión" hasta que se cargue la fecha límite.
+            </p>
+          </div>
+        );
+
+      case "sinVencimiento":
+        return (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              No tiene fecha límite, pero debe ser gestionada y marcada como cumplida
+              manualmente.
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
     }
   };
 
@@ -445,7 +645,21 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
               <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <input type="checkbox" id="requiresAction" checked={formData.requiresAction} onChange={(e) => setFormData({ ...formData, requiresAction: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                  <input
+                    type="checkbox"
+                    id="requiresAction"
+                    checked={formData.requiresAction}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      requiresAction: e.target.checked,
+                      futureActionType: e.target.checked ? formData.futureActionType : "",
+                      actionText: e.target.checked ? formData.actionText : "",
+                      plazoDias: e.target.checked ? formData.plazoDias : undefined,
+                      fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
+                      documentoRequerido: e.target.checked ? formData.documentoRequerido : undefined,
+                    })}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
                   <label htmlFor="requiresAction" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Requiere acción futura del usuario
                   </label>
@@ -468,7 +682,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                       <select
                         required={formData.requiresAction}
                         value={formData.futureActionType}
-                        onChange={(e) => setFormData({ ...formData, futureActionType: e.target.value as TipoAccionFutura })}
+                        onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)}
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Selecciona un tipo de acción...</option>
@@ -480,6 +694,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         <option value="sinVencimiento">{tipoAccionFuturaLabels.sinVencimiento}</option>
                       </select>
                     </div>
+
+                    {renderFutureActionConditionalFields()}
 
                     <div>
                       <div className="flex items-center gap-2 mb-2">

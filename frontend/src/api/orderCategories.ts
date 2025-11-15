@@ -35,6 +35,9 @@ export interface OrderCategory {
   requiresAction?: boolean;
   actionText?: string;
   futureActionType?: TipoAccionFutura;
+  plazoDias?: number;
+  fechaLimite?: string;
+  documentoRequerido?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +64,9 @@ export const orderCategoriesAPI = {
     requiresAction?: boolean;
     actionText?: string;
     futureActionType?: TipoAccionFutura;
+    plazoDias?: number;
+    fechaLimite?: string;
+    documentoRequerido?: string;
   }): Promise<OrderCategory> => {
     const { data } = await axios.post<OrderCategory>('/order-categories', categoryData);
     return data;
@@ -78,6 +84,9 @@ export const orderCategoriesAPI = {
       requiresAction?: boolean;
       actionText?: string;
       futureActionType?: TipoAccionFutura;
+      plazoDias?: number;
+      fechaLimite?: string;
+      documentoRequerido?: string;
     }
   ): Promise<OrderCategory> => {
     const { data } = await axios.put<OrderCategory>(`/order-categories/${id}`, updates);
