@@ -352,9 +352,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                   <option value="objeto">Objeto/Texto</option>
                   <option value="otros">Otros (Descripción larga)</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Define qué tipo de input se mostrará en el formulario móvil
-                </p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define qué tipo de input se mostrará en el formulario móvil</p>
               </div>
 
               <div>
@@ -409,34 +407,17 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
               <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <input
-                    type="checkbox"
-                    id="requiresAction"
-                    checked={formData.requiresAction}
-                    onChange={(e) => setFormData({ ...formData, requiresAction: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                  />
+                  <input type="checkbox" id="requiresAction" checked={formData.requiresAction} onChange={(e) => setFormData({ ...formData, requiresAction: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
                   <label htmlFor="requiresAction" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Requiere acción/confirmación del usuario
+                    Requiere acción futura del usuario
                   </label>
                 </div>
 
                 {formData.requiresAction && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Texto de la acción *
-                    </label>
-                    <input
-                      type="text"
-                      required={formData.requiresAction}
-                      value={formData.actionText}
-                      onChange={(e) => setFormData({ ...formData, actionText: e.target.value })}
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ej: Adjunto comprobantes de gastos"
-                    />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Este texto aparecerá junto a un checkbox que el usuario debe marcar
-                    </p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Texto de la acción *</label>
+                    <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Adjunto comprobantes de gastos" />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto aparecerá junto a un checkbox que el usuario debe marcar</p>
                   </div>
                 )}
               </div>
@@ -444,7 +425,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="isActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
                 <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Categoría activa (visible en el formulario)
+                  Activa (visible en el formulario)
                 </label>
               </div>
 
