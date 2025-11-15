@@ -75,6 +75,9 @@ const createOrderSchema = z.object({
   dynamicValue: z.any().optional(),
   amount: z.number().min(0).optional(),
   photoUrl: z.string().optional(),
+  futureActionPlazoDias: z.number().min(1).max(365).optional(),
+  futureActionFechaLimite: z.string().optional(),
+  futureActionDocumento: z.string().optional(),
 });
 
 const updateOrderSchema = z.object({
@@ -164,6 +167,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       ...req.body,
       amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
       actionCompleted: req.body.actionCompleted === "true" || req.body.actionCompleted === true,
+      futureActionPlazoDias: req.body.futureActionPlazoDias ? parseInt(req.body.futureActionPlazoDias) : undefined,
       photoUrl,
     });
 
@@ -204,7 +208,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       const category = await OrderCategory.findById(data.categoryId);
 
       if (category?.requiresAction && category.futureActionType && data.actionCompleted) {
-        await FutureAction.create({
+        const futureActionData: any = {
           tenantId: req.tenantObjectId,
           orderId: order._id,
           requiereAccionFutura: true,
@@ -213,7 +217,47 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
           responsableAccion: "usuario",
           estadoAccion: "pendiente",
           fechaCreacionAccion: new Date(),
-        });
+        };
+
+        switch (category.futureActionType) {
+          case "plazoDias":
+            if (data.futureActionPlazoDias) {
+              futureActionData.plazoDias = data.futureActionPlazoDias;
+            }
+            break;
+
+          case "fechaEspecifica":
+            if (data.futureActionFechaLimite) {
+              futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+            }
+            break;
+
+          case "presentacionDocumento":
+            if (data.futureActionDocumento) {
+              futureActionData.documentoRequerido = data.futureActionDocumento;
+            }
+            if (data.futureActionFechaLimite) {
+              futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+            }
+            break;
+
+          case "vencimientoSistema":
+            if (data.futureActionPlazoDias) {
+              futureActionData.plazoDias = data.futureActionPlazoDias;
+              futureActionData.quienDefineVencimiento = "sistema";
+            }
+            break;
+
+          case "vencimientoInterno":
+            futureActionData.quienDefineVencimiento = "area_interna";
+            futureActionData.estadoAccion = "en_revision";
+            break;
+
+          case "sinVencimiento":
+            break;
+        }
+
+        await FutureAction.create(futureActionData);
       }
     }
 

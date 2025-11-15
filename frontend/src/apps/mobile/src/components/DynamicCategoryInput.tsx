@@ -176,6 +176,11 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
                 placeholder="Ej: 10"
               />
+              {futureActionPlazoDias && futureActionPlazoDias > 0 && (
+                <p className="mt-1 text-xs text-green-600 dark:text-green-400 font-medium">
+                  ✓ Fecha límite: {new Date(Date.now() + futureActionPlazoDias * 24 * 60 * 60 * 1000).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+              )}
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 El sistema calculará automáticamente la fecha límite
               </p>
@@ -277,9 +282,14 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({
                   className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-slate-700 dark:text-slate-200 flex-1">
-                  {category.actionText}
+                  {category.actionText} <span className="text-red-500">*</span>
                 </span>
               </label>
+              {!actionCompleted && (
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                  Debes marcar este compromiso para continuar
+                </p>
+              )}
             </div>
           )}
         </div>
