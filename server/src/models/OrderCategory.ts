@@ -8,6 +8,8 @@ export type TipoAccionFutura =
   | "vencimientoInterno"
   | "sinVencimiento";
 
+export type DateMode = "single" | "range";
+
 export interface ISubtype {
   id: string;
   label: string;
@@ -38,6 +40,7 @@ export interface IOrderCategory extends Document {
   isActive: boolean;
   sortOrder: number;
   categoryType: "fecha" | "dinero" | "objeto" | "otros";
+  dateMode?: DateMode;
   config?: ICategoryConfig;
   requiresAction?: boolean;
   actionText?: string;
@@ -62,6 +65,12 @@ const orderCategorySchema = new Schema<IOrderCategory>(
       enum: ["fecha", "dinero", "objeto", "otros"],
       default: "otros",
       index: true
+    },
+    dateMode: {
+      type: String,
+      enum: ["single", "range"],
+      default: "single",
+      trim: true
     },
     config: { type: Schema.Types.Mixed },
     requiresAction: { type: Boolean, default: false },

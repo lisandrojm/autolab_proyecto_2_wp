@@ -21,6 +21,7 @@ export const OrdersPage: React.FC = () => {
     description: "",
     category: "",
     amount: undefined as number | undefined,
+    dynamicValue: undefined as any,
   });
 
   useEffect(() => {
@@ -62,6 +63,19 @@ export const OrdersPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const selectedCategory = categories.find(c => c.name === formData.category);
+
+      if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
+        if (!formData.dynamicValue?.fechaDesde || !formData.dynamicValue?.fechaHasta) {
+          sweetAlert.error("Error", "Debes seleccionar ambas fechas (Desde y Hasta)");
+          return;
+        }
+        if (new Date(formData.dynamicValue.fechaDesde) > new Date(formData.dynamicValue.fechaHasta)) {
+          sweetAlert.error("Error", "La fecha 'Hasta' debe ser mayor o igual a la fecha 'Desde'");
+          return;
+        }
+      }
+
       if (editingOrder) {
         await personnelAPI.updateOrder(editingOrder._id, formData);
         sweetAlert.success("Pedido actualizado", "El pedido se actualizó correctamente");
@@ -71,7 +85,7 @@ export const OrdersPage: React.FC = () => {
       }
       setShowModal(false);
       setEditingOrder(null);
-      setFormData({ title: "", description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined });
+      setFormData({ title: "", description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined, dynamicValue: undefined });
       fetchData();
     } catch (error: any) {
       sweetAlert.error("Error", error?.response?.data?.error || "No se pudo procesar el pedido");
@@ -107,13 +121,14 @@ export const OrdersPage: React.FC = () => {
       description: order.description,
       category: order.category,
       amount: order.amount,
+      dynamicValue: order.dynamicValue,
     });
     setShowModal(true);
   };
 
   const openCreate = () => {
     setEditingOrder(null);
-    setFormData({ title: "", description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined });
+    setFormData({ title: "", description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined, dynamicValue: undefined });
     setShowModal(true);
   };
 
@@ -205,6 +220,54 @@ export const OrdersPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto (opcional)</label>
               <input type="number" min="0" step="0.01" value={formData.amount || ""} onChange={(e) => setFormData({ ...formData, amount: e.target.value ? parseFloat(e.target.value) : undefined })} className="input-field" placeholder="0.00" />
             </div>
+            {(() => {
+              const selectedCategory = categories.find(c => c.name === formData.category);
+              if (selectedCategory?.categoryType === "fecha") {
+                if (selectedCategory.dateMode === "range") {
+                  return (
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rango de Fechas *</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Desde</label>
+                          <input
+                            type="date"
+                            required
+                            value={formData.dynamicValue?.fechaDesde || ""}
+                            onChange={(e) => setFormData({ ...formData, dynamicValue: { ...formData.dynamicValue, fechaDesde: e.target.value } })}
+                            className="input-field"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Hasta</label>
+                          <input
+                            type="date"
+                            required
+                            value={formData.dynamicValue?.fechaHasta || ""}
+                            onChange={(e) => setFormData({ ...formData, dynamicValue: { ...formData.dynamicValue, fechaHasta: e.target.value } })}
+                            className="input-field"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha *</label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.dynamicValue || ""}
+                        onChange={(e) => setFormData({ ...formData, dynamicValue: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción *</label>
               <textarea required value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} className="input-field" placeholder="Describe el pedido en detalle..." />
@@ -275,6 +338,25 @@ export const OrdersPage: React.FC = () => {
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 dark:text-gray-400">{order.description}</p>
                   {order.amount && <p className="text-sm font-semibold text-gray-900 dark:text-white">Monto: ${order.amount.toFixed(2)}</p>}
+                  {order.dynamicValue && (() => {
+                    const category = categories.find(c => c.name === order.category);
+                    if (category?.categoryType === "fecha") {
+                      if (category.dateMode === "range" && order.dynamicValue.fechaDesde && order.dynamicValue.fechaHasta) {
+                        return (
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            Desde: {new Date(order.dynamicValue.fechaDesde).toLocaleDateString()} - Hasta: {new Date(order.dynamicValue.fechaHasta).toLocaleDateString()}
+                          </p>
+                        );
+                      } else if (typeof order.dynamicValue === "string") {
+                        return (
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            Fecha: {new Date(order.dynamicValue).toLocaleDateString()}
+                          </p>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
                 </div>
               </Card>
             );

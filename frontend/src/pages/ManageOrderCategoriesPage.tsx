@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
-import { orderCategoriesAPI, OrderCategory, CategoryType, Subtype, TipoAccionFutura } from "../api/orderCategories";
+import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -76,6 +76,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     description: string;
     isActive: boolean;
     categoryType: CategoryType;
+    dateMode: DateMode;
     requiresAction: boolean;
     actionText: string;
     futureActionType: TipoAccionFutura | "";
@@ -88,6 +89,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     description: "",
     isActive: true,
     categoryType: "fecha",
+    dateMode: "single",
     requiresAction: false,
     actionText: "",
     futureActionType: "",
@@ -101,6 +103,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   const [tempCategories, setTempCategories] = useState<OrderCategory[]>([]);
 
   const [showCategoryTypeInfo, setShowCategoryTypeInfo] = useState(false);
+  const [showDateModeInfo, setShowDateModeInfo] = useState(false);
   const [showSubcategoriesInfo, setShowSubcategoriesInfo] = useState(false);
   const [showActionTypeInfo, setShowActionTypeInfo] = useState(false);
   const [showActionTextInfo, setShowActionTextInfo] = useState(false);
@@ -136,6 +139,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       description: "",
       isActive: true,
       categoryType: "fecha",
+      dateMode: "single",
       requiresAction: false,
       actionText: "",
       futureActionType: "",
@@ -154,6 +158,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       description: category.description || "",
       isActive: category.isActive,
       categoryType: category.categoryType || "fecha",
+      dateMode: category.dateMode || "single",
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
       futureActionType: category.futureActionType || "",
@@ -221,6 +226,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         description: formData.description,
         isActive: formData.isActive,
         categoryType: formData.categoryType,
+        dateMode: formData.categoryType === "fecha" ? formData.dateMode : undefined,
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction ? formData.actionText : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
@@ -582,6 +588,31 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 </select>
               </div>
 
+              {formData.categoryType === "fecha" && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modo de Fecha *</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowDateModeInfo(true)}
+                      className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+                      title="Ver información"
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <select
+                    required
+                    value={formData.dateMode}
+                    onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="single">Fecha única</option>
+                    <option value="range">Rango de fechas (Desde - Hasta)</option>
+                  </select>
+                </div>
+              )}
+
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -803,6 +834,27 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         <div className="text-gray-700 dark:text-gray-300">
           <p>Este texto aparecerá junto a un checkbox que el usuario debe marcar para confirmar que completará la acción requerida.</p>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Ejemplo: "Me comprometo a adjuntar los comprobantes de gastos"</p>
+        </div>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={showDateModeInfo}
+        onClose={() => setShowDateModeInfo(false)}
+        title="Modo de Fecha"
+        size="sm"
+      >
+        <div className="text-gray-700 dark:text-gray-300 space-y-3">
+          <p>Define cómo el usuario ingresará la fecha en el formulario de pedidos:</p>
+          <div>
+            <strong className="text-blue-600 dark:text-blue-400">Fecha única:</strong>
+            <p className="text-sm mt-1">El usuario selecciona una sola fecha mediante un calendario.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ejemplo: Fecha de nacimiento, fecha de evento</p>
+          </div>
+          <div>
+            <strong className="text-blue-600 dark:text-blue-400">Rango de fechas (Desde - Hasta):</strong>
+            <p className="text-sm mt-1">El usuario selecciona dos fechas: una fecha de inicio y una de fin.</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ejemplo: Período de vacaciones, duración de un proyecto</p>
+          </div>
         </div>
       </InfoModal>
     </PageLayout>

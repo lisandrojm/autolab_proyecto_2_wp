@@ -8,6 +8,8 @@ export type TipoAccionFutura =
   | "vencimientoInterno"
   | "sinVencimiento";
 
+export type DateMode = "single" | "range";
+
 export interface Subtype {
   id: string;
   label: string;
@@ -31,6 +33,7 @@ export interface OrderCategory {
   isActive: boolean;
   sortOrder: number;
   categoryType: CategoryType;
+  dateMode?: DateMode;
   config?: CategoryConfig;
   requiresAction?: boolean;
   actionText?: string;
@@ -60,6 +63,7 @@ export const orderCategoriesAPI = {
     isActive?: boolean;
     sortOrder?: number;
     categoryType?: CategoryType;
+    dateMode?: DateMode;
     config?: CategoryConfig;
     requiresAction?: boolean;
     actionText?: string;
@@ -80,6 +84,7 @@ export const orderCategoriesAPI = {
       isActive?: boolean;
       sortOrder?: number;
       categoryType?: CategoryType;
+      dateMode?: DateMode;
       config?: CategoryConfig;
       requiresAction?: boolean;
       actionText?: string;
