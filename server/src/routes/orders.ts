@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
+import { FutureAction } from "../models/FutureAction.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -198,6 +199,23 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     });
 
     await order.save();
+
+    if (data.categoryId) {
+      const category = await OrderCategory.findById(data.categoryId);
+
+      if (category?.requiresAction && category.futureActionType && data.actionCompleted) {
+        await FutureAction.create({
+          tenantId: req.tenantObjectId,
+          orderId: order._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: category.futureActionType,
+          descripcionAccion: category.actionText || "Acción requerida por categoría",
+          responsableAccion: "usuario",
+          estadoAccion: "pendiente",
+          fechaCreacionAccion: new Date(),
+        });
+      }
+    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,

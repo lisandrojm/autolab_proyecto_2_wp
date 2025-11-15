@@ -1,5 +1,13 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
+export type TipoAccionFutura =
+  | "plazoDias"
+  | "fechaEspecifica"
+  | "presentacionDocumento"
+  | "vencimientoSistema"
+  | "vencimientoInterno"
+  | "sinVencimiento";
+
 export interface ISubtype {
   id: string;
   label: string;
@@ -33,6 +41,7 @@ export interface IOrderCategory extends Document {
   config?: ICategoryConfig;
   requiresAction?: boolean;
   actionText?: string;
+  futureActionType?: TipoAccionFutura;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +63,11 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     config: { type: Schema.Types.Mixed },
     requiresAction: { type: Boolean, default: false },
     actionText: { type: String, trim: true },
+    futureActionType: {
+      type: String,
+      enum: ["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"],
+      trim: true
+    },
   },
   { timestamps: true }
 );

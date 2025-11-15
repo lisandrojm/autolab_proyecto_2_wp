@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical } from "@fortawesome/free-solid-svg-icons";
-import { orderCategoriesAPI, OrderCategory, CategoryType, Subtype } from "../api/orderCategories";
+import { orderCategoriesAPI, OrderCategory, CategoryType, Subtype, TipoAccionFutura } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { tipoAccionFuturaLabels } from "../types/futureAction";
 
 interface SortableRowProps {
   category: OrderCategory;
@@ -76,6 +77,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     categoryType: CategoryType;
     requiresAction: boolean;
     actionText: string;
+    futureActionType: TipoAccionFutura | "";
     subtipos: Subtype[];
   }>({
     name: "",
@@ -84,6 +86,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     categoryType: "fecha",
     requiresAction: false,
     actionText: "",
+    futureActionType: "",
     subtipos: [],
   });
   const [submitting, setSubmitting] = useState(false);
@@ -123,6 +126,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       categoryType: "fecha",
       requiresAction: false,
       actionText: "",
+      futureActionType: "",
       subtipos: [],
     });
     setShowModal(true);
@@ -137,6 +141,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       categoryType: category.categoryType || "fecha",
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
+      futureActionType: category.futureActionType || "",
       subtipos: category.config?.subtipos || [],
     });
     setShowModal(true);
@@ -153,6 +158,12 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         return;
       }
 
+      if (formData.requiresAction && !formData.futureActionType) {
+        sweetAlert.error("Error", "Debes seleccionar el tipo de acción futura");
+        setSubmitting(false);
+        return;
+      }
+
       const payload: any = {
         name: formData.name,
         description: formData.description,
@@ -160,6 +171,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         categoryType: formData.categoryType,
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction ? formData.actionText : undefined,
+        futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
         config: formData.subtipos.length > 0 ? { subtipos: formData.subtipos } : undefined,
       };
 
@@ -419,10 +431,31 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 </div>
 
                 {formData.requiresAction && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Texto de la acción *</label>
-                    <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Adjunto comprobantes de gastos" />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto aparecerá junto a un checkbox que el usuario debe marcar</p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Acción Futura *</label>
+                      <select
+                        required={formData.requiresAction}
+                        value={formData.futureActionType}
+                        onChange={(e) => setFormData({ ...formData, futureActionType: e.target.value as TipoAccionFutura })}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecciona un tipo de acción...</option>
+                        <option value="plazoDias">{tipoAccionFuturaLabels.plazoDias}</option>
+                        <option value="fechaEspecifica">{tipoAccionFuturaLabels.fechaEspecifica}</option>
+                        <option value="presentacionDocumento">{tipoAccionFuturaLabels.presentacionDocumento}</option>
+                        <option value="vencimientoSistema">{tipoAccionFuturaLabels.vencimientoSistema}</option>
+                        <option value="vencimientoInterno">{tipoAccionFuturaLabels.vencimientoInterno}</option>
+                        <option value="sinVencimiento">{tipoAccionFuturaLabels.sinVencimiento}</option>
+                      </select>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define qué tipo de acción futura se creará cuando el usuario elija esta categoría</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Texto de la acción *</label>
+                      <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Adjunto comprobantes de gastos" />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto aparecerá junto a un checkbox que el usuario debe marcar</p>
+                    </div>
                   </div>
                 )}
               </div>

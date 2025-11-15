@@ -1,5 +1,13 @@
 import axios from './axiosConfig';
 
+export type TipoAccionFutura =
+  | "plazoDias"
+  | "fechaEspecifica"
+  | "presentacionDocumento"
+  | "vencimientoSistema"
+  | "vencimientoInterno"
+  | "sinVencimiento";
+
 export interface Subtype {
   id: string;
   label: string;
@@ -26,6 +34,7 @@ export interface OrderCategory {
   config?: CategoryConfig;
   requiresAction?: boolean;
   actionText?: string;
+  futureActionType?: TipoAccionFutura;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +60,7 @@ export const orderCategoriesAPI = {
     config?: CategoryConfig;
     requiresAction?: boolean;
     actionText?: string;
+    futureActionType?: TipoAccionFutura;
   }): Promise<OrderCategory> => {
     const { data } = await axios.post<OrderCategory>('/order-categories', categoryData);
     return data;
@@ -67,6 +77,7 @@ export const orderCategoriesAPI = {
       config?: CategoryConfig;
       requiresAction?: boolean;
       actionText?: string;
+      futureActionType?: TipoAccionFutura;
     }
   ): Promise<OrderCategory> => {
     const { data } = await axios.put<OrderCategory>(`/order-categories/${id}`, updates);
