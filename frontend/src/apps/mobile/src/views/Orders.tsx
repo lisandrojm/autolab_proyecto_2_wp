@@ -60,7 +60,15 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setFutureActionPlazoDias(undefined);
     setFutureActionFechaLimite("");
     setFutureActionDocumento("");
-  }, [selectedCategoryId]);
+
+    // Clear photo if category doesn't allow photos
+    if (selectedCategory && selectedCategory.categoryType !== "objeto" && selectedCategory.categoryType !== "otros") {
+      setPhoto(null);
+      setPhotoPreview(null);
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      if (galleryInputRef.current) galleryInputRef.current.value = "";
+    }
+  }, [selectedCategoryId, selectedCategory]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,6 +101,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
     try {
       const subcategoryLabel = selectedCategory?.config?.subtipos?.find(s => s.id === subcategoryId)?.label;
 
+      // Only include photo if category allows it
+      const shouldIncludePhoto = selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros";
+
       await createOrder({
         title: product,
         description,
@@ -105,7 +116,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         futureActionPlazoDias: futureActionPlazoDias || undefined,
         futureActionFechaLimite: futureActionFechaLimite || undefined,
         futureActionDocumento: futureActionDocumento || undefined,
-        photo,
+        photo: shouldIncludePhoto ? photo : null,
       });
       setShowForm(false);
       setProduct("");
@@ -249,31 +260,33 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 onFutureActionDocumentoChange={setFutureActionDocumento}
               />
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Foto (opcional)</label>
-                {photoPreview ? (
-                  <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
-                    <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
-                    <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
-                      <Camera className="w-6 h-6 text-slate-400" />
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
-                    </button>
+              {(selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros") && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Foto (opcional)</label>
+                  {photoPreview ? (
+                    <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                      <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
+                      <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+                      <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <Camera className="w-6 h-6 text-slate-400" />
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
+                      </button>
 
-                    <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
-                      <ImageIcon className="w-6 h-6 text-slate-400" />
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Imagen</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                      <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                      <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <ImageIcon className="w-6 h-6 text-slate-400" />
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Imagen</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button type="submit" disabled={submitting} className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? "Enviando..." : "Enviar Pedido"}
