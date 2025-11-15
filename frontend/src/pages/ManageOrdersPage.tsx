@@ -77,28 +77,28 @@ export const ManageOrdersPage: React.FC = () => {
       pending: {
         title: "¿Marcar como pendiente?",
         text: `¿Estás seguro de marcar "${selectedOrder.title}" como pendiente?`,
-        success: "marcado como pendiente"
+        success: "marcado como pendiente",
       },
       approved: {
         title: "¿Aprobar este pedido?",
         text: `¿Estás seguro de aprobar el pedido "${selectedOrder.title}"?`,
-        success: "aprobado"
+        success: "aprobado",
       },
       rejected: {
         title: "¿Rechazar este pedido?",
         text: `¿Estás seguro de rechazar el pedido "${selectedOrder.title}"?`,
-        success: "rechazado"
+        success: "rechazado",
       },
       delivered: {
         title: "¿Marcar como entregado?",
         text: `¿Estás seguro de marcar "${selectedOrder.title}" como entregado?`,
-        success: "marcado como entregado"
+        success: "marcado como entregado",
       },
       cancelled: {
         title: "¿Cancelar este pedido?",
         text: `¿Estás seguro de cancelar el pedido "${selectedOrder.title}"?`,
-        success: "cancelado"
-      }
+        success: "cancelado",
+      },
     };
 
     const message = statusMessages[newStatus];
@@ -141,7 +141,7 @@ export const ManageOrdersPage: React.FC = () => {
       approved: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
       rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
       delivered: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+      cancelled: "bg-orange-100 text-orange-800 dark:bg-gray-900/30 dark:text-gray-400",
     };
     const labels: Record<string, string> = {
       pending: "Pendiente",
@@ -260,7 +260,14 @@ export const ManageOrdersPage: React.FC = () => {
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-center gap-2">
-                              <button onClick={() => { setSelectedOrder(order); setShowDetailModal(true); }} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors" title="Ver detalles">
+                              <button
+                                onClick={() => {
+                                  setSelectedOrder(order);
+                                  setShowDetailModal(true);
+                                }}
+                                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
+                                title="Ver detalles"
+                              >
                                 <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                               </button>
                             </div>
@@ -301,7 +308,7 @@ export const ManageOrdersPage: React.FC = () => {
 
       {showDetailModal && selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
               <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -310,19 +317,14 @@ export const ManageOrdersPage: React.FC = () => {
             </div>
 
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-[5fr_3fr] gap-6">
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información del Pedido</h3>
 
                     {selectedOrder.photoUrl && (
                       <div className="mb-4">
-                        <img
-                          src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`}
-                          alt={selectedOrder.title}
-                          className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)}
-                        />
+                        <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
                       </div>
                     )}
 
@@ -383,9 +385,7 @@ export const ManageOrdersPage: React.FC = () => {
                           <div className="flex-1">
                             <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Aprobación</p>
                             <p className="text-base text-gray-900 dark:text-white">{new Date(selectedOrder.approvedAt).toLocaleString()}</p>
-                            {selectedOrder.approvedBy && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Por: {getUserName(selectedOrder.approvedBy)}</p>
-                            )}
+                            {selectedOrder.approvedBy && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Por: {getUserName(selectedOrder.approvedBy)}</p>}
                           </div>
                         </div>
                       )}
@@ -408,11 +408,7 @@ export const ManageOrdersPage: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Control de Estado</h3>
 
                     {selectedOrder.status === "approved" && (
-                      <button
-                        onClick={() => handleStatusChange("delivered")}
-                        disabled={updatingStatus}
-                        className="w-full mb-4 py-3 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
+                      <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="w-full mb-4 py-3 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <FontAwesomeIcon icon={faTruck} />
                         Marcar como Entregado
                       </button>
@@ -424,66 +420,51 @@ export const ManageOrdersPage: React.FC = () => {
                         { value: "approved", label: "Aprobado", icon: faCheckCircle, color: "blue" },
                         { value: "rejected", label: "Rechazado", icon: faTimesCircle, color: "red" },
                         { value: "delivered", label: "Entregado", icon: faTruck, color: "green" },
-                        { value: "cancelled", label: "Cancelado", icon: faBan, color: "gray" }
+                        { value: "cancelled", label: "Cancelado", icon: faBan, color: "gray" },
                       ].map((status) => {
                         const isActive = selectedOrder.status === status.value;
 
-                        const inactiveClasses = "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-400";
+                        const inactiveClasses = "bg-blue-500 dark:bg-blue-800/20 border-blue-200/20 dark:border-blue-800/20 text-blue-800/20 dark:text-blue-400/60";
 
                         const activeColorClasses: Record<string, { bg: string; border: string; text: string; dotBg: string }> = {
                           yellow: {
                             bg: "bg-yellow-100 dark:bg-yellow-900/30",
                             border: "border-yellow-500 dark:border-yellow-500",
                             text: "text-yellow-900 dark:text-yellow-300",
-                            dotBg: "bg-yellow-500"
+                            dotBg: "bg-yellow-500",
                           },
                           blue: {
                             bg: "bg-blue-100 dark:bg-blue-900/30",
                             border: "border-blue-500 dark:border-blue-500",
                             text: "text-blue-900 dark:text-blue-300",
-                            dotBg: "bg-blue-500"
+                            dotBg: "bg-blue-500",
                           },
                           red: {
                             bg: "bg-red-100 dark:bg-red-900/30",
                             border: "border-red-500 dark:border-red-500",
                             text: "text-red-900 dark:text-red-300",
-                            dotBg: "bg-red-500"
+                            dotBg: "bg-red-500",
                           },
                           green: {
                             bg: "bg-green-100 dark:bg-green-900/30",
                             border: "border-green-500 dark:border-green-500",
                             text: "text-green-900 dark:text-green-300",
-                            dotBg: "bg-green-500"
+                            dotBg: "bg-green-500",
                           },
                           gray: {
                             bg: "bg-gray-100 dark:bg-gray-900/30",
                             border: "border-gray-500 dark:border-gray-500",
                             text: "text-gray-900 dark:text-gray-300",
-                            dotBg: "bg-gray-500"
-                          }
+                            dotBg: "bg-gray-500",
+                          },
                         };
 
                         const activeColors = activeColorClasses[status.color];
 
                         return (
-                          <button
-                            key={status.value}
-                            onClick={() => handleStatusChange(status.value)}
-                            disabled={updatingStatus}
-                            className={`w-full p-4 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                              isActive
-                                ? `${activeColors.bg} ${activeColors.border} ${activeColors.text} shadow-md`
-                                : `${inactiveClasses} hover:shadow-md hover:scale-[1.02]`
-                            }`}
-                          >
+                          <button key={status.value} onClick={() => handleStatusChange(status.value)} disabled={updatingStatus} className={`w-full p-4 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isActive ? `${activeColors.bg} ${activeColors.border} ${activeColors.text} shadow-md` : `${inactiveClasses} hover:shadow-md hover:scale-[1.02]`}`}>
                             <div className="flex items-center gap-3">
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                isActive ? activeColors.border : "border-blue-300 dark:border-blue-600"
-                              }`}>
-                                {isActive && (
-                                  <div className={`w-3 h-3 rounded-full ${activeColors.dotBg}`} />
-                                )}
-                              </div>
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isActive ? activeColors.border : "border-blue-300 dark:border-blue-600"}`}>{isActive && <div className={`w-3 h-3 rounded-full ${activeColors.dotBg}`} />}</div>
                               <FontAwesomeIcon icon={status.icon} className="h-5 w-5" />
                               <span className="font-semibold">{status.label}</span>
                             </div>
