@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, Subtype, TipoAccionFutura } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
+import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -92,6 +93,11 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [tempCategories, setTempCategories] = useState<OrderCategory[]>([]);
+
+  const [showCategoryTypeInfo, setShowCategoryTypeInfo] = useState(false);
+  const [showSubcategoriesInfo, setShowSubcategoriesInfo] = useState(false);
+  const [showActionTypeInfo, setShowActionTypeInfo] = useState(false);
+  const [showActionTextInfo, setShowActionTextInfo] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -357,19 +363,38 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Categoría *</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Categoría *</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoryTypeInfo(true)}
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+                    title="Ver información"
+                  >
+                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                  </button>
+                </div>
                 <select required value={formData.categoryType} onChange={(e) => setFormData({ ...formData, categoryType: e.target.value as CategoryType })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                   <option value="fecha">Fecha</option>
                   <option value="dinero">Dinero</option>
                   <option value="objeto">Objeto</option>
                   <option value="otros">Otros</option>
                 </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">* Define qué tipo de input se mostrará en el formulario móvil</p>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subcategorías (opcional) *</label>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subcategorías (opcional)</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowSubcategoriesInfo(true)}
+                      className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+                      title="Ver información"
+                    >
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
@@ -384,10 +409,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                     + Agregar Subcategoría
                   </button>
                 </div>
-
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                  * Estas subcategorías aparecerán luego como un <strong>select obligatorio</strong> cuando el usuario elija esta categoría en el formulario móvil.
-                </p>
 
                 {formData.subtipos.length > 0 && (
                   <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-2">
@@ -433,7 +454,17 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 {formData.requiresAction && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Acción Futura *</label>
+                      <div className="flex items-center gap-2 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Acción Futura *</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowActionTypeInfo(true)}
+                          className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+                          title="Ver información"
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                        </button>
+                      </div>
                       <select required={formData.requiresAction} value={formData.futureActionType} onChange={(e) => setFormData({ ...formData, futureActionType: e.target.value as TipoAccionFutura })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                         <option value="">Selecciona un tipo de acción...</option>
                         <option value="plazoDias">{tipoAccionFuturaLabels.plazoDias}</option>
@@ -443,24 +474,21 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         <option value="vencimientoInterno">{tipoAccionFuturaLabels.vencimientoInterno}</option>
                         <option value="sinVencimiento">{tipoAccionFuturaLabels.sinVencimiento}</option>
                       </select>
-
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define qué tipo de acción futura se creará cuando el usuario elija esta categoría</p>
-
-                      <ul className="mt-2 text-xs text-gray-500 dark:text-gray-400 border dark:border-slate-700 rounded p-2">
-                        <span className="text-lg">Tipos de acción futura</span>
-                        <li> Plazo en Días: genera un vencimiento automático.</li>
-                        <li> Fecha Específica: asigna una fecha fija.</li>
-                        <li> Presentación de Documento: requiere subir un documento.</li>
-                        <li> Vencimiento por Sistema: la fecha viene de un sistema externo.</li>
-                        <li> Vencimiento Interno: la empresa fija la fecha.</li>
-                        <li> Sin Vencimiento: no requiere fecha límite.</li>
-                      </ul>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Texto de la acción *</label>
+                      <div className="flex items-center gap-2 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto de la acción *</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowActionTextInfo(true)}
+                          className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+                          title="Ver información"
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                        </button>
+                      </div>
                       <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Adjunto comprobantes de gastos" />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto aparecerá junto a un checkbox que el usuario debe marcar</p>
                     </div>
                   </div>
                 )}
@@ -485,6 +513,77 @@ export const ManageOrderCategoriesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <InfoModal
+        isOpen={showCategoryTypeInfo}
+        onClose={() => setShowCategoryTypeInfo(false)}
+        title="Tipo de Categoría"
+        size="sm"
+      >
+        <div className="text-gray-700 dark:text-gray-300">
+          <p>Define qué tipo de input se mostrará en el formulario móvil cuando el usuario seleccione esta categoría.</p>
+        </div>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={showSubcategoriesInfo}
+        onClose={() => setShowSubcategoriesInfo(false)}
+        title="Subcategorías"
+        size="sm"
+      >
+        <div className="text-gray-700 dark:text-gray-300">
+          <p>Estas subcategorías aparecerán luego como un <strong>select obligatorio</strong> cuando el usuario elija esta categoría en el formulario móvil.</p>
+        </div>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={showActionTypeInfo}
+        onClose={() => setShowActionTypeInfo(false)}
+        title="Tipos de Acción Futura"
+        size="md"
+      >
+        <div className="text-gray-700 dark:text-gray-300 space-y-3">
+          <p className="font-medium mb-3">Cada tipo de acción futura tiene características específicas:</p>
+          <div className="space-y-2">
+            <div>
+              <strong className="text-blue-600 dark:text-blue-400">Plazo en Días:</strong>
+              <p className="text-sm mt-1">Genera un vencimiento automático basado en días desde la creación del pedido.</p>
+            </div>
+            <div>
+              <strong className="text-blue-600 dark:text-blue-400">Fecha Específica:</strong>
+              <p className="text-sm mt-1">Asigna una fecha fija como límite para completar la acción.</p>
+            </div>
+            <div>
+              <strong className="text-blue-600 dark:text-blue-400">Presentación de Documento:</strong>
+              <p className="text-sm mt-1">Requiere que el usuario suba un documento específico.</p>
+            </div>
+            <div>
+              <strong className="text-blue-600 dark:text-blue-400">Vencimiento por Sistema:</strong>
+              <p className="text-sm mt-1">La fecha de vencimiento viene definida por un sistema externo o reglas predefinidas.</p>
+            </div>
+            <div>
+              <strong className="text-blue-600 dark:text-blue-400">Vencimiento Interno:</strong>
+              <p className="text-sm mt-1">La empresa fija la fecha de vencimiento manualmente después de revisar el pedido.</p>
+            </div>
+            <div>
+              <strong className="text-blue-600 dark:text-blue-400">Sin Vencimiento:</strong>
+              <p className="text-sm mt-1">No requiere fecha límite, pero debe ser completada y marcada manualmente.</p>
+            </div>
+          </div>
+        </div>
+      </InfoModal>
+
+      <InfoModal
+        isOpen={showActionTextInfo}
+        onClose={() => setShowActionTextInfo(false)}
+        title="Texto de la Acción"
+        size="sm"
+      >
+        <div className="text-gray-700 dark:text-gray-300">
+          <p>Este texto aparecerá junto a un checkbox que el usuario debe marcar para confirmar que completará la acción requerida.</p>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Ejemplo: "Me comprometo a adjuntar los comprobantes de gastos"</p>
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };
