@@ -33,7 +33,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [futureActionFechaLimite, setFutureActionFechaLimite] = useState("");
   const [futureActionDocumento, setFutureActionDocumento] = useState("");
 
-  const selectedCategory = categories.find(c => c._id === selectedCategoryId) || null;
+  const selectedCategory = categories.find((c) => c._id === selectedCategoryId) || null;
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -99,7 +99,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setSubmitError(null);
 
     try {
-      const subcategoryLabel = selectedCategory?.config?.subtipos?.find(s => s.id === subcategoryId)?.label;
+      const subcategoryLabel = selectedCategory?.config?.subtipos?.find((s) => s.id === subcategoryId)?.label;
 
       // Only include photo if category allows it
       const shouldIncludePhoto = selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros";
@@ -203,7 +203,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
           </div>
         )}
 
-        <button onClick={() => setShowForm(!showForm)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
+        <button onClick={() => setShowForm(!showForm)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 hover:bg-blue-500/90 text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
           <Package className="w-5 h-5" />
           {showForm ? "Cancelar" : "Nuevo Pedido"}
         </button>
@@ -244,21 +244,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe tu solicitud..." />
               </div>
 
-              <DynamicCategoryInput
-                category={selectedCategory}
-                subcategoryValue={subcategoryId}
-                onSubcategoryChange={setSubcategoryId}
-                dynamicValue={dynamicValue}
-                onDynamicValueChange={setDynamicValue}
-                actionCompleted={actionCompleted}
-                onActionCompletedChange={setActionCompleted}
-                futureActionPlazoDias={futureActionPlazoDias}
-                onFutureActionPlazoDiasChange={setFutureActionPlazoDias}
-                futureActionFechaLimite={futureActionFechaLimite}
-                onFutureActionFechaLimiteChange={setFutureActionFechaLimite}
-                futureActionDocumento={futureActionDocumento}
-                onFutureActionDocumentoChange={setFutureActionDocumento}
-              />
+              <DynamicCategoryInput category={selectedCategory} subcategoryValue={subcategoryId} onSubcategoryChange={setSubcategoryId} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} />
 
               {(selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros") && (
                 <div>
@@ -288,7 +274,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 </div>
               )}
 
-              <button type="submit" disabled={submitting} className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+              <button type="submit" disabled={submitting} className="w-full flex items-center justify-center rounded-lg h-10 px-4 bg-blue-500 hover:bg-blue-500/90  text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? "Enviando..." : "Enviar Pedido"}
               </button>
             </div>
