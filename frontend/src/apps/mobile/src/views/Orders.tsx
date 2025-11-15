@@ -236,7 +236,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Título del pedido *</label>
-                <input type="text" value={product} onChange={(e) => setProduct(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Ej: Laptop para trabajo remoto" />
+                <input type="text" value={product} onChange={(e) => setProduct(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Necesito ..." />
               </div>
 
               <div>
