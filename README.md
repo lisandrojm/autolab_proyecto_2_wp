@@ -267,5 +267,3 @@ Para que el **botón de deploy** aparezca correctamente, sigue estos pasos:
 ---
 
 ✅ **Listo:** el botón de deploy debería estar visible y funcional.
-
----
