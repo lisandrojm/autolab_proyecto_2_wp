@@ -19,7 +19,19 @@ const createUserSchema = z.object({
   roles: z.array(z.string()).default([]),
   positionId: z.string().optional(),
   levelId: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // Si hay levelId, debe haber positionId
+    if (data.levelId && !data.positionId) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "No se puede asignar un nivel sin un cargo. Por favor, asigna un cargo primero.",
+    path: ["levelId"],
+  }
+);
 
 const updateUserSchema = z.object({
   email: z.string().email().optional(),
@@ -29,7 +41,19 @@ const updateUserSchema = z.object({
   roles: z.array(z.string()).optional(),
   positionId: z.string().nullable().optional(),
   levelId: z.string().nullable().optional(),
-});
+}).refine(
+  (data) => {
+    // Si hay levelId (y no es null), debe haber positionId (y no ser null)
+    if (data.levelId && data.levelId !== null && (!data.positionId || data.positionId === null)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "No se puede asignar un nivel sin un cargo. Por favor, asigna un cargo primero.",
+    path: ["levelId"],
+  }
+);
 
 const updatePasswordSchema = z.object({
   password: z.string().min(6),
@@ -115,13 +139,18 @@ router.post("/",
   async (req: AuthenticatedRequest & TenantRequest, res) => {
     try {
       const data = createUserSchema.parse(req.body);
-      
+
+      // Si no hay positionId, eliminar levelId automáticamente
+      if (!data.positionId) {
+        data.levelId = undefined;
+      }
+
       // Verificar que no existe usuario con el mismo email en el tenant
       const existingUser = await User.findOne({
         email: data.email,
         tenantId: req.tenantObjectId
       });
-      
+
       if (existingUser) {
         res.status(409).json({ error: "Email already exists in this tenant" });
         return;
@@ -275,6 +304,11 @@ router.patch("/:id",
         }
 
         data.roles = roleObjectIds.map(id => id.toString());
+      }
+
+      // Si se elimina positionId, también eliminar levelId automáticamente
+      if (data.positionId === null && data.levelId !== null) {
+        data.levelId = null;
       }
 
       // Preparar updateData: usar $set para campos con valor y $unset para campos null

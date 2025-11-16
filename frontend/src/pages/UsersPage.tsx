@@ -184,6 +184,20 @@ export const UsersPage: React.FC = () => {
     setShowModal(true);
   };
 
+  // Detectar cambios en positionId y resetear levelId si es necesario
+  useEffect(() => {
+    if (showModal && modalMode === "edit") {
+      // Si positionId está vacío pero levelId tiene valor, resetear levelId
+      if (!formData.positionId && formData.levelId) {
+        sweetAlert.warning(
+          "Nivel eliminado",
+          "Al cambiar a 'Sin cargo', el nivel asignado será eliminado. Deberá asignar un nuevo nivel con el nuevo cargo."
+        );
+        setFormData((prev) => ({ ...prev, levelId: undefined }));
+      }
+    }
+  }, [formData.positionId, showModal, modalMode]);
+
   const openEdit = (user: User) => {
     setEditingUser(user);
     setModalMode("edit");
@@ -245,8 +259,14 @@ export const UsersPage: React.FC = () => {
       // Esto permite que el backend elimine el campo de la DB
       if (!submitData.positionId || submitData.positionId === "") {
         submitData.positionId = null;
+        // Si no hay cargo, no puede haber nivel
+        submitData.levelId = null;
+      } else if (!submitData.levelId || submitData.levelId === "") {
+        submitData.levelId = null;
       }
-      if (!submitData.levelId || submitData.levelId === "") {
+
+      // Validación adicional: no permitir levelId sin positionId
+      if (submitData.levelId && !submitData.positionId) {
         submitData.levelId = null;
       }
 
@@ -541,18 +561,25 @@ export const UsersPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                    {!formData.positionId && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Selecciona un cargo para poder asignar un nivel
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
-                    <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field">
-                      <option value="">Sin nivel</option>
-                      {levels.map((level) => (
-                        <option key={level._id} value={level._id}>
-                          {level.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {formData.positionId && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
+                      <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field">
+                        <option value="">Sin nivel</option>
+                        {levels.map((level) => (
+                          <option key={level._id} value={level._id}>
+                            {level.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/*                 <div>
