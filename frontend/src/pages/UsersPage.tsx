@@ -249,12 +249,13 @@ export const UsersPage: React.FC = () => {
     try {
       const submitData: any = { ...formData };
 
-      // Limpiar campos vacíos o undefined para que se guarden correctamente como null/undefined en DB
+      // Enviar null explícitamente cuando se selecciona "Sin cargo" o "Sin nivel"
+      // Esto permite que el backend elimine el campo de la DB
       if (!submitData.positionId || submitData.positionId === '') {
-        submitData.positionId = undefined;
+        submitData.positionId = null;
       }
       if (!submitData.levelId || submitData.levelId === '') {
-        submitData.levelId = undefined;
+        submitData.levelId = null;
       }
 
       if (editingUser) {

@@ -27,8 +27,8 @@ const updateUserSchema = z.object({
   lastName: z.string().optional(),
   isActive: z.boolean().optional(),
   roles: z.array(z.string()).optional(),
-  positionId: z.string().optional(),
-  levelId: z.string().optional(),
+  positionId: z.string().nullable().optional(),
+  levelId: z.string().nullable().optional(),
 });
 
 const updatePasswordSchema = z.object({
@@ -277,17 +277,21 @@ router.patch("/:id",
         data.roles = roleObjectIds.map(id => id.toString());
       }
 
-      // Preparar updateData: usar $set para campos con valor y $unset para campos undefined
+      // Preparar updateData: usar $set para campos con valor y $unset para campos null
       const updateData: any = { $set: {} };
       const fieldsToUnset: string[] = [];
 
       Object.keys(data).forEach((key) => {
-        if (data[key] === undefined || data[key] === null || data[key] === '') {
-          // Si el campo es undefined, null o vacío, lo eliminamos de la DB
+        const value = data[key];
+
+        // null explícito significa "eliminar este campo"
+        if (value === null) {
           fieldsToUnset.push(key);
-        } else {
-          // Si tiene valor, lo actualizamos
-          updateData.$set[key] = data[key];
+        }
+        // undefined significa "no tocar este campo" (no se incluye en la actualización)
+        else if (value !== undefined) {
+          // Tiene valor definido, actualizar
+          updateData.$set[key] = value;
         }
       });
 
