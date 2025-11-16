@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
 import { rolesAPI, Role } from "../api/roles";
+import { positionsAPI, Position } from "../api/positions";
+import { levelsAPI, Level } from "../api/levels";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -21,6 +23,8 @@ interface UserFormData {
   lastName: string;
   isActive: boolean;
   roles: string[];
+  positionId?: string;
+  levelId?: string;
 }
 
 type ModalMode = "edit" | "password";
@@ -31,6 +35,8 @@ export const UsersPage: React.FC = () => {
   // data
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
 
@@ -53,6 +59,8 @@ export const UsersPage: React.FC = () => {
     lastName: "",
     isActive: true,
     roles: [],
+    positionId: undefined,
+    levelId: undefined,
   });
 
   // password modal fields (cuando modalMode === "password")
@@ -80,7 +88,7 @@ export const UsersPage: React.FC = () => {
     const init = async () => {
       try {
         setInitialLoading(true);
-        await Promise.all([fetchUsers({ silent: true }), fetchRoles()]);
+        await Promise.all([fetchUsers({ silent: true }), fetchRoles(), fetchPositions(), fetchLevels()]);
       } finally {
         setInitialLoading(false);
       }
@@ -135,6 +143,24 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  const fetchPositions = async () => {
+    try {
+      const response = await positionsAPI.list({ limit: 100 });
+      setPositions(response.positions);
+    } catch (error) {
+      console.error("Error fetching positions:", error);
+    }
+  };
+
+  const fetchLevels = async () => {
+    try {
+      const response = await levelsAPI.list({ limit: 100 });
+      setLevels(response.levels);
+    } catch (error) {
+      console.error("Error fetching levels:", error);
+    }
+  };
+
   // Abrir modales
   const openCreate = () => {
     setEditingUser(null);
@@ -151,6 +177,8 @@ export const UsersPage: React.FC = () => {
       lastName: "",
       isActive: true,
       roles: defaultRoles,
+      positionId: undefined,
+      levelId: undefined,
     });
     setShowPassword(false);
     setShowModal(true);
@@ -166,6 +194,8 @@ export const UsersPage: React.FC = () => {
       lastName: user.lastName || "",
       isActive: user.isActive,
       roles: user.roles.map((r) => r._id),
+      positionId: (user as any).positionId?._id || (user as any).positionId || undefined,
+      levelId: (user as any).levelId?._id || (user as any).levelId || undefined,
     });
     setShowPassword(false);
     setShowModal(true);
@@ -469,6 +499,39 @@ export const UsersPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Apellido</label>
                     <input type="text" value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" placeholder="Apellido" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>
+                    <select
+                      value={formData.positionId || ""}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined }))}
+                      className="input-field"
+                    >
+                      <option value="">Sin cargo</option>
+                      {positions.map((position) => (
+                        <option key={position._id} value={position._id}>
+                          {position.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
+                    <select
+                      value={formData.levelId || ""}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))}
+                      className="input-field"
+                    >
+                      <option value="">Sin nivel</option>
+                      {levels.map((level) => (
+                        <option key={level._id} value={level._id}>
+                          {level.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

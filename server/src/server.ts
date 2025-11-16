@@ -50,6 +50,8 @@ import { hrManagementRoutes } from "./routes/hr-management.js";
 import { requestRoutes } from "./routes/requests.js";
 import { requestTypeRoutes } from "./routes/requestTypes.js";
 import { futureActionsRoutes } from "./routes/futureActions.js";
+import { positionRoutes } from "./routes/positions.js";
+import { levelRoutes } from "./routes/levels.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -152,6 +154,8 @@ app.use("/api/v1/hr-management", hrManagementRoutes);
 app.use("/api/v1/requests", requestRoutes);
 app.use("/api/v1/request-types", requestTypeRoutes);
 app.use("/api/v1/future-actions", futureActionsRoutes);
+app.use("/api/v1/positions", positionRoutes);
+app.use("/api/v1/levels", levelRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

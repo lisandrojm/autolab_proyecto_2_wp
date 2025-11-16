@@ -11,6 +11,8 @@ import { ClientsPage } from "./pages/ClientsPage";
 import { TasksPage } from "./pages/TasksPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { RolesPage } from "./pages/RolesPage";
+import { PositionsPage } from "./pages/PositionsPage";
+import { LevelsPage } from "./pages/LevelsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { TenantsPage } from "./pages/TenantsPage";
 import { ClientDetailPage } from "./pages/ClientDetailPage";
@@ -317,6 +319,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RolesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/positions"
+                element={
+                  <ProtectedRoute>
+                    <PositionsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/levels"
+                element={
+                  <ProtectedRoute>
+                    <LevelsPage />
                   </ProtectedRoute>
                 }
               />

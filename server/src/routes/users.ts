@@ -17,6 +17,8 @@ const createUserSchema = z.object({
   lastName: z.string().optional(),
   isActive: z.boolean().default(true),
   roles: z.array(z.string()).default([]),
+  positionId: z.string().optional(),
+  levelId: z.string().optional(),
 });
 
 const updateUserSchema = z.object({
@@ -25,6 +27,8 @@ const updateUserSchema = z.object({
   lastName: z.string().optional(),
   isActive: z.boolean().optional(),
   roles: z.array(z.string()).optional(),
+  positionId: z.string().optional(),
+  levelId: z.string().optional(),
 });
 
 const updatePasswordSchema = z.object({
@@ -79,6 +83,8 @@ router.get("/",
           .select('-password') // Nunca devolver password
           .populate('roles', 'name description permissions')
           .populate('clientIds', 'name')
+          .populate('positionId', 'name description')
+          .populate('levelId', 'name description')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(Number(limit)),
@@ -181,7 +187,9 @@ router.post("/",
       const userResponse = await User.findById(user._id)
         .select('-password')
         .populate('roles', 'name description permissions')
-        .populate('clientIds', 'name');
+        .populate('clientIds', 'name')
+        .populate('positionId', 'name description')
+        .populate('levelId', 'name description');
 
       res.status(201).json(userResponse);
     } catch (error) {
@@ -207,7 +215,9 @@ router.get("/:id",
         tenantId: req.tenantObjectId
       })
         .select('-password')
-        .populate('roles', 'name description permissions');
+        .populate('roles', 'name description permissions')
+        .populate('positionId', 'name description')
+        .populate('levelId', 'name description');
       
       if (!user) {
         res.status(404).json({ error: "User not found" });
@@ -273,7 +283,9 @@ router.patch("/:id",
         { new: true, runValidators: true }
       )
         .select('-password')
-        .populate('roles', 'name description permissions');
+        .populate('roles', 'name description permissions')
+        .populate('positionId', 'name description')
+        .populate('levelId', 'name description');
       
       if (!user) {
         res.status(404).json({ error: "User not found" });
