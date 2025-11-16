@@ -345,7 +345,8 @@ router.get("/orders/pending", async (req: AuthenticatedRequest & TenantRequest, 
       status: "pending",
     })
       .sort({ requestedAt: -1 })
-      .populate("userId", "firstName lastName email");
+      .populate("userId", "firstName lastName email")
+      .populate("categoryId");
 
     res.json(orders);
   } catch (error) {

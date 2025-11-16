@@ -298,7 +298,8 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
         .skip(skip)
         .limit(Number(limit))
         .populate("userId", "firstName lastName email")
-        .populate("approvedBy", "firstName lastName email"),
+        .populate("approvedBy", "firstName lastName email")
+        .populate("categoryId"),
       Order.countDocuments(filter),
     ]);
 

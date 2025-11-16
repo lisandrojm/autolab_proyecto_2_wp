@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import { OrderCategory } from "./orderCategories";
 
 export interface Pagination {
   page: number;
@@ -87,6 +88,9 @@ export interface Order {
   title: string;
   description: string;
   category: string;
+  categoryId?: OrderCategory | string;
+  subcategoryId?: string;
+  subcategoryLabel?: string;
   status: "pending" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: string;
   approvedBy?: any;
@@ -94,6 +98,9 @@ export interface Order {
   deliveredAt?: string;
   amount?: number;
   photoUrl?: string;
+  actionCompleted?: boolean;
+  dynamicValue?: any;
+  requiereAccionFutura?: boolean;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faClipboardList, faListCheck, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
+import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
@@ -155,6 +156,40 @@ export const ManageOrdersPage: React.FC = () => {
 
   const getCategoryLabel = (category: string) => category;
 
+  const getCategoryTypeName = (categoryType?: CategoryType): string => {
+    const typeNames: Record<CategoryType, string> = {
+      fecha: "Fecha",
+      dinero: "Dinero",
+      objeto: "Objeto",
+      otros: "Otros",
+    };
+    return categoryType ? typeNames[categoryType] : "N/A";
+  };
+
+  const getSubcategoryDisplay = (order: Order): string => {
+    if (!order.categoryId || typeof order.categoryId === "string") return "N/A";
+
+    const category = order.categoryId as OrderCategory;
+
+    if (!order.subcategoryId || !category.config?.subtipos) return "Sin opciones";
+
+    const selectedSubtype = category.config.subtipos.find(st => st.id === order.subcategoryId);
+    return selectedSubtype ? selectedSubtype.label : order.subcategoryLabel || "Opción desconocida";
+  };
+
+  const hasRequiresAction = (order: Order): boolean => {
+    if (!order.categoryId || typeof order.categoryId === "string") return false;
+    const category = order.categoryId as OrderCategory;
+    return category.requiresAction || false;
+  };
+
+  const getCategoryName = (order: Order): string => {
+    if (!order.categoryId) return order.category || "Sin categoría";
+    if (typeof order.categoryId === "string") return order.category || "Sin categoría";
+    const category = order.categoryId as OrderCategory;
+    return category.name || order.category || "Sin categoría";
+  };
+
   return (
     <PageLayout
       title="Gestión de Pedidos"
@@ -228,6 +263,9 @@ export const ManageOrdersPage: React.FC = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Categoría</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
@@ -253,7 +291,22 @@ export const ManageOrdersPage: React.FC = () => {
                             {order.amount && <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1">Monto: ${order.amount.toFixed(2)}</div>}
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getCategoryLabel(order.category)}</td>
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getCategoryName(order)}</td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                              {typeof order.categoryId === "object" && order.categoryId ? getCategoryTypeName(order.categoryId.categoryType) : "N/A"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{getSubcategoryDisplay(order)}</td>
+                          <td className="py-3 px-4 text-center">
+                            {hasRequiresAction(order) ? (
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30" title="Requiere acción futura">
+                                <FontAwesomeIcon icon={faExclamationTriangle} className="text-orange-600 dark:text-orange-400 text-xs" />
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
+                            )}
+                          </td>
                           <td className="py-3 px-4">
                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>{badge.label}</span>
                           </td>
@@ -360,9 +413,61 @@ export const ManageOrdersPage: React.FC = () => {
                         <FontAwesomeIcon icon={faTag} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
                         <div className="flex-1">
                           <p className="text-sm text-gray-600 dark:text-gray-400">Categoría</p>
-                          <p className="text-base text-gray-900 dark:text-white">{getCategoryLabel(selectedOrder.category)}</p>
+                          <p className="text-base text-gray-900 dark:text-white">{getCategoryName(selectedOrder)}</p>
                         </div>
                       </div>
+
+                      {typeof selectedOrder.categoryId === "object" && selectedOrder.categoryId && (
+                        <>
+                          <div className="flex items-start gap-3">
+                            <FontAwesomeIcon icon={faListCheck} className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-1" />
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Tipo de Categoría</p>
+                              <p className="text-base text-gray-900 dark:text-white">{getCategoryTypeName(selectedOrder.categoryId.categoryType)}</p>
+                            </div>
+                          </div>
+
+                          {selectedOrder.categoryId.config?.subtipos && selectedOrder.categoryId.config.subtipos.length > 0 && (
+                            <div className="flex items-start gap-3">
+                              <FontAwesomeIcon icon={faList} className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mt-1" />
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Opción Seleccionada</p>
+                                <p className="text-base text-gray-900 dark:text-white">{getSubcategoryDisplay(selectedOrder)}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedOrder.categoryId.requiresAction && (
+                            <div className="flex items-start gap-3">
+                              <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-1" />
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Requiere Acción Futura</p>
+                                <p className="text-base font-semibold text-orange-600 dark:text-orange-400">Sí</p>
+                                {selectedOrder.categoryId.actionText && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedOrder.categoryId.actionText}</p>
+                                )}
+                                {selectedOrder.categoryId.futureActionType && selectedOrder.categoryId.futureActionType !== "sinVencimiento" && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Tipo: {selectedOrder.categoryId.futureActionType}</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedOrder.categoryId.categoryType === "fecha" && selectedOrder.categoryId.dateMode === "range" && selectedOrder.dynamicValue && (
+                            <div className="flex items-start gap-3">
+                              <FontAwesomeIcon icon={faCalendar} className="h-5 w-5 text-teal-600 dark:text-teal-400 mt-1" />
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Rango de Fechas</p>
+                                <p className="text-base text-gray-900 dark:text-white">
+                                  {selectedOrder.dynamicValue.fechaDesde && new Date(selectedOrder.dynamicValue.fechaDesde).toLocaleDateString()}
+                                  {" - "}
+                                  {selectedOrder.dynamicValue.fechaHasta && new Date(selectedOrder.dynamicValue.fechaHasta).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
 
                       {selectedOrder.amount && (
                         <div className="flex items-start gap-3">
