@@ -674,21 +674,27 @@ export const UsersPage: React.FC = () => {
               }
             >
               {/* Cargo y Nivel */}
-              {(typeof user.positionId === 'object' && user.positionId?.name) && (
-                <div className="mb-3">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Cargo y Nivel</label>
+              <div className="mb-3">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Cargo y Nivel</label>
+                {!(typeof user.positionId === 'object' && user.positionId?.name) && !(typeof user.levelId === 'object' && user.levelId?.name) ? (
+                  <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo ni nivel asignado</span>
+                ) : (
                   <div className="flex flex-wrap gap-1">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                      {user.positionId.name}
-                    </span>
-                    {typeof user.levelId === 'object' && user.levelId?.name && (
+                    {typeof user.positionId === 'object' && user.positionId?.name ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                        {user.positionId.name}
+                      </span>
+                    ) : null}
+                    {typeof user.levelId === 'object' && user.levelId?.name ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-300">
                         {user.levelId.name}
                       </span>
-                    )}
+                    ) : (typeof user.positionId === 'object' && user.positionId?.name) ? (
+                      <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>
+                    ) : null}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Roles */}
               <div className="mb-3">
