@@ -322,6 +322,12 @@ export const ManageOrdersPage: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información del Pedido</h3>
 
+                    <div className="mb-4">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(selectedOrder.status).style}`}>
+                        {getStatusBadge(selectedOrder.status).label}
+                      </span>
+                    </div>
+
                     {selectedOrder.photoUrl && (
                       <div className="mb-4">
                         <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
