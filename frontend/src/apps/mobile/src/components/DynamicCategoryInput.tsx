@@ -35,13 +35,6 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({
 }) => {
   if (!category) return null;
 
-  console.log("DynamicCategoryInput - category:", {
-    name: category.name,
-    requiresAction: category.requiresAction,
-    futureActionType: category.futureActionType,
-    actionText: category.actionText
-  });
-
   const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
 
   const renderDynamicInput = () => {
