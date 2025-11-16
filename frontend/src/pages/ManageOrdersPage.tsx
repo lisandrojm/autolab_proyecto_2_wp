@@ -192,7 +192,7 @@ export const ManageOrdersPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Gestión de Pedidos"
+      title="Pedidos"
       subtitle="Administra todos los pedidos del personal"
       faIcon={{ icon: faShoppingCart }}
       // 🔥 INFO MODAL (IGUAL QUE UsersPage)
@@ -259,7 +259,6 @@ export const ManageOrdersPage: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Categoría</th>
@@ -267,48 +266,66 @@ export const ManageOrdersPage: React.FC = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+
+                      {/* 🔥 Imagen movida aquí */}
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th>
+
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {filteredOrders.map((order) => {
                       const badge = getStatusBadge(order.status);
                       return (
                         <tr key={order._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                          <td className="py-3 px-4">
-                            {order.photoUrl ? (
-                              <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="w-16 h-16 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
-                            ) : (
-                              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                                <FontAwesomeIcon icon={faImage} className="text-gray-400" />
-                              </div>
-                            )}
-                          </td>
+                          {/* --- TÍTULO --- */}
                           <td className="py-3 px-4">
                             <div className="font-medium text-gray-900 dark:text-gray-100">{order.title}</div>
                             <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{order.description}</div>
                             {order.amount && <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1">Monto: ${order.amount.toFixed(2)}</div>}
                           </td>
+
+                          {/* --- SOLICITANTE --- */}
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
+
+                          {/* --- CATEGORÍA --- */}
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getCategoryName(order)}</td>
+
+                          {/* --- TIPO --- */}
                           <td className="py-3 px-4">
                             <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{typeof order.categoryId === "object" && order.categoryId ? getCategoryTypeName(order.categoryId.categoryType) : "N/A"}</span>
                           </td>
+
+                          {/* --- OPCIÓN --- */}
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{getSubcategoryDisplay(order)}</td>
+
+                          {/* --- ACCIÓN FUTURA --- */}
                           <td className="py-3 px-4 text-center">
                             {hasRequiresAction(order) ? (
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30" title="Requiere acción futura">
-                                <FontAwesomeIcon icon={faExclamationTriangle} className="text-orange-600 dark:text-orange-400 text-xs" />
+                              <span className="inline-flex p-2 items-center justify-center text-orange-600 dark:text-orange-400 text-xs rounded-full bg-orange-100 dark:bg-orange-900/30" title="Requiere acción futura">
+                                Requiere A.F
                               </span>
                             ) : (
                               <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
                             )}
                           </td>
+
+                          {/* --- ESTADO --- */}
                           <td className="py-3 px-4">
                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>{badge.label}</span>
                           </td>
+
+                          {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
+                          <td className="py-3 px-4">
+                            <div className="flex justify-center items-center p-3">{order.photoUrl ? <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="w-auto h-auto object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} /> : <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>}</div>
+                          </td>
+
+                          {/* --- FECHA --- */}
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
+
+                          {/* --- ACCIONES --- */}
                           <td className="py-3 px-4">
                             <div className="flex items-center justify-center gap-2">
                               <button
@@ -358,7 +375,7 @@ export const ManageOrdersPage: React.FC = () => {
       {viewingImage && <ImageModal imageUrl={viewingImage} alt="Order Photo" isOpen={true} onClose={() => setViewingImage(null)} />}
 
       {showDetailModal && selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDetailModal(false)}>
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDetailModal(false)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
@@ -372,12 +389,6 @@ export const ManageOrdersPage: React.FC = () => {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información del Pedido</h3>
-
-                    {selectedOrder.photoUrl && (
-                      <div className="mb-4">
-                        <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
-                      </div>
-                    )}
 
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
@@ -418,7 +429,7 @@ export const ManageOrdersPage: React.FC = () => {
                       {typeof selectedOrder.categoryId === "object" && selectedOrder.categoryId && (
                         <>
                           <div className="flex items-start gap-3">
-                            <FontAwesomeIcon icon={faListCheck} className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-1" />
+                            <FontAwesomeIcon icon={faListCheck} className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-1" />
                             <div className="flex-1">
                               <p className="text-sm text-gray-600 dark:text-gray-400">Tipo de Dato</p>
                               <p className="text-base text-gray-900 dark:text-white">{getCategoryTypeName(selectedOrder.categoryId.categoryType)}</p>
@@ -427,7 +438,7 @@ export const ManageOrdersPage: React.FC = () => {
 
                           {selectedOrder.categoryId.config?.subtipos && selectedOrder.categoryId.config.subtipos.length > 0 && (
                             <div className="flex items-start gap-3">
-                              <FontAwesomeIcon icon={faList} className="h-5 w-5 text-indigo-600 dark:text-indigo-400 mt-1" />
+                              <FontAwesomeIcon icon={faList} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
                               <div className="flex-1">
                                 <p className="text-sm text-gray-600 dark:text-gray-400">Opción Seleccionada</p>
                                 <p className="text-base text-gray-900 dark:text-white">{getSubcategoryDisplay(selectedOrder)}</p>
@@ -437,10 +448,10 @@ export const ManageOrdersPage: React.FC = () => {
 
                           {selectedOrder.categoryId.requiresAction && (
                             <div className="flex items-start gap-3">
-                              <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-1" />
+                              <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
                               <div className="flex-1">
                                 <p className="text-sm text-gray-600 dark:text-gray-400">Requiere Acción Futura</p>
-                                <p className="text-base font-semibold text-orange-600 dark:text-orange-400">Sí</p>
+                                <p className="text-base font-semibold text-blue-600 dark:text-blue-400">Sí</p>
                                 {selectedOrder.categoryId.actionText && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedOrder.categoryId.actionText}</p>}
                                 {selectedOrder.categoryId.futureActionType && selectedOrder.categoryId.futureActionType !== "sinVencimiento" && <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Tipo: {selectedOrder.categoryId.futureActionType}</p>}
                               </div>
@@ -465,10 +476,10 @@ export const ManageOrdersPage: React.FC = () => {
 
                       {selectedOrder.amount && (
                         <div className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faDollarSign} className="h-5 w-5 text-green-600 dark:text-green-400 mt-1" />
+                          <FontAwesomeIcon icon={faDollarSign} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
                           <div className="flex-1">
                             <p className="text-sm text-gray-600 dark:text-gray-400">Monto</p>
-                            <p className="text-lg font-bold text-green-600 dark:text-green-400">${selectedOrder.amount.toFixed(2)}</p>
+                            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">${selectedOrder.amount.toFixed(2)}</p>
                           </div>
                         </div>
                       )}
@@ -478,6 +489,23 @@ export const ManageOrdersPage: React.FC = () => {
                         <div className="flex-1">
                           <p className="text-sm text-gray-600 dark:text-gray-400">Solicitante</p>
                           <p className="text-base font-medium text-gray-900 dark:text-white">{getUserName(selectedOrder.userId)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faImage} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <div className="flex flex-col gap-1">
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Imagen</p>
+                          </div>
+                          <div>
+                            {selectedOrder.photoUrl && (
+                              <div className="w-1/3 p-2 border border-slate-700 rounded">
+                                <div className="mb-4 max-w-sm">
+                                  <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 

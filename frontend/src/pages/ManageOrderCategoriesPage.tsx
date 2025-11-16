@@ -415,7 +415,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Gestión de Tipos de Pedidos"
+      title="Tipos de Pedidos"
       subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
       faIcon={{ icon: faList }}
       onBack={() => navigate("/hr/orders")}
