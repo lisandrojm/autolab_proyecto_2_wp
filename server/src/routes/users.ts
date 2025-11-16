@@ -17,12 +17,12 @@ const createUserSchema = z.object({
   lastName: z.string().optional(),
   isActive: z.boolean().default(true),
   roles: z.array(z.string()).default([]),
-  positionId: z.string().optional(),
-  levelId: z.string().optional(),
+  positionId: z.string().nullable().optional(),
+  levelId: z.string().nullable().optional(),
 }).refine(
   (data) => {
-    // Si hay levelId, debe haber positionId
-    if (data.levelId && !data.positionId) {
+    // Si hay levelId (y no es null), debe haber positionId (y no ser null)
+    if (data.levelId && data.levelId !== null && (!data.positionId || data.positionId === null)) {
       return false;
     }
     return true;
@@ -140,8 +140,13 @@ router.post("/",
     try {
       const data = createUserSchema.parse(req.body);
 
-      // Si no hay positionId, eliminar levelId automáticamente
-      if (!data.positionId) {
+      // Si no hay positionId o es null, eliminar levelId automáticamente
+      if (!data.positionId || data.positionId === null) {
+        data.levelId = undefined;
+        data.positionId = undefined;
+      }
+      // Si levelId es null, convertir a undefined
+      if (data.levelId === null) {
         data.levelId = undefined;
       }
 
