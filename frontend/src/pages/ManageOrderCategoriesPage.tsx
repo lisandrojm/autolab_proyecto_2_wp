@@ -528,7 +528,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Categoría *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Dato *</label>
                   <button type="button" onClick={() => setShowCategoryTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
@@ -622,7 +622,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                       setFormData({
                         ...formData,
                         requiresAction: e.target.checked,
-                        futureActionType: e.target.checked ? (formData.futureActionType || "sinVencimiento") : "",
+                        futureActionType: e.target.checked ? formData.futureActionType || "sinVencimiento" : "",
                         actionText: e.target.checked ? formData.actionText : "",
                         plazoDias: e.target.checked ? formData.plazoDias : undefined,
                         fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
@@ -690,9 +690,9 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         </div>
       )}
 
-      <InfoModal isOpen={showCategoryTypeInfo} onClose={() => setShowCategoryTypeInfo(false)} title="Tipo de Categoría" size="sm">
+      <InfoModal isOpen={showCategoryTypeInfo} onClose={() => setShowCategoryTypeInfo(false)} title="Tipo de Dato" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
-          <p>Define qué tipo de input se mostrará en el formulario móvil cuando el usuario seleccione esta categoría.</p>
+          <p>Define qué tipo de input se mostrará en el formulario móvil cuando el usuario seleccione este tipo de pedido.</p>
         </div>
       </InfoModal>
 

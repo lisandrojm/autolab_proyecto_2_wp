@@ -173,7 +173,7 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (!order.subcategoryId || !category.config?.subtipos) return "Sin opciones";
 
-    const selectedSubtype = category.config.subtipos.find(st => st.id === order.subcategoryId);
+    const selectedSubtype = category.config.subtipos.find((st) => st.id === order.subcategoryId);
     return selectedSubtype ? selectedSubtype.label : order.subcategoryLabel || "Opción desconocida";
   };
 
@@ -293,9 +293,7 @@ export const ManageOrdersPage: React.FC = () => {
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getCategoryName(order)}</td>
                           <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                              {typeof order.categoryId === "object" && order.categoryId ? getCategoryTypeName(order.categoryId.categoryType) : "N/A"}
-                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{typeof order.categoryId === "object" && order.categoryId ? getCategoryTypeName(order.categoryId.categoryType) : "N/A"}</span>
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{getSubcategoryDisplay(order)}</td>
                           <td className="py-3 px-4 text-center">
@@ -422,7 +420,7 @@ export const ManageOrdersPage: React.FC = () => {
                           <div className="flex items-start gap-3">
                             <FontAwesomeIcon icon={faListCheck} className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-1" />
                             <div className="flex-1">
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Tipo de Categoría</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Tipo de Dato</p>
                               <p className="text-base text-gray-900 dark:text-white">{getCategoryTypeName(selectedOrder.categoryId.categoryType)}</p>
                             </div>
                           </div>
@@ -443,12 +441,8 @@ export const ManageOrdersPage: React.FC = () => {
                               <div className="flex-1">
                                 <p className="text-sm text-gray-600 dark:text-gray-400">Requiere Acción Futura</p>
                                 <p className="text-base font-semibold text-orange-600 dark:text-orange-400">Sí</p>
-                                {selectedOrder.categoryId.actionText && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedOrder.categoryId.actionText}</p>
-                                )}
-                                {selectedOrder.categoryId.futureActionType && selectedOrder.categoryId.futureActionType !== "sinVencimiento" && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Tipo: {selectedOrder.categoryId.futureActionType}</p>
-                                )}
+                                {selectedOrder.categoryId.actionText && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedOrder.categoryId.actionText}</p>}
+                                {selectedOrder.categoryId.futureActionType && selectedOrder.categoryId.futureActionType !== "sinVencimiento" && <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Tipo: {selectedOrder.categoryId.futureActionType}</p>}
                               </div>
                             </div>
                           )}
