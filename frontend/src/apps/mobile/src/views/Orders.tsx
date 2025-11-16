@@ -64,7 +64,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
     }
 
     setActionCompleted(false);
-    setFutureActionPlazoDias(undefined);
+
+    // Auto-set plazoDias from category if it's defined (read-only for mobile users)
+    if (selectedCategory?.futureActionType === "plazoDias" && selectedCategory.plazoDias) {
+      setFutureActionPlazoDias(selectedCategory.plazoDias);
+    } else {
+      setFutureActionPlazoDias(undefined);
+    }
+
     setFutureActionFechaLimite("");
     setFutureActionDocumento("");
 
@@ -138,7 +145,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
       }
 
       setActionCompleted(false);
-      setFutureActionPlazoDias(undefined);
+
+      // Reset plazoDias to category default if available
+      if (selectedCategory?.futureActionType === "plazoDias" && selectedCategory.plazoDias) {
+        setFutureActionPlazoDias(selectedCategory.plazoDias);
+      } else {
+        setFutureActionPlazoDias(undefined);
+      }
+
       setFutureActionFechaLimite("");
       setFutureActionDocumento("");
       setPhoto(null);

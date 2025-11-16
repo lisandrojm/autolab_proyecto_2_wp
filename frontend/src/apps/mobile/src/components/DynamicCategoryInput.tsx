@@ -192,28 +192,27 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({
           </div>
 
           {category.futureActionType === "plazoDias" && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Plazo en Días *
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="365"
-                value={futureActionPlazoDias || ""}
-                onChange={(e) => onFutureActionPlazoDiasChange?.(parseInt(e.target.value) || 0)}
-                required
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
-                placeholder="Ej: 10"
-              />
-              {futureActionPlazoDias && futureActionPlazoDias > 0 && (
-                <p className="mt-1 text-xs text-green-600 dark:text-green-400 font-medium">
-                  ✓ Fecha límite: {new Date(Date.now() + futureActionPlazoDias * 24 * 60 * 60 * 1000).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-                </p>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                  <span className="text-white text-lg font-bold">{category.plazoDias}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                    Plazo definido: {category.plazoDias} días
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    El sistema calculará automáticamente la fecha límite desde el día de la solicitud
+                  </p>
+                </div>
+              </div>
+              {category.plazoDias && category.plazoDias > 0 && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                    ✓ Fecha límite estimada: {new Date(Date.now() + category.plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                  </p>
+                </div>
               )}
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                El sistema calculará automáticamente la fecha límite
-              </p>
             </div>
           )}
 
