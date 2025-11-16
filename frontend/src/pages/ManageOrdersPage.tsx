@@ -264,7 +264,7 @@ export const ManageOrdersPage: React.FC = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Categoría</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Acción Futura</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
 
                       {/* 🔥 Imagen movida aquí */}
@@ -304,7 +304,7 @@ export const ManageOrdersPage: React.FC = () => {
                           {/* --- ACCIÓN FUTURA --- */}
                           <td className="py-3 px-4 text-center">
                             {hasRequiresAction(order) ? (
-                              <span className="inline-flex p-2 items-center justify-center text-orange-600 dark:text-orange-400 text-xs rounded-full bg-orange-100 dark:bg-orange-900/30" title="Requiere acción futura">
+                              <span className="inline-flex p-2 items-center justify-center text-blue-600 dark:text-blue-400 text-xs rounded-full bg-orange-100 dark:bg-blue-900/30" title="Requiere acción futura">
                                 Requiere A.F
                               </span>
                             ) : (
@@ -452,7 +452,7 @@ export const ManageOrdersPage: React.FC = () => {
                               <div className="flex-1">
                                 <p className="text-sm text-gray-600 dark:text-gray-400">Requiere Acción Futura</p>
                                 <p className="text-base font-semibold text-blue-600 dark:text-blue-400">Sí</p>
-                                {selectedOrder.categoryId.actionText && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{selectedOrder.categoryId.actionText}</p>}
+                                {selectedOrder.categoryId.actionText && <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">"{selectedOrder.categoryId.actionText}"</p>}
                                 {selectedOrder.categoryId.futureActionType && selectedOrder.categoryId.futureActionType !== "sinVencimiento" && <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Tipo: {selectedOrder.categoryId.futureActionType}</p>}
                               </div>
                             </div>
