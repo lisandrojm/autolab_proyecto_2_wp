@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels";
 
 export type HelpEntry = {
   title: string;
@@ -56,6 +56,16 @@ const helpResources = {
       "roles.title": "Información de Roles",
       "roles.description": "Sistema de permisos y roles",
       "roles.items": ["**Roles**: Agrupan permisos para simplificar la administración (ej: *Viewer*, *Manager*, *Content Creator*)", "**Rol por defecto**: Se asigna automáticamente a usuarios nuevos", "**Permisos**: Agrupados por módulo con opciones *Marcar todo* / *Desmarcar todo*", "**Gestión**: Crear roles personalizados y asignar permisos granulares"],
+
+      // Positions
+      "positions.title": "Información de Cargos",
+      "positions.description": "Gestión de cargos organizacionales",
+      "positions.items": ["**Cargos**: Definen las posiciones dentro de la organización (ej: *Diseñador*, *Community Manager*, *Director Creativo*)", "**Descripción**: Detalle opcional sobre las responsabilidades del cargo", "**Asignación**: Los usuarios pueden tener un cargo asignado que define su rol funcional", "**Gestión**: Crear, editar y eliminar cargos según la estructura organizacional"],
+
+      // Levels
+      "levels.title": "Información de Niveles",
+      "levels.description": "Gestión de niveles de experiencia",
+      "levels.items": ["**Niveles**: Representan la antigüedad o experiencia (ej: *Junior*, *Semi-Senior*, *Senior*, *Lead*)", "**Jerarquía**: Los niveles complementan a los cargos agregando una dimensión de experiencia", "**Descripción**: Detalle opcional sobre las expectativas del nivel", "**Gestión**: Crear, editar y eliminar niveles según las necesidades de la organización"],
 
       // Client Detail
       "clientDetail.title": "Información de Cliente",
@@ -291,6 +301,18 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     title: "Guía de Tipos de Pedidos",
     size: "lg",
     content: buildHelpContent("orderCategories"),
+  },
+
+  positions: {
+    title: "Información de Cargos",
+    size: "sm",
+    content: buildHelpContent("positions"),
+  },
+
+  levels: {
+    title: "Información de Niveles",
+    size: "sm",
+    content: buildHelpContent("levels"),
   },
 };
 

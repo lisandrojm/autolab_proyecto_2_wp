@@ -9,6 +9,9 @@ import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faIdCard, faEdit, faTrash, faPlus, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
+const HELP_KEY = "positions" as const;
 
 interface PositionFormData {
   name: string;
@@ -34,6 +37,9 @@ export const PositionsPage: React.FC = () => {
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewPosition, setViewPosition] = useState<Position | null>(null);
+
+  const [openInfo, setOpenInfo] = useState(false);
+  const helpEntry = getHelp(HELP_KEY);
 
   const canManage = hasPermission("users:view");
 
@@ -145,6 +151,16 @@ export const PositionsPage: React.FC = () => {
     <PageLayout
       title="Cargos"
       subtitle="Gestiona los cargos de la organización"
+      faIcon={{ icon: faIdCard }}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         canManage ? (
           <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">

@@ -317,6 +317,7 @@ export const UsersPage: React.FC = () => {
     <PageLayout
       title="Usuarios"
       subtitle="Gestiona usuarios y sus roles"
+      faIcon={{ icon: faUser }}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),

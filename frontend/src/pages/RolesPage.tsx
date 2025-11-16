@@ -409,6 +409,7 @@ export const RolesPage: React.FC = () => {
     <PageLayout
       title="Roles"
       subtitle="Gestiona roles y permisos del sistema"
+      faIcon={{ icon: faUserShield }}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),

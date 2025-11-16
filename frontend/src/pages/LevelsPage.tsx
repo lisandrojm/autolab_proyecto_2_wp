@@ -9,6 +9,9 @@ import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faEdit, faTrash, faPlus, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
+const HELP_KEY = "levels" as const;
 
 interface LevelFormData {
   name: string;
@@ -34,6 +37,9 @@ export const LevelsPage: React.FC = () => {
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLevel, setViewLevel] = useState<Level | null>(null);
+
+  const [openInfo, setOpenInfo] = useState(false);
+  const helpEntry = getHelp(HELP_KEY);
 
   const canManage = hasPermission("users:view");
 
@@ -145,6 +151,16 @@ export const LevelsPage: React.FC = () => {
     <PageLayout
       title="Niveles"
       subtitle="Gestiona los niveles de experiencia de la organización"
+      faIcon={{ icon: faChartLine }}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         canManage ? (
           <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
