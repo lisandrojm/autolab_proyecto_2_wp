@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories";
 
 export type HelpEntry = {
   title: string;
@@ -134,6 +134,25 @@ const helpResources = {
       "clientContextOrders.title": "Pedidos del Cliente",
       "clientContextOrders.description": "Vista filtrada que muestra únicamente los pedidos asociados al cliente actual.",
       "clientContextOrders.items": ["**Contexto**: Solo muestra las solicitudes generadas dentro del cliente en curso.", "**Filtros**: Búsqueda y filtrado por estado o categoría.", "**Acciones**: Según permisos: visualizar, aprobar, rechazar o marcar como entregado.", "**Orden cronológico**: Incluye fecha de solicitud y el estado actual.", "**Evidencia visual**: Previsualización de imágenes adjuntas."],
+
+      //
+      // ---------------------------------------------------------
+      // NUEVO: Gestión de Tipos de Pedidos (Order Categories)
+      // ---------------------------------------------------------
+      //
+      "orderCategories.title": "Guía de Tipos de Pedidos",
+      "orderCategories.description": "Este documento describe los tipos de pedidos universales que pueden configurarse en el sistema, utilizando la estructura flexible del módulo Tipos de Pedido. El objetivo es brindar una referencia clara para que administradores y supervisores puedan crear nuevos pedidos sin conocimientos técnicos.",
+      "orderCategories.items": [
+        "**Tipos de Pedido Disponibles**: Cada pedido se configura a partir de un *Tipo de Categoría*, que define la estructura del formulario que verán los colaboradores en la aplicación móvil.",
+        "**Tipo Fecha**: Se utiliza para solicitudes relacionadas con días específicos, rangos de fechas o eventos temporales. Casos de uso: Solicitud de día por enfermedad, licencias justificadas, permiso por estudio, ausencias programadas, turnos o guardias especiales. Configuraciones: Fecha única o rango de fechas (Desde/Hasta).",
+        "**Tipo Dinero**: Diseñado para cualquier pedido que implique un monto económico. Casos de uso: Adelantos de sueldo, reembolso de gastos, viáticos, gastos varios, compensaciones. Campos: Monto, descripción breve y adjuntos opcionales.",
+        "**Tipo Objeto**: Indicado para pedidos de bienes físicos, equipamiento o materiales. Casos de uso: Herramientas, uniformes, elementos de protección personal, insumos de trabajo, tecnología (mouse, teclado, monitor, notebook), kits de bienvenida, reposición de materiales.",
+        "**Tipo Otros**: Un tipo flexible para cualquier pedido no contemplado en las categorías anteriores. Casos de uso: Justificaciones libres, acciones futuras, comunicaciones internas, solicitudes especiales, notas informativas.",
+        "**Opciones del Pedido**: Cada Tipo de Pedido puede incluir *Opciones* (subcategorías) que sirven para agregar un segundo selector dependiente del tipo principal. Ejemplos para Licencias: Médica, Por estudio, Examen, Cuidado familiar, Matrimonio, Nacimiento. Para Objeto: Tecnología, Seguridad e higiene, Oficina, Accesorios. Para Dinero: Adelanto de sueldo, Gastos con factura, Viáticos.",
+        "**Requiere Acción Futura**: Los Tipos de Pedido pueden configurarse para requerir una acción posterior por parte del colaborador. Útil para: Adjuntar comprobantes luego de un reembolso, presentar certificado médico luego de una licencia, confirmar la recepción de un material, subir una factura luego de un viático, cargar documentación complementaria.",
+        "**Estado del Tipo de Pedido**: Cada Tipo puede ser *Activo* (visible para los colaboradores) o *Inactivo* (oculto temporalmente sin perder historial). Ideal para mantener un catálogo ordenado sin eliminar información importante.",
+        "**Recomendaciones**: Elegir el Tipo de Categoría según el campo principal que deberá completar el usuario. Agregar Opciones solo si realmente existen variantes internas del pedido. Activar *Requiere acción futura* únicamente cuando sea necesario solicitar documentación o confirmación adicional. Mantener los nombres claros y precisos para facilitar su entendimiento en la aplicación móvil."
+      ],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -276,6 +295,12 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     title: "Pedidos del Cliente",
     size: "sm",
     content: buildHelpContent("clientContextOrders"),
+  },
+
+  orderCategories: {
+    title: "Guía de Tipos de Pedidos",
+    size: "lg",
+    content: buildHelpContent("orderCategories"),
   },
 };
 

@@ -10,6 +10,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { tipoAccionFuturaLabels } from "../types/futureAction";
+import { getHelp, hasHelp } from "../data/help/helpContent";
 
 interface SortableRowProps {
   category: OrderCategory;
@@ -65,6 +66,8 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
   );
 };
 
+const HELP_KEY = "orderCategories";
+
 export const ManageOrderCategoriesPage: React.FC = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<OrderCategory[]>([]);
@@ -102,11 +105,14 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [tempCategories, setTempCategories] = useState<OrderCategory[]>([]);
 
+  const [showMainInfo, setShowMainInfo] = useState(false);
   const [showCategoryTypeInfo, setShowCategoryTypeInfo] = useState(false);
   const [showDateModeInfo, setShowDateModeInfo] = useState(false);
   const [showSubcategoriesInfo, setShowSubcategoriesInfo] = useState(false);
   const [showActionTypeInfo, setShowActionTypeInfo] = useState(false);
   const [showActionTextInfo, setShowActionTextInfo] = useState(false);
+
+  const helpEntry = getHelp(HELP_KEY);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -413,6 +419,15 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
       faIcon={{ icon: faList }}
       onBack={() => navigate("/hr/orders")}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      infoModal={{
+        isOpen: showMainInfo,
+        onOpen: () => setShowMainInfo(true),
+        onClose: () => setShowMainInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
       headerActions={
         <div className="flex items-center gap-3">
           {isReorderMode ? (
