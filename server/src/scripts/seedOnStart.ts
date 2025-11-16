@@ -14,6 +14,8 @@ import { CalendarEvent } from "../models/CalendarEvent.js";
 import { RequestType } from "../models/RequestType.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { FutureAction } from "../models/FutureAction.js";
+import { Position } from "../models/Position.js";
+import { Level } from "../models/Level.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -99,8 +101,8 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
   return role;
 }
 
-async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean }) {
-  const { tenantId, email, password, roleName, firstName, lastName, isActive = true } = params;
+async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId }) {
+  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId } = params;
 
   let user = await User.findOne({ tenantId, email });
   let wantedRole: any = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${roleName}$`, "i") } });
@@ -120,6 +122,8 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
       firstName,
       lastName,
       isActive,
+      positionId,
+      levelId,
     });
     await user.save();
 
@@ -136,6 +140,8 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
     if (user.firstName !== firstName) updates.firstName = firstName;
     if (user.lastName !== lastName) updates.lastName = lastName;
     if (typeof isActive === "boolean" && user.isActive !== isActive) updates.isActive = isActive;
+    if (positionId && String(user.positionId) !== String(positionId)) updates.positionId = positionId;
+    if (levelId && String(user.levelId) !== String(levelId)) updates.levelId = levelId;
     if (Object.keys(updates).length) {
       await User.updateOne({ _id: user._id }, { $set: updates });
       console.log(`♻️ ensureUser: updated ${email}`);
@@ -275,6 +281,82 @@ export async function seedOnStart() {
     void mobileCoordRole;
     void mobileCollabRole;
 
+    // ---- POSITIONS ----
+    console.log("📋 Seeding Positions...");
+    let positionDirector = await Position.findOne({ tenantId, name: "Director" });
+    if (!positionDirector) {
+      positionDirector = await Position.create({
+        tenantId,
+        name: "Director",
+        description: "Responsable de la dirección estratégica y toma de decisiones",
+      });
+      console.log(`✅ Created Position: Director (ID: ${positionDirector._id})`);
+    } else {
+      console.log(`✔️ Position exists: Director (ID: ${positionDirector._id})`);
+    }
+
+    let positionProductor = await Position.findOne({ tenantId, name: "Productor" });
+    if (!positionProductor) {
+      positionProductor = await Position.create({
+        tenantId,
+        name: "Productor",
+        description: "Responsable de la producción y coordinación de proyectos",
+      });
+      console.log(`✅ Created Position: Productor (ID: ${positionProductor._id})`);
+    } else {
+      console.log(`✔️ Position exists: Productor (ID: ${positionProductor._id})`);
+    }
+
+    let positionEditor = await Position.findOne({ tenantId, name: "Editor" });
+    if (!positionEditor) {
+      positionEditor = await Position.create({
+        tenantId,
+        name: "Editor",
+        description: "Responsable de la edición y creación de contenido",
+      });
+      console.log(`✅ Created Position: Editor (ID: ${positionEditor._id})`);
+    } else {
+      console.log(`✔️ Position exists: Editor (ID: ${positionEditor._id})`);
+    }
+
+    // ---- LEVELS ----
+    console.log("📊 Seeding Levels...");
+    let levelSenior = await Level.findOne({ tenantId, name: "Senior" });
+    if (!levelSenior) {
+      levelSenior = await Level.create({
+        tenantId,
+        name: "Senior",
+        description: "Nivel de experiencia avanzado con liderazgo",
+      });
+      console.log(`✅ Created Level: Senior (ID: ${levelSenior._id})`);
+    } else {
+      console.log(`✔️ Level exists: Senior (ID: ${levelSenior._id})`);
+    }
+
+    let levelMid = await Level.findOne({ tenantId, name: "Mid" });
+    if (!levelMid) {
+      levelMid = await Level.create({
+        tenantId,
+        name: "Mid",
+        description: "Nivel de experiencia intermedio",
+      });
+      console.log(`✅ Created Level: Mid (ID: ${levelMid._id})`);
+    } else {
+      console.log(`✔️ Level exists: Mid (ID: ${levelMid._id})`);
+    }
+
+    let levelJunior = await Level.findOne({ tenantId, name: "Junior" });
+    if (!levelJunior) {
+      levelJunior = await Level.create({
+        tenantId,
+        name: "Junior",
+        description: "Nivel de experiencia inicial",
+      });
+      console.log(`✅ Created Level: Junior (ID: ${levelJunior._id})`);
+    } else {
+      console.log(`✔️ Level exists: Junior (ID: ${levelJunior._id})`);
+    }
+
     // ---- USUARIOS BASE ----
     const adminUser = await ensureUser({
       tenantId,
@@ -284,8 +366,11 @@ export async function seedOnStart() {
       firstName: "Admin",
       lastName: "User",
       isActive: true,
+      positionId: positionDirector._id as Types.ObjectId,
+      levelId: levelSenior._id as Types.ObjectId,
     });
     const adminId = String(adminUser._id);
+    console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelSenior.name}`);
 
     // Colaborador móvil
     const collab = await ensureUser({
@@ -296,7 +381,10 @@ export async function seedOnStart() {
       firstName: "Juan",
       lastName: "Colaborador",
       isActive: true,
+      positionId: positionEditor._id as Types.ObjectId,
+      levelId: levelJunior._id as Types.ObjectId,
     });
+    console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelJunior.name}`);
 
     // Coordinador móvil
     const coord = await ensureUser({
@@ -307,7 +395,10 @@ export async function seedOnStart() {
       firstName: "María",
       lastName: "Coordinadora",
       isActive: true,
+      positionId: positionProductor._id as Types.ObjectId,
+      levelId: levelMid._id as Types.ObjectId,
     });
+    console.log(`👤 Coordinador assigned: Position=${positionProductor.name}, Level=${levelMid.name}`);
 
     /* ============ SEED: MODELOS DEL NAVBAR (HR / MODELOS) ============ */
     console.log("👥 Seeding HR/Models demo data...");

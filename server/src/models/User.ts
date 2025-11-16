@@ -9,6 +9,8 @@ export interface IUser extends Document {
   tenantId: Types.ObjectId;
   firstName?: string;
   lastName?: string;
+  positionId?: Types.ObjectId;
+  levelId?: Types.ObjectId;
   isActive: boolean;
   lastLoginAt?: Date;
   createdAt: Date;
@@ -33,6 +35,8 @@ const userSchema = new Schema<IUser>(
       trim: true,
       set: (v: string) => (v && v.trim() !== "" ? v.trim() : undefined),
     },
+    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
+    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
   },
