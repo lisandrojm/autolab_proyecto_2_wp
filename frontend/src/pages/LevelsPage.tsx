@@ -300,7 +300,7 @@ export const LevelsPage: React.FC = () => {
             header={{
               title: "Nuevo Nivel",
               subtitle: "Crear un nuevo nivel de experiencia",
-              icon: faChartLine,
+              icon: faUserGraduate,
             }}
           />
         )}

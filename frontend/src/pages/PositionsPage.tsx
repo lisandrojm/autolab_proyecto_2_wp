@@ -300,7 +300,7 @@ export const PositionsPage: React.FC = () => {
             header={{
               title: "Nuevo Cargo",
               subtitle: "Crear un nuevo cargo para la organización",
-              icon: faIdCard,
+              icon: faUserTie,
             }}
           />
         )}
