@@ -469,251 +469,342 @@ export async function seedOnStart() {
     // ---- OrderCategory ----
     const categoriesCount = await OrderCategory.countDocuments({ tenantId });
     if (categoriesCount === 0) {
-      const catDias = await OrderCategory.create({
+      const catLicencias = await OrderCategory.create({
         tenantId,
-        name: "Pedidos de Días",
-        description: "Solicitudes de días libres, licencias y permisos especiales",
+        name: "Licencias y Permisos",
+        description: "Solicitud de licencias médicas, permisos por estudio, cuidado familiar, matrimonio, etc.",
         categoryType: "fecha",
+        dateMode: "range",
         isActive: true,
         sortOrder: 1,
+        requiresAction: true,
+        actionText: "Me comprometo a presentar el certificado correspondiente",
         config: {
           subtipos: [
-            { id: "compensatorio", label: "Día Compensatorio", requiere_certificado: false },
-            { id: "mudanza", label: "Día de Mudanza", requiere_certificado: false },
-            { id: "enfermedad", label: "Día por Enfermedad", requiere_certificado: true },
-            { id: "maternidad", label: "Licencia por Maternidad", requiere_certificado: true },
-            { id: "personal", label: "Día Personal / Administrativo", requiere_certificado: false },
+            { id: "licencia_medica", label: "Licencia Médica", requiere_certificado: true },
+            { id: "permiso_estudio", label: "Permiso por Estudio", requiere_certificado: true },
+            { id: "cuidado_familiar", label: "Cuidado Familiar", requiere_certificado: true },
+            { id: "matrimonio", label: "Matrimonio", requiere_certificado: false },
           ],
         },
       });
 
-      const catMateriales = await OrderCategory.create({
+      const catAdelantos = await OrderCategory.create({
         tenantId,
-        name: "Pedidos de Materiales",
-        description: "Equipamiento y materiales de trabajo",
-        categoryType: "objeto",
+        name: "Adelantos y Anticipos",
+        description: "Adelantos de sueldo y anticipos por emergencias",
+        categoryType: "dinero",
         isActive: true,
         sortOrder: 2,
+        requiresAction: true,
+        actionText: "Acepto el descuento en cuotas según el plazo acordado",
         config: {
           subtipos: [
-            { id: "notebook", label: "Notebook" },
-            { id: "monitor", label: "Monitor" },
-            { id: "mouse", label: "Mouse" },
-            { id: "teclado", label: "Teclado" },
-            { id: "silla", label: "Silla Ergonómica" },
-            { id: "celular", label: "Celular Corporativo" },
+            { id: "adelanto_sueldo", label: "Adelanto de Sueldo" },
+            { id: "adelanto_emergencia", label: "Adelanto por Emergencia" },
           ],
         },
       });
 
-      const catAdelanto = await OrderCategory.create({
+      const catReembolsos = await OrderCategory.create({
         tenantId,
-        name: "Adelanto de Dinero",
-        description: "Solicitudes de adelantos de sueldo o gastos",
+        name: "Reembolsos de Gastos",
+        description: "Reembolsos por viáticos, gastos con factura y otros gastos laborales",
         categoryType: "dinero",
         isActive: true,
         sortOrder: 3,
         requiresAction: true,
-        actionText: "Confirmo que devolveré el monto en los próximos 3 meses",
+        actionText: "Adjunto todos los comprobantes y facturas originales",
+      });
+
+      const catEquipamiento = await OrderCategory.create({
+        tenantId,
+        name: "Equipamiento y Materiales",
+        description: "Solicitud de equipamiento tecnológico, elementos de seguridad e higiene, y materiales de oficina",
+        categoryType: "objeto",
+        isActive: true,
+        sortOrder: 4,
+        requiresAction: true,
+        actionText: "Me comprometo a confirmar la recepción en buen estado",
         config: {
           subtipos: [
-            { id: "sueldo", label: "Adelanto de Sueldo" },
-            { id: "gastos", label: "Adelanto por Gastos" },
+            { id: "tecnologia", label: "Tecnología" },
+            { id: "seguridad_higiene", label: "Seguridad e Higiene" },
+            { id: "oficina", label: "Materiales de Oficina" },
           ],
         },
       });
 
-      const catReembolso = await OrderCategory.create({
+      const catSolicitudesEspeciales = await OrderCategory.create({
         tenantId,
-        name: "Reembolso de Gastos",
-        description: "Reembolsos por gastos realizados en nombre de la empresa",
-        categoryType: "dinero",
-        isActive: true,
-        sortOrder: 4,
-        requiresAction: true,
-        actionText: "Adjunto comprobantes de los gastos realizados",
-      });
-
-      const catOtros = await OrderCategory.create({
-        tenantId,
-        name: "Otros Pedidos",
-        description: "Pedidos generales que no entran en las categorías anteriores",
+        name: "Solicitudes Especiales",
+        description: "Solicitudes generales, justificaciones, comunicaciones y pedidos no categorizados",
         categoryType: "otros",
         isActive: true,
         sortOrder: 5,
       });
 
-      console.log("✅ OrderCategory seeded");
+      console.log("✅ OrderCategory seeded (5 categorías representativas)");
 
-      // ---- Order (with new structure) ----
-      await Order.create([
-        {
-          tenantId,
-          userId: collab._id,
-          title: "Solicitud de día por enfermedad",
-          description: "Necesito el día 15 de marzo por consulta médica",
-          category: "Pedidos de Días",
-          categoryId: catDias._id,
-          subcategoryId: "enfermedad",
-          subcategoryLabel: "Día por Enfermedad",
-          dynamicValue: new Date(2025, 2, 15),
-          status: "pending",
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          title: "Notebook para trabajo remoto",
-          description: "Necesito una notebook con al menos 16GB RAM y procesador i7",
-          category: "Pedidos de Materiales",
-          categoryId: catMateriales._id,
-          subcategoryId: "notebook",
-          subcategoryLabel: "Notebook",
-          dynamicValue: "Lenovo ThinkPad X1 Carbon o similar",
-          status: "approved",
-          approvedBy: adminId,
-          approvedAt: new Date(2024, 1, 10),
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          title: "Adelanto de sueldo urgente",
-          description: "Necesito un adelanto por emergencia familiar",
-          category: "Adelanto de Dinero",
-          categoryId: catAdelanto._id,
-          subcategoryId: "sueldo",
-          subcategoryLabel: "Adelanto de Sueldo",
-          dynamicValue: 50000,
-          actionCompleted: true,
-          status: "pending",
-        },
-        {
-          tenantId,
-          userId: coord._id,
-          title: "Reembolso viáticos conferencia",
-          description: "Gastos de hospedaje y alimentación en conferencia técnica",
-          category: "Reembolso de Gastos",
-          categoryId: catReembolso._id,
-          dynamicValue: 35000,
-          actionCompleted: true,
-          status: "approved",
-          amount: 35000,
-          approvedBy: adminId,
-          approvedAt: new Date(2024, 2, 5),
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          title: "Monitor adicional",
-          description: "27 pulgadas 4K para mejorar productividad",
-          category: "Pedidos de Materiales",
-          categoryId: catMateriales._id,
-          subcategoryId: "monitor",
-          subcategoryLabel: "Monitor",
-          dynamicValue: "Dell UltraSharp 27\" 4K",
-          status: "delivered",
-          approvedBy: adminId,
-          approvedAt: new Date(2024, 0, 15),
-          deliveredAt: new Date(2024, 0, 20),
-        },
-      ]);
-      console.log("✅ Order seeded");
+      // ---- Order (ejemplos representativos de cada tipo) ----
+      const order1 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Licencia médica por gripe",
+        description: "Solicito licencia por cuadro gripal con certificado médico",
+        category: "Licencias y Permisos",
+        categoryId: catLicencias._id,
+        subcategoryId: "licencia_medica",
+        subcategoryLabel: "Licencia Médica",
+        dynamicValue: { startDate: new Date(2024, 1, 5), endDate: new Date(2024, 1, 7) },
+        status: "approved",
+        approvedBy: adminId,
+        approvedAt: new Date(2024, 1, 4),
+        requestedAt: new Date(2024, 1, 3),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order2 = await Order.create({
+        tenantId,
+        userId: coord._id,
+        title: "Permiso para examen universitario",
+        description: "Necesito presentarme a examen final de la carrera de grado el 20 de marzo",
+        category: "Licencias y Permisos",
+        categoryId: catLicencias._id,
+        subcategoryId: "permiso_estudio",
+        subcategoryLabel: "Permiso por Estudio",
+        dynamicValue: { startDate: new Date(2025, 2, 20), endDate: new Date(2025, 2, 20) },
+        status: "pending",
+        requestedAt: new Date(),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order3 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Adelanto de sueldo",
+        description: "Solicito adelanto de $150.000 por gastos médicos urgentes",
+        category: "Adelantos y Anticipos",
+        categoryId: catAdelantos._id,
+        subcategoryId: "adelanto_sueldo",
+        subcategoryLabel: "Adelanto de Sueldo",
+        dynamicValue: 150000,
+        amount: 150000,
+        status: "pending",
+        requestedAt: new Date(),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order4 = await Order.create({
+        tenantId,
+        userId: coord._id,
+        title: "Reembolso viáticos conferencia técnica",
+        description: "Gastos de hospedaje, traslados y comidas durante conferencia en Córdoba",
+        category: "Reembolsos de Gastos",
+        categoryId: catReembolsos._id,
+        dynamicValue: 85000,
+        amount: 85000,
+        status: "approved",
+        approvedBy: adminId,
+        approvedAt: new Date(2024, 1, 20),
+        requestedAt: new Date(2024, 1, 15),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order5 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Adelanto por emergencia familiar",
+        description: "Necesito un adelanto urgente por hospitalización de familiar directo",
+        category: "Adelantos y Anticipos",
+        categoryId: catAdelantos._id,
+        subcategoryId: "adelanto_emergencia",
+        subcategoryLabel: "Adelanto por Emergencia",
+        dynamicValue: 80000,
+        amount: 80000,
+        status: "rejected",
+        requestedAt: new Date(2024, 0, 10),
+      });
+
+      const order6 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Notebook Lenovo ThinkPad",
+        description: "Solicito notebook para trabajo remoto: Lenovo ThinkPad E14, 16GB RAM, 512GB SSD",
+        category: "Equipamiento y Materiales",
+        categoryId: catEquipamiento._id,
+        subcategoryId: "tecnologia",
+        subcategoryLabel: "Tecnología",
+        dynamicValue: "Lenovo ThinkPad E14 Gen 4 - Intel i7 - 16GB RAM - 512GB SSD",
+        status: "delivered",
+        approvedBy: adminId,
+        approvedAt: new Date(2024, 0, 10),
+        deliveredAt: new Date(2024, 0, 15),
+        requestedAt: new Date(2024, 0, 5),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order7 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Elementos de protección personal",
+        description: "Necesito renovar EPP: barbijo N95, guantes de seguridad y antiparras",
+        category: "Equipamiento y Materiales",
+        categoryId: catEquipamiento._id,
+        subcategoryId: "seguridad_higiene",
+        subcategoryLabel: "Seguridad e Higiene",
+        dynamicValue: "Kit EPP completo: barbijos N95 (caja x50), guantes nitrilo (caja x100), antiparras protección UV",
+        status: "pending",
+        requestedAt: new Date(),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order8 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Justificación ausencia por trámite",
+        description: "Tuve que realizar trámite urgente en ANSES el día 10/01. Adjunto comprobante de turno",
+        category: "Solicitudes Especiales",
+        categoryId: catSolicitudesEspeciales._id,
+        dynamicValue: "Trámite en ANSES - Comprobante de turno adjunto",
+        status: "approved",
+        approvedBy: adminId,
+        approvedAt: new Date(2024, 0, 11),
+        requestedAt: new Date(2024, 0, 10),
+      });
+
+      const order9 = await Order.create({
+        tenantId,
+        userId: coord._id,
+        title: "Solicitud cambio de horario laboral",
+        description: "Por razones personales solicito cambio de horario de entrada: de 9:00 a 10:00 hs",
+        category: "Solicitudes Especiales",
+        categoryId: catSolicitudesEspeciales._id,
+        dynamicValue: "Propuesta: Horario de 10:00 a 19:00 hs en lugar de 9:00 a 18:00 hs",
+        status: "pending",
+        requestedAt: new Date(),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      console.log("✅ Order seeded (9 pedidos representativos con estados variados)");
 
       const futureActionsCount = await FutureAction.countDocuments({ tenantId });
       if (futureActionsCount === 0) {
-        const orderForFA1 = await Order.findOne({ tenantId, title: "Adelanto de sueldo urgente" });
-        const orderForFA2 = await Order.findOne({ tenantId, title: "Reembolso viáticos conferencia" });
-        const orderForFA3 = await Order.findOne({ tenantId, title: "Solicitud de día por enfermedad" });
-
-        if (orderForFA1) {
-          const fa1 = await FutureAction.create({
-            tenantId,
-            orderId: orderForFA1._id,
-            requiereAccionFutura: true,
-            tipoAccionFutura: "plazoDias",
-            descripcionAccion: "El usuario tiene 10 días para completar el formulario de devolución",
-            responsableAccion: "usuario",
-            plazoDias: 10,
-            fechaCreacionAccion: orderForFA1.requestedAt,
-            estadoAccion: "pendiente",
-          });
-          orderForFA1.requiereAccionFutura = true;
-          orderForFA1.futureActionId = fa1._id as any;
-          await orderForFA1.save();
-        }
-
-        if (orderForFA2) {
-          const futureDate = new Date();
-          futureDate.setDate(futureDate.getDate() + 15);
-          const fa2 = await FutureAction.create({
-            tenantId,
-            orderId: orderForFA2._id,
-            requiereAccionFutura: true,
-            tipoAccionFutura: "fechaEspecifica",
-            descripcionAccion: "Presentar todos los comprobantes antes de la fecha límite",
-            responsableAccion: "usuario",
-            fechaLimite: futureDate,
-            fechaCreacionAccion: orderForFA2.requestedAt,
-            estadoAccion: "pendiente",
-          });
-          orderForFA2.requiereAccionFutura = true;
-          orderForFA2.futureActionId = fa2._id as any;
-          await orderForFA2.save();
-        }
-
-        if (orderForFA3) {
-          const fa3 = await FutureAction.create({
-            tenantId,
-            orderId: orderForFA3._id,
-            requiereAccionFutura: true,
-            tipoAccionFutura: "presentacionDocumento",
-            descripcionAccion: "Presentar certificado médico que justifique la ausencia",
-            responsableAccion: "usuario",
-            documentoRequerido: "Certificado médico escaneado",
-            fechaCreacionAccion: orderForFA3.requestedAt,
-            estadoAccion: "pendiente",
-          });
-          orderForFA3.requiereAccionFutura = true;
-          orderForFA3.futureActionId = fa3._id as any;
-          await orderForFA3.save();
-        }
-
-        await FutureAction.create({
+        const fa1 = await FutureAction.create({
           tenantId,
-          orderId: new Types.ObjectId(),
+          orderId: order1._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "presentacionDocumento",
+          descripcionAccion: "Presentar certificado médico que justifique la ausencia por enfermedad",
+          responsableAccion: "usuario",
+          documentoRequerido: "Certificado médico original o escaneado",
+          fechaCreacionAccion: order1.requestedAt,
+          estadoAccion: "cumplida",
+        });
+        order1.futureActionId = fa1._id as any;
+        await order1.save();
+
+        const fa2 = await FutureAction.create({
+          tenantId,
+          orderId: order2._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "presentacionDocumento",
+          descripcionAccion: "Presentar certificado de inscripción o constancia de examen",
+          responsableAccion: "usuario",
+          documentoRequerido: "Certificado de alumno regular y constancia de examen",
+          fechaCreacionAccion: order2.requestedAt,
+          estadoAccion: "pendiente",
+        });
+        order2.futureActionId = fa2._id as any;
+        await order2.save();
+
+        const limitDate3 = new Date();
+        limitDate3.setDate(limitDate3.getDate() + 30);
+        const fa3 = await FutureAction.create({
+          tenantId,
+          orderId: order3._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "plazoDias",
+          descripcionAccion: "El monto será descontado en 3 cuotas mensuales según lo acordado",
+          responsableAccion: "usuario",
+          plazoDias: 30,
+          fechaLimite: limitDate3,
+          fechaCreacionAccion: order3.requestedAt,
+          estadoAccion: "pendiente",
+        });
+        order3.futureActionId = fa3._id as any;
+        await order3.save();
+
+        const fa4 = await FutureAction.create({
+          tenantId,
+          orderId: order4._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "fechaEspecifica",
+          descripcionAccion: "Comprobantes y facturas originales presentados correctamente",
+          responsableAccion: "usuario",
+          fechaLimite: new Date(2024, 1, 18),
+          fechaCreacionAccion: order4.requestedAt,
+          estadoAccion: "cumplida",
+        });
+        order4.futureActionId = fa4._id as any;
+        await order4.save();
+
+        const fa6 = await FutureAction.create({
+          tenantId,
+          orderId: order6._id,
           requiereAccionFutura: true,
           tipoAccionFutura: "vencimientoSistema",
-          descripcionAccion: "El sistema define automáticamente 7 días para completar encuesta de satisfacción",
+          descripcionAccion: "Confirmar recepción del equipamiento en buen estado",
           responsableAccion: "usuario",
           plazoDias: 7,
           quienDefineVencimiento: "sistema",
-          fechaCreacionAccion: new Date(),
+          fechaLimite: new Date(2024, 0, 22),
+          fechaCreacionAccion: order6.requestedAt,
+          estadoAccion: "cumplida",
+        });
+        order6.futureActionId = fa6._id as any;
+        await order6.save();
+
+        const limitDate7 = new Date();
+        limitDate7.setDate(limitDate7.getDate() + 7);
+        const fa7 = await FutureAction.create({
+          tenantId,
+          orderId: order7._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "vencimientoSistema",
+          descripcionAccion: "Confirmar recepción de los elementos de protección personal",
+          responsableAccion: "usuario",
+          plazoDias: 7,
+          quienDefineVencimiento: "sistema",
+          fechaLimite: limitDate7,
+          fechaCreacionAccion: order7.requestedAt,
           estadoAccion: "pendiente",
         });
+        order7.futureActionId = fa7._id as any;
+        await order7.save();
 
-        await FutureAction.create({
+        const fa9 = await FutureAction.create({
           tenantId,
-          orderId: new Types.ObjectId(),
+          orderId: order9._id,
           requiereAccionFutura: true,
           tipoAccionFutura: "vencimientoInterno",
-          descripcionAccion: "El área de RRHH debe revisar y asignar fecha de vencimiento para capacitación",
+          descripcionAccion: "El área de RRHH debe evaluar la solicitud y definir si es viable el cambio de horario",
           responsableAccion: "area_interna",
           quienDefineVencimiento: "area_interna",
-          fechaCreacionAccion: new Date(),
+          fechaCreacionAccion: order9.requestedAt,
           estadoAccion: "en_revision",
         });
+        order9.futureActionId = fa9._id as any;
+        await order9.save();
 
-        await FutureAction.create({
-          tenantId,
-          orderId: new Types.ObjectId(),
-          requiereAccionFutura: true,
-          tipoAccionFutura: "sinVencimiento",
-          descripcionAccion: "Seguimiento de proyecto especial - sin fecha límite pero requiere gestión",
-          responsableAccion: "cliente",
-          fechaCreacionAccion: new Date(),
-          estadoAccion: "pendiente",
-        });
-
-        console.log("✅ FutureAction seeded (6 examples covering all types)");
+        console.log("✅ FutureAction seeded (7 acciones vinculadas con estados variados)");
       } else {
         console.log("✔️ FutureAction already present");
       }
