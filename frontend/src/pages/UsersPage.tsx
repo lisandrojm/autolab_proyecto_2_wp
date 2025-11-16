@@ -11,7 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "users" as const;
@@ -676,7 +676,10 @@ export const UsersPage: React.FC = () => {
             >
               {/* Roles */}
               <div className="mb-3">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Rol/es</label>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faUserShield} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                  Rol/es
+                </label>
                 {user.roles.length === 0 ? (
                   <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
                 ) : (
@@ -693,7 +696,19 @@ export const UsersPage: React.FC = () => {
 
               {/* Cargo y Nivel */}
               <div className="mb-3">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Cargo | Nivel</label>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">
+                  <div className="flex gap-2">
+                    <span className="flex gap-1 w-ful">
+                      <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                      Cargo
+                    </span>
+                    <span>|</span>
+                    <span className="flex gap-1 w-ful">
+                      <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-graykj-400" />
+                      Nivel
+                    </span>
+                  </div>
+                </label>
                 {!(typeof user.positionId === "object" && user.positionId?.name) && !(typeof user.levelId === "object" && user.levelId?.name) ? (
                   <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo ni nivel asignado</span>
                 ) : (
