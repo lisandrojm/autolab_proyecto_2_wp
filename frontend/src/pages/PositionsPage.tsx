@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faIdCard, faEdit, faTrash, faPlus, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
+import { faIdCard, faEdit, faTrash, faPlus, faShieldHalved, faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "positions" as const;
@@ -151,7 +151,7 @@ export const PositionsPage: React.FC = () => {
     <PageLayout
       title="Cargos"
       subtitle="Gestiona los cargos de la organización"
-      faIcon={{ icon: faIdCard }}
+      faIcon={{ icon: faUserTie }}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -262,7 +262,7 @@ export const PositionsPage: React.FC = () => {
             header={{
               title: position.name,
               subtitle: position.description,
-              icon: faIdCard,
+              icon: faUserTie,
             }}
             footer={
               canManage

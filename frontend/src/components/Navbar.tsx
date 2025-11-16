@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -264,9 +264,9 @@ export const MobileNavbar: React.FC = () => {
     if (isSuperAdminTenant) {
       base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
     } else {
-      if (hasPermission("roles:view")) base.push({ path: "/roles", icon: faShield, label: "Roles", scope: "global", count: adminCounts.roles, badge: "Finish", badgeColor: "bg-blue-500" });
-      if (hasPermission("users:view")) base.push({ path: "/positions", icon: faIdCard, label: "Cargos", scope: "global", count: adminCounts.positions, badge: "New", badgeColor: "bg-red-500" });
-      if (hasPermission("users:view")) base.push({ path: "/levels", icon: faBriefcase, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "New", badgeColor: "bg-red-500" });
+      if (hasPermission("roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles, badge: "Finish", badgeColor: "bg-blue-500" });
+      if (hasPermission("users:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions, badge: "New", badgeColor: "bg-red-500" });
+      if (hasPermission("users:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "Next", badgeColor: "bg-orange-400" });
@@ -382,17 +382,11 @@ export const MobileNavbar: React.FC = () => {
     const creativeSuiteItem = menuItems.find((item) => item.isCreativeSuite);
 
     // Partición de items: Admin Usuarios y Admin General
-    const userAdminItems = adminItems.filter((item) =>
-      ['/roles', '/positions', '/levels', '/users'].includes(item.path)
-    );
+    const userAdminItems = adminItems.filter((item) => ["/roles", "/positions", "/levels", "/users"].includes(item.path));
 
-    const generalAdminItems = adminItems.filter((item) =>
-      ['/hr/orders', '/hr/vacation-requests', '/hr/activity-logs', '/hr/calendar-events', '/hr/employee-profiles', '/hr/documents'].includes(item.path)
-    );
+    const generalAdminItems = adminItems.filter((item) => ["/hr/orders", "/hr/vacation-requests", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
-    const otherAdminItems = adminItems.filter((item) =>
-      !userAdminItems.includes(item) && !generalAdminItems.includes(item)
-    );
+    const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {
@@ -456,44 +450,28 @@ export const MobileNavbar: React.FC = () => {
         {/* ADMIN USUARIOS */}
         {userAdminItems.length > 0 && (
           <div className="px-2 mb-2">
-            <button
-              onClick={() => toggleAdminSection('users')}
-              className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2"
-            >
-              <span>Admin <span className="uppercase">Usuarios</span></span>
-              <FontAwesomeIcon
-                icon={faChevronDown}
-                className={`h-3 w-3 transform transition-transform ${openAdminSection === 'users' ? 'rotate-180' : ''}`}
-              />
+            <button onClick={() => toggleAdminSection("users")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+              <span>
+                Admin <span className="uppercase">Usuarios</span>
+              </span>
+              <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "users" ? "rotate-180" : ""}`} />
             </button>
 
-            {openAdminSection === 'users' && (
-              <nav className="space-y-1 pb-2">
-                {userAdminItems.map((item) => renderMenuItem(item))}
-              </nav>
-            )}
+            {openAdminSection === "users" && <nav className="space-y-1 pb-2">{userAdminItems.map((item) => renderMenuItem(item))}</nav>}
           </div>
         )}
 
         {/* ADMIN GENERAL (RRHH) */}
         {generalAdminItems.length > 0 && (
           <div className="px-2 mb-2">
-            <button
-              onClick={() => toggleAdminSection('general')}
-              className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2"
-            >
-              <span>Admin <span className="uppercase">General</span></span>
-              <FontAwesomeIcon
-                icon={faChevronDown}
-                className={`h-3 w-3 transform transition-transform ${openAdminSection === 'general' ? 'rotate-180' : ''}`}
-              />
+            <button onClick={() => toggleAdminSection("general")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+              <span>
+                Admin <span className="uppercase">General</span>
+              </span>
+              <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "general" ? "rotate-180" : ""}`} />
             </button>
 
-            {openAdminSection === 'general' && (
-              <nav className="space-y-1 pb-2">
-                {generalAdminItems.map((item) => renderMenuItem(item))}
-              </nav>
-            )}
+            {openAdminSection === "general" && <nav className="space-y-1 pb-2">{generalAdminItems.map((item) => renderMenuItem(item))}</nav>}
           </div>
         )}
 
@@ -501,9 +479,7 @@ export const MobileNavbar: React.FC = () => {
         {otherAdminItems.length > 0 && (
           <div className="px-2 mb-2">
             <div className="text-gray-500 dark:text-gray-400 text-xs uppercase mb-1">Otros</div>
-            <nav className="space-y-1 pb-2">
-              {otherAdminItems.map((item) => renderMenuItem(item))}
-            </nav>
+            <nav className="space-y-1 pb-2">{otherAdminItems.map((item) => renderMenuItem(item))}</nav>
           </div>
         )}
       </div>

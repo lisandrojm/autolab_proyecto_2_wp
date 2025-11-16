@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartLine, faEdit, faTrash, faPlus, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faEdit, faTrash, faPlus, faShieldHalved, faUserGraduate } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "levels" as const;
@@ -151,7 +151,7 @@ export const LevelsPage: React.FC = () => {
     <PageLayout
       title="Niveles"
       subtitle="Gestiona los niveles de experiencia de la organización"
-      faIcon={{ icon: faChartLine }}
+      faIcon={{ icon: faUserGraduate }}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -262,7 +262,7 @@ export const LevelsPage: React.FC = () => {
             header={{
               title: level.name,
               subtitle: level.description,
-              icon: faChartLine,
+              icon: faUserGraduate,
             }}
             footer={
               canManage
