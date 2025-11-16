@@ -222,19 +222,22 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     if (data.categoryId) {
       const category = await OrderCategory.findById(data.categoryId);
 
-      if (category?.requiresAction && category.futureActionType && data.actionCompleted) {
+      if (category?.requiresAction && data.actionCompleted) {
+        // Default to "sinVencimiento" if futureActionType is not set
+        const actionType = category.futureActionType || "sinVencimiento";
+
         const futureActionData: any = {
           tenantId: req.tenantObjectId,
           orderId: order._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: category.futureActionType,
+          tipoAccionFutura: actionType,
           descripcionAccion: category.actionText || "Acción requerida por categoría",
           responsableAccion: "usuario",
           estadoAccion: "pendiente",
           fechaCreacionAccion: new Date(),
         };
 
-        switch (category.futureActionType) {
+        switch (actionType) {
           case "plazoDias":
             if (data.futureActionPlazoDias) {
               futureActionData.plazoDias = data.futureActionPlazoDias;

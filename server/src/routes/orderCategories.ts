@@ -28,7 +28,7 @@ const createCategorySchema = z.object({
   config: configSchema.optional(),
   requiresAction: z.boolean().default(false),
   actionText: z.string().max(500).optional(),
-  futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).optional(),
+  futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).default("sinVencimiento").optional(),
   plazoDias: z.number().int().min(1).max(365).optional(),
   fechaLimite: z.string().optional(),
   documentoRequerido: z.string().max(200).optional(),
@@ -42,17 +42,6 @@ const createCategorySchema = z.object({
   {
     message: "actionText is required when requiresAction is true",
     path: ["actionText"],
-  }
-).refine(
-  (data) => {
-    if (data.requiresAction && !data.futureActionType) {
-      return false;
-    }
-    return true;
-  },
-  {
-    message: "futureActionType is required when requiresAction is true",
-    path: ["futureActionType"],
   }
 ).refine(
   (data) => {
@@ -113,17 +102,6 @@ const updateCategorySchema = z.object({
   {
     message: "actionText is required when requiresAction is true",
     path: ["actionText"],
-  }
-).refine(
-  (data) => {
-    if (data.requiresAction && !data.futureActionType) {
-      return false;
-    }
-    return true;
-  },
-  {
-    message: "futureActionType is required when requiresAction is true",
-    path: ["futureActionType"],
   }
 ).refine(
   (data) => {
@@ -268,11 +246,18 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const nextSortOrder = maxOrderCategory ? maxOrderCategory.sortOrder + 1 : 1;
 
-    const category = new OrderCategory({
+    // If requiresAction is true but futureActionType is not provided, default to "sinVencimiento"
+    const categoryData: any = {
       tenantId: req.tenantObjectId,
       ...data,
       sortOrder: nextSortOrder,
-    });
+    };
+
+    if (categoryData.requiresAction && !categoryData.futureActionType) {
+      categoryData.futureActionType = "sinVencimiento";
+    }
+
+    const category = new OrderCategory(categoryData);
 
     await category.save();
 

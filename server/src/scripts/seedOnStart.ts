@@ -479,6 +479,7 @@ export async function seedOnStart() {
         sortOrder: 1,
         requiresAction: true,
         actionText: "Me comprometo a presentar el certificado correspondiente",
+        futureActionType: "sinVencimiento",
         config: {
           subtipos: [
             { id: "licencia_medica", label: "Licencia Médica", requiere_certificado: true },
@@ -498,6 +499,7 @@ export async function seedOnStart() {
         sortOrder: 2,
         requiresAction: true,
         actionText: "Acepto el descuento en cuotas según el plazo acordado",
+        futureActionType: "sinVencimiento",
         config: {
           subtipos: [
             { id: "adelanto_sueldo", label: "Adelanto de Sueldo" },
@@ -515,6 +517,7 @@ export async function seedOnStart() {
         sortOrder: 3,
         requiresAction: true,
         actionText: "Adjunto todos los comprobantes y facturas originales",
+        futureActionType: "sinVencimiento",
       });
 
       const catEquipamiento = await OrderCategory.create({
@@ -526,6 +529,7 @@ export async function seedOnStart() {
         sortOrder: 4,
         requiresAction: true,
         actionText: "Me comprometo a confirmar la recepción en buen estado",
+        futureActionType: "sinVencimiento",
         config: {
           subtipos: [
             { id: "tecnologia", label: "Tecnología" },

@@ -95,7 +95,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     dateMode: "single",
     requiresAction: false,
     actionText: "",
-    futureActionType: "",
+    futureActionType: "sinVencimiento",
     subtipos: [],
     plazoDias: undefined,
     fechaLimite: undefined,
@@ -148,7 +148,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       dateMode: "single",
       requiresAction: false,
       actionText: "",
-      futureActionType: "",
+      futureActionType: "sinVencimiento",
       subtipos: [],
       plazoDias: undefined,
       fechaLimite: undefined,
@@ -167,7 +167,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       dateMode: category.dateMode || "single",
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
-      futureActionType: category.futureActionType || "",
+      futureActionType: category.futureActionType || "sinVencimiento",
       subtipos: category.config?.subtipos || [],
       plazoDias: category.plazoDias,
       fechaLimite: category.fechaLimite,
@@ -622,7 +622,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                       setFormData({
                         ...formData,
                         requiresAction: e.target.checked,
-                        futureActionType: e.target.checked ? formData.futureActionType : "",
+                        futureActionType: e.target.checked ? (formData.futureActionType || "sinVencimiento") : "",
                         actionText: e.target.checked ? formData.actionText : "",
                         plazoDias: e.target.checked ? formData.plazoDias : undefined,
                         fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
@@ -646,13 +646,12 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         </button>
                       </div>
                       <select required={formData.requiresAction} value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-                        <option value="">Selecciona un tipo de acción...</option>
+                        <option value="sinVencimiento">{tipoAccionFuturaLabels.sinVencimiento}</option>
                         <option value="plazoDias">{tipoAccionFuturaLabels.plazoDias}</option>
                         <option value="fechaEspecifica">{tipoAccionFuturaLabels.fechaEspecifica}</option>
                         <option value="presentacionDocumento">{tipoAccionFuturaLabels.presentacionDocumento}</option>
                         <option value="vencimientoSistema">{tipoAccionFuturaLabels.vencimientoSistema}</option>
                         <option value="vencimientoInterno">{tipoAccionFuturaLabels.vencimientoInterno}</option>
-                        <option value="sinVencimiento">{tipoAccionFuturaLabels.sinVencimiento}</option>
                       </select>
                     </div>
 

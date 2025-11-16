@@ -78,6 +78,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     futureActionType: {
       type: String,
       enum: ["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"],
+      default: "sinVencimiento",
       trim: true
     },
     plazoDias: { type: Number, min: 1, max: 365 },
