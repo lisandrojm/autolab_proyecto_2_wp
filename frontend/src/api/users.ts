@@ -31,6 +31,16 @@ export interface User {
   /** ← ahora viaja como OBJETO (no tenantId string) */
   tenant?: TenantRef;
   tenantId?: string;
+  positionId?: string | {
+    _id: string;
+    name: string;
+    description?: string;
+  };
+  levelId?: string | {
+    _id: string;
+    name: string;
+    description?: string;
+  };
   isActive: boolean;
   lastLoginAt?: string;
   createdAt: string;
@@ -66,6 +76,34 @@ function normalizeUser(raw: any): User {
   const firstName = raw?.firstName && String(raw.firstName).trim() !== "" ? String(raw.firstName) : undefined;
   const lastName = raw?.lastName && String(raw.lastName).trim() !== "" ? String(raw.lastName) : undefined;
 
+  // Normalizar positionId
+  let positionId: User['positionId'] = undefined;
+  if (raw?.positionId) {
+    if (typeof raw.positionId === 'string') {
+      positionId = raw.positionId;
+    } else if (typeof raw.positionId === 'object' && raw.positionId._id) {
+      positionId = {
+        _id: String(raw.positionId._id),
+        name: String(raw.positionId.name ?? ''),
+        description: raw.positionId.description ?? undefined,
+      };
+    }
+  }
+
+  // Normalizar levelId
+  let levelId: User['levelId'] = undefined;
+  if (raw?.levelId) {
+    if (typeof raw.levelId === 'string') {
+      levelId = raw.levelId;
+    } else if (typeof raw.levelId === 'object' && raw.levelId._id) {
+      levelId = {
+        _id: String(raw.levelId._id),
+        name: String(raw.levelId.name ?? ''),
+        description: raw.levelId.description ?? undefined,
+      };
+    }
+  }
+
   return {
     _id: String(raw?._id ?? ""),
     email: String(raw?.email ?? ""),
@@ -89,6 +127,8 @@ function normalizeUser(raw: any): User {
       : undefined,
     tenant: normalizeTenant(raw),
     tenantId: raw?.tenantId ?? undefined,
+    positionId,
+    levelId,
     isActive: Boolean(raw?.isActive),
     lastLoginAt: raw?.lastLoginAt ? String(raw.lastLoginAt) : undefined,
     createdAt: String(raw?.createdAt ?? ""),
@@ -147,7 +187,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[] }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string; levelId?: string }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -162,6 +202,8 @@ class UsersAPI {
       lastName?: string;
       isActive?: boolean;
       roles?: string[];
+      positionId?: string;
+      levelId?: string;
     }
   ): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}`, data, { headers: this.getHeaders() });
