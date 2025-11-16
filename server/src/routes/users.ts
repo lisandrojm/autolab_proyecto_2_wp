@@ -277,9 +277,36 @@ router.patch("/:id",
         data.roles = roleObjectIds.map(id => id.toString());
       }
 
+      // Preparar updateData: usar $set para campos con valor y $unset para campos undefined
+      const updateData: any = { $set: {} };
+      const fieldsToUnset: string[] = [];
+
+      Object.keys(data).forEach((key) => {
+        if (data[key] === undefined || data[key] === null || data[key] === '') {
+          // Si el campo es undefined, null o vacío, lo eliminamos de la DB
+          fieldsToUnset.push(key);
+        } else {
+          // Si tiene valor, lo actualizamos
+          updateData.$set[key] = data[key];
+        }
+      });
+
+      // Si hay campos para eliminar, agregamos $unset
+      if (fieldsToUnset.length > 0) {
+        updateData.$unset = {};
+        fieldsToUnset.forEach(field => {
+          updateData.$unset[field] = '';
+        });
+      }
+
+      // Si no hay nada en $set, lo eliminamos
+      if (Object.keys(updateData.$set).length === 0) {
+        delete updateData.$set;
+      }
+
       const user = await User.findOneAndUpdate(
         { _id: req.params.id, tenantId: req.tenantObjectId },
-        data,
+        updateData,
         { new: true, runValidators: true }
       )
         .select('-password')

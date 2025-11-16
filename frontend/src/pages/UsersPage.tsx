@@ -247,10 +247,19 @@ export const UsersPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const submitData = { ...formData };
+      const submitData: any = { ...formData };
+
+      // Limpiar campos vacíos o undefined para que se guarden correctamente como null/undefined en DB
+      if (!submitData.positionId || submitData.positionId === '') {
+        submitData.positionId = undefined;
+      }
+      if (!submitData.levelId || submitData.levelId === '') {
+        submitData.levelId = undefined;
+      }
+
       if (editingUser) {
         // no enviar password vacío al editar
-        delete (submitData as any).password;
+        delete submitData.password;
         await usersAPI.update(editingUser._id, submitData);
         sweetAlert.success("Usuario actualizado", "Los cambios se han guardado correctamente");
       } else {
