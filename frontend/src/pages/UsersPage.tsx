@@ -189,10 +189,7 @@ export const UsersPage: React.FC = () => {
     if (showModal && modalMode === "edit") {
       // Si positionId está vacío pero levelId tiene valor, resetear levelId
       if (!formData.positionId && formData.levelId) {
-        sweetAlert.warning(
-          "Nivel eliminado",
-          "Al cambiar a 'Sin cargo', el nivel asignado será eliminado. Deberá asignar un nuevo nivel con el nuevo cargo."
-        );
+        sweetAlert.warning("Nivel eliminado", "Al cambiar a 'Sin cargo', el nivel asignado será eliminado. Deberá asignar un nuevo nivel con el nuevo cargo.");
         setFormData((prev) => ({ ...prev, levelId: undefined }));
       }
     }
@@ -561,11 +558,7 @@ export const UsersPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    {!formData.positionId && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Selecciona un cargo para poder asignar un nivel
-                      </p>
-                    )}
+                    {!formData.positionId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un cargo para poder asignar un nivel</p>}
                   </div>
                   {formData.positionId && (
                     <div>
@@ -680,22 +673,9 @@ export const UsersPage: React.FC = () => {
                   : undefined
               }
             >
-              {/* Cargo y Nivel */}
-              <div className="mb-3">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Cargo y Nivel</label>
-                {!(typeof user.positionId === "object" && user.positionId?.name) && !(typeof user.levelId === "object" && user.levelId?.name) ? (
-                  <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo ni nivel asignado</span>
-                ) : (
-                  <div className="flex flex-wrap gap-1 items-center">
-                    {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : null}
-                    {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-300">{user.levelId.name}</span> : typeof user.positionId === "object" && user.positionId?.name ? <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span> : null}
-                  </div>
-                )}
-              </div>
-
               {/* Roles */}
               <div className="mb-3">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Roles</label>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Rol/es</label>
                 {user.roles.length === 0 ? (
                   <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
                 ) : (
@@ -706,6 +686,19 @@ export const UsersPage: React.FC = () => {
                       </span>
                     ))}
                     {user.roles.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{user.roles.length - 3} más</span>}
+                  </div>
+                )}
+              </div>
+
+              {/* Cargo y Nivel */}
+              <div className="mb-3">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Cargo | Nivel</label>
+                {!(typeof user.positionId === "object" && user.positionId?.name) && !(typeof user.levelId === "object" && user.levelId?.name) ? (
+                  <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo ni nivel asignado</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1 items-center">
+                    {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : null}
+                    {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-teal-100 dark:bg-blue-900 text-teal-800 dark:text-blue-300">{user.levelId.name}</span> : typeof user.positionId === "object" && user.positionId?.name ? <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span> : null}
                   </div>
                 )}
               </div>
