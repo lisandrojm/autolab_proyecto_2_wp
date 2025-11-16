@@ -122,7 +122,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       setCategories(data);
     } catch (error) {
       console.error("Error loading categories:", error);
-      sweetAlert.error("Error", "No se pudieron cargar las categorías");
+      sweetAlert.error("Error", "No se pudieron cargar los tipos de pedidos");
     } finally {
       setLoading(false);
     }
@@ -313,7 +313,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
     try {
       await orderCategoriesAPI.reorder(reorderData);
-      sweetAlert.success("Orden guardado", "El orden de las categorías se actualizó correctamente");
+      sweetAlert.success("Orden guardado", "El orden de los tipos de pedidos se actualizó correctamente");
       setIsReorderMode(false);
       setTempCategories([]);
       loadCategories();
@@ -351,39 +351,17 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       case "plazoDias":
         return (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Plazo en Días *
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="365"
-              value={formData.plazoDias || ""}
-              onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })}
-              required
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              placeholder="Ej: 10"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              El sistema calculará automáticamente la fecha límite
-            </p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo en Días *</label>
+            <input type="number" min="1" max="365" value={formData.plazoDias || ""} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: 10" />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema calculará automáticamente la fecha límite</p>
           </div>
         );
 
       case "fechaEspecifica":
         return (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Fecha Límite *
-            </label>
-            <input
-              type="date"
-              value={formData.fechaLimite || ""}
-              onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })}
-              required
-              min={new Date().toISOString().split("T")[0]}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite *</label>
+            <input type="date" value={formData.fechaLimite || ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
           </div>
         );
 
@@ -391,29 +369,12 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         return (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Documento Requerido *
-              </label>
-              <input
-                type="text"
-                value={formData.documentoRequerido || ""}
-                onChange={(e) => setFormData({ ...formData, documentoRequerido: e.target.value })}
-                required
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: DNI escaneado, Certificado médico..."
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Documento Requerido *</label>
+              <input type="text" value={formData.documentoRequerido || ""} onChange={(e) => setFormData({ ...formData, documentoRequerido: e.target.value })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: DNI escaneado, Certificado médico..." />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Fecha Límite (Opcional)
-              </label>
-              <input
-                type="date"
-                value={formData.fechaLimite || ""}
-                onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })}
-                min={new Date().toISOString().split("T")[0]}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite (Opcional)</label>
+              <input type="date" value={formData.fechaLimite || ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
         );
@@ -421,41 +382,23 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       case "vencimientoSistema":
         return (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Plazo Predefinido (Días) *
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="365"
-              value={formData.plazoDias || 7}
-              onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || 7 })}
-              required
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              El sistema define automáticamente este plazo según reglas internas
-            </p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo Predefinido (Días) *</label>
+            <input type="number" min="1" max="365" value={formData.plazoDias || 7} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || 7 })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema define automáticamente este plazo según reglas internas</p>
           </div>
         );
 
       case "vencimientoInterno":
         return (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              Un área interna debe evaluar y asignar una fecha de vencimiento. El pedido
-              quedará en estado "En Revisión" hasta que se cargue la fecha límite.
-            </p>
+            <p className="text-sm text-gray-700 dark:text-gray-200">Un área interna debe evaluar y asignar una fecha de vencimiento. El pedido quedará en estado "En Revisión" hasta que se cargue la fecha límite.</p>
           </div>
         );
 
       case "sinVencimiento":
         return (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              No tiene fecha límite, pero debe ser gestionada y marcada como cumplida
-              manualmente.
-            </p>
+            <p className="text-sm text-gray-700 dark:text-gray-200">No tiene fecha límite, pero debe ser gestionada y marcada como cumplida manualmente.</p>
           </div>
         );
 
@@ -466,8 +409,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Categorías de Pedidos"
-      subtitle="Administra las categorías que se muestran en el formulario de pedidos"
+      title="Gestión de Tipos de Pedidos"
+      subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
       faIcon={{ icon: faList }}
       onBack={() => navigate("/hr/orders")}
       headerActions={
@@ -485,7 +428,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
             <>
               <button onClick={openCreateModal} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2">
                 <FontAwesomeIcon icon={faPlus} />
-                <span>Nueva Categoría</span>
+                <span>Nuevo Tipo de Pedido</span>
               </button>
               <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 <FontAwesomeIcon icon={faGripVertical} />
@@ -539,7 +482,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               {categories.length === 0 && (
                 <div className="text-center py-12">
                   <FontAwesomeIcon icon={faList} className="h-16 w-16 text-gray-400 mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">No hay categorías registradas</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">No hay los tipos de pedido registradas</p>
                   <button onClick={openCreateModal} className="btn-primary">
                     Crear Primera Categoría
                   </button>
@@ -554,7 +497,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{editingCategory ? "Editar Categoría" : "Nueva Categoría"}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{editingCategory ? "Editar Tipo de Pedido" : "Nuevo Tipo de Pedido"}</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -571,12 +514,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Categoría *</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowCategoryTypeInfo(true)}
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                    title="Ver información"
-                  >
+                  <button type="button" onClick={() => setShowCategoryTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
@@ -592,21 +530,11 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modo de Fecha *</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowDateModeInfo(true)}
-                      className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                      title="Ver información"
-                    >
+                    <button type="button" onClick={() => setShowDateModeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                     </button>
                   </div>
-                  <select
-                    required
-                    value={formData.dateMode}
-                    onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select required value={formData.dateMode} onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                     <option value="single">Fecha única</option>
                     <option value="range">Rango de fechas (Desde - Hasta)</option>
                   </select>
@@ -616,13 +544,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subcategorías (opcional)</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowSubcategoriesInfo(true)}
-                      className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                      title="Ver información"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Opciones del Pedido (opcional)</label>
+                    <button type="button" onClick={() => setShowSubcategoriesInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                     </button>
                   </div>
@@ -635,9 +558,9 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         subtipos: [...formData.subtipos, { id: newId, label: "" }],
                       });
                     }}
-                    className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-500 text-blue-700 dark:text-white rounded hover:bg-blue-200"
+                    className="text-sm px-2 py-1 bg-blue-100 dark:bg-blue-500 text-blue-700 dark:text-white rounded hover:bg-blue-200"
                   >
-                    + Agregar Subcategoría
+                    + Agregar Opciones
                   </button>
                 </div>
 
@@ -680,15 +603,17 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                     type="checkbox"
                     id="requiresAction"
                     checked={formData.requiresAction}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      requiresAction: e.target.checked,
-                      futureActionType: e.target.checked ? formData.futureActionType : "",
-                      actionText: e.target.checked ? formData.actionText : "",
-                      plazoDias: e.target.checked ? formData.plazoDias : undefined,
-                      fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
-                      documentoRequerido: e.target.checked ? formData.documentoRequerido : undefined,
-                    })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        requiresAction: e.target.checked,
+                        futureActionType: e.target.checked ? formData.futureActionType : "",
+                        actionText: e.target.checked ? formData.actionText : "",
+                        plazoDias: e.target.checked ? formData.plazoDias : undefined,
+                        fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
+                        documentoRequerido: e.target.checked ? formData.documentoRequerido : undefined,
+                      })
+                    }
                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
                   <label htmlFor="requiresAction" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -701,21 +626,11 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Acción Futura *</label>
-                        <button
-                          type="button"
-                          onClick={() => setShowActionTypeInfo(true)}
-                          className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                          title="Ver información"
-                        >
+                        <button type="button" onClick={() => setShowActionTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
                           <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                         </button>
                       </div>
-                      <select
-                        required={formData.requiresAction}
-                        value={formData.futureActionType}
-                        onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)}
-                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                      >
+                      <select required={formData.requiresAction} value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                         <option value="">Selecciona un tipo de acción...</option>
                         <option value="plazoDias">{tipoAccionFuturaLabels.plazoDias}</option>
                         <option value="fechaEspecifica">{tipoAccionFuturaLabels.fechaEspecifica}</option>
@@ -731,12 +646,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto de la acción *</label>
-                        <button
-                          type="button"
-                          onClick={() => setShowActionTextInfo(true)}
-                          className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                          title="Ver información"
-                        >
+                        <button type="button" onClick={() => setShowActionTextInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
                           <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                         </button>
                       </div>
@@ -766,34 +676,21 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         </div>
       )}
 
-      <InfoModal
-        isOpen={showCategoryTypeInfo}
-        onClose={() => setShowCategoryTypeInfo(false)}
-        title="Tipo de Categoría"
-        size="sm"
-      >
+      <InfoModal isOpen={showCategoryTypeInfo} onClose={() => setShowCategoryTypeInfo(false)} title="Tipo de Categoría" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
           <p>Define qué tipo de input se mostrará en el formulario móvil cuando el usuario seleccione esta categoría.</p>
         </div>
       </InfoModal>
 
-      <InfoModal
-        isOpen={showSubcategoriesInfo}
-        onClose={() => setShowSubcategoriesInfo(false)}
-        title="Subcategorías"
-        size="sm"
-      >
+      <InfoModal isOpen={showSubcategoriesInfo} onClose={() => setShowSubcategoriesInfo(false)} title="Opciones del Pedido" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
-          <p>Estas subcategorías aparecerán luego como un <strong>select obligatorio</strong> cuando el usuario elija esta categoría en el formulario móvil.</p>
+          <p>
+            Estas opciones aparecerán luego como un <strong>select obligatorio</strong> cuando el usuario elija este tipo de pedido en el formulario móvil.
+          </p>
         </div>
       </InfoModal>
 
-      <InfoModal
-        isOpen={showActionTypeInfo}
-        onClose={() => setShowActionTypeInfo(false)}
-        title="Tipos de Acción Futura"
-        size="md"
-      >
+      <InfoModal isOpen={showActionTypeInfo} onClose={() => setShowActionTypeInfo(false)} title="Tipos de Acción Futura" size="md">
         <div className="text-gray-700 dark:text-gray-300 space-y-3">
           <p className="font-medium mb-3">Cada tipo de acción futura tiene características específicas:</p>
           <div className="space-y-2">
@@ -825,24 +722,14 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         </div>
       </InfoModal>
 
-      <InfoModal
-        isOpen={showActionTextInfo}
-        onClose={() => setShowActionTextInfo(false)}
-        title="Texto de la Acción"
-        size="sm"
-      >
+      <InfoModal isOpen={showActionTextInfo} onClose={() => setShowActionTextInfo(false)} title="Texto de la Acción" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
           <p>Este texto aparecerá junto a un checkbox que el usuario debe marcar para confirmar que completará la acción requerida.</p>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Ejemplo: "Me comprometo a adjuntar los comprobantes de gastos"</p>
         </div>
       </InfoModal>
 
-      <InfoModal
-        isOpen={showDateModeInfo}
-        onClose={() => setShowDateModeInfo(false)}
-        title="Modo de Fecha"
-        size="sm"
-      >
+      <InfoModal isOpen={showDateModeInfo} onClose={() => setShowDateModeInfo(false)} title="Modo de Fecha" size="sm">
         <div className="text-gray-700 dark:text-gray-300 space-y-3">
           <p>Define cómo el usuario ingresará la fecha en el formulario de pedidos:</p>
           <div>
