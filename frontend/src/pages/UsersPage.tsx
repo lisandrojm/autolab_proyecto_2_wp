@@ -189,18 +189,10 @@ export const UsersPage: React.FC = () => {
     setModalMode("edit");
 
     // Extraer positionId correctamente (puede ser string u objeto)
-    const positionId = typeof user.positionId === 'string'
-      ? user.positionId
-      : typeof user.positionId === 'object' && user.positionId?._id
-        ? user.positionId._id
-        : undefined;
+    const positionId = typeof user.positionId === "string" ? user.positionId : typeof user.positionId === "object" && user.positionId?._id ? user.positionId._id : undefined;
 
     // Extraer levelId correctamente (puede ser string u objeto)
-    const levelId = typeof user.levelId === 'string'
-      ? user.levelId
-      : typeof user.levelId === 'object' && user.levelId?._id
-        ? user.levelId._id
-        : undefined;
+    const levelId = typeof user.levelId === "string" ? user.levelId : typeof user.levelId === "object" && user.levelId?._id ? user.levelId._id : undefined;
 
     setFormData({
       email: user.email,
@@ -251,10 +243,10 @@ export const UsersPage: React.FC = () => {
 
       // Enviar null explícitamente cuando se selecciona "Sin cargo" o "Sin nivel"
       // Esto permite que el backend elimine el campo de la DB
-      if (!submitData.positionId || submitData.positionId === '') {
+      if (!submitData.positionId || submitData.positionId === "") {
         submitData.positionId = null;
       }
-      if (!submitData.levelId || submitData.levelId === '') {
+      if (!submitData.levelId || submitData.levelId === "") {
         submitData.levelId = null;
       }
 
@@ -406,17 +398,13 @@ export const UsersPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+              <div className="flex items-center">
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Cargo</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {typeof viewUser.positionId === 'object' && viewUser.positionId?.name ? viewUser.positionId.name : "Sin cargo"}
-                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.positionId === "object" && viewUser.positionId?.name ? viewUser.positionId.name : "Sin cargo"}</p>
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Nivel</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {typeof viewUser.levelId === 'object' && viewUser.levelId?.name ? viewUser.levelId.name : "Sin nivel"}
-                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.levelId === "object" && viewUser.levelId?.name ? viewUser.levelId.name : "Sin nivel"}</p>
               </div>
             </div>
 
@@ -545,11 +533,7 @@ export const UsersPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>
-                    <select
-                      value={formData.positionId || ""}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined }))}
-                      className="input-field"
-                    >
+                    <select value={formData.positionId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined }))} className="input-field">
                       <option value="">Sin cargo</option>
                       {positions.map((position) => (
                         <option key={position._id} value={position._id}>
@@ -560,11 +544,7 @@ export const UsersPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
-                    <select
-                      value={formData.levelId || ""}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))}
-                      className="input-field"
-                    >
+                    <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field">
                       <option value="">Sin nivel</option>
                       {levels.map((level) => (
                         <option key={level._id} value={level._id}>
@@ -676,22 +656,12 @@ export const UsersPage: React.FC = () => {
               {/* Cargo y Nivel */}
               <div className="mb-3">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Cargo y Nivel</label>
-                {!(typeof user.positionId === 'object' && user.positionId?.name) && !(typeof user.levelId === 'object' && user.levelId?.name) ? (
+                {!(typeof user.positionId === "object" && user.positionId?.name) && !(typeof user.levelId === "object" && user.levelId?.name) ? (
                   <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo ni nivel asignado</span>
                 ) : (
-                  <div className="flex flex-wrap gap-1">
-                    {typeof user.positionId === 'object' && user.positionId?.name ? (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                        {user.positionId.name}
-                      </span>
-                    ) : null}
-                    {typeof user.levelId === 'object' && user.levelId?.name ? (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-300">
-                        {user.levelId.name}
-                      </span>
-                    ) : (typeof user.positionId === 'object' && user.positionId?.name) ? (
-                      <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>
-                    ) : null}
+                  <div className="flex flex-wrap gap-1 items-center">
+                    {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : null}
+                    {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-300">{user.levelId.name}</span> : typeof user.positionId === "object" && user.positionId?.name ? <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span> : null}
                   </div>
                 )}
               </div>
