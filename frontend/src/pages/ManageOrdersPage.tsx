@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faShoppingCart, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -322,12 +322,6 @@ export const ManageOrdersPage: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información del Pedido</h3>
 
-                    <div className="mb-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(selectedOrder.status).style}`}>
-                        {getStatusBadge(selectedOrder.status).label}
-                      </span>
-                    </div>
-
                     {selectedOrder.photoUrl && (
                       <div className="mb-4">
                         <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
@@ -335,6 +329,17 @@ export const ManageOrdersPage: React.FC = () => {
                     )}
 
                     <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <FontAwesomeIcon icon={faClipboardList} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <div className="flex flex-col gap-1">
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Estado</p>
+                          </div>
+                          <div>
+                            <p className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</p>
+                          </div>
+                        </div>
+                      </div>
                       <div className="flex items-start gap-3">
                         <FontAwesomeIcon icon={faShoppingCart} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
                         <div className="flex-1">
