@@ -73,6 +73,23 @@ export const sweetAlert = {
     });
   },
 
+  warning: (title: string, text?: string) => {
+    return Swal.fire({
+      icon: "warning",
+      title,
+      text,
+      timer: 3000,
+      showConfirmButton: false,
+      toast: true,
+      position: "top-end",
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener("mouseenter", Swal.stopTimer);
+        toast.addEventListener("mouseleave", Swal.resumeTimer);
+      },
+    });
+  },
+
   favoriteToggle: (isFavorite: boolean, itemName?: string) => {
     return Swal.fire({
       toast: true,
