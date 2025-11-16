@@ -211,7 +211,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   return (
     <div className="flex-1 pb-24">
-      <div className="sticky top-0 z-10 bg-background-light dark:bg-background-dark p-4 pb-2">
+      <div className="sticky top-0 z-10 p-4 pb-2 order-t border-b border-slate-800 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800">

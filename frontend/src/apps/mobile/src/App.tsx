@@ -133,7 +133,7 @@ function App() {
 
   return (
     <div className="w-full dark:bg-gray-900 flex justify-center">
-      <div className="relative flex min-h-screen border dark:border-gray-800 flex-col bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-display xl:w-1/2">
+      <div className="relative flex min-h-screen flex-col bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-display w-full">
         {showTopBar && <TopBar title={getTitle(currentView)} hasNotifications={true} onNotificationClick={() => alert("Notificaciones")} userRole={userRole} userName={user?.firstName || "Usuario"} />}
         {renderView()}
         <BottomNav currentView={currentView} onNavigate={setCurrentView} />
