@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Package, CheckCircle, Clock, XCircle, Truck, AlertCircle, Camera, Image as ImageIcon, X } from "lucide-react";
+import { ArrowLeft, Package, CheckCircle, Clock, XCircle, Truck, Camera, Image as ImageIcon, X } from "lucide-react";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
 import { OrderCategory } from "../../../../api/orderCategories";
 import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
+import { sweetAlert } from "../utils/sweetAlert";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -21,7 +22,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +92,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        setSubmitError("La imagen debe ser menor a 10MB");
+        sweetAlert.warning("Imagen muy grande", "La imagen debe ser menor a 10MB");
         return;
       }
       setPhoto(file);
@@ -114,28 +114,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setSubmitError(null);
 
     try {
       const subcategoryLabel = selectedCategory?.config?.subtipos?.find((s) => s.id === subcategoryId)?.label;
 
-      // Only include photo if category allows it
       const shouldIncludePhoto = selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros";
 
-      // Validate and prepare dynamicValue
       let validDynamicValue: any = undefined;
 
       if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
-        console.log("Date range validation - dynamicValue:", dynamicValue);
-        console.log("fechaDesde:", dynamicValue?.fechaDesde);
-        console.log("fechaHasta:", dynamicValue?.fechaHasta);
-
-        // Check if dates are provided (not empty strings)
         const hasDesde = dynamicValue?.fechaDesde && dynamicValue.fechaDesde.trim() !== "";
         const hasHasta = dynamicValue?.fechaHasta && dynamicValue.fechaHasta.trim() !== "";
 
         if (!hasDesde || !hasHasta) {
-          setSubmitError("Debes completar ambas fechas (Desde y Hasta)");
+          await sweetAlert.warning("Campos incompletos", "Debes completar ambas fechas (Desde y Hasta)");
           setSubmitting(false);
           return;
         }
@@ -144,13 +136,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
           fechaDesde: dynamicValue.fechaDesde.trim(),
           fechaHasta: dynamicValue.fechaHasta.trim()
         };
-        console.log("validDynamicValue:", validDynamicValue);
       } else if (dynamicValue !== undefined && dynamicValue !== null && dynamicValue !== "") {
-        // For other types, include dynamicValue if it has a value
         validDynamicValue = dynamicValue;
       }
-
-      console.log("Sending createOrder with validDynamicValue:", validDynamicValue);
 
       await createOrder({
         title: product,
@@ -166,12 +154,12 @@ export default function Orders({ onNavigate }: OrdersProps) {
         futureActionDocumento: futureActionDocumento || undefined,
         photo: shouldIncludePhoto ? photo : null,
       });
+      await sweetAlert.success('¡Pedido creado!', 'Tu pedido ha sido enviado correctamente');
       setShowForm(false);
       setProduct("");
       setDescription("");
       setSubcategoryId("");
 
-      // Reset dynamicValue based on current category type
       if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
         setDynamicValue({ fechaDesde: "", fechaHasta: "" });
       } else {
@@ -180,7 +168,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
       setActionCompleted(false);
 
-      // Reset plazoDias to category default if available
       if (selectedCategory?.futureActionType === "plazoDias" && selectedCategory.plazoDias) {
         setFutureActionPlazoDias(selectedCategory.plazoDias);
       } else {
@@ -192,7 +179,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setPhoto(null);
       setPhotoPreview(null);
     } catch (err: any) {
-      setSubmitError(err.response?.data?.error || "Error al crear pedido");
+      await sweetAlert.error('Error', err.response?.data?.error || "Error al crear pedido");
     } finally {
       setSubmitting(false);
     }
@@ -258,13 +245,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
       </div>
 
       <div className="px-4 pt-4">
-        {error && (
-          <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 mb-4 dark:border-red-800 dark:bg-red-900/20">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          </div>
-        )}
-
         <button onClick={() => setShowForm(!showForm)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 hover:bg-blue-500/90 text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
           <Package className="w-5 h-5" />
           {showForm ? "Cancelar" : "Nuevo Pedido"}
@@ -272,12 +252,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
         {showForm && (
           <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-6">
-            {submitError && (
-              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 mb-4 dark:border-red-800 dark:bg-red-900/20">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
-              </div>
-            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categoría *</label>

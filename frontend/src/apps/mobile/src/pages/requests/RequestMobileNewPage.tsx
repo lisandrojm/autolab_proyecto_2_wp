@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Send, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import { requestsAPI } from '../../../../../api/requests';
+import { sweetAlert } from '../../utils/sweetAlert';
 
 interface RequestMobileNewPageProps {
   onBack: () => void;
@@ -13,12 +14,10 @@ export default function RequestMobileNewPage({ onBack, onSuccess }: RequestMobil
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
 
     try {
       await requestsAPI.createRequest({
@@ -28,9 +27,10 @@ export default function RequestMobileNewPage({ onBack, onSuccess }: RequestMobil
         reason: reason || undefined,
         source: 'mobile',
       });
+      await sweetAlert.success('¡Solicitud creada!', 'Tu solicitud ha sido enviada correctamente');
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al crear solicitud');
+      await sweetAlert.error('Error', err.response?.data?.error || 'Error al crear solicitud');
     } finally {
       setSubmitting(false);
     }
@@ -57,13 +57,6 @@ export default function RequestMobileNewPage({ onBack, onSuccess }: RequestMobil
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 space-y-6">
-        {error && (
-          <div className="flex items-start gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          </div>
-        )}
-
         <div>
           <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Tipo de Solicitud <span className="text-red-500">*</span>

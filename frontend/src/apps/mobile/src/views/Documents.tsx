@@ -1,4 +1,5 @@
 import { FileText, Download, File, Award } from 'lucide-react';
+import { sweetAlert } from '../utils/sweetAlert';
 
 export default function Documents() {
   const documents = [
@@ -78,8 +79,8 @@ export default function Documents() {
     }
   };
 
-  const handleDownload = (documentName: string) => {
-    alert(`Descargando: ${documentName}`);
+  const handleDownload = async (documentName: string) => {
+    await sweetAlert.info('Descargando...', `Iniciando descarga de ${documentName}`);
   };
 
   const documentTypes = [

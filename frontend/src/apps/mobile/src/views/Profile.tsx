@@ -1,8 +1,9 @@
 import { Mail, Phone, MapPin, Briefcase, Calendar, LogOut, Settings, Shield, UserCheck } from 'lucide-react';
 import { useAuthStore } from '../../../../stores/authStore';
+import { sweetAlert } from '../utils/sweetAlert';
 
 export default function Profile() {
-  const { user, hasPermission } = useAuthStore();
+  const { user, hasPermission, logout } = useAuthStore();
 
   const isMobileCoordinator = hasPermission('mobile:coordinator');
   const isMobileCollaborator = hasPermission('mobile:collaborator');
@@ -26,22 +27,47 @@ export default function Profile() {
     { label: 'Días de vacaciones', value: '18', icon: Briefcase },
   ];
 
+  const handleLogout = async () => {
+    const result = await sweetAlert.confirm(
+      '¿Cerrar sesión?',
+      '¿Estás seguro de que deseas salir de la aplicación?',
+      'Sí, cerrar sesión',
+      'Cancelar'
+    );
+
+    if (result.isConfirmed) {
+      logout();
+      await sweetAlert.success('Sesión cerrada', 'Has salido correctamente');
+    }
+  };
+
+  const handleSettings = async () => {
+    await sweetAlert.info('Próximamente', 'Esta función estará disponible pronto');
+  };
+
+  const handlePrivacy = async () => {
+    await sweetAlert.info('Próximamente', 'Esta función estará disponible pronto');
+  };
+
   const menuItems = [
     {
       icon: Settings,
       label: 'Configuración',
       description: 'Preferencias y ajustes',
+      onClick: handleSettings,
     },
     {
       icon: Shield,
       label: 'Privacidad',
       description: 'Seguridad y datos',
+      onClick: handlePrivacy,
     },
     {
       icon: LogOut,
       label: 'Cerrar Sesión',
       description: 'Salir de la aplicación',
       danger: true,
+      onClick: handleLogout,
     },
   ];
 
@@ -133,6 +159,7 @@ export default function Profile() {
             return (
               <button
                 key={index}
+                onClick={item.onClick}
                 className={`w-full flex items-center gap-4 p-4 rounded-xl shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                   item.danger
                     ? 'bg-red-50 dark:bg-red-900/20'

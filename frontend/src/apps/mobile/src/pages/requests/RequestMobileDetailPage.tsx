@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, User, Clock, CheckCircle, XCircle, Ban, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Clock, CheckCircle, XCircle, Ban } from 'lucide-react';
 import { requestsAPI, RequestData } from '../../../../../api/requests';
+import { sweetAlert } from '../../utils/sweetAlert';
 
 interface RequestMobileDetailPageProps {
   requestId: string;
@@ -33,14 +34,22 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
   const handleCancel = async () => {
     if (!request || request.status !== 'pending') return;
 
-    if (!confirm('¿Estás seguro de cancelar esta solicitud?')) return;
+    const result = await sweetAlert.confirm(
+      '¿Cancelar solicitud?',
+      'Esta acción no se puede deshacer. ¿Estás seguro de cancelar esta solicitud?',
+      'Sí, cancelar',
+      'No, volver'
+    );
+
+    if (!result.isConfirmed) return;
 
     try {
       setCancelling(true);
       await requestsAPI.cancelRequest(request._id);
+      await sweetAlert.success('Solicitud cancelada', 'Tu solicitud ha sido cancelada correctamente');
       fetchRequest();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Error al cancelar solicitud');
+      await sweetAlert.error('Error', err.response?.data?.error || 'Error al cancelar solicitud');
     } finally {
       setCancelling(false);
     }
@@ -84,26 +93,17 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
     );
   }
 
+  useEffect(() => {
+    if (error && !loading) {
+      sweetAlert.error('Error', error || 'Solicitud no encontrada');
+      onBack();
+    }
+  }, [error, loading]);
+
   if (error || !request) {
     return (
-      <div className="flex-1 pb-24 bg-gray-50 dark:bg-gray-900">
-        <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <ArrowLeft className="w-6 h-6 text-gray-900 dark:text-gray-100" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error</h1>
-          </div>
-        </div>
-        <div className="p-4">
-          <div className="flex items-start gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600 dark:text-red-400">{error || 'Solicitud no encontrada'}</p>
-          </div>
-        </div>
+      <div className="flex-1 pb-24 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     );
   }

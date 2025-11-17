@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, Calendar, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
+import { sweetAlert } from "../utils/sweetAlert";
 
 interface VacationsProps {
   onNavigate: (view: ViewType) => void;
@@ -14,12 +15,10 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setSubmitError(null);
 
     try {
       await createVacation({
@@ -27,12 +26,13 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         endDate,
         reason,
       });
+      await sweetAlert.success('¡Solicitud creada!', 'Tu solicitud de vacaciones ha sido enviada');
       setShowForm(false);
       setStartDate("");
       setEndDate("");
       setReason("");
     } catch (err: any) {
-      setSubmitError(err.response?.data?.error || "Error al crear solicitud");
+      await sweetAlert.error('Error', err.response?.data?.error || "Error al crear solicitud");
     } finally {
       setSubmitting(false);
     }
@@ -93,13 +93,6 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       </div>
 
       <div className="px-4 pt-4">
-        {error && (
-          <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 mb-4 dark:border-red-800 dark:bg-red-900/20">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          </div>
-        )}
-
         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -116,12 +109,6 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
         {showForm && (
           <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-6">
-            {submitError && (
-              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 mb-4 dark:border-red-800 dark:bg-red-900/20">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
-              </div>
-            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de inicio</label>
