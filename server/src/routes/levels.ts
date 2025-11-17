@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Level } from "../models/Level.js";
 import { User } from "../models/User.js";
+import { Position } from "../models/Position.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
@@ -12,9 +13,25 @@ const router = Router();
 const createLevelSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
-});
+  type: z.enum(["general", "position-specific"]).default("general"),
+  positionId: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.type === "position-specific" && !data.positionId) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "positionId es requerido cuando el tipo es 'position-specific'",
+    path: ["positionId"],
+  }
+);
 
-const updateLevelSchema = createLevelSchema.partial();
+const updateLevelSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().optional(),
+});
 
 // GET /levels/count - Contar niveles
 router.get("/count",
@@ -45,7 +62,7 @@ router.get("/",
   requirePermission('users:view'),
   async (req: AuthenticatedRequest & TenantRequest, res) => {
     try {
-      const { page = 1, limit = 100, name } = req.query;
+      const { page = 1, limit = 100, name, positionId } = req.query;
 
       const tenantId = toObjectIdOrNull(req.tenantObjectId);
       if (!tenantId) {
@@ -60,10 +77,23 @@ router.get("/",
         filter.name = { $regex: name, $options: 'i' };
       }
 
+      if (positionId) {
+        const posObjId = toObjectIdOrNull(positionId as string);
+        if (!posObjId) {
+          res.status(400).json({ error: "Invalid position ID" });
+          return;
+        }
+        filter.$or = [
+          { type: "general" },
+          { type: "position-specific", positionId: posObjId }
+        ];
+      }
+
       const skip = (Number(page) - 1) * Number(limit);
 
       const [levels, total] = await Promise.all([
         Level.find(filter)
+          .populate('positionId', 'name')
           .sort({ name: 1 })
           .skip(skip)
           .limit(Number(limit)),
@@ -95,19 +125,41 @@ router.post("/",
     try {
       const data = createLevelSchema.parse(req.body);
 
-      // Verificar que no existe un nivel con el mismo nombre en el tenant
+      if (data.positionId) {
+        const posObjId = toObjectIdOrNull(data.positionId);
+        if (!posObjId) {
+          res.status(400).json({ error: "Invalid position ID" });
+          return;
+        }
+
+        const positionExists = await Position.findOne({
+          _id: posObjId,
+          tenantId: req.tenantObjectId
+        });
+
+        if (!positionExists) {
+          res.status(404).json({ error: "El cargo especificado no existe" });
+          return;
+        }
+      }
+
+      const positionIdObj = data.positionId ? toObjectIdOrNull(data.positionId) : null;
       const existingLevel = await Level.findOne({
         name: data.name,
-        tenantId: req.tenantObjectId
+        tenantId: req.tenantObjectId,
+        positionId: positionIdObj
       });
 
       if (existingLevel) {
-        res.status(409).json({ error: "Ya existe un nivel con este nombre en esta organización" });
+        res.status(409).json({ error: "Ya existe un nivel con este nombre en este contexto" });
         return;
       }
 
       const level = new Level({
-        ...data,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        positionId: positionIdObj,
         tenantId: req.tenantObjectId
       });
 
@@ -156,7 +208,7 @@ router.get("/:id",
       const level = await Level.findOne({
         _id: levelId,
         tenantId
-      });
+      }).populate('positionId', 'name');
 
       if (!level) {
         res.status(404).json({ error: "Nivel no encontrado" });
@@ -186,16 +238,26 @@ router.patch("/:id",
         return;
       }
 
-      // Si se está cambiando el nombre, verificar unicidad
+      const currentLevel = await Level.findOne({
+        _id: levelId,
+        tenantId: req.tenantObjectId
+      });
+
+      if (!currentLevel) {
+        res.status(404).json({ error: "Nivel no encontrado" });
+        return;
+      }
+
       if (data.name) {
         const existingLevel = await Level.findOne({
           name: data.name,
           tenantId: req.tenantObjectId,
+          positionId: currentLevel.positionId,
           _id: { $ne: levelId }
         });
 
         if (existingLevel) {
-          res.status(409).json({ error: "Ya existe un nivel con este nombre en esta organización" });
+          res.status(409).json({ error: "Ya existe un nivel con este nombre en este contexto" });
           return;
         }
       }

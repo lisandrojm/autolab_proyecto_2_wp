@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuthStore } from "../stores/authStore";
-import { levelsAPI, Level } from "../api/levels";
+import { levelsAPI, Level, LevelFormData as APILevelFormData } from "../api/levels";
+import { positionsAPI, Position } from "../api/positions";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -8,7 +9,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faGlobe } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -17,6 +18,8 @@ const HELP_KEY = "levels" as const;
 interface LevelFormData {
   name: string;
   description: string;
+  type: "general" | "position-specific";
+  positionId: string;
 }
 
 export const LevelsPage: React.FC = () => {
@@ -24,6 +27,7 @@ export const LevelsPage: React.FC = () => {
   const { hasPermission } = useAuthStore();
 
   const [levels, setLevels] = useState<Level[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,6 +39,8 @@ export const LevelsPage: React.FC = () => {
   const [formData, setFormData] = useState<LevelFormData>({
     name: "",
     description: "",
+    type: "general",
+    positionId: "",
   });
 
   const [viewOpen, setViewOpen] = useState(false);
@@ -47,6 +53,7 @@ export const LevelsPage: React.FC = () => {
 
   useEffect(() => {
     fetchLevels();
+    fetchPositions();
   }, []);
 
   const fetchLevels = async () => {
@@ -62,11 +69,22 @@ export const LevelsPage: React.FC = () => {
     }
   };
 
+  const fetchPositions = async () => {
+    try {
+      const response = await positionsAPI.list({ limit: 100 });
+      setPositions(response.positions);
+    } catch (error) {
+      console.error("Error fetching positions:", error);
+    }
+  };
+
   const openCreate = () => {
     setEditingLevel(null);
     setFormData({
       name: "",
       description: "",
+      type: "general",
+      positionId: "",
     });
     setShowModal(true);
   };
@@ -76,6 +94,8 @@ export const LevelsPage: React.FC = () => {
     setFormData({
       name: level.name,
       description: level.description || "",
+      type: level.type,
+      positionId: typeof level.positionId === "object" && level.positionId ? level.positionId._id : (level.positionId as string) || "",
     });
     setShowModal(true);
   };
@@ -97,12 +117,28 @@ export const LevelsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.type === "position-specific" && !formData.positionId) {
+      sweetAlert.error("Error", "Debes seleccionar un cargo para niveles específicos");
+      return;
+    }
+
     try {
       if (editingLevel) {
-        await levelsAPI.update(editingLevel._id, formData);
+        const updateData: Partial<APILevelFormData> = {
+          name: formData.name,
+          description: formData.description,
+        };
+        await levelsAPI.update(editingLevel._id, updateData);
         sweetAlert.success("Nivel actualizado", "Los cambios se han guardado correctamente");
       } else {
-        await levelsAPI.create(formData);
+        const createData: APILevelFormData = {
+          name: formData.name,
+          description: formData.description,
+          type: formData.type,
+          positionId: formData.type === "position-specific" ? formData.positionId : undefined,
+        };
+        await levelsAPI.create(createData);
         sweetAlert.success("Nivel creado", "El nivel se ha creado correctamente");
       }
       closeModal();
@@ -221,6 +257,22 @@ export const LevelsPage: React.FC = () => {
         content: viewLevel ? (
           <div className="space-y-4">
             <div>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Tipo</h4>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                {viewLevel.type === "general" ? (
+                  <span className="inline-flex items-center gap-2">
+                    <FontAwesomeIcon icon={faGlobe} className="text-blue-600" />
+                    General (disponible para todos los cargos)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <FontAwesomeIcon icon={faUserTie} className="text-purple-600" />
+                    Específico de cargo: {typeof viewLevel.positionId === "object" && viewLevel.positionId ? viewLevel.positionId.name : "—"}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
               <p className="text-sm text-gray-700 dark:text-gray-300">{viewLevel.description || "—"}</p>
             </div>
@@ -251,6 +303,78 @@ export const LevelsPage: React.FC = () => {
         content: (
           <form id="level-form" onSubmit={handleSubmit}>
             <div className="space-y-6">
+              {!editingLevel && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tipo de Nivel *
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="type"
+                        value="general"
+                        checked={formData.type === "general"}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value as "general" | "position-specific", positionId: "" }))}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faGlobe} className="text-blue-600" />
+                        General
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="type"
+                        value="position-specific"
+                        checked={formData.type === "position-specific"}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value as "general" | "position-specific" }))}
+                        className="w-4 h-4 text-purple-600"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUserTie} className="text-purple-600" />
+                        Específico de Cargo
+                      </span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {formData.type === "general"
+                      ? "Este nivel estará disponible para todos los cargos"
+                      : "Este nivel solo estará disponible para el cargo seleccionado"}
+                  </p>
+                </div>
+              )}
+
+              {editingLevel && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    <strong>Nota:</strong> El tipo y cargo de un nivel no pueden modificarse una vez creado.
+                  </p>
+                </div>
+              )}
+
+              {!editingLevel && formData.type === "position-specific" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Cargo *
+                  </label>
+                  <select
+                    required
+                    value={formData.positionId}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value }))}
+                    className="input-field"
+                  >
+                    <option value="">Seleccionar cargo...</option>
+                    {positions.map((position) => (
+                      <option key={position._id} value={position._id}>
+                        {position.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
                 <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Nombre del nivel" />
@@ -272,9 +396,22 @@ export const LevelsPage: React.FC = () => {
             onClick={() => openView(level)}
             className="hover:scale-105 hover:shadow-lg transition-all duration-200"
             header={{
-              title: level.name,
+              title: (
+                <div className="flex items-center gap-2">
+                  <span>{level.name}</span>
+                  {level.type === "general" ? (
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                      General
+                    </span>
+                  ) : (
+                    <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">
+                      {typeof level.positionId === "object" && level.positionId ? level.positionId.name : "Cargo"}
+                    </span>
+                  )}
+                </div>
+              ),
               subtitle: level.description,
-              icon: faUserGraduate,
+              icon: level.type === "general" ? faGlobe : faUserTie,
             }}
             footer={
               canManage

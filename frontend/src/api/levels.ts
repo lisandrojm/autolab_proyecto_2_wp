@@ -5,6 +5,11 @@ export interface Level {
   tenantId: string;
   name: string;
   description?: string;
+  type: "general" | "position-specific";
+  positionId?: {
+    _id: string;
+    name: string;
+  } | string;
   createdAt: string;
   updatedAt: string;
 }
@@ -12,6 +17,8 @@ export interface Level {
 export interface LevelFormData {
   name: string;
   description?: string;
+  type: "general" | "position-specific";
+  positionId?: string;
 }
 
 export interface LevelListResponse {
@@ -25,9 +32,14 @@ export interface LevelListResponse {
 }
 
 export const levelsAPI = {
-  list: async (params?: { page?: number; limit?: number; name?: string }): Promise<LevelListResponse> => {
+  list: async (params?: { page?: number; limit?: number; name?: string; positionId?: string }): Promise<LevelListResponse> => {
     const response = await axios.get("/levels", { params });
     return response.data;
+  },
+
+  listForPosition: async (positionId: string): Promise<Level[]> => {
+    const response = await axios.get("/levels", { params: { positionId, limit: 1000 } });
+    return response.data.levels;
   },
 
   listAll: async (): Promise<Level[]> => {
