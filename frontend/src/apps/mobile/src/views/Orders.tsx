@@ -59,6 +59,10 @@ export default function Orders({ onNavigate }: OrdersProps) {
     // Initialize dynamicValue based on category type and date mode
     if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
       setDynamicValue({ fechaDesde: "", fechaHasta: "" });
+    } else if (selectedCategory?.categoryType === "fecha") {
+      setDynamicValue("");
+    } else if (selectedCategory?.categoryType === "dinero") {
+      setDynamicValue("");
     } else {
       setDynamicValue("");
     }
@@ -118,6 +122,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
       // Only include photo if category allows it
       const shouldIncludePhoto = selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros";
 
+      // Validate date range if applicable
+      let validDynamicValue = dynamicValue;
+      if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
+        if (!dynamicValue?.fechaDesde || !dynamicValue?.fechaHasta) {
+          setSubmitError("Debes completar ambas fechas (Desde y Hasta)");
+          setSubmitting(false);
+          return;
+        }
+        validDynamicValue = {
+          fechaDesde: dynamicValue.fechaDesde,
+          fechaHasta: dynamicValue.fechaHasta
+        };
+      }
+
       await createOrder({
         title: product,
         description,
@@ -125,7 +143,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         categoryId: selectedCategoryId,
         subcategoryId: subcategoryId || undefined,
         subcategoryLabel: subcategoryLabel || undefined,
-        dynamicValue: dynamicValue || undefined,
+        dynamicValue: validDynamicValue || undefined,
         actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
         futureActionFechaLimite: futureActionFechaLimite || undefined,

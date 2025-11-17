@@ -27,17 +27,45 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
     switch (category.categoryType) {
       case "fecha":
         if (category.dateMode === "range") {
+          const fechaDesde = dynamicValue?.fechaDesde || "";
+          const fechaHasta = dynamicValue?.fechaHasta || "";
+
           return (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Rango de Fechas *</label>
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Fecha Desde</label>
-                  <input type="date" value={dynamicValue?.fechaDesde || ""} onChange={(e) => onDynamicValueChange({ ...dynamicValue, fechaDesde: e.target.value })} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+                  <input
+                    type="date"
+                    value={fechaDesde}
+                    onChange={(e) => {
+                      const newValue = {
+                        fechaDesde: e.target.value,
+                        fechaHasta: fechaHasta
+                      };
+                      onDynamicValueChange(newValue);
+                    }}
+                    required
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Fecha Hasta</label>
-                  <input type="date" value={dynamicValue?.fechaHasta || ""} onChange={(e) => onDynamicValueChange({ ...dynamicValue, fechaHasta: e.target.value })} min={dynamicValue?.fechaDesde || ""} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+                  <input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => {
+                      const newValue = {
+                        fechaDesde: fechaDesde,
+                        fechaHasta: e.target.value
+                      };
+                      onDynamicValueChange(newValue);
+                    }}
+                    min={fechaDesde || ""}
+                    required
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                  />
                 </div>
               </div>
             </div>
