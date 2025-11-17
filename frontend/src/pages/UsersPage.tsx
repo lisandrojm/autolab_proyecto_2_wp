@@ -161,7 +161,7 @@ export const UsersPage: React.FC = () => {
         setLevels(levelsForPosition);
       } else {
         const response = await levelsAPI.list({ limit: 100 });
-        const generalLevels = response.levels.filter(l => l.type === "general");
+        const generalLevels = response.levels.filter((l) => l.type === "general");
         setLevels(generalLevels);
       }
     } catch (error) {
@@ -196,14 +196,14 @@ export const UsersPage: React.FC = () => {
     if (showModal && modalMode === "edit") {
       if (formData.positionId) {
         fetchLevels(formData.positionId);
-        const currentLevelValid = levels.some(l => l._id === formData.levelId);
+        const currentLevelValid = levels.some((l) => l._id === formData.levelId);
         if (formData.levelId && !currentLevelValid) {
           setFormData((prev) => ({ ...prev, levelId: undefined }));
         }
       } else {
         fetchLevels();
         if (formData.levelId) {
-          const isGeneralLevel = levels.find(l => l._id === formData.levelId && l.type === "general");
+          const isGeneralLevel = levels.find((l) => l._id === formData.levelId && l.type === "general");
           if (!isGeneralLevel) {
             setFormData((prev) => ({ ...prev, levelId: undefined }));
           }
@@ -587,7 +587,7 @@ export const UsersPage: React.FC = () => {
                     {positions.length === 0 ? (
                       <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                         No has creado ningún cargo aún.{" "}
-                        <a href="/positions" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium underline">
+                        <a href="/positions" className="text-primary-600 dark:text-primary-400 hover:underline">
                           Crear cargo →
                         </a>
                       </p>
@@ -599,8 +599,7 @@ export const UsersPage: React.FC = () => {
                             setFormData((prev) => ({
                               ...prev,
                               positionId: e.target.value || undefined,
-                              // Si cambia el cargo, reseteo el nivel
-                              levelId: undefined,
+                              levelId: undefined, // resetea nivel cuando cambia cargo
                             }))
                           }
                           className="input-field"
@@ -618,7 +617,7 @@ export const UsersPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* NIVEL */}
+                  {/* NIVEL – SOLO SI HAY CARGO */}
                   {formData.positionId && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
@@ -626,7 +625,7 @@ export const UsersPage: React.FC = () => {
                       {levels.length === 0 ? (
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           No hay niveles disponibles para este cargo.{" "}
-                          <a href="/levels" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium underline">
+                          <a href="/levels" className="text-primary-600 dark:text-primary-400 hover:underline">
                             Crear nivel →
                           </a>
                         </p>
@@ -643,62 +642,35 @@ export const UsersPage: React.FC = () => {
                             className="input-field"
                           >
                             <option value="">Sin nivel</option>
-                            {levels.filter(l => l.type === "general").length > 0 && (
+
+                            {/* Generales */}
+                            {levels.filter((l) => l.type === "general").length > 0 && (
                               <optgroup label="Niveles Generales">
-                                {levels.filter(l => l.type === "general").map((level) => (
-                                  <option key={level._id} value={level._id}>
-                                    {level.name}
-                                  </option>
-                                ))}
+                                {levels
+                                  .filter((l) => l.type === "general")
+                                  .map((level) => (
+                                    <option key={level._id} value={level._id}>
+                                      {level.name}
+                                    </option>
+                                  ))}
                               </optgroup>
                             )}
-                            {levels.filter(l => l.type === "position-specific").length > 0 && (
+
+                            {/* Específicos */}
+                            {levels.filter((l) => l.type === "position-specific").length > 0 && (
                               <optgroup label="Niveles Específicos del Cargo">
-                                {levels.filter(l => l.type === "position-specific").map((level) => (
-                                  <option key={level._id} value={level._id}>
-                                    {level.name}
-                                  </option>
-                                ))}
+                                {levels
+                                  .filter((l) => l.type === "position-specific")
+                                  .map((level) => (
+                                    <option key={level._id} value={level._id}>
+                                      {level.name}
+                                    </option>
+                                  ))}
                               </optgroup>
                             )}
                           </select>
 
                           {!formData.levelId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un nivel para completar el perfil</p>}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {!formData.positionId && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
-                      {levels.length === 0 ? (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          No hay niveles generales creados.{" "}
-                          <a href="/levels" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium underline">
-                            Crear nivel →
-                          </a>
-                        </p>
-                      ) : (
-                        <>
-                          <select
-                            value={formData.levelId || ""}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                levelId: e.target.value || undefined,
-                              }))
-                            }
-                            className="input-field"
-                          >
-                            <option value="">Sin nivel</option>
-                            {levels.map((level) => (
-                              <option key={level._id} value={level._id}>
-                                {level.name}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Solo niveles generales disponibles sin cargo</p>
                         </>
                       )}
                     </div>
