@@ -551,7 +551,7 @@ export const UsersPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>
-                    <select value={formData.positionId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined }))} className="input-field">
+                    <select value={formData.positionId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined }))} className="input-field" disabled={positions.length === 0}>
                       <option value="">Sin cargo</option>
                       {positions.map((position) => (
                         <option key={position._id} value={position._id}>
@@ -559,12 +559,21 @@ export const UsersPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    {!formData.positionId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un cargo para poder asignar un nivel</p>}
+                    {positions.length === 0 ? (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        No has creado ningún cargo aún.{" "}
+                        <a href="/positions" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium underline">
+                          Crear cargo →
+                        </a>
+                      </p>
+                    ) : !formData.positionId ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un cargo para poder asignar un nivel</p>
+                    ) : null}
                   </div>
                   {formData.positionId && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
-                      <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field">
+                      <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field" disabled={levels.length === 0}>
                         <option value="">Sin nivel</option>
                         {levels.map((level) => (
                           <option key={level._id} value={level._id}>
@@ -572,6 +581,14 @@ export const UsersPage: React.FC = () => {
                           </option>
                         ))}
                       </select>
+                      {levels.length === 0 && (
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          Este cargo no tiene niveles creados.{" "}
+                          <a href="/levels" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium underline">
+                            Crear nivel →
+                          </a>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
