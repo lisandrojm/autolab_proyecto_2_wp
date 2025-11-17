@@ -71,24 +71,34 @@ router.get("/",
         Position.countDocuments(filter)
       ]);
 
-      const positionsWithLevelCounts = await Promise.all(
+      const positionsWithLevels = await Promise.all(
         positions.map(async (position) => {
-          const levelCount = await Level.countDocuments({
+          const levelFilter = {
             tenantId,
             $or: [
               { type: "general" },
               { type: "position-specific", positionId: position._id }
             ]
-          });
+          };
+
+          const [levels, levelCount] = await Promise.all([
+            Level.find(levelFilter)
+              .select('name description type')
+              .sort({ name: 1 })
+              .limit(5),
+            Level.countDocuments(levelFilter)
+          ]);
+
           return {
             ...position.toObject(),
-            levelCount
+            levelCount,
+            levels
           };
         })
       );
 
       res.json({
-        positions: positionsWithLevelCounts,
+        positions: positionsWithLevels,
         pagination: {
           page: Number(page),
           limit: Number(limit),
