@@ -194,17 +194,21 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
 
       if (category.categoryType === "fecha" && category.dateMode === "range") {
-        if (!data.dynamicValue || !data.dynamicValue.fechaDesde || !data.dynamicValue.fechaHasta) {
-          res.status(400).json({ error: "Date range categories require both 'fechaDesde' and 'fechaHasta'" });
-          return;
-        }
+        const actionType = category.futureActionType || "sinVencimiento";
 
-        const fechaDesde = new Date(data.dynamicValue.fechaDesde);
-        const fechaHasta = new Date(data.dynamicValue.fechaHasta);
+        if (actionType !== "sinVencimiento") {
+          if (!data.dynamicValue || !data.dynamicValue.fechaDesde || !data.dynamicValue.fechaHasta) {
+            res.status(400).json({ error: "Date range categories require both 'fechaDesde' and 'fechaHasta'" });
+            return;
+          }
 
-        if (fechaDesde > fechaHasta) {
-          res.status(400).json({ error: "The 'fechaHasta' must be greater than or equal to 'fechaDesde'" });
-          return;
+          const fechaDesde = new Date(data.dynamicValue.fechaDesde);
+          const fechaHasta = new Date(data.dynamicValue.fechaHasta);
+
+          if (fechaDesde > fechaHasta) {
+            res.status(400).json({ error: "The 'fechaHasta' must be greater than or equal to 'fechaDesde'" });
+            return;
+          }
         }
       }
     }
