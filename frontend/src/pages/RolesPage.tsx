@@ -10,7 +10,9 @@ import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faIdCard, faFileLines, faRocket, faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt, faBox, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserTie, faUserGraduate, faKey, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { useNavigate } from "react-router-dom";
 
 const HELP_KEY = "roles" as const;
 
@@ -191,6 +193,7 @@ interface RoleFormData {
 }
 
 export const RolesPage: React.FC = () => {
+  const navigate = useNavigate();
   const { hasPermission, user } = useAuthStore();
 
   const [roles, setRoles] = useState<Role[]>([]);
@@ -222,7 +225,7 @@ export const RolesPage: React.FC = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRole, setViewRole] = useState<Role | null>(null);
 
-  const canManage = hasPermission("roles:delete");
+  const canManage = hasPermission("roles:view");
   const isSuperAdmin = user?.primaryRole === "superadmin";
   const isAdmin = user?.primaryRole === "admin" || isSuperAdmin;
 
@@ -420,11 +423,25 @@ export const RolesPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        hasPermission("roles:delete") ? (
-          <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
-            <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+        <div className="flex gap-2">
+          {canManage && (
+            <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+            </button>
+          )}
+          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Usuarios</span>
           </button>
-        ) : undefined
+          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Cargos</span>
+          </button>
+          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Niveles</span>
+          </button>
+        </div>
       }
       searchAndFilters={
         <SearchAndFilters
@@ -756,7 +773,7 @@ export const RolesPage: React.FC = () => {
           title={startDate || endDate ? "No hay roles en este rango de fechas" : "No hay roles"}
           description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer rol para comenzar a gestionar permisos."}
           action={
-            hasPermission("roles:delete")
+            hasPermission("roles:view")
               ? {
                   label: "Nuevo Rol",
                   onClick: openCreate,

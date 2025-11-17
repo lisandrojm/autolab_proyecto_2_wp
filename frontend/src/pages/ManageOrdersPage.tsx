@@ -318,7 +318,7 @@ export const ManageOrdersPage: React.FC = () => {
                           </td>
 
                           {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 h-10 w-10">
                             <div className="flex justify-center items-center p-3">{order.photoUrl ? <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="w-auto h-auto object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} /> : <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>}</div>
                           </td>
 

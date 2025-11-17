@@ -8,8 +8,9 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faIdCard, faEdit, faTrash, faPlus, faShieldHalved, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { useNavigate } from "react-router-dom";
 
 const HELP_KEY = "positions" as const;
 
@@ -19,6 +20,7 @@ interface PositionFormData {
 }
 
 export const PositionsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
 
   const [positions, setPositions] = useState<Position[]>([]);
@@ -162,11 +164,21 @@ export const PositionsPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        canManage ? (
-          <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
-            <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+        <div className="flex gap-2">
+          {canManage && (
+            <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+            </button>
+          )}
+          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Usuarios</span>
           </button>
-        ) : undefined
+          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Niveles</span>
+          </button>
+        </div>
       }
       searchAndFilters={
         <SearchAndFilters

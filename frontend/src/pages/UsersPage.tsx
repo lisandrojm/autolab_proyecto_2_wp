@@ -13,6 +13,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { useNavigate } from "react-router-dom";
 
 const HELP_KEY = "users" as const;
 
@@ -30,6 +31,7 @@ interface UserFormData {
 type ModalMode = "edit" | "password";
 
 export const UsersPage: React.FC = () => {
+  const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
 
   // data
@@ -328,11 +330,25 @@ export const UsersPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        canManage ? (
-          <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
-            <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+        <div className="flex gap-2">
+          {canManage && (
+            <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+            </button>
+          )}
+          <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Roles</span>
           </button>
-        ) : undefined
+          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Cargos</span>
+          </button>
+          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span>Niveles</span>
+          </button>
+        </div>
       }
       // Igual que RolesPage: SearchAndFilters directo (sin botón Buscar)
       searchAndFilters={
@@ -549,16 +565,10 @@ export const UsersPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* CARGO */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>
-                    <select value={formData.positionId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined }))} className="input-field" disabled={positions.length === 0}>
-                      <option value="">Sin cargo</option>
-                      {positions.map((position) => (
-                        <option key={position._id} value={position._id}>
-                          {position.name}
-                        </option>
-                      ))}
-                    </select>
+
                     {positions.length === 0 ? (
                       <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                         No has creado ningún cargo aún.{" "}
@@ -566,28 +576,67 @@ export const UsersPage: React.FC = () => {
                           Crear cargo →
                         </a>
                       </p>
-                    ) : !formData.positionId ? (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un cargo para poder asignar un nivel</p>
-                    ) : null}
+                    ) : (
+                      <>
+                        <select
+                          value={formData.positionId || ""}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              positionId: e.target.value || undefined,
+                              // Si cambia el cargo, reseteo el nivel
+                              levelId: undefined,
+                            }))
+                          }
+                          className="input-field"
+                        >
+                          <option value="">Sin cargo</option>
+                          {positions.map((position) => (
+                            <option key={position._id} value={position._id}>
+                              {position.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        {!formData.positionId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un cargo para poder asignar un nivel</p>}
+                      </>
+                    )}
                   </div>
+
+                  {/* NIVEL */}
                   {formData.positionId && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
-                      <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field" disabled={levels.length === 0}>
-                        <option value="">Sin nivel</option>
-                        {levels.map((level) => (
-                          <option key={level._id} value={level._id}>
-                            {level.name}
-                          </option>
-                        ))}
-                      </select>
-                      {levels.length === 0 && (
+
+                      {levels.length === 0 ? (
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           Este cargo no tiene niveles creados.{" "}
                           <a href="/levels" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium underline">
                             Crear nivel →
                           </a>
                         </p>
+                      ) : (
+                        <>
+                          <select
+                            value={formData.levelId || ""}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                levelId: e.target.value || undefined,
+                              }))
+                            }
+                            className="input-field"
+                          >
+                            <option value="">Sin nivel</option>
+                            {levels.map((level) => (
+                              <option key={level._id} value={level._id}>
+                                {level.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          {!formData.levelId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un nivel para completar el perfil</p>}
+                        </>
                       )}
                     </div>
                   )}
