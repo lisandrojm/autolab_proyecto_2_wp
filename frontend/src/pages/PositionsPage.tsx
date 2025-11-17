@@ -354,18 +354,21 @@ export const PositionsPage: React.FC = () => {
             }}
             body={
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <FontAwesomeIcon icon={faUserTie} className="text-purple-600 dark:text-purple-400" />
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    {position.specificLevelCount !== undefined && position.specificLevelCount > 0 ? (
-                      <span>
-                        Niveles específicos: {position.specificLevelCount}
-                      </span>
-                    ) : (
-                      <span className="text-gray-500 dark:text-gray-500">Sin niveles específicos</span>
-                    )}
-                  </span>
-                </div>
+                {position.specificLevelCount !== undefined && position.specificLevelCount > 0 ? (
+                  <div className="flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <FontAwesomeIcon icon={faLayerGroup} className="text-purple-600 dark:text-purple-400" />
+                    <span className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                      {position.specificLevelCount} {position.specificLevelCount === 1 ? 'nivel específico' : 'niveles específicos'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 dark:text-gray-600" />
+                    <span className="text-sm text-gray-500 dark:text-gray-500">
+                      Sin niveles específicos
+                    </span>
+                  </div>
+                )}
 
                 {position.levels && position.levels.length > 0 && (
                   <div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
