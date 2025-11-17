@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faGlobe, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -80,9 +80,16 @@ export const PositionsPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const openView = (position: Position) => {
-    setViewPosition(position);
-    setViewOpen(true);
+  const openView = async (position: Position) => {
+    try {
+      const fullPosition = await positionsAPI.getById(position._id);
+      setViewPosition(fullPosition);
+      setViewOpen(true);
+    } catch (error) {
+      console.error("Error fetching position details:", error);
+      setViewPosition(position);
+      setViewOpen(true);
+    }
   };
 
   const closeModal = () => {
@@ -219,10 +226,79 @@ export const PositionsPage: React.FC = () => {
           },
         ],
         content: viewPosition ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
               <p className="text-sm text-gray-700 dark:text-gray-300">{viewPosition.description || "—"}</p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-blue-600 dark:text-blue-400" />
+                  Niveles Disponibles
+                </h4>
+                <button
+                  onClick={() => navigate("/levels")}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Administrar niveles
+                </button>
+              </div>
+
+              {viewPosition.levels && viewPosition.levels.length > 0 ? (
+                <div className="space-y-2">
+                  {viewPosition.levels.map((level) => (
+                    <div
+                      key={level._id}
+                      className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                    >
+                      <FontAwesomeIcon
+                        icon={level.type === "general" ? faGlobe : faUserTie}
+                        className={`mt-0.5 ${level.type === "general" ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400"}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {level.name}
+                          </p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            level.type === "general"
+                              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                              : "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                          }`}>
+                            {level.type === "general" ? "General" : "Específico"}
+                          </span>
+                        </div>
+                        {level.description && (
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            {level.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">
+                    Los niveles "Generales" están disponibles para todos los cargos, mientras que los "Específicos" son exclusivos de este cargo.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 dark:text-gray-600 text-2xl mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    No hay niveles disponibles para este cargo
+                  </p>
+                  <button
+                    onClick={() => {
+                      closeView();
+                      navigate("/levels");
+                    }}
+                    className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Crear nivel
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ) : null,
@@ -276,6 +352,22 @@ export const PositionsPage: React.FC = () => {
               subtitle: position.description,
               icon: faUserTie,
             }}
+            body={
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-blue-600 dark:text-blue-400" />
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {position.levelCount !== undefined && position.levelCount > 0 ? (
+                      <span className="font-medium">
+                        {position.levelCount} {position.levelCount === 1 ? "nivel disponible" : "niveles disponibles"}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-500">Sin niveles asociados</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            }
             footer={
               canManage
                 ? {

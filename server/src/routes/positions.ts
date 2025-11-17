@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Position } from "../models/Position.js";
 import { User } from "../models/User.js";
+import { Level } from "../models/Level.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
@@ -70,8 +71,24 @@ router.get("/",
         Position.countDocuments(filter)
       ]);
 
+      const positionsWithLevelCounts = await Promise.all(
+        positions.map(async (position) => {
+          const levelCount = await Level.countDocuments({
+            tenantId,
+            $or: [
+              { type: "general" },
+              { type: "position-specific", positionId: position._id }
+            ]
+          });
+          return {
+            ...position.toObject(),
+            levelCount
+          };
+        })
+      );
+
       res.json({
-        positions,
+        positions: positionsWithLevelCounts,
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -163,7 +180,21 @@ router.get("/:id",
         return;
       }
 
-      res.json(position);
+      const levels = await Level.find({
+        tenantId,
+        $or: [
+          { type: "general" },
+          { type: "position-specific", positionId: position._id }
+        ]
+      }).sort({ name: 1 });
+
+      const levelCount = levels.length;
+
+      res.json({
+        ...position.toObject(),
+        levelCount,
+        levels
+      });
     } catch (error) {
       console.error("Get position error:", error);
       res.status(500).json({ error: "Internal server error" });

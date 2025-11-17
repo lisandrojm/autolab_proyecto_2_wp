@@ -5,6 +5,13 @@ export interface Position {
   tenantId: string;
   name: string;
   description?: string;
+  levelCount?: number;
+  levels?: Array<{
+    _id: string;
+    name: string;
+    description?: string;
+    type: "general" | "position-specific";
+  }>;
   createdAt: string;
   updatedAt: string;
 }
