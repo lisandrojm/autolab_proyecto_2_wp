@@ -267,7 +267,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("users:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("users:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "New", badgeColor: "bg-red-500" });
-      if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "Finish", badgeColor: "bg-blue-500" });
+      if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "Next", badgeColor: "bg-orange-400" });
       if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
