@@ -266,7 +266,7 @@ export const LevelsPage: React.FC = () => {
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-2">
-                    <FontAwesomeIcon icon={faUserTie} className="text-purple-600" />
+                    <FontAwesomeIcon icon={faUserTie} className="text-blue-600" />
                     Específico de cargo: {typeof viewLevel.positionId === "object" && viewLevel.positionId ? viewLevel.positionId.name : "—"}
                   </span>
                 )}
@@ -339,10 +339,10 @@ export const LevelsPage: React.FC = () => {
                             type: e.target.value as "general" | "position-specific",
                           }))
                         }
-                        className="w-4 h-4 text-purple-600"
+                        className="w-4 h-4 text-blue-600"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faUserTie} className="text-purple-600" />
+                        <FontAwesomeIcon icon={faUserTie} className="text-blue-600" />
                         Específico de Cargo
                       </span>
                     </label>
