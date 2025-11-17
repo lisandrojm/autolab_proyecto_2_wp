@@ -227,78 +227,84 @@ export const PositionsPage: React.FC = () => {
         ],
         content: viewPosition ? (
           <div className="space-y-6">
+            {/* Descripción */}
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
               <p className="text-sm text-gray-700 dark:text-gray-300">{viewPosition.description || "—"}</p>
             </div>
 
+            {/* Niveles */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faLayerGroup} className="text-blue-600 dark:text-blue-400" />
+                  <FontAwesomeIcon icon={faUserGraduate} className="text-blue-600 dark:text-blue-400" />
                   Niveles Disponibles
                 </h4>
-                <button
-                  onClick={() => navigate("/levels")}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                >
+
+                <button onClick={() => navigate("/levels")} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
                   Administrar niveles
                 </button>
               </div>
 
-              {viewPosition.levels && viewPosition.levels.length > 0 ? (
-                <div className="space-y-2">
-                  {viewPosition.levels.map((level) => (
-                    <div
-                      key={level._id}
-                      className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
-                    >
-                      <FontAwesomeIcon
-                        icon={level.type === "general" ? faGlobe : faUserTie}
-                        className={`mt-0.5 ${level.type === "general" ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400"}`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {level.name}
-                          </p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            level.type === "general"
-                              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                              : "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                          }`}>
-                            {level.type === "general" ? "General" : "Específico"}
-                          </span>
-                        </div>
-                        {level.description && (
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            {level.description}
-                          </p>
-                        )}
+              {/* Agrupar niveles */}
+              {(() => {
+                const específicos = (viewPosition.levels || []).filter((lvl) => lvl.type !== "general");
+                const generales = (viewPosition.levels || []).filter((lvl) => lvl.type === "general");
+
+                return (
+                  <div className="space-y-6">
+                    {/* Específicos */}
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/30">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FontAwesomeIcon icon={faUserTie} className="text-blue-500 dark:text-blue-400" />
+                        <h5 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Específicos</h5>
                       </div>
+
+                      {específicos.length > 0 ? (
+                        <div className="space-y-2">
+                          {específicos.map((level) => (
+                            <div key={level._id} className="flex items-start gap-3 bg-white dark:bg-gray-800">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{level.name}</p>
+                                </div>
+                                {level.description && <p className="text-xs text-gray-600 dark:text-gray-400">{level.description}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic">No hay niveles específicos para este cargo.</p>
+                      )}
                     </div>
-                  ))}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">
-                    Los niveles "Generales" están disponibles para todos los cargos, mientras que los "Específicos" son exclusivos de este cargo.
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 dark:text-gray-600 text-2xl mb-2" />
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    No hay niveles disponibles para este cargo
-                  </p>
-                  <button
-                    onClick={() => {
-                      closeView();
-                      navigate("/levels");
-                    }}
-                    className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Crear nivel
-                  </button>
-                </div>
-              )}
+
+                    {/* Generales */}
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/30">
+                      <div className="flex items-center gap-2 mb-3">
+                        <FontAwesomeIcon icon={faGlobe} className="text-blue-400 dark:text-blue-300" />
+                        <h5 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Generales</h5>
+                      </div>
+
+                      {generales.length > 0 ? (
+                        <div className="space-y-2">
+                          {generales.map((level) => (
+                            <div key={level._id} className="flex items-start gap-3 bg-white dark:bg-gray-800">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{level.name}</p>
+                                </div>
+                                {level.description && <p className="text-xs text-gray-600 dark:text-gray-400">{level.description}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 italic">No hay niveles generales para este cargo.</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         ) : null,
@@ -343,21 +349,7 @@ export const PositionsPage: React.FC = () => {
     >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
         {filteredPositions.map((position) => {
-          const levelBadges = position.levels && position.levels.length > 0
-            ? position.levels.slice(0, 3).map((level) => ({
-                text: level.name,
-                variant: level.type === "general" ? ("blue" as const) : ("purple" as const),
-                icon: level.type === "general" ? faGlobe : faUserTie,
-              }))
-            : [];
-
-          if (position.levels && position.levels.length > 3) {
-            levelBadges.push({
-              text: `+${position.levels.length - 3}`,
-              variant: "info" as const,
-              icon: faLayerGroup,
-            });
-          }
+          const specificLevels = position.levels ? position.levels.filter((level) => level.type !== "general") : [];
 
           return (
             <Card
@@ -368,7 +360,6 @@ export const PositionsPage: React.FC = () => {
                 title: position.name,
                 subtitle: position.description,
                 icon: faUserTie,
-                badges: levelBadges,
               }}
               footer={
                 canManage
@@ -397,7 +388,24 @@ export const PositionsPage: React.FC = () => {
                     }
                   : undefined
               }
-            />
+            >
+              {specificLevels.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 tracking-wide mb-1">
+                    <FontAwesomeIcon icon={faUserGraduate} className="text-blue-400 dark:text-blue-300 mb-2" />
+                    <span>Niveles específicos</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {specificLevels.map((level) => (
+                      <span key={level._id} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-xs text-blue-100">
+                        <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 text-blue-200" />
+                        <span className="font-medium">{level.name}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
           );
         })}
         {canManage && (
