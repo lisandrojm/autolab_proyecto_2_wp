@@ -354,21 +354,21 @@ export const PositionsPage: React.FC = () => {
             }}
             body={
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm border-b border-gray-200 dark:border-gray-700 pb-2">
-                  <FontAwesomeIcon icon={faLayerGroup} className="text-blue-600 dark:text-blue-400" />
+                <div className="flex items-center gap-2 text-sm">
+                  <FontAwesomeIcon icon={faUserTie} className="text-purple-600 dark:text-purple-400" />
                   <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    {position.levelCount !== undefined && position.levelCount > 0 ? (
+                    {position.specificLevelCount !== undefined && position.specificLevelCount > 0 ? (
                       <span>
-                        {position.levelCount} {position.levelCount === 1 ? "nivel" : "niveles"}
+                        Niveles específicos: {position.specificLevelCount}
                       </span>
                     ) : (
-                      <span className="text-gray-500 dark:text-gray-500">Sin niveles</span>
+                      <span className="text-gray-500 dark:text-gray-500">Sin niveles específicos</span>
                     )}
                   </span>
                 </div>
 
-                {position.levels && position.levels.length > 0 ? (
-                  <div className="space-y-1.5">
+                {position.levels && position.levels.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
                     {position.levels.slice(0, 3).map((level) => (
                       <div
                         key={level._id}
@@ -401,10 +401,6 @@ export const PositionsPage: React.FC = () => {
                         +{position.levelCount - 3} más...
                       </div>
                     )}
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 italic text-center py-2">
-                    No hay niveles asociados
                   </div>
                 )}
               </div>

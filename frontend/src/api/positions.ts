@@ -6,6 +6,7 @@ export interface Position {
   name: string;
   description?: string;
   levelCount?: number;
+  specificLevelCount?: number;
   levels?: Array<{
     _id: string;
     name: string;
