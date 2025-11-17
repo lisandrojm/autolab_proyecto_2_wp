@@ -122,19 +122,35 @@ export default function Orders({ onNavigate }: OrdersProps) {
       // Only include photo if category allows it
       const shouldIncludePhoto = selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros";
 
-      // Validate date range if applicable
-      let validDynamicValue = dynamicValue;
+      // Validate and prepare dynamicValue
+      let validDynamicValue: any = undefined;
+
       if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
-        if (!dynamicValue?.fechaDesde || !dynamicValue?.fechaHasta) {
+        console.log("Date range validation - dynamicValue:", dynamicValue);
+        console.log("fechaDesde:", dynamicValue?.fechaDesde);
+        console.log("fechaHasta:", dynamicValue?.fechaHasta);
+
+        // Check if dates are provided (not empty strings)
+        const hasDesde = dynamicValue?.fechaDesde && dynamicValue.fechaDesde.trim() !== "";
+        const hasHasta = dynamicValue?.fechaHasta && dynamicValue.fechaHasta.trim() !== "";
+
+        if (!hasDesde || !hasHasta) {
           setSubmitError("Debes completar ambas fechas (Desde y Hasta)");
           setSubmitting(false);
           return;
         }
+
         validDynamicValue = {
-          fechaDesde: dynamicValue.fechaDesde,
-          fechaHasta: dynamicValue.fechaHasta
+          fechaDesde: dynamicValue.fechaDesde.trim(),
+          fechaHasta: dynamicValue.fechaHasta.trim()
         };
+        console.log("validDynamicValue:", validDynamicValue);
+      } else if (dynamicValue !== undefined && dynamicValue !== null && dynamicValue !== "") {
+        // For other types, include dynamicValue if it has a value
+        validDynamicValue = dynamicValue;
       }
+
+      console.log("Sending createOrder with validDynamicValue:", validDynamicValue);
 
       await createOrder({
         title: product,
@@ -143,7 +159,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         categoryId: selectedCategoryId,
         subcategoryId: subcategoryId || undefined,
         subcategoryLabel: subcategoryLabel || undefined,
-        dynamicValue: validDynamicValue || undefined,
+        dynamicValue: validDynamicValue,
         actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
         futureActionFechaLimite: futureActionFechaLimite || undefined,

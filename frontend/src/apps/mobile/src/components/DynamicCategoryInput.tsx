@@ -30,6 +30,10 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           const fechaDesde = dynamicValue?.fechaDesde || "";
           const fechaHasta = dynamicValue?.fechaHasta || "";
 
+          console.log("DynamicCategoryInput - Date Range - dynamicValue:", dynamicValue);
+          console.log("DynamicCategoryInput - Date Range - fechaDesde:", fechaDesde);
+          console.log("DynamicCategoryInput - Date Range - fechaHasta:", fechaHasta);
+
           return (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Rango de Fechas *</label>
@@ -40,10 +44,12 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     type="date"
                     value={fechaDesde}
                     onChange={(e) => {
+                      console.log("fechaDesde changed to:", e.target.value);
                       const newValue = {
                         fechaDesde: e.target.value,
                         fechaHasta: fechaHasta
                       };
+                      console.log("Calling onDynamicValueChange with:", newValue);
                       onDynamicValueChange(newValue);
                     }}
                     required
@@ -56,10 +62,12 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     type="date"
                     value={fechaHasta}
                     onChange={(e) => {
+                      console.log("fechaHasta changed to:", e.target.value);
                       const newValue = {
                         fechaDesde: fechaDesde,
                         fechaHasta: e.target.value
                       };
+                      console.log("Calling onDynamicValueChange with:", newValue);
                       onDynamicValueChange(newValue);
                     }}
                     min={fechaDesde || ""}
