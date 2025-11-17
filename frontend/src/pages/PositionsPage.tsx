@@ -342,101 +342,64 @@ export const PositionsPage: React.FC = () => {
       }}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-        {filteredPositions.map((position) => (
-          <Card
-            key={position._id}
-            onClick={() => openView(position)}
-            className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-            header={{
-              title: position.name,
-              subtitle: position.description,
-              icon: faUserTie,
-            }}
-            body={
-              <div className="space-y-3">
-                {position.specificLevelCount !== undefined && position.specificLevelCount > 0 ? (
-                  <div className="flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <FontAwesomeIcon icon={faLayerGroup} className="text-purple-600 dark:text-purple-400" />
-                    <span className="text-sm font-semibold text-purple-900 dark:text-purple-100">
-                      {position.specificLevelCount} {position.specificLevelCount === 1 ? 'nivel específico' : 'niveles específicos'}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400 dark:text-gray-600" />
-                    <span className="text-sm text-gray-500 dark:text-gray-500">
-                      Sin niveles específicos
-                    </span>
-                  </div>
-                )}
+        {filteredPositions.map((position) => {
+          const levelBadges = position.levels && position.levels.length > 0
+            ? position.levels.slice(0, 3).map((level) => ({
+                text: level.name,
+                variant: level.type === "general" ? ("blue" as const) : ("purple" as const),
+                icon: level.type === "general" ? faGlobe : faUserTie,
+              }))
+            : [];
 
-                {position.levels && position.levels.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    {position.levels.slice(0, 3).map((level) => (
-                      <div
-                        key={level._id}
-                        className="flex items-center gap-2 text-xs"
-                      >
-                        <FontAwesomeIcon
-                          icon={level.type === "general" ? faGlobe : faUserTie}
-                          className={`text-[10px] ${
-                            level.type === "general"
-                              ? "text-blue-500 dark:text-blue-400"
-                              : "text-purple-500 dark:text-purple-400"
-                          }`}
-                        />
-                        <span className="text-gray-700 dark:text-gray-300 truncate">
-                          {level.name}
-                        </span>
-                        <span
-                          className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${
-                            level.type === "general"
-                              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                              : "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
-                          }`}
-                        >
-                          {level.type === "general" ? "G" : "E"}
-                        </span>
-                      </div>
-                    ))}
-                    {position.levelCount && position.levelCount > 3 && (
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400 italic pt-1">
-                        +{position.levelCount - 3} más...
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            }
-            footer={
-              canManage
-                ? {
-                    leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : ""}</span>,
-                    actions: [
-                      {
-                        icon: faEdit,
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          openEdit(position);
+          if (position.levels && position.levels.length > 3) {
+            levelBadges.push({
+              text: `+${position.levels.length - 3}`,
+              variant: "info" as const,
+              icon: faLayerGroup,
+            });
+          }
+
+          return (
+            <Card
+              key={position._id}
+              onClick={() => openView(position)}
+              className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+              header={{
+                title: position.name,
+                subtitle: position.description,
+                icon: faUserTie,
+                badges: levelBadges,
+              }}
+              footer={
+                canManage
+                  ? {
+                      leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : ""}</span>,
+                      actions: [
+                        {
+                          icon: faEdit,
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            openEdit(position);
+                          },
+                          title: "Editar",
+                          variant: "default",
                         },
-                        title: "Editar",
-                        variant: "default",
-                      },
-                      {
-                        icon: faTrash,
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          handleDelete(position);
+                        {
+                          icon: faTrash,
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handleDelete(position);
+                          },
+                          title: "Eliminar",
+                          variant: "default",
                         },
-                        title: "Eliminar",
-                        variant: "default",
-                      },
-                    ],
-                  }
-                : undefined
-            }
-          />
-        ))}
+                      ],
+                    }
+                  : undefined
+              }
+            />
+          );
+        })}
         {canManage && (
           <Card
             variant="create"
