@@ -77,7 +77,7 @@ async function ensureTenant({ name, slug }: { name: string; slug: string }) {
 }
 
 async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "") {
-  let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, "i") } });
+  let role = await Role.findOne({ tenantId, name });
   if (!role) {
     role = await Role.create({
       tenantId,
@@ -508,7 +508,7 @@ export async function seedOnStart() {
       console.log(`✔️ Position-Specific Level exists: Editor Jefe (ID: ${levelEditorJefe._id})`);
     }
 
-    console.log(`📊 Levels Summary: 4 General + 9 Position-Specific (3 per position) = 13 total`)
+    console.log(`📊 Levels Summary: 4 General + 9 Position-Specific (3 per position) = 13 total`);
 
     // ---- USUARIOS BASE ----
     const adminUser = await ensureUser({
