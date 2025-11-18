@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/api-weprodu/:path*", "destination": "https://autolab.fun/api-weprodu/:path*" }]
+  "rewrites": [
+    { "source": "/api-weprodu/:path*", "destination": "https://autolab.fun/api-weprodu/:path*" },
+    { "source": "/((?!.*\\.).*)", "destination": "/" }
+  ]
 }
