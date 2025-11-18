@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const mime = guessMime(String(file));
 
     // Orígenes candidatos (primero tu backend https, luego el IP http)
-    const urlA = `https://autolab.fun:7000/storage/${tenantId}/client/${clientId}/brandkit/${encodeURIComponent(file)}`;
+    const urlA = `https://autolab.fun:4001/storage/${tenantId}/client/${clientId}/brandkit/${encodeURIComponent(file)}`;
     const urlB = `http://72.60.9.42/api/archivos/modo/${encodeURIComponent(file)}`;
     const candidates = [urlA, urlB];
 

@@ -70,7 +70,7 @@ El backend corre independientemente en un VPS y NO se deploya en Bolt.
 - **Local** → `npm run dev`
   Usa `.env.development` → corre **server local** (HTTP :8080).
 - **VPS** → `npm run prod`  
-  Usa `.env.production` → corre **server VPS** (HTTPS :7000 con Let’s Encrypt).
+  Usa `.env.production` → corre **server VPS** (HTTPS :4001 con Let’s Encrypt).
 
 ---
 

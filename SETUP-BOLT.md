@@ -52,9 +52,9 @@ El archivo `vite.config.ts` en el root tiene la propiedad `root: "frontend"` que
 
 ```typescript
 export default defineConfig({
-  root: "frontend",           // ← Trabaja desde frontend/
+  root: "frontend", // ← Trabaja desde frontend/
   build: {
-    outDir: "../dist",        // ← Output en root/dist/
+    outDir: "../dist", // ← Output en root/dist/
     emptyOutDir: true,
   },
   // ...
@@ -66,6 +66,7 @@ export default defineConfig({
 ### Development Mode (`npm run dev:local`)
 
 Usa `frontend/.env.development`:
+
 ```env
 VITE_API_URL=http://localhost:8080/api/v1
 ```
@@ -75,8 +76,9 @@ Vite configura un proxy para redirigir `/api/*` al backend local.
 ### Production Mode (`npm run dev` o `npm run prod`)
 
 Usa `frontend/.env.production`:
+
 ```env
-VITE_API_URL=https://autolab.fun:7000/api/v1
+VITE_API_URL=https://autolab.fun:4001/api/v1
 ```
 
 Conecta directamente al backend en el VPS (sin proxy).
@@ -86,7 +88,7 @@ Conecta directamente al backend en el VPS (sin proxy).
 El backend corre en un VPS externo y **NO** forma parte del deploy de Bolt.
 
 - **Development**: `http://localhost:8080`
-- **Production**: `https://autolab.fun:7000`
+- **Production**: `https://autolab.fun:4001`
 
 ## Verificación
 

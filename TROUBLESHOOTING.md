@@ -13,44 +13,51 @@ Este problema ocurre cuando el navegador tiene la aplicación cacheada con varia
 ### Soluciones:
 
 #### 1. Hard Refresh en el navegador
+
 Presiona `Ctrl+Shift+R` (Windows/Linux) o `Cmd+Shift+R` (Mac) para forzar la recarga sin cache.
 
 #### 2. Reiniciar el dev server en Bolt.new
+
 1. Detener el servidor actual
 2. Ejecutar nuevamente `npm run dev`
 
 #### 3. Verificar la consola del navegador
+
 Abre DevTools (F12) y busca en la consola:
+
 ```
 === APP STARTUP ===
-🌍 VITE_API_URL: https://autolab.fun:7000/api/v1
+🌍 VITE_API_URL: https://autolab.fun:4001/api/v1
 🌍 MODE: production
 ==================
 ```
 
-Si ves `http://localhost:8080` en lugar de `https://autolab.fun:7000`, el navegador tiene la versión antigua cacheada.
+Si ves `http://localhost:8080` en lugar de `https://autolab.fun:4001`, el navegador tiene la versión antigua cacheada.
 
 ### Verificación:
 
 Después de aplicar las soluciones, deberías ver:
 
 **En la consola del servidor:**
+
 ```
 🚀 Mode: production
-👉 VITE_API_URL: https://autolab.fun:7000/api/v1
+👉 VITE_API_URL: https://autolab.fun:4001/api/v1
 ```
 
 **En la consola del navegador:**
+
 ```
 === APP STARTUP ===
-🌍 VITE_API_URL: https://autolab.fun:7000/api/v1
+🌍 VITE_API_URL: https://autolab.fun:4001/api/v1
 🌍 MODE: production
 ==================
 ```
 
 **En la interfaz:**
+
 - Badge: **"Autolab.fun | Production"** 🟣
-- Server status: Conectando a `https://autolab.fun:7000`
+- Server status: Conectando a `https://autolab.fun:4001`
 
 ### ¿Por qué pasa esto?
 
@@ -62,7 +69,7 @@ Después de aplicar las soluciones, deberías ver:
 
 1. Abrir DevTools (F12)
 2. Ver Network tab
-3. Las peticiones deben ir a `https://autolab.fun:7000/api/v1`
+3. Las peticiones deben ir a `https://autolab.fun:4001/api/v1`
 
 ## Comandos
 
