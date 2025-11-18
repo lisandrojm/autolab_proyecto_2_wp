@@ -90,7 +90,7 @@ const ENV_ALLOWED = (env.CORS_ORIGIN || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const ALLOWED = new Set<string>([...ENV_ALLOWED, "https://autolab-brandme.vercel.app", "https://autolab.fun", "http://localhost:5173"]);
+const ALLOWED = new Set<string>([...ENV_ALLOWED, "https://autolab-proyecto-2-o4byfnvo4-lisandrojms-projects.vercel.app", "https://autolab.fun", "http://localhost:5173"]);
 
 // Ayuda a caches/proxies a variar por Origin
 app.use((_, res, next) => {
