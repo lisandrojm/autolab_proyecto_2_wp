@@ -59,7 +59,10 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = Number(env.PORT) || 8080;
 const USE_HTTPS = String(env.USE_HTTPS) === "true";
-
+// ───────────────── AGREGAR ESTA LÍNEA ─────────────────
+// SOLUCIÓN AL ERROR: Le indica a Express que confíe en el encabezado X-Forwarded-For
+// enviado por el Proxy Inverso (Apache). '1' es el número de proxies a confiar.
+app.set("trust proxy", 1);
 // ───────────────── Middlewares base ─────────────────
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
