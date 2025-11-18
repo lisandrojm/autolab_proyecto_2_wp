@@ -77,35 +77,19 @@ async function ensureTenant({ name, slug }: { name: string; slug: string }) {
 }
 
 async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "") {
-  let role = await Role.findOne({ tenantId, name });
-
+  let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, "i") } });
   if (!role) {
-    try {
-      role = await Role.create({
-        tenantId,
-        name,
-        description: description || `${name} role`,
-        permissions,
-        isDefault: false,
-      });
-      console.log(`✅ Created role: ${name} (${permissions.length ? `perms: ${permissions.join(", ")}` : "sin permisos"})`);
-    } catch (err: any) {
-      // Si otro proceso lo creó en el medio, nos quedamos con ese y seguimos
-      if (err && err.code === 11000) {
-        role = await Role.findOne({ tenantId, name });
-        if (role) {
-          console.log(`✔️ Role already created concurrently: ${name}`);
-        } else {
-          console.error("❌ Duplicate key on Role but not found afterwards:", err);
-          throw err;
-        }
-      } else {
-        throw err;
-      }
-    }
+    role = await Role.create({
+      tenantId,
+      name,
+      description: description || `${name} role`,
+      permissions,
+      isDefault: false,
+    });
+    console.log(`✅ Created role: ${name} (${permissions.length ? `perms: ${permissions.join(", ")}` : "sin permisos"})`);
   } else {
-    const mustUpdate = permissions.length && (role.permissions.length !== permissions.length || permissions.some((p) => !role!.permissions.includes(p)));
-
+    // Mantenerlo minimal: solo garantizamos los permisos pedidos si cambian
+    const mustUpdate = permissions.length && (role.permissions.length !== permissions.length || permissions.some((p) => !role.permissions.includes(p)));
     if (mustUpdate) {
       role.permissions = permissions;
       await role.save();
@@ -114,8 +98,7 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
       console.log(`✔️ Role exists: ${name}`);
     }
   }
-
-  return role!;
+  return role;
 }
 
 async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId }) {
