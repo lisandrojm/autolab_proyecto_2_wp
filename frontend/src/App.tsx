@@ -1,0 +1,660 @@
+// apps/web/src/App.tsx
+import { useEffect, lazy, Suspense } from "react";
+import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import { useAuthStore } from "./stores/authStore";
+import { useThemeStore } from "./stores/themeStore";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { RegisterClientPage } from "./pages/RegisterClientPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { ClientsPage } from "./pages/ClientsPage";
+import { TasksPage } from "./pages/TasksPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { RolesPage } from "./pages/RolesPage";
+import { PositionsPage } from "./pages/PositionsPage";
+import { LevelsPage } from "./pages/LevelsPage";
+import { UsersPage } from "./pages/UsersPage";
+import { TenantsPage } from "./pages/TenantsPage";
+import { ClientDetailPage } from "./pages/ClientDetailPage";
+import { ClientProjectsPage } from "./pages/ClientProjectsPage";
+import { ProjectDetailPage } from "./pages/ProjectDetailPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { MobileNavbar } from "./components/Navbar";
+import { ServerStatusCard } from "./components/ServerStatusCard";
+import { CampaignDetailPage } from "./pages/CampaignDetailPage";
+import { PostDetailPage } from "./pages/PostDetailPage";
+import { ClientContextInfoPage } from "./pages/ClientContextInfoPage";
+import { ClientContextBrandKitPage } from "./pages/ClientContextBrandKitPage";
+import { ClientContextCampaignsPage } from "./pages/ClientContextCampaignsPage";
+import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
+import { ClientContextUsersPage } from "./pages/ClientContextUsersPage";
+import { ClientDashboardPage } from "./pages/ClientDashboardPage";
+import { ClientProfilePage } from "./pages/ClientProfilePage";
+import { ClientRequestsPage } from "./pages/ClientRequestsPage";
+import { ClientApprovalsPage } from "./pages/ClientApprovalsPage";
+import { ClientCampaignsPage } from "./pages/ClientCampaignsPage";
+import { CalendarPage } from "./pages/CalendarPage";
+import { PlatformUsagePage } from "./pages/PlatformUsagePage";
+import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
+import { AIAssistantModal } from "./components/AIAssistantModal";
+import { AssistantRedirect } from "./pages/AssistantRedirect";
+import { PersonnelHomePage } from "./pages/PersonnelHomePage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { TeamPage } from "./pages/TeamPage";
+import { DailyReportPage } from "./pages/DailyReportPage";
+import { VacationsPage } from "./pages/VacationsPage";
+import { OtherRequestsPage } from "./pages/OtherRequestsPage";
+import { OrdersPage } from "./pages/OrdersPage";
+import { DocumentsPage } from "./pages/DocumentsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { ActivityPage } from "./pages/ActivityPage";
+import { TasksPersonnelPage } from "./pages/TasksPersonnelPage";
+import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
+import { PendingVacationsPage } from "./pages/PendingVacationsPage";
+import { PendingRequestsPage } from "./pages/PendingRequestsPage";
+import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
+import { ManageCalendarEventsPage } from "./pages/ManageCalendarEventsPage";
+import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
+import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
+import { ManageOrdersPage } from "./pages/ManageOrdersPage";
+import { ManageOrderCategoriesPage } from "./pages/ManageOrderCategoriesPage";
+import { ManageVacationRequestsPage } from "./pages/ManageVacationRequestsPage";
+import { RequestsListPage } from "./pages/Requests/RequestsListPage";
+import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
+import { RequestTypesManagementPage } from "./pages/RequestTypesManagementPage";
+
+const AppMobile = lazy(() => import("./apps/mobile/src/App"));
+
+// --- DashboardRouter para centralizar la lógica de roles ---
+const DashboardRouter: React.FC = () => {
+  const { user } = useAuthStore();
+  if (!user) return null;
+  if (user.tenantSlug === "superadmin") return <DashboardPage />;
+  if (["admin", "manager"].includes(user.primaryRole)) return <UsersPage />;
+  return <ClientDashboardPage />;
+};
+
+// --- Wrapper para rutas de cliente con Outlet ---
+const ClientContextWrapper: React.FC = () => (
+  <>
+    {/* Aquí podés poner header o sidebar si querés */}
+    <Outlet />
+  </>
+);
+
+// --- Layout principal que incluye el MobileNavbar ---
+// Esto se aplica a TODAS las rutas "normales", excepto /mobile/*
+const AppLayout: React.FC = () => {
+  const { isAuthenticated } = useAuthStore();
+
+  return (
+    <>
+      {isAuthenticated && <MobileNavbar />}
+      <Outlet />
+    </>
+  );
+};
+
+function App() {
+  const { isAuthenticated, token, user } = useAuthStore();
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    console.log("=== APP STARTUP ===");
+    console.log("🌍 VITE_API_URL:", import.meta.env.VITE_API_URL);
+    console.log("🌍 MODE:", import.meta.env.MODE);
+    console.log("🌍 DEV:", import.meta.env.DEV);
+    console.log("🌍 PROD:", import.meta.env.PROD);
+    console.log("==================");
+  }, []);
+
+  // Restaurar sesión si hay token
+  useEffect(() => {
+    if (token && user && !isAuthenticated) {
+      useAuthStore.setState({ isAuthenticated: true });
+    } else if (token && !user) {
+      const checkTokenValidity = async () => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/secure/ping`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Tenant-Id": localStorage.getItem("tenantId") || "demo-tenant",
+            },
+          });
+
+          if (!response.ok) {
+            useAuthStore.getState().logout();
+          } else {
+            const savedUser = localStorage.getItem("user");
+            if (savedUser) {
+              try {
+                const userData = JSON.parse(savedUser);
+                useAuthStore.setState({ user: userData, isAuthenticated: true });
+              } catch {
+                useAuthStore.getState().logout();
+              }
+            }
+          }
+        } catch {
+          useAuthStore.getState().logout();
+        }
+      };
+      checkTokenValidity();
+    }
+  }, [token, user, isAuthenticated]);
+
+  // Sincronizar tema
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    root.classList.remove("light", "dark");
+    body.classList.remove("light", "dark");
+    root.classList.add(theme);
+    body.classList.add(theme);
+  }, [theme]);
+
+  return (
+    <div className={theme}>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+        <Router>
+          <Routes>
+            {/* Rutas que usan el layout principal (con MobileNavbar) */}
+            <Route element={<AppLayout />}>
+              {/* Public Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/register-client" element={<RegisterClientPage />} />
+
+              {/* Dashboard */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <DashboardRouter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardRouter />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Client Routes */}
+              <Route
+                path="/client/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <ClientDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/gestion"
+                element={
+                  <ProtectedRoute>
+                    <ClientProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/solicitudes"
+                element={
+                  <ProtectedRoute>
+                    <ClientRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/aprobaciones"
+                element={
+                  <ProtectedRoute>
+                    <ClientApprovalsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/client/campañas"
+                element={
+                  <ProtectedRoute>
+                    <ClientCampaignsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* General Routes */}
+              <Route
+                path="/clients"
+                element={
+                  <ProtectedRoute>
+                    <ClientsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clients/:clientId"
+                element={
+                  <ProtectedRoute>
+                    <ClientDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clients/:clientId/projects"
+                element={
+                  <ProtectedRoute>
+                    <ClientProjectsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:projectId"
+                element={
+                  <ProtectedRoute>
+                    <ProjectDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:projectId/campaigns/:campaignId"
+                element={
+                  <ProtectedRoute>
+                    <CampaignDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/posts/:postId"
+                element={
+                  <ProtectedRoute>
+                    <PostDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <ProtectedRoute>
+                    <TasksPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <AnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tenants"
+                element={
+                  <ProtectedRoute>
+                    <TenantsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/platform/usage"
+                element={
+                  <ProtectedRoute>
+                    <PlatformUsagePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/platform/settings"
+                element={
+                  <ProtectedRoute>
+                    <PlatformSettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/roles"
+                element={
+                  <ProtectedRoute>
+                    <RolesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/positions"
+                element={
+                  <ProtectedRoute>
+                    <PositionsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/levels"
+                element={
+                  <ProtectedRoute>
+                    <LevelsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute>
+                    <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/assistant"
+                element={
+                  <ProtectedRoute>
+                    <AssistantRedirect />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Personnel Module Routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <PersonnelHomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/perfil"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/equipo"
+                element={
+                  <ProtectedRoute>
+                    <TeamPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/novedades/reporte-diario"
+                element={
+                  <ProtectedRoute>
+                    <DailyReportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/vacaciones"
+                element={
+                  <ProtectedRoute>
+                    <VacationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/pedidos"
+                element={
+                  <ProtectedRoute>
+                    <OrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/otras-solicitudes"
+                element={
+                  <ProtectedRoute>
+                    <OtherRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/pedidos/ausencias"
+                element={
+                  <ProtectedRoute>
+                    <RequestsListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/requests"
+                element={
+                  <ProtectedRoute>
+                    <RequestsListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/requests/:id"
+                element={
+                  <ProtectedRoute>
+                    <RequestDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/request-types"
+                element={
+                  <ProtectedRoute>
+                    <RequestTypesManagementPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/documentos"
+                element={
+                  <ProtectedRoute>
+                    <DocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/calendario"
+                element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/notificaciones"
+                element={
+                  <ProtectedRoute>
+                    <NotificationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/actividad"
+                element={
+                  <ProtectedRoute>
+                    <ActivityPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/personal/tareas"
+                element={
+                  <ProtectedRoute>
+                    <TasksPersonnelPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/administracion/empleados"
+                element={
+                  <ProtectedRoute>
+                    <EmployeesAdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/administracion/aprobaciones/vacaciones-pendientes"
+                element={
+                  <ProtectedRoute>
+                    <PendingVacationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/administracion/aprobaciones/pedidos-pendientes"
+                element={
+                  <ProtectedRoute>
+                    <PendingRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* HR Management Routes */}
+              <Route
+                path="/hr/activity-logs"
+                element={
+                  <ProtectedRoute>
+                    <ManageActivityLogsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/calendar-events"
+                element={
+                  <ProtectedRoute>
+                    <ManageCalendarEventsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/employee-profiles"
+                element={
+                  <ProtectedRoute>
+                    <ManageEmployeeProfilesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/documents"
+                element={
+                  <ProtectedRoute>
+                    <ManageHRDocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/orders"
+                element={
+                  <ProtectedRoute>
+                    <ManageOrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/order-categories"
+                element={
+                  <ProtectedRoute>
+                    <ManageOrderCategoriesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/vacation-requests"
+                element={
+                  <ProtectedRoute>
+                    <ManageVacationRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Client Context Routes */}
+              <Route
+                path="/cliente/:id"
+                element={
+                  <ProtectedRoute>
+                    <ClientContextWrapper />
+                  </ProtectedRoute>
+                }
+              >
+                <Route
+                  path="info-basica"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextInfoPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="brand-kit"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextBrandKitPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="campanas"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextCampaignsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="posts"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextPostsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="usuarios"
+                  element={
+                    <ProtectedRoute>
+                      <ClientContextUsersPage />
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
+            </Route>
+
+            {/* Mobile App Route SIN MobileNavbar (no está dentro de AppLayout) */}
+            <Route
+              path="/mobile/*"
+              element={
+                <ProtectedRoute>
+                  <Suspense
+                    fallback={
+                      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                        <div className="text-center">
+                          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+                          <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando aplicación mobile...</p>
+                        </div>
+                      </div>
+                    }
+                  >
+                    <AppMobile />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+
+          <ServerStatusCard />
+          <AIAssistantModal />
+        </Router>
+      </div>
+    </div>
+  );
+}
+
+export default App;

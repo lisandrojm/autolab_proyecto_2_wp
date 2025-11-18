@@ -1,0 +1,265 @@
+/* Custom styles for react-big-calendar */
+
+/* Light mode */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-header {
+  padding: 12px 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #374151;
+}
+
+.rbc-month-view {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rbc-month-row {
+  border-top: 1px solid #d1d5db;
+}
+
+.rbc-day-bg {
+  border-left: 1px solid #d1d5db;
+}
+
+.rbc-off-range-bg {
+  background-color: #f9fafb;
+}
+
+.rbc-today {
+  background-color: #dbeafe;
+}
+
+.rbc-date-cell {
+  padding: 6px 8px;
+}
+
+.rbc-button-link {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.rbc-event {
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.rbc-event:hover {
+  opacity: 0.8;
+}
+
+/* Event with image styles */
+.rbc-time-slot .rbc-event {
+  overflow: visible;
+}
+
+.rbc-event img {
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.rbc-event-label {
+  font-size: 0.75rem;
+}
+
+.rbc-show-more {
+  color: #2563eb;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 4px;
+}
+
+.rbc-show-more:hover {
+  text-decoration: underline;
+}
+
+/* Week and Day view */
+.rbc-time-view {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rbc-time-header {
+  border-bottom: 1px solid #d1d5db;
+}
+
+.rbc-time-content {
+  border-top: 1px solid #d1d5db;
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #d1d5db;
+  min-height: 60px;
+}
+
+.rbc-timeslot-group {
+  min-height: 120px;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #d1d5db;
+}
+
+.rbc-current-time-indicator {
+  background-color: #ef4444;
+  height: 2px;
+}
+
+/* Agenda view */
+.rbc-agenda-view {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.rbc-agenda-table {
+  border-spacing: 0;
+}
+
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell {
+  padding: 12px;
+  border-right: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.rbc-agenda-event-cell {
+  padding: 12px;
+}
+
+/* Dark mode */
+.dark .rbc-header {
+  color: #d1d5db;
+  background-color: #1f2937;
+  border-bottom: 1px solid #374151;
+}
+
+.dark .rbc-month-view {
+  border: 1px solid #374151;
+}
+
+.dark .rbc-month-row {
+  border-top: 1px solid #374151;
+}
+
+.dark .rbc-day-bg {
+  background-color: #111827;
+  border-left: 1px solid #374151;
+}
+
+.dark .rbc-off-range-bg {
+  background-color: #1f2937;
+}
+
+.dark .rbc-today {
+  background-color: #1e3a5f;
+}
+
+.dark .rbc-button-link {
+  color: #e5e7eb;
+}
+
+.dark .rbc-show-more {
+  color: #60a5fa;
+}
+
+.dark .rbc-time-view {
+  border: 1px solid #374151;
+  background-color: #111827;
+}
+
+.dark .rbc-time-header {
+  border-bottom: 1px solid #374151;
+  background-color: #1f2937;
+}
+
+.dark .rbc-time-header-content {
+  border-left: 1px solid #374151;
+}
+
+.dark .rbc-time-content {
+  border-top: 1px solid #374151;
+}
+
+.dark .rbc-time-slot {
+  border-top: 1px solid #4b5563;
+  min-height: 60px;
+}
+
+.dark .rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #4b5563;
+}
+
+.dark .rbc-timeslot-group {
+  border-left: 1px solid #374151;
+  min-height: 120px;
+}
+
+.dark .rbc-agenda-view {
+  border: 1px solid #374151;
+  background-color: #111827;
+  padding: 20px;
+}
+
+.dark .rbc-agenda-date-cell,
+.dark .rbc-agenda-time-cell {
+  background-color: #1f2937;
+  border-right: 1px solid #374151;
+  color: #d1d5db;
+}
+
+.dark .rbc-agenda-event-cell {
+  color: #e5e7eb;
+}
+
+.dark .rbc-header + .rbc-header {
+  border-left: 1px solid #374151;
+}
+
+.dark .rbc-time-header-content {
+  border-left: 1px solid #374151;
+}
+
+.dark .rbc-label {
+  color: #9ca3af;
+}
+
+/* Responsive */
+
+tr {
+  margin: 10px !important;
+  border: 1px solid #374151 !important;
+}
+.rbc-agenda-view table.rbc-agenda-table {
+  width: 100%;
+  border: 1px solid #374151;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+.rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  padding: 3px 5px;
+  text-align: left;
+  border-bottom: 1px solid #374151;
+}
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .rbc-toolbar button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}

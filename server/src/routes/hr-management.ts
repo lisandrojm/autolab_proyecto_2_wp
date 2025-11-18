@@ -1,0 +1,515 @@
+import { Router } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import { z } from "zod";
+import { ActivityLog } from "../models/ActivityLog.js";
+import { CalendarEvent } from "../models/CalendarEvent.js";
+import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { HRDocument } from "../models/Document.js";
+import { Order } from "../models/Order.js";
+import { VacationRequest } from "../models/VacationRequest.js";
+import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
+import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+
+const router = Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+router.use(requireTenant, authenticateToken);
+
+async function ensureDir(dir: string) {
+  try {
+    await fs.promises.mkdir(dir, { recursive: true });
+  } catch (err) {
+    console.error("Error creating directory:", dir, err);
+    throw err;
+  }
+}
+
+const orderStorage = multer.diskStorage({
+  destination: async (req: any, _file, cb) => {
+    try {
+      const tenantId = req.tenantId || "unknown_tenant";
+      const userId = req.user?.userId || "admin";
+      const dir = path.join(__dirname, "../../storage", tenantId, userId, "orders");
+      await ensureDir(dir);
+      cb(null, dir);
+    } catch (err) {
+      console.error("Error in multer destination:", err);
+      cb(err as any, "");
+    }
+  },
+  filename: (_req: any, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const orderId = new mongoose.Types.ObjectId();
+    const filename = `order_${orderId}${ext}`;
+    cb(null, filename);
+  },
+});
+
+const uploadOrderImage = multer({
+  storage: orderStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp)"));
+  },
+}).single("photo");
+
+const createOrderSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  category: z.string().default("other"),
+  amount: z.number().min(0).optional(),
+  photoUrl: z.string().optional(),
+});
+
+const updateOrderSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  category: z.string().optional(),
+  amount: z.number().min(0).optional(),
+  status: z.enum(["pending", "approved", "rejected", "delivered", "cancelled"]).optional(),
+  photoUrl: z.string().optional(),
+});
+
+router.get("/activitylogs", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { page = 1, limit = 50, userId, action, entityType } = req.query;
+
+    const filter: any = { tenantId: req.tenantObjectId };
+
+    if (userId) filter.userId = userId;
+    if (action) filter.action = action;
+    if (entityType) filter.entityType = entityType;
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [logs, total] = await Promise.all([
+      ActivityLog.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate("userId", "firstName lastName email")
+        .populate("entityId"),
+      ActivityLog.countDocuments(filter),
+    ]);
+
+    res.json({
+      logs,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get activity logs error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/activitylogs/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const count = await ActivityLog.countDocuments({ tenantId: req.tenantObjectId });
+    res.json({ count });
+  } catch (error) {
+    console.error("Count activity logs error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/calendarevents", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { page = 1, limit = 50, year, month, userId } = req.query;
+
+    const filter: any = { tenantId: req.tenantObjectId };
+
+    if (userId) filter.userId = userId;
+
+    if (year && month) {
+      const startDate = new Date(Number(year), Number(month) - 1, 1);
+      const endDate = new Date(Number(year), Number(month), 0, 23, 59, 59);
+      filter.start = { $gte: startDate, $lte: endDate };
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [events, total] = await Promise.all([
+      CalendarEvent.find(filter)
+        .sort({ start: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate("userId", "firstName lastName email")
+        .populate("createdBy", "firstName lastName email"),
+      CalendarEvent.countDocuments(filter),
+    ]);
+
+    res.json({
+      events,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get calendar events error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/calendarevents/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const count = await CalendarEvent.countDocuments({ tenantId: req.tenantObjectId });
+    res.json({ count });
+  } catch (error) {
+    console.error("Count calendar events error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/employeeprofiles", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { page = 1, limit = 50, department, isActive, search } = req.query;
+
+    const filter: any = { tenantId: req.tenantObjectId };
+
+    if (department) filter.department = department;
+    if (isActive !== undefined) filter.isActive = isActive === "true";
+
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [profiles, total] = await Promise.all([
+      EmployeeProfile.find(filter)
+        .sort({ lastName: 1, firstName: 1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate("userId", "email roles"),
+      EmployeeProfile.countDocuments(filter),
+    ]);
+
+    res.json({
+      profiles,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get employee profiles error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/employeeprofiles/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const count = await EmployeeProfile.countDocuments({ tenantId: req.tenantObjectId });
+    res.json({ count });
+  } catch (error) {
+    console.error("Count employee profiles error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/hrdocuments", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { page = 1, limit = 50, type, userId } = req.query;
+
+    const filter: any = { tenantId: req.tenantObjectId };
+
+    if (type) filter.type = type;
+    if (userId) filter.userId = userId;
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [documents, total] = await Promise.all([
+      HRDocument.find(filter)
+        .sort({ uploadedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate("userId", "firstName lastName email")
+        .populate("uploadedBy", "firstName lastName email"),
+      HRDocument.countDocuments(filter),
+    ]);
+
+    res.json({
+      documents,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get HR documents error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/hrdocuments/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const count = await HRDocument.countDocuments({ tenantId: req.tenantObjectId });
+    res.json({ count });
+  } catch (error) {
+    console.error("Count HR documents error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { page = 1, limit = 50, status, category, userId } = req.query;
+
+    const filter: any = { tenantId: req.tenantObjectId };
+
+    if (status) filter.status = status;
+    if (category) filter.category = category;
+    if (userId) filter.userId = userId;
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .sort({ requestedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate("userId", "firstName lastName email")
+        .populate("approvedBy", "firstName lastName email")
+        .populate("categoryId"),
+      Order.countDocuments(filter),
+    ]);
+
+    res.json({
+      orders,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get orders error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/orders/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const count = await Order.countDocuments({ tenantId: req.tenantObjectId });
+    res.json({ count });
+  } catch (error) {
+    console.error("Count orders error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+    let photoUrl: string | undefined;
+
+    if (req.file) {
+      const tenantId = req.tenantId || "unknown_tenant";
+      photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+    }
+
+    const data = createOrderSchema.parse({
+      ...req.body,
+      amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      photoUrl,
+    });
+
+    const order = new Order({
+      tenantId: req.tenantObjectId,
+      userId,
+      ...data,
+      status: "pending",
+      requestedAt: new Date(),
+    });
+
+    await order.save();
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId,
+      action: "order_created",
+      description: `Created order: ${order.title}`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "firstName lastName email")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.status(201).json(populatedOrder);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid data", details: error.errors });
+      return;
+    }
+    console.error("Create order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    let photoUrl: string | undefined = order.photoUrl;
+
+    if (req.file) {
+      if (order.photoUrl) {
+        const oldPath = path.join(__dirname, "../../", order.photoUrl);
+        try {
+          await fs.promises.unlink(oldPath);
+        } catch (err) {
+          console.error("Error deleting old photo:", err);
+        }
+      }
+      const tenantId = req.tenantId || "unknown_tenant";
+      const userId = req.user!.userId;
+      photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+    }
+
+    const data = updateOrderSchema.parse({
+      ...req.body,
+      amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+      photoUrl,
+    });
+
+    Object.assign(order, data);
+    await order.save();
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "firstName lastName email")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(populatedOrder);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid data", details: error.errors });
+      return;
+    }
+    console.error("Update order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/orders/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (order.photoUrl) {
+      const photoPath = path.join(__dirname, "../../", order.photoUrl);
+      try {
+        await fs.promises.unlink(photoPath);
+      } catch (err) {
+        console.error("Error deleting photo:", err);
+      }
+    }
+
+    await Order.findByIdAndDelete(order._id);
+
+    res.json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error("Delete order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/vacationrequests", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { page = 1, limit = 50, status, userId, year } = req.query;
+
+    const filter: any = { tenantId: req.tenantObjectId };
+
+    if (status) filter.status = status;
+    if (userId) filter.userId = userId;
+
+    if (year) {
+      const startDate = new Date(Number(year), 0, 1);
+      const endDate = new Date(Number(year), 11, 31, 23, 59, 59);
+      filter.startDate = { $gte: startDate, $lte: endDate };
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [vacations, total] = await Promise.all([
+      VacationRequest.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate("userId", "firstName lastName email")
+        .populate("approvedBy", "firstName lastName email"),
+      VacationRequest.countDocuments(filter),
+    ]);
+
+    res.json({
+      vacations,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get vacation requests error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/vacationrequests/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const count = await VacationRequest.countDocuments({ tenantId: req.tenantObjectId });
+    res.json({ count });
+  } catch (error) {
+    console.error("Count vacation requests error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export { router as hrManagementRoutes };

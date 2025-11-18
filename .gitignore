@@ -1,0 +1,13 @@
+node_modules
+.DS_Store
+dist
+build
+*.log
+coverage
+.nyc_output
+.vscode
+.idea
+*.tgz
+*.tar.gz
+.cache
+.parcel-cache
