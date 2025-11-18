@@ -120,42 +120,42 @@ app.options("*", cors());
 // ───────────────── Archivos estáticos ─────────────────
 const storagePath = path.join(__dirname, "../storage");
 app.use("/storage", express.static(storagePath));
-app.use("/api-weprodu/api/v1/storage", express.static(storagePath));
-// ───────────────── Rutas API (/api-weprodu/api/v1/...) ─────────────────
-app.use("/api-weprodu/api/v1/health", healthRoutes);
-app.use("/api-weprodu/api/v1/auth", authRoutes);
-app.use("/api-weprodu/api/v1/secure", secureRoutes);
-app.use("/api-weprodu/api/v1/clients", clientRoutes);
-app.use("/api-weprodu/api/v1/campaigns", campaignRoutes);
-app.use("/api-weprodu/api/v1/posts", postRoutes);
-app.use("/api-weprodu/api/v1/tasks", taskRoutes);
-app.use("/api-weprodu/api/v1/briefs", briefRoutes);
-app.use("/api-weprodu/api/v1/roles", roleRoutes);
-app.use("/api-weprodu/api/v1/users", userRoutes);
-app.use("/api-weprodu/api/v1/tenants", tenantRoutes);
-app.use("/api-weprodu/api/v1", projectRoutes);
-app.use("/api-weprodu/api/v1/client-assets", clientAssetsRoutes);
-app.use("/api-weprodu/api/v1/dashboard", dashboardRoutes);
-app.use("/api-weprodu/api/v1/platform", platformRoutes);
-app.use("/api-weprodu/api/v1", vercelRoutes);
-app.use("/api-weprodu/api/v1", envRoutes);
+app.use("/api/v1/storage", express.static(storagePath));
+// ───────────────── Rutas API (/api/v1/...) ─────────────────
+app.use("/api/v1/health", healthRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/secure", secureRoutes);
+app.use("/api/v1/clients", clientRoutes);
+app.use("/api/v1/campaigns", campaignRoutes);
+app.use("/api/v1/posts", postRoutes);
+app.use("/api/v1/tasks", taskRoutes);
+app.use("/api/v1/briefs", briefRoutes);
+app.use("/api/v1/roles", roleRoutes);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/tenants", tenantRoutes);
+app.use("/api/v1", projectRoutes);
+app.use("/api/v1/client-assets", clientAssetsRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/platform", platformRoutes);
+app.use("/api/v1", vercelRoutes);
+app.use("/api/v1", envRoutes);
 
 // ───────────────── HR Module Routes ─────────────────
-app.use("/api-weprodu/api/v1/profile", profileRoutes);
-app.use("/api-weprodu/api/v1/vacations", vacationRoutes);
-app.use("/api-weprodu/api/v1/documents", documentRoutes);
-app.use("/api-weprodu/api/v1/orders", orderRoutes);
-app.use("/api-weprodu/api/v1/order-categories", orderCategoryRoutes);
-app.use("/api-weprodu/api/v1/calendar", calendarRoutes);
-app.use("/api-weprodu/api/v1/notifications", notificationRoutes);
-app.use("/api-weprodu/api/v1/activity", activityRoutes);
-app.use("/api-weprodu/api/v1/hr-admin", hrAdminRoutes);
-app.use("/api-weprodu/api/v1/hr-management", hrManagementRoutes);
-app.use("/api-weprodu/api/v1/requests", requestRoutes);
-app.use("/api-weprodu/api/v1/request-types", requestTypeRoutes);
-app.use("/api-weprodu/api/v1/future-actions", futureActionsRoutes);
-app.use("/api-weprodu/api/v1/positions", positionRoutes);
-app.use("/api-weprodu/api/v1/levels", levelRoutes);
+app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/vacations", vacationRoutes);
+app.use("/api/v1/documents", documentRoutes);
+app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/order-categories", orderCategoryRoutes);
+app.use("/api/v1/calendar", calendarRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/activity", activityRoutes);
+app.use("/api/v1/hr-admin", hrAdminRoutes);
+app.use("/api/v1/hr-management", hrManagementRoutes);
+app.use("/api/v1/requests", requestRoutes);
+app.use("/api/v1/request-types", requestTypeRoutes);
+app.use("/api/v1/future-actions", futureActionsRoutes);
+app.use("/api/v1/positions", positionRoutes);
+app.use("/api/v1/levels", levelRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);
@@ -199,16 +199,16 @@ connectDB()
         console.log(`🚀 HTTPS Server running on port ${PORT}`);
         console.log(`📱 Environment: ${env.NODE_ENV}`);
         console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
-        console.log(`🩺 Health:        https://localhost:${PORT}/api-weprodu/api/v1/health`);
-        console.log(`🌍 Env info:       https://localhost:${PORT}/api-weprodu/api/v1/env`);
+        console.log(`🩺 Health:        https://localhost:${PORT}/api/v1/health`);
+        console.log(`🌍 Env info:       https://localhost:${PORT}/api/v1/env`);
       });
     } else {
       http.createServer(app).listen(PORT, () => {
         console.log(`🚀 HTTP Server running on port ${PORT}`);
         console.log(`📱 Environment: ${env.NODE_ENV}`);
         console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
-        console.log(`🩺 Health:        http://localhost:${PORT}/api-weprodu/api/v1/health`);
-        console.log(`🌍 Env info:       http://localhost:${PORT}/api-weprodu/api/v1/env`);
+        console.log(`🩺 Health:        http://localhost:${PORT}/api/v1/health`);
+        console.log(`🌍 Env info:       http://localhost:${PORT}/api/v1/env`);
       });
     }
   })
