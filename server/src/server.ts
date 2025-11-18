@@ -121,6 +121,7 @@ app.options("*", cors());
 const storagePath = path.join(__dirname, "../storage");
 app.use("/storage", express.static(storagePath));
 app.use("/api/v1/storage", express.static(storagePath));
+
 // ───────────────── Rutas API (/api/v1/...) ─────────────────
 app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
@@ -164,28 +165,38 @@ app.use(errorHandler);
 // ───────────────── Boot ─────────────────
 connectDB()
   .then(async () => {
-    try {
-      await ensureSuperAdmin();
-    } catch (error) {
-      console.error("❌ Failed to ensure superadmin:", error);
-    }
+    // Solo una instancia (worker 0 o modo single) corre el seed / init
+    const instance = process.env.NODE_APP_INSTANCE;
+    const isSeedInstance = instance === undefined || instance === "0";
 
-    try {
-      console.log("🔍 Verifying all tenants have default roles...");
-      await ensureAllTenantsHaveDefaultRoles();
-      console.log("✅ Role verification completed successfully");
-    } catch (error) {
-      console.error("❌ Role verification failed:", error);
-    }
+    if (isSeedInstance) {
+      console.log(`🌱 Init tasks running on instance: ${instance ?? "single"}`);
 
-    if (String(env.SEED_ON_START) === "true") {
       try {
-        console.log("🌱 Starting auto-seed process...");
-        await seedOnStart();
-        console.log("✅ Auto-seed completed successfully");
+        await ensureSuperAdmin();
       } catch (error) {
-        console.error("❌ Auto-seed failed:", error);
+        console.error("❌ Failed to ensure superadmin:", error);
       }
+
+      try {
+        console.log("🔍 Verifying all tenants have default roles...");
+        await ensureAllTenantsHaveDefaultRoles();
+        console.log("✅ Role verification completed successfully");
+      } catch (error) {
+        console.error("❌ Role verification failed:", error);
+      }
+
+      if (String(env.SEED_ON_START) === "true") {
+        try {
+          console.log("🌱 Starting auto-seed process...");
+          await seedOnStart();
+          console.log("✅ Auto-seed completed successfully");
+        } catch (error) {
+          console.error("❌ Auto-seed failed:", error);
+        }
+      }
+    } else {
+      console.log(`ℹ️ Skipping seed/init on worker ${instance}`);
     }
 
     if (USE_HTTPS) {
