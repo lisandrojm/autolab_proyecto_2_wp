@@ -51,6 +51,7 @@ export default function Home({ onNavigate }: HomeProps) {
       description: "Solicita tus días libres",
       view: "vacations" as ViewType,
       roles: ["coordinator", "collaborator"],
+      disabled: true,
     },
     {
       icon: FileText,
@@ -58,6 +59,7 @@ export default function Home({ onNavigate }: HomeProps) {
       description: "Consulta tus documentos",
       view: "documents" as ViewType,
       roles: ["coordinator", "collaborator"],
+      disabled: true,
     },
     {
       icon: Receipt,
@@ -65,6 +67,7 @@ export default function Home({ onNavigate }: HomeProps) {
       description: "Accede a tus nóminas",
       view: "documents" as ViewType,
       roles: ["coordinator", "collaborator"],
+      disabled: true,
     },
   ];
 
@@ -150,7 +153,15 @@ export default function Home({ onNavigate }: HomeProps) {
           const isCoordinatorOnly = action.roles?.includes("coordinator") && !action.roles?.includes("collaborator");
 
           return (
-            <button key={index} onClick={() => onNavigate(action.view)} className={`flex flex-col flex-1 gap-3 rounded-xl border bg-white p-4 text-left shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 relative ${isCoordinatorOnly ? "border-blue-200 dark:border-blue-800" : "border-slate-200 dark:border-slate-800"}`}>
+            <button
+              key={index}
+              onClick={() => {
+                if (!action.disabled) onNavigate(action.view);
+              }}
+              disabled={action.disabled}
+              className={`flex flex-col flex-1 gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
+    ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-800"}`}
+            >
               {(action as any).badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase z-10">{(action as any).badge}</span>}
               <Icon className={`h-6 w-6 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">

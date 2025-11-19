@@ -95,15 +95,7 @@ router.get("/activitylogs", async (req: AuthenticatedRequest & TenantRequest, re
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [logs, total] = await Promise.all([
-      ActivityLog.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate("userId", "firstName lastName email")
-        .populate("entityId"),
-      ActivityLog.countDocuments(filter),
-    ]);
+    const [logs, total] = await Promise.all([ActivityLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("entityId"), ActivityLog.countDocuments(filter)]);
 
     res.json({
       logs,
@@ -146,15 +138,7 @@ router.get("/calendarevents", async (req: AuthenticatedRequest & TenantRequest, 
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [events, total] = await Promise.all([
-      CalendarEvent.find(filter)
-        .sort({ start: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate("userId", "firstName lastName email")
-        .populate("createdBy", "firstName lastName email"),
-      CalendarEvent.countDocuments(filter),
-    ]);
+    const [events, total] = await Promise.all([CalendarEvent.find(filter).sort({ start: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("createdBy", "firstName lastName email"), CalendarEvent.countDocuments(filter)]);
 
     res.json({
       events,
@@ -191,23 +175,12 @@ router.get("/employeeprofiles", async (req: AuthenticatedRequest & TenantRequest
     if (isActive !== undefined) filter.isActive = isActive === "true";
 
     if (search) {
-      filter.$or = [
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ];
+      filter.$or = [{ firstName: { $regex: search, $options: "i" } }, { lastName: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }];
     }
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [profiles, total] = await Promise.all([
-      EmployeeProfile.find(filter)
-        .sort({ lastName: 1, firstName: 1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate("userId", "email roles"),
-      EmployeeProfile.countDocuments(filter),
-    ]);
+    const [profiles, total] = await Promise.all([EmployeeProfile.find(filter).sort({ lastName: 1, firstName: 1 }).skip(skip).limit(Number(limit)).populate("userId", "email roles"), EmployeeProfile.countDocuments(filter)]);
 
     res.json({
       profiles,
@@ -245,15 +218,7 @@ router.get("/hrdocuments", async (req: AuthenticatedRequest & TenantRequest, res
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [documents, total] = await Promise.all([
-      HRDocument.find(filter)
-        .sort({ uploadedAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate("userId", "firstName lastName email")
-        .populate("uploadedBy", "firstName lastName email"),
-      HRDocument.countDocuments(filter),
-    ]);
+    const [documents, total] = await Promise.all([HRDocument.find(filter).sort({ uploadedAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("uploadedBy", "firstName lastName email"), HRDocument.countDocuments(filter)]);
 
     res.json({
       documents,
@@ -292,16 +257,7 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [orders, total] = await Promise.all([
-      Order.find(filter)
-        .sort({ requestedAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate("userId", "firstName lastName email")
-        .populate("approvedBy", "firstName lastName email")
-        .populate("categoryId"),
-      Order.countDocuments(filter),
-    ]);
+    const [orders, total] = await Promise.all([Order.find(filter).sort({ requestedAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email").populate("categoryId"), Order.countDocuments(filter)]);
 
     res.json({
       orders,
@@ -363,9 +319,7 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
       entityId: order._id,
     });
 
-    const populatedOrder = await Order.findById(order._id)
-      .populate("userId", "firstName lastName email")
-      .populate("approvedBy", "firstName lastName email");
+    const populatedOrder = await Order.findById(order._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email");
 
     res.status(201).json(populatedOrder);
   } catch (error) {
@@ -415,9 +369,7 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     Object.assign(order, data);
     await order.save();
 
-    const populatedOrder = await Order.findById(order._id)
-      .populate("userId", "firstName lastName email")
-      .populate("approvedBy", "firstName lastName email");
+    const populatedOrder = await Order.findById(order._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email");
 
     res.json(populatedOrder);
   } catch (error) {
@@ -477,15 +429,7 @@ router.get("/vacationrequests", async (req: AuthenticatedRequest & TenantRequest
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [vacations, total] = await Promise.all([
-      VacationRequest.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate("userId", "firstName lastName email")
-        .populate("approvedBy", "firstName lastName email"),
-      VacationRequest.countDocuments(filter),
-    ]);
+    const [vacations, total] = await Promise.all([VacationRequest.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email"), VacationRequest.countDocuments(filter)]);
 
     res.json({
       vacations,

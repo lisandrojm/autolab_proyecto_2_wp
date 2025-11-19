@@ -184,9 +184,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
 
       if (data.subcategoryId && category.config?.subtipos) {
-        const subtypeExists = category.config.subtipos.some(
-          (st: any) => st.id === data.subcategoryId
-        );
+        const subtypeExists = category.config.subtipos.some((st: any) => st.id === data.subcategoryId);
         if (!subtypeExists) {
           res.status(400).json({ error: "Invalid subcategory for this category" });
           return;
