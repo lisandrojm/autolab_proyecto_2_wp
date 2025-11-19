@@ -562,9 +562,9 @@ export const MobileNavbar: React.FC = () => {
               )}
 
               {/* 🤖 Robot (por ahora oculto) */}
-              <button onClick={() => openAssistant?.()} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
+              {/*               <button onClick={() => openAssistant?.()} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
                 <FontAwesomeIcon icon={faRobot} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </button>
+              </button> */}
 
               <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
@@ -591,7 +591,7 @@ export const MobileNavbar: React.FC = () => {
 
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4 pt-1 space-y-3 mb-40 ">
-              {showClientContext && (
+              {/*               {showClientContext && (
                 <div className="bg-white dark:bg-gray-800">
                   <div>
                     <div className="text-sm font-medium text-gray-500 dark:text-gray-40 uppercase tracking-wider mb-2">Cliente</div>
@@ -601,7 +601,7 @@ export const MobileNavbar: React.FC = () => {
                     <ClientContextMenu />
                   </div>
                 </div>
-              )}
+              )} */}
               <div>
                 <NavMenu onItemClick={() => setOpen(false)} />
               </div>

@@ -353,15 +353,15 @@ export const UsersPage: React.FC = () => {
           )}
           <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span>Roles</span>
+            <span className="hidden lg:block">Roles</span>
           </button>
           <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span>Cargos</span>
+            <span className="hidden lg:block">Cargos</span>
           </button>
           <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span>Niveles</span>
+            <span className="hidden lg:block">Niveles</span>
           </button>
         </div>
       }
