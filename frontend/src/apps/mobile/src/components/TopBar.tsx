@@ -2,6 +2,7 @@ import { Bell, Sun, Moon, LogOut } from "lucide-react";
 import { useThemeStore } from "../../../../stores/themeStore";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 interface TopBarProps {
   title: string;
@@ -13,8 +14,17 @@ interface TopBarProps {
 
 export default function TopBar({ title, hasNotifications = false, onNotificationClick, userRole, userName }: TopBarProps) {
   const { theme, toggleTheme } = useThemeStore();
-  const { logout } = useAuthStore();
+  const { logout, user, tenantId } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && user.tenantId && !tenantId) {
+      localStorage.setItem("tenantId", user.tenantId);
+      if (user.tenantSlug) {
+        localStorage.setItem("tenantSlug", user.tenantSlug);
+      }
+    }
+  }, [user, tenantId]);
 
   const handleLogout = () => {
     logout();

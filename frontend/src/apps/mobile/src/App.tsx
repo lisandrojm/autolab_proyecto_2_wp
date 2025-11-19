@@ -14,7 +14,7 @@ import { useThemeStore } from "../../../stores/themeStore";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
-  const { user, hasPermission } = useAuthStore();
+  const { user, hasPermission, tenantId, setTenantId } = useAuthStore();
   const { theme } = useThemeStore();
 
   useEffect(() => {
@@ -24,6 +24,16 @@ function App() {
       document.documentElement.classList.remove("dark");
     }
   }, [theme]);
+
+  useEffect(() => {
+    if (user?.tenantId && (!tenantId || tenantId === "demo-tenant")) {
+      setTenantId(user.tenantId);
+      localStorage.setItem("tenantId", user.tenantId);
+      if (user.tenantSlug) {
+        localStorage.setItem("tenantSlug", user.tenantSlug);
+      }
+    }
+  }, [user, tenantId, setTenantId]);
 
   const permissions = user?.permissions || [];
   const hasMobileAccess = hasPermission("mobile:access");
