@@ -120,7 +120,7 @@ export const RegisterPage: React.FC = () => {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    navigate("/clients");
+    navigate("/users");
   };
 
   return (
