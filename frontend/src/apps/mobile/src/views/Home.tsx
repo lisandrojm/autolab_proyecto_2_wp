@@ -121,7 +121,7 @@ export default function Home({ onNavigate }: HomeProps) {
   return (
     <div className="flex-1 pb-24">
       <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
-
+      {/* Notificaciones */}
       {!notifLoading && latestNotification && (
         <div className="p-4">
           <div className="flex items-start gap-3 rounded-xl border border-green-500 bg-green-50 p-4 shadow-sm dark:border-green-400 dark:bg-green-900/40">
@@ -138,7 +138,6 @@ export default function Home({ onNavigate }: HomeProps) {
           </div>
         </div>
       )}
-
       {notifLoading && (
         <div className="p-4">
           <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
@@ -146,7 +145,6 @@ export default function Home({ onNavigate }: HomeProps) {
           </div>
         </div>
       )}
-
       <div className={`grid ${isMobileCoordinator ? "grid-cols-2" : "grid-cols-2"} gap-4 p-4`}>
         {quickActions.map((action, index) => {
           const Icon = action.icon;
@@ -159,8 +157,8 @@ export default function Home({ onNavigate }: HomeProps) {
                 if (!action.disabled) onNavigate(action.view);
               }}
               disabled={action.disabled}
-              className={`flex flex-col flex-1 gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
-    ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-800"}`}
+              className={`relative flex flex-col flex-1 gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
+    ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
               {(action as any).badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase z-10">{(action as any).badge}</span>}
               <Icon className={`h-6 w-6 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
@@ -172,9 +170,7 @@ export default function Home({ onNavigate }: HomeProps) {
           );
         })}
       </div>
-
       <h3 className="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">Actividad Reciente</h3>
-
       {activityLoading ? (
         <div className="flex flex-col gap-3 px-4">
           {[1, 2].map((i) => (
