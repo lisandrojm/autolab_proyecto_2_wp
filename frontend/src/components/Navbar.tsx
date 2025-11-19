@@ -522,11 +522,49 @@ export const MobileNavbar: React.FC = () => {
               <div className="hidden lg:block">
                 <UserCard />
               </div>
+              {isDeployButtonVisible() && (
+                <button onClick={handleRedeploy} onMouseEnter={loadDeployMeta} disabled={isDeploying} className="relative p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group">
+                  <FontAwesomeIcon icon={faRocket} className={`h-5 w-5 text-blue-600 dark:text-blue-400 ${isDeploying ? "animate-pulse" : ""}`} />
+                  <div className="absolute top-full left-1/2 mt-2 -translate-x-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                    <div className="w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800 dark:border-b-gray-700"></div>
+                    <span className="rounded-md bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 shadow-md whitespace-nowrap">
+                      <div className="font-semibold flex flex-col">Vercel Deploy</div>
+                      {deployMetaLoading ? (
+                        <span className="ml-2 opacity-80">cargando…</span>
+                      ) : deployMetaError ? (
+                        <span className="ml-2 opacity-80">sin datos</span>
+                      ) : deployMeta?.shortSha ? (
+                        <>
+                          <span className="ml-2">•</span>
+                          {deployMeta.url ? (
+                            <a href={`https://${deployMeta.url}`} target="_blank" rel="noopener noreferrer" className="ml-2 underline underline-offset-2" title={deployMeta.commitMessage || deployMeta.sha}>
+                              {deployMeta.shortSha}
+                            </a>
+                          ) : (
+                            <span className="ml-2" title={deployMeta.commitMessage || deployMeta.sha}>
+                              {deployMeta.shortSha}
+                            </span>
+                          )}
+                          {deployMeta.branch ? <span className="ml-2 opacity-80">({deployMeta.branch})</span> : null}
+                          {deployMeta.createdAt ? (
+                            <>
+                              <span className="ml-2">•</span>
+                              <span className="ml-2 opacity-80">{formatDateTime(deployMeta.createdAt)}</span>
+                            </>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="ml-2 opacity-80">sin datos</span>
+                      )}
+                    </span>
+                  </div>
+                </button>
+              )}
 
               {/* 🤖 Robot (por ahora oculto) */}
-              {/*               <button onClick={() => openAssistant?.()} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
+              <button onClick={() => openAssistant?.()} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
                 <FontAwesomeIcon icon={faRobot} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </button> */}
+              </button>
 
               <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
