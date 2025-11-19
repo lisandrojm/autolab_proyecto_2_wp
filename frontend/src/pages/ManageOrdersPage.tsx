@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faClipboardList, faListCheck, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -194,7 +194,7 @@ export const ManageOrdersPage: React.FC = () => {
     <PageLayout
       title="Pedidos"
       subtitle="Administra todos los pedidos del personal"
-      faIcon={{ icon: faClipboardList }}
+      faIcon={{ icon: faShoppingCart }}
       // 🔥 INFO MODAL (IGUAL QUE UsersPage)
       infoModal={{
         isOpen: openInfo,
@@ -349,7 +349,7 @@ export const ManageOrdersPage: React.FC = () => {
 
               {filteredOrders.length === 0 && (
                 <div className="text-center py-12">
-                  <FontAwesomeIcon icon={faClipboardList} className="h-16 w-16 text-gray-400 mb-4" />
+                  <FontAwesomeIcon icon={faShoppingCart} className="h-16 w-16 text-gray-400 mb-4" />
                   <p className="text-gray-600 dark:text-gray-400">{searchTerm || statusFilter !== "all" ? "No se encontraron pedidos con los filtros aplicados" : "No hay pedidos registrados"}</p>
                 </div>
               )}
@@ -392,7 +392,7 @@ export const ManageOrdersPage: React.FC = () => {
 
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faClipboardList} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <FontAwesomeIcon icon={faShoppingCart} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
                         <div className="flex flex-col gap-1">
                           <div>
                             <p className="text-sm text-gray-600 dark:text-gray-400">Estado</p>
@@ -403,7 +403,7 @@ export const ManageOrdersPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faClipboardList} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
+                        <FontAwesomeIcon icon={faShoppingCart} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
                         <div className="flex-1">
                           <p className="text-sm text-gray-600 dark:text-gray-400">Título</p>
                           <p className="text-base font-semibold text-gray-900 dark:text-white">{selectedOrder.title}</p>

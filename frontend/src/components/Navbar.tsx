@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -268,7 +268,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("users:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "New", badgeColor: "bg-red-500" });
-      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faClipboardList, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faShoppingCart, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "Next", badgeColor: "bg-orange-400" });
       if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: true, icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true, disabled: true });
       if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });

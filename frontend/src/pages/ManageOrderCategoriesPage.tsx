@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faCircleInfo, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faCircleInfo, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { InfoModal } from "../components/ui/InfoModal";
@@ -446,7 +446,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 <span className="hidden lg:block">Nuevo Tipo de Pedido</span>
               </button>
               <button onClick={() => navigate("/orders")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-                <FontAwesomeIcon icon={faClipboardList} className="h-3 w-3 lg:h-4 lg:w-4" />
+                <FontAwesomeIcon icon={faShoppingCart} className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden lg:block">Pedidos</span>
               </button>
               <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
