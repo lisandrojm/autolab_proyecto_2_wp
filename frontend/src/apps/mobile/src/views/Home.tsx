@@ -122,7 +122,7 @@ export default function Home({ onNavigate }: HomeProps) {
     <div className="flex-1 pb-24">
       <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
       {/* Notificaciones */}
-      {!notifLoading && latestNotification && (
+      {/*       {!notifLoading && latestNotification && (
         <div className="p-4">
           <div className="flex items-start gap-3 rounded-xl border border-green-500 bg-green-50 p-4 shadow-sm dark:border-green-400 dark:bg-green-900/40">
             <Bell className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
@@ -144,7 +144,7 @@ export default function Home({ onNavigate }: HomeProps) {
             <div className="animate-pulse text-sm text-slate-500 dark:text-slate-400">Cargando notificaciones...</div>
           </div>
         </div>
-      )}
+      )} */}
       <div className={`grid ${isMobileCoordinator ? "grid-cols-2" : "grid-cols-2"} gap-4 p-4`}>
         {quickActions.map((action, index) => {
           const Icon = action.icon;
