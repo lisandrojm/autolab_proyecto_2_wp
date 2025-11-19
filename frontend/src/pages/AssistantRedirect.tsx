@@ -8,7 +8,7 @@ export const AssistantRedirect: React.FC = () => {
 
   useEffect(() => {
     openAssistant();
-    navigate("/dashboard", { replace: true });
+    navigate("/users", { replace: true });
   }, []);
 
   return null;

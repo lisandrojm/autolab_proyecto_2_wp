@@ -143,7 +143,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
     const permissions = [...new Set(rolePermissions)];
 
     // Calcular redirectTo basado en permisos
-    let redirectTo = "/dashboard"; // Ruta por defecto
+    let redirectTo = "/users"; // Ruta por defecto
     if (permissions.includes("mobile:access")) {
       redirectTo = "/mobile";
     }
@@ -202,9 +202,7 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
       return;
     }
 
-    const user = await User.findOne({ _id: userId, tenantId, isActive: true })
-      .populate("roles", "name permissions")
-      .populate("tenantId", "_id name slug");
+    const user = await User.findOne({ _id: userId, tenantId, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -588,7 +586,7 @@ router.post("/register-tenant", async (req, res) => {
 
     // Los roles se crean automáticamente mediante el hook post-save del modelo Tenant
     // Esperar un momento para que se complete el hook
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Obtener el rol admin creado automáticamente
     const { adminRole } = await ensureDefaultRoles(tenant._id as Types.ObjectId);

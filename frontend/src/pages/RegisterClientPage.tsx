@@ -107,7 +107,7 @@ export const RegisterClientPage: React.FC = () => {
       // 🔔 Avisar a la app que la lista de clientes cambió (para que pickers refresquen)
       window.dispatchEvent(new CustomEvent("clientsChanged", { detail: { reason: "clientRegistered" } }));
 
-      navigate("/client/dashboard");
+      navigate("/client/users");
     } catch (err: any) {
       console.error("[register-client:error]", err);
       setError(err.message || "Error al crear la cuenta");
