@@ -6,7 +6,7 @@ import { personnelAPI, OrderData } from "../api/personnel";
 import { orderCategoriesAPI, OrderCategory } from "../api/orderCategories";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faPlus, faEdit, faTrash, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 
 export const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,7 @@ export const OrdersPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const selectedCategory = categories.find(c => c.name === formData.category);
+      const selectedCategory = categories.find((c) => c.name === formData.category);
 
       if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
         if (!formData.dynamicValue?.fechaDesde || !formData.dynamicValue?.fechaHasta) {
@@ -164,7 +164,7 @@ export const OrdersPage: React.FC = () => {
     <PageLayout
       title="Pedidos"
       subtitle="Solicitudes de suministros y equipamiento"
-      faIcon={{ icon: faShoppingCart }}
+      faIcon={{ icon: faClipboardList }}
       headerActions={
         <div className="flex items-center gap-3">
           <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-green-500 text-white uppercase">Nuevo</span>
@@ -221,7 +221,7 @@ export const OrdersPage: React.FC = () => {
               <input type="number" min="0" step="0.01" value={formData.amount || ""} onChange={(e) => setFormData({ ...formData, amount: e.target.value ? parseFloat(e.target.value) : undefined })} className="input-field" placeholder="0.00" />
             </div>
             {(() => {
-              const selectedCategory = categories.find(c => c.name === formData.category);
+              const selectedCategory = categories.find((c) => c.name === formData.category);
               if (selectedCategory?.categoryType === "fecha") {
                 if (selectedCategory.dateMode === "range") {
                   return (
@@ -230,23 +230,11 @@ export const OrdersPage: React.FC = () => {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Desde</label>
-                          <input
-                            type="date"
-                            required
-                            value={formData.dynamicValue?.fechaDesde || ""}
-                            onChange={(e) => setFormData({ ...formData, dynamicValue: { ...formData.dynamicValue, fechaDesde: e.target.value } })}
-                            className="input-field"
-                          />
+                          <input type="date" required value={formData.dynamicValue?.fechaDesde || ""} onChange={(e) => setFormData({ ...formData, dynamicValue: { ...formData.dynamicValue, fechaDesde: e.target.value } })} className="input-field" />
                         </div>
                         <div>
                           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Hasta</label>
-                          <input
-                            type="date"
-                            required
-                            value={formData.dynamicValue?.fechaHasta || ""}
-                            onChange={(e) => setFormData({ ...formData, dynamicValue: { ...formData.dynamicValue, fechaHasta: e.target.value } })}
-                            className="input-field"
-                          />
+                          <input type="date" required value={formData.dynamicValue?.fechaHasta || ""} onChange={(e) => setFormData({ ...formData, dynamicValue: { ...formData.dynamicValue, fechaHasta: e.target.value } })} className="input-field" />
                         </div>
                       </div>
                     </div>
@@ -255,13 +243,7 @@ export const OrdersPage: React.FC = () => {
                   return (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha *</label>
-                      <input
-                        type="date"
-                        required
-                        value={formData.dynamicValue || ""}
-                        onChange={(e) => setFormData({ ...formData, dynamicValue: e.target.value })}
-                        className="input-field"
-                      />
+                      <input type="date" required value={formData.dynamicValue || ""} onChange={(e) => setFormData({ ...formData, dynamicValue: e.target.value })} className="input-field" />
                     </div>
                   );
                 }
@@ -311,7 +293,7 @@ export const OrdersPage: React.FC = () => {
                 header={{
                   title: order.title,
                   subtitle: getCategoryLabel(order.category),
-                  icon: faShoppingCart,
+                  icon: faClipboardList,
                   badges: [{ text: badge.text, variant: badge.variant }],
                 }}
                 footer={{
@@ -338,25 +320,22 @@ export const OrdersPage: React.FC = () => {
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 dark:text-gray-400">{order.description}</p>
                   {order.amount && <p className="text-sm font-semibold text-gray-900 dark:text-white">Monto: ${order.amount.toFixed(2)}</p>}
-                  {order.dynamicValue && (() => {
-                    const category = categories.find(c => c.name === order.category);
-                    if (category?.categoryType === "fecha") {
-                      if (category.dateMode === "range" && order.dynamicValue.fechaDesde && order.dynamicValue.fechaHasta) {
-                        return (
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            Desde: {new Date(order.dynamicValue.fechaDesde).toLocaleDateString()} - Hasta: {new Date(order.dynamicValue.fechaHasta).toLocaleDateString()}
-                          </p>
-                        );
-                      } else if (typeof order.dynamicValue === "string") {
-                        return (
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            Fecha: {new Date(order.dynamicValue).toLocaleDateString()}
-                          </p>
-                        );
+                  {order.dynamicValue &&
+                    (() => {
+                      const category = categories.find((c) => c.name === order.category);
+                      if (category?.categoryType === "fecha") {
+                        if (category.dateMode === "range" && order.dynamicValue.fechaDesde && order.dynamicValue.fechaHasta) {
+                          return (
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              Desde: {new Date(order.dynamicValue.fechaDesde).toLocaleDateString()} - Hasta: {new Date(order.dynamicValue.fechaHasta).toLocaleDateString()}
+                            </p>
+                          );
+                        } else if (typeof order.dynamicValue === "string") {
+                          return <p className="text-sm font-medium text-gray-900 dark:text-white">Fecha: {new Date(order.dynamicValue).toLocaleDateString()}</p>;
+                        }
                       }
-                    }
-                    return null;
-                  })()}
+                      return null;
+                    })()}
                 </div>
               </Card>
             );
@@ -365,7 +344,7 @@ export const OrdersPage: React.FC = () => {
 
         {orders.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
-            <FontAwesomeIcon icon={faShoppingCart} className="h-12 w-12 text-gray-400 mb-4" />
+            <FontAwesomeIcon icon={faClipboardList} className="h-12 w-12 text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400 mb-4">No hay pedidos</p>
             <button onClick={openCreate} className="btn-primary">
               Crear Primer Pedido

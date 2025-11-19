@@ -268,12 +268,12 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("users:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "New", badgeColor: "bg-red-500" });
-      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faClipboardList, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "Next", badgeColor: "bg-orange-400" });
-      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: true, icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true, disabled: true });
-      if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
-      if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
-      if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
+      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true, disabled: true });
+      if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", icon: faCalendar, label: "Calendario", scope: "global" });
+      if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
+      if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
       if (hasPermission("creative:view")) {
         base.push({
@@ -430,19 +430,6 @@ export const MobileNavbar: React.FC = () => {
         );
       }
 
-      // Disabled state
-      if (item.disabled) {
-        return (
-          <div key={item.path} className="group relative flex items-center justify-between px-2 py-2 rounded-lg transition-all cursor-not-allowed opacity-40 bg-gray-100 dark:bg-gray-700 select-none">
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
-              <div className="h-8 w-8 flex items-center justify-center rounded-md bg-gray-200 dark:bg-gray-600">
-                <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
-              </div>
-              <span className="font-medium truncate">{item.label}</span>
-            </div>
-          </div>
-        );
-      }
       return (
         <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? "page" : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded-lg transition-all ${isActive(item.path) ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-blue-300 dark:border-blue-800" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"}`}>
           <div className="flex items-center space-x-3 flex-1 min-w-0">
