@@ -1,19 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBuilding,
-  faUser,
-  faUserShield,
-  faRightFromBracket,
-  faTimes
-} from "@fortawesome/free-solid-svg-icons";
-import {
-  ShoppingCart,
-  Umbrella,
-  FileText,
-  Receipt,
-  CheckCircle,
-  File
-} from "lucide-react";
+import { faBuilding, faUser, faUserShield, faRightFromBracket, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File } from "lucide-react";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { ActivityRecord } from "../../../../api/personnel";
@@ -27,13 +14,7 @@ interface SideMenuProps {
   userRole?: "coordinator" | "collaborator" | null;
 }
 
-export default function SideMenu({
-  isOpen,
-  onClose,
-  onNavigate,
-  recentActivity = [],
-  userRole
-}: SideMenuProps) {
+export default function SideMenu({ isOpen, onClose, onNavigate, recentActivity = [], userRole }: SideMenuProps) {
   const { user, logout, hasPermission } = useAuthStore();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -67,11 +48,7 @@ export default function SideMenu({
     onClose();
   };
 
-  const userRoleLabel = userRole === "coordinator"
-    ? "Coordinador"
-    : userRole === "collaborator"
-    ? "Colaborador"
-    : null;
+  const userRoleLabel = userRole === "coordinator" ? "Coordinador" : userRole === "collaborator" ? "Colaborador" : null;
 
   const baseActions = [
     {
@@ -112,12 +89,9 @@ export default function SideMenu({
   };
 
   const getActivityColor = (action: string) => {
-    if (action.includes("vacation"))
-      return { bg: "bg-green-100 dark:bg-green-900/50", icon: "text-green-600 dark:text-green-400" };
-    if (action.includes("order"))
-      return { bg: "bg-blue-100 dark:bg-blue-900/50", icon: "text-blue-600 dark:text-blue-400" };
-    if (action.includes("document"))
-      return { bg: "bg-purple-100 dark:bg-purple-900/50", icon: "text-purple-600 dark:text-purple-400" };
+    if (action.includes("vacation")) return { bg: "bg-green-100 dark:bg-green-900/50", icon: "text-green-600 dark:text-green-400" };
+    if (action.includes("order")) return { bg: "bg-blue-100 dark:bg-blue-900/50", icon: "text-blue-600 dark:text-blue-400" };
+    if (action.includes("document")) return { bg: "bg-purple-100 dark:bg-purple-900/50", icon: "text-purple-600 dark:text-purple-400" };
     return { bg: "bg-slate-100 dark:bg-slate-800", icon: "text-slate-600 dark:text-slate-400" };
   };
 
@@ -138,28 +112,14 @@ export default function SideMenu({
   return (
     <>
       {/* Overlay */}
-      <div
-        className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={onClose} aria-hidden="true" />
 
       {/* Side Menu */}
-      <div
-        ref={menuRef}
-        className={`fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white dark:bg-slate-900 z-50 shadow-2xl transform transition-transform duration-300 ease-in-out overflow-y-auto ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Menú de navegación"
-      >
+      <div ref={menuRef} className={`fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white dark:bg-slate-900 z-50 shadow-2xl transform transition-transform duration-300 ease-in-out overflow-y-auto ${isOpen ? "translate-x-0" : "-translate-x-full"}`} role="dialog" aria-modal="true" aria-label="Menú de navegación">
         {/* Header del menú con badges */}
         <div className="sticky top-0 bg-slate-900 dark:bg-slate-950 border-b border-slate-800 p-4 z-10">
           <div className="flex items-start justify-between mb-4">
-            <div className="flex flex-col gap-2 flex-1">
+            <div className="flex gap-2 flex-1 flex-wrap">
               {/* Tenant Badge */}
               {user?.tenantSlug && (
                 <span className="inline-flex items-center w-fit capitalize font-semibold px-3 py-1.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
@@ -186,11 +146,7 @@ export default function SideMenu({
             </div>
 
             {/* Botón cerrar */}
-            <button
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-slate-800 dark:hover:bg-slate-900 transition-colors"
-              aria-label="Cerrar menú"
-            >
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-slate-800 dark:hover:bg-slate-900 transition-colors" aria-label="Cerrar menú">
               <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
             </button>
           </div>
@@ -204,29 +160,12 @@ export default function SideMenu({
               {baseActions.map((action, index) => {
                 const Icon = action.icon;
                 return (
-                  <button
-                    key={index}
-                    onClick={() => !action.disabled && handleNavigation(action.view)}
-                    disabled={action.disabled}
-                    className={`relative flex flex-col gap-2 rounded-xl border p-3 text-left shadow-sm transition-all ${
-                      action.disabled
-                        ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600"
-                        : "bg-white hover:shadow-md active:scale-95 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    {action.badge && (
-                      <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase">
-                        {action.badge}
-                      </span>
-                    )}
+                  <button key={index} onClick={() => !action.disabled && handleNavigation(action.view)} disabled={action.disabled} className={`relative flex flex-col gap-2 rounded-xl border p-3 text-left shadow-sm transition-all ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:shadow-md active:scale-95 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"}`}>
+                    {action.badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase">{action.badge}</span>}
                     <Icon className="h-5 w-5 text-slate-700 dark:text-slate-300" />
                     <div className="flex flex-col gap-0.5">
-                      <h3 className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
-                        {action.title}
-                      </h3>
-                      <p className="text-xs leading-tight text-slate-500 dark:text-slate-400">
-                        {action.description}
-                      </p>
+                      <h3 className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h3>
+                      <p className="text-xs leading-tight text-slate-500 dark:text-slate-400">{action.description}</p>
                     </div>
                   </button>
                 );
@@ -237,28 +176,19 @@ export default function SideMenu({
           {/* Actividad Reciente */}
           {recentActivity.length > 0 && (
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">
-                Actividad Reciente
-              </h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Actividad Reciente</h3>
               <div className="flex flex-col gap-2">
                 {recentActivity.slice(0, 2).map((activity) => {
                   const Icon = getActivityIcon(activity.action);
                   const colors = getActivityColor(activity.action);
                   return (
-                    <div
-                      key={activity._id}
-                      className="flex items-center gap-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3"
-                    >
+                    <div key={activity._id} className="flex items-center gap-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${colors.bg}`}>
                         <Icon className={`h-4 w-4 ${colors.icon}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                          {activity.description}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {formatTimeAgo(activity.createdAt)}
-                        </p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{activity.description}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{formatTimeAgo(activity.createdAt)}</p>
                       </div>
                     </div>
                   );
@@ -270,10 +200,7 @@ export default function SideMenu({
 
         {/* Footer con botón de logout */}
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors"
-          >
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors">
             <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4" />
             Cerrar Sesión
           </button>
