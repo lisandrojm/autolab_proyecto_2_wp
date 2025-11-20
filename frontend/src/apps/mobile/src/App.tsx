@@ -178,7 +178,6 @@ function App() {
           isOpen={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
           onNavigate={setCurrentView}
-          recentActivity={recentActivity}
           userRole={userRole}
         />
         {renderView()}

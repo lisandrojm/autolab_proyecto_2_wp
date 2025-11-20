@@ -3,22 +3,18 @@ import { faBuilding, faUser, faUserShield, faRightFromBracket, faTimes } from "@
 import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File } from "lucide-react";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
-import { ActivityRecord } from "../../../../api/personnel";
 import { useEffect, useRef } from "react";
 
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (view: ViewType) => void;
-  recentActivity?: ActivityRecord[];
   userRole?: "coordinator" | "collaborator" | null;
 }
 
 export default function SideMenu({ isOpen, onClose, onNavigate, recentActivity = [], userRole }: SideMenuProps) {
   const { user, logout, hasPermission } = useAuthStore();
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const isMobileCoordinator = hasPermission("mobile:coordinator");
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -50,32 +46,24 @@ export default function SideMenu({ isOpen, onClose, onNavigate, recentActivity =
 
   const userRoleLabel = userRole === "coordinator" ? "Coordinador" : userRole === "collaborator" ? "Colaborador" : null;
 
-  const baseActions = [
+  const menuItems = [
     {
-      icon: ShoppingCart,
       title: "Mis Pedidos",
-      description: "Gestiona tus pedidos",
       view: "orders" as ViewType,
-      badge: "Nuevo",
+      disabled: false,
     },
     {
-      icon: Umbrella,
       title: "Solicitar Vacaciones",
-      description: "Solicita tus días libres",
       view: "vacations" as ViewType,
-      disabled: true,
+      disabled: false,
     },
     {
-      icon: FileText,
       title: "Mis Contratos",
-      description: "Consulta tus documentos",
       view: "documents" as ViewType,
-      disabled: true,
+      disabled: false,
     },
     {
-      icon: Receipt,
       title: "Mis Recibos",
-      description: "Accede a tus nóminas",
       view: "documents" as ViewType,
       disabled: true,
     },
@@ -119,7 +107,7 @@ export default function SideMenu({ isOpen, onClose, onNavigate, recentActivity =
         {/* Header del menú con badges */}
         <div className="sticky top-0 bg-slate-900 dark:bg-slate-950 border-b border-slate-800 p-4 z-10">
           <div className="flex items-start justify-between mb-4">
-            <div className="flex gap-2 flex-1 flex-wrap">
+            <div className="flex flex-col gap-2 flex-1">
               {/* Tenant Badge */}
               {user?.tenantSlug && (
                 <span className="inline-flex items-center w-fit capitalize font-semibold px-3 py-1.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
@@ -130,7 +118,7 @@ export default function SideMenu({ isOpen, onClose, onNavigate, recentActivity =
 
               {/* Usuario Badge */}
               {user?.firstName && (
-                <span className="inline-flex items-center w-fit font-semibold px-3 py-1.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                <span className="inline-flex items-center font-medium px-2.5 py-1 rounded text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
                   <FontAwesomeIcon icon={faUser} className="h-3 w-3 mr-1.5" />
                   {user.firstName}
                 </span>
@@ -138,7 +126,7 @@ export default function SideMenu({ isOpen, onClose, onNavigate, recentActivity =
 
               {/* Rol Badge */}
               {userRoleLabel && (
-                <span className="inline-flex items-center w-fit font-semibold px-3 py-1.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                <span className="inline-flex items-center font-medium px-2.5 py-1 rounded text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
                   <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 mr-1.5" />
                   {userRoleLabel}
                 </span>
@@ -202,7 +190,7 @@ export default function SideMenu({ isOpen, onClose, onNavigate, recentActivity =
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4">
           <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors">
             <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4" />
-            Cerrar Sesión
+            Salir
           </button>
         </div>
       </div>
