@@ -120,7 +120,6 @@ export default function Home({ onNavigate }: HomeProps) {
 
   return (
     <div className="flex-1 pb-24">
-      <h1 className="px-4 pb-3 pt-6 text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
       {/* Notificaciones */}
       {/*       {!notifLoading && latestNotification && (
         <div className="p-4">

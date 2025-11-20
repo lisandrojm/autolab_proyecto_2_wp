@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { ViewType } from "./types";
 import TopBar from "./components/TopBar";
+import MobileHeader from "./components/MobileHeader";
+import SideMenu from "./components/SideMenu";
 import BottomNav from "./components/BottomNav";
 import Home from "./views/Home";
 import Calendar from "./views/Calendar";
@@ -11,9 +13,12 @@ import Orders from "./views/Orders";
 import Requests from "./views/Requests";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
+import { personnelAPI, ActivityRecord } from "../../../api/personnel";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const { user, hasPermission, tenantId, setTenantId } = useAuthStore();
   const { theme } = useThemeStore();
 
@@ -34,6 +39,21 @@ function App() {
       }
     }
   }, [user, tenantId, setTenantId]);
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const data = await personnelAPI.getRecentActivity();
+        setRecentActivity(data.slice(0, 3));
+      } catch (error) {
+        console.error("Error fetching activity:", error);
+      }
+    };
+
+    if (user) {
+      fetchActivity();
+    }
+  }, [user]);
 
   const permissions = user?.permissions || [];
   const hasMobileAccess = hasPermission("mobile:access");
@@ -84,7 +104,8 @@ function App() {
     }
   };
 
-  const showTopBar = currentView === "home" || currentView === "calendar" || currentView === "documents" || currentView === "profile";
+  const showMobileHeader = currentView === "home";
+  const showTopBar = currentView === "calendar" || currentView === "documents" || currentView === "profile";
 
   if (!hasMobileAccess) {
     return (
@@ -144,7 +165,22 @@ function App() {
   return (
     <div className="w-full dark:bg-gray-900 flex justify-center">
       <div className="relative flex min-h-screen flex-col bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-display w-full xl:w-1/2">
+        {showMobileHeader && (
+          <MobileHeader
+            onMenuToggle={() => setIsMenuOpen(true)}
+            hasNotifications={true}
+            notificationCount={3}
+            onNotificationClick={() => alert("Notificaciones")}
+          />
+        )}
         {showTopBar && <TopBar title={getTitle(currentView)} hasNotifications={true} onNotificationClick={() => alert("Notificaciones")} userRole={userRole} userName={user?.firstName || "Usuario"} />}
+        <SideMenu
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          onNavigate={setCurrentView}
+          recentActivity={recentActivity}
+          userRole={userRole}
+        />
         {renderView()}
         <BottomNav currentView={currentView} onNavigate={setCurrentView} />
       </div>
