@@ -78,7 +78,7 @@ Vite configura un proxy para redirigir `/api/*` al backend local.
 Usa `frontend/.env.production`:
 
 ```env
-VITE_API_URL=https://autolab.fun:4001/api/v1
+VITE_API_URL=https://autolab.fun:7001/api/v1
 ```
 
 Conecta directamente al backend en el VPS (sin proxy).
@@ -88,7 +88,7 @@ Conecta directamente al backend en el VPS (sin proxy).
 El backend corre en un VPS externo y **NO** forma parte del deploy de Bolt.
 
 - **Development**: `http://localhost:8080`
-- **Production**: `https://autolab.fun:4001`
+- **Production**: `https://autolab.fun:7001`
 
 ## Verificación
 
