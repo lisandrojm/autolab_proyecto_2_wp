@@ -6,6 +6,8 @@ import axios from "../../../../api/axiosConfig";
 import { OrderCategory } from "../../../../api/orderCategories";
 import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
 import { sweetAlert } from "../utils/sweetAlert";
+import OrderDetailModal from "../components/OrderDetailModal";
+import { OrderData } from "../../../../api/personnel";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -23,6 +25,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -215,6 +219,11 @@ export default function Orders({ onNavigate }: OrdersProps) {
     }
   };
 
+  const handleOrderClick = (order: OrderData) => {
+    setSelectedOrder(order);
+    setShowDetailModal(true);
+  };
+
   const getStatusBg = (status: string) => {
     switch (status) {
       case "delivered":
@@ -332,11 +341,23 @@ export default function Orders({ onNavigate }: OrdersProps) {
         ) : orders.length > 0 ? (
           <div className="space-y-3">
             {orders.map((order) => (
-              <div key={order._id} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
+              <div
+                key={order._id}
+                className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleOrderClick(order)}
+              >
                 <div className="flex items-start gap-3 mb-3">
                   {order.photoUrl && (
                     <div className="flex-shrink-0">
-                      <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
+                      <img
+                        src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`}
+                        alt={order.title}
+                        className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`);
+                        }}
+                      />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -368,6 +389,15 @@ export default function Orders({ onNavigate }: OrdersProps) {
           </div>
         )}
       </div>
+
+      <OrderDetailModal
+        order={selectedOrder}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedOrder(null);
+        }}
+      />
 
       {viewingImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
