@@ -285,6 +285,7 @@ export const ManageOrdersPage: React.FC = () => {
                 <table className="w-full table-fixed">
                   <thead>
                     <tr>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
                       <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
@@ -314,6 +315,7 @@ export const ManageOrdersPage: React.FC = () => {
                           }}
                         >
                           {/* --- TÍTULO --- */}
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300"> #C0E98</td>
                           <td className="py-3 px-4">
                             <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
                             <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{order.description}</div>
@@ -410,7 +412,7 @@ export const ManageOrdersPage: React.FC = () => {
 
       {showDetailModal && selectedOrder && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col h-full">
               <header className="flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-4">
@@ -427,11 +429,7 @@ export const ManageOrdersPage: React.FC = () => {
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         {getUserAvatar(selectedOrder.userId) ? (
-                          <img
-                            alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`}
-                            className="w-10 h-10 rounded-full object-cover"
-                            src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`}
-                          />
+                          <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
                             {getUserName(selectedOrder.userId)
@@ -455,16 +453,14 @@ export const ManageOrdersPage: React.FC = () => {
                           <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder._id)}</p>
                           <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p>
                         </div>
-                        <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>
-                          {getStatusBadge(selectedOrder.status).label}
-                        </span>
+                        <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</span>
                       </div>
                       <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                       <div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Categoría</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
                         <p className="font-medium text-slate-800 dark:text-slate-100">{getCategoryName(selectedOrder)}</p>
                       </div>
                       {selectedOrder.amount && (
@@ -488,12 +484,7 @@ export const ManageOrdersPage: React.FC = () => {
                       {selectedOrder.photoUrl && (
                         <div className="md:col-span-2">
                           <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
-                          <img
-                            src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`}
-                            alt={selectedOrder.title}
-                            className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)}
-                          />
+                          <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
                         </div>
                       )}
                     </div>
@@ -519,28 +510,16 @@ export const ManageOrdersPage: React.FC = () => {
               <div className="flex justify-end items-center gap-4 px-8 py-6 border-t border-slate-200 dark:border-slate-700">
                 {selectedOrder.status === "pending" && (
                   <>
-                    <button
-                      onClick={() => handleStatusChange("rejected")}
-                      disabled={updatingStatus}
-                      className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <button onClick={() => handleStatusChange("rejected")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       Rechazar
                     </button>
-                    <button
-                      onClick={() => handleStatusChange("approved")}
-                      disabled={updatingStatus}
-                      className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       Aprobar
                     </button>
                   </>
                 )}
                 {selectedOrder.status === "approved" && (
-                  <button
-                    onClick={() => handleStatusChange("delivered")}
-                    disabled={updatingStatus}
-                    className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
+                  <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                     <FontAwesomeIcon icon={faTruck} />
                     Marcar como Entregado
                   </button>
