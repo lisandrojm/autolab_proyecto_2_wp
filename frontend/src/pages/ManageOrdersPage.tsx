@@ -190,6 +190,32 @@ export const ManageOrdersPage: React.FC = () => {
     return category.name || order.category || "Sin categoría";
   };
 
+  const getOrderNumber = (orderId: string): string => {
+    const last5 = orderId.slice(-5).toUpperCase();
+    return `#${last5}`;
+  };
+
+  const getUserRole = (user: any): string => {
+    if (!user) return "Usuario";
+    if (typeof user === "string") return "Usuario";
+    if (user.role) return user.role;
+    return "Empleado";
+  };
+
+  const getUserAvatar = (user: any): string | null => {
+    if (!user || typeof user === "string") return null;
+    return user.avatar || user.photoUrl || null;
+  };
+
+  const formatDateShort = (dateString: string | undefined): string => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   return (
     <PageLayout
       title="Pedidos"
@@ -384,249 +410,147 @@ export const ManageOrdersPage: React.FC = () => {
 
       {showDetailModal && selectedOrder && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
-              <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-              </button>
-            </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col h-full">
+              <header className="flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-4">
+                  <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Detalles del Pedido</h1>
+                </div>
+                <button onClick={() => setShowDetailModal(false)} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+                  <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
+                </button>
+              </header>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-[5fr_3fr] gap-6">
+              <div className="flex-1 overflow-y-auto p-8">
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información del Pedido</h3>
-
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faShoppingCart} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                        <div className="flex flex-col gap-1">
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Estado</p>
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        {getUserAvatar(selectedOrder.userId) ? (
+                          <img
+                            alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`}
+                            className="w-10 h-10 rounded-full object-cover"
+                            src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                            {getUserName(selectedOrder.userId)
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)}
                           </div>
-                          <div>
-                            <p className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</p>
-                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{getUserRole(selectedOrder.userId)}</p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faShoppingCart} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Título</p>
-                          <p className="text-base font-semibold text-gray-900 dark:text-white">{selectedOrder.title}</p>
+                    </div>
+
+                    <div className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-lg">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder._id)}</p>
+                          <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p>
                         </div>
+                        <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>
+                          {getStatusBadge(selectedOrder.status).label}
+                        </span>
                       </div>
+                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
+                    </div>
 
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Descripción</p>
-                          <p className="text-base text-gray-900 dark:text-white">{selectedOrder.description}</p>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                      <div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Categoría</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-100">{getCategoryName(selectedOrder)}</p>
                       </div>
-
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faTag} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Categoría</p>
-                          <p className="text-base text-gray-900 dark:text-white">{getCategoryName(selectedOrder)}</p>
-                        </div>
-                      </div>
-
-                      {typeof selectedOrder.categoryId === "object" && selectedOrder.categoryId && (
-                        <>
-                          <div className="flex items-start gap-3">
-                            <FontAwesomeIcon icon={faListCheck} className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-1" />
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Tipo de Dato</p>
-                              <p className="text-base text-gray-900 dark:text-white">{getCategoryTypeName(selectedOrder.categoryId.categoryType)}</p>
-                            </div>
-                          </div>
-
-                          {selectedOrder.categoryId.config?.subtipos && selectedOrder.categoryId.config.subtipos.length > 0 && (
-                            <div className="flex items-start gap-3">
-                              <FontAwesomeIcon icon={faList} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                              <div className="flex-1">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Opción Seleccionada</p>
-                                <p className="text-base text-gray-900 dark:text-white">{getSubcategoryDisplay(selectedOrder)}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedOrder.categoryId.requiresAction && (
-                            <div className="flex items-start gap-3">
-                              <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                              <div className="flex-1">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Requiere Acción Futura</p>
-                                <p className="text-base font-semibold text-blue-600 dark:text-blue-400">Sí</p>
-                                {selectedOrder.categoryId.actionText && <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">"{selectedOrder.categoryId.actionText}"</p>}
-                                {selectedOrder.categoryId.futureActionType && selectedOrder.categoryId.futureActionType !== "sinVencimiento" && <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Tipo: {selectedOrder.categoryId.futureActionType}</p>}
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedOrder.categoryId.categoryType === "fecha" && selectedOrder.categoryId.dateMode === "range" && selectedOrder.dynamicValue && (
-                            <div className="flex items-start gap-3">
-                              <FontAwesomeIcon icon={faCalendar} className="h-5 w-5 text-teal-600 dark:text-teal-400 mt-1" />
-                              <div className="flex-1">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Rango de Fechas</p>
-                                <p className="text-base text-gray-900 dark:text-white">
-                                  {selectedOrder.dynamicValue.fechaDesde && new Date(selectedOrder.dynamicValue.fechaDesde).toLocaleDateString()}
-                                  {" - "}
-                                  {selectedOrder.dynamicValue.fechaHasta && new Date(selectedOrder.dynamicValue.fechaHasta).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-
                       {selectedOrder.amount && (
-                        <div className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faDollarSign} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Monto</p>
-                            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">${selectedOrder.amount.toFixed(2)}</p>
-                          </div>
+                        <div>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
+                          <p className="font-medium text-slate-800 dark:text-slate-100">${selectedOrder.amount.toFixed(2)} USD</p>
                         </div>
                       )}
-
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Solicitante</p>
-                          <p className="text-base font-medium text-gray-900 dark:text-white">{getUserName(selectedOrder.userId)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faImage} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                        <div className="flex flex-col gap-1">
-                          <div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Imagen</p>
-                          </div>
-                          <div>
-                            {selectedOrder.photoUrl && (
-                              <div className="w-1/3 p-2 border border-slate-700 rounded">
-                                <div className="mb-4 max-w-sm">
-                                  <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faCalendar} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Solicitud</p>
-                          <p className="text-base text-gray-900 dark:text-white">{new Date(selectedOrder.requestedAt).toLocaleString()}</p>
-                        </div>
-                      </div>
-
-                      {selectedOrder.approvedAt && (
-                        <div className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-600 dark:text-green-400 mt-1" />
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Aprobación</p>
-                            <p className="text-base text-gray-900 dark:text-white">{new Date(selectedOrder.approvedAt).toLocaleString()}</p>
-                            {selectedOrder.approvedBy && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Por: {getUserName(selectedOrder.approvedBy)}</p>}
-                          </div>
+                      {selectedOrder.dynamicValue?.fechaDesde && (
+                        <div>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
+                          <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaDesde)}</p>
                         </div>
                       )}
-
-                      {selectedOrder.deliveredAt && (
-                        <div className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faTruck} className="h-5 w-5 text-green-600 dark:text-green-400 mt-1" />
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Entrega</p>
-                            <p className="text-base text-gray-900 dark:text-white">{new Date(selectedOrder.deliveredAt).toLocaleString()}</p>
-                          </div>
+                      {selectedOrder.dynamicValue?.fechaHasta && (
+                        <div>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
+                          <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaHasta)}</p>
+                        </div>
+                      )}
+                      {selectedOrder.photoUrl && (
+                        <div className="md:col-span-2">
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
+                          <img
+                            src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`}
+                            alt={selectedOrder.title}
+                            className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)}
+                          />
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Control de Estado</h3>
-
-                    {selectedOrder.status === "approved" && (
-                      <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="w-full mb-4 py-3 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        <FontAwesomeIcon icon={faTruck} />
-                        Marcar como Entregado
-                      </button>
-                    )}
-
-                    <div className="space-y-3">
-                      {[
-                        { value: "pending", label: "Pendiente", icon: faSpinner, color: "yellow" },
-                        { value: "approved", label: "Aprobado", icon: faCheckCircle, color: "blue" },
-                        { value: "rejected", label: "Rechazado", icon: faTimesCircle, color: "red" },
-                        { value: "delivered", label: "Entregado", icon: faTruck, color: "green" },
-                        { value: "cancelled", label: "Cancelado", icon: faBan, color: "gray" },
-                      ].map((status) => {
-                        const isActive = selectedOrder.status === status.value;
-
-                        const inactiveClasses = "bg-blue-500 dark:bg-blue-800/20 border-blue-200/20 dark:border-blue-800/20 text-blue-800/20 dark:text-blue-400/60";
-
-                        const activeColorClasses: Record<string, { bg: string; border: string; text: string; dotBg: string }> = {
-                          yellow: {
-                            bg: "bg-yellow-100 dark:bg-yellow-900/30",
-                            border: "border-yellow-500 dark:border-yellow-500",
-                            text: "text-yellow-900 dark:text-yellow-300",
-                            dotBg: "bg-yellow-500",
-                          },
-                          blue: {
-                            bg: "bg-blue-100 dark:bg-blue-900/30",
-                            border: "border-blue-500 dark:border-blue-500",
-                            text: "text-blue-900 dark:text-blue-300",
-                            dotBg: "bg-blue-500",
-                          },
-                          red: {
-                            bg: "bg-red-100 dark:bg-red-900/30",
-                            border: "border-red-500 dark:border-red-500",
-                            text: "text-red-900 dark:text-red-300",
-                            dotBg: "bg-red-500",
-                          },
-                          green: {
-                            bg: "bg-green-100 dark:bg-green-900/30",
-                            border: "border-green-500 dark:border-green-500",
-                            text: "text-green-900 dark:text-green-300",
-                            dotBg: "bg-green-500",
-                          },
-                          gray: {
-                            bg: "bg-gray-100 dark:bg-gray-900/30",
-                            border: "border-gray-500 dark:border-gray-500",
-                            text: "text-gray-900 dark:text-gray-300",
-                            dotBg: "bg-gray-500",
-                          },
-                        };
-
-                        const activeColors = activeColorClasses[status.color];
-
-                        return (
-                          <button key={status.value} onClick={() => handleStatusChange(status.value)} disabled={updatingStatus} className={`w-full p-4 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isActive ? `${activeColors.bg} ${activeColors.border} ${activeColors.text} shadow-md` : `${inactiveClasses} hover:shadow-md hover:scale-[1.02]`}`}>
-                            <div className="flex items-center gap-3">
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isActive ? activeColors.border : "border-blue-300 dark:border-blue-600"}`}>{isActive && <div className={`w-3 h-3 rounded-full ${activeColors.dotBg}`} />}</div>
-                              <FontAwesomeIcon icon={status.icon} className="h-5 w-5" />
-                              <span className="font-semibold">{status.label}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Solicitud</p>
+                      <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.requestedAt)}</p>
                     </div>
-
-                    {updatingStatus && (
-                      <div className="mt-4 flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400">
-                        <FontAwesomeIcon icon={faSpinner} spin />
-                        <span className="text-sm">Actualizando estado...</span>
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Aprobación</p>
+                      <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.approvedAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Entrega</p>
+                      <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.deliveredAt)}</p>
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="flex justify-end items-center gap-4 px-8 py-6 border-t border-slate-200 dark:border-slate-700">
+                {selectedOrder.status === "pending" && (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange("rejected")}
+                      disabled={updatingStatus}
+                      className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Rechazar
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange("approved")}
+                      disabled={updatingStatus}
+                      className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Aprobar
+                    </button>
+                  </>
+                )}
+                {selectedOrder.status === "approved" && (
+                  <button
+                    onClick={() => handleStatusChange("delivered")}
+                    disabled={updatingStatus}
+                    className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faTruck} />
+                    Marcar como Entregado
+                  </button>
+                )}
+                {updatingStatus && (
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <FontAwesomeIcon icon={faSpinner} spin />
+                    <span className="text-sm">Actualizando...</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
