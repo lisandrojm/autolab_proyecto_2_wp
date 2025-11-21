@@ -130,6 +130,7 @@ export default function Home({ onNavigate }: HomeProps) {
       {/* Header: saludo + botones de tema y salir */}
       <div className="flex items-center justify-between px-4 pt-4">
         <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
+
         <div className="flex items-center gap-1">
           <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
             {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}

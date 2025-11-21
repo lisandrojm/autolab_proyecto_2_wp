@@ -1755,7 +1755,7 @@ export async function seedOnStart() {
           deliveredAt: new Date(2024, 0, 20),
         });
 
-        console.log("✅ Created orders for regular user");
+        console.log("✅ Pedido creados for regular user");
       }
     }
 
@@ -1912,7 +1912,7 @@ export async function seedOnStart() {
           tenantId,
           userId: regularUser._id,
           action: "order_created",
-          description: "Created order: Standing Desk",
+          description: "Pedido creado: Standing Desk",
           entityType: "Order",
         });
 

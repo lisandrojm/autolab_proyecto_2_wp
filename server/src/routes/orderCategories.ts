@@ -9,142 +9,158 @@ const router = Router();
 
 router.use(requireTenant, authenticateToken);
 
-const subtypeSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  requiere_certificado: z.boolean().optional(),
-}).passthrough();
+const subtypeSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    requiere_certificado: z.boolean().optional(),
+  })
+  .passthrough();
 
-const configSchema = z.object({
-  subtipos: z.array(subtypeSchema).optional(),
-}).passthrough();
+const configSchema = z
+  .object({
+    subtipos: z.array(subtypeSchema).optional(),
+  })
+  .passthrough();
 
-const createCategorySchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  isActive: z.boolean().default(true),
-  categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).default("otros"),
-  dateMode: z.enum(["single", "range"]).default("single").optional(),
-  config: configSchema.optional(),
-  requiresAction: z.boolean().default(false),
-  actionText: z.string().max(500).optional(),
-  futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).default("sinVencimiento").optional(),
-  plazoDias: z.number().int().min(1).max(365).optional(),
-  fechaLimite: z.string().optional(),
-  documentoRequerido: z.string().max(200).optional(),
-}).refine(
-  (data) => {
-    if (data.requiresAction && !data.actionText) {
-      return false;
+const createCategorySchema = z
+  .object({
+    name: z.string().min(1).max(100),
+    description: z.string().max(500).optional(),
+    isActive: z.boolean().default(true),
+    categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).default("otros"),
+    dateMode: z.enum(["single", "range"]).default("single").optional(),
+    config: configSchema.optional(),
+    requiresAction: z.boolean().default(false),
+    actionText: z.string().max(500).optional(),
+    futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).default("sinVencimiento").optional(),
+    plazoDias: z.number().int().min(1).max(365).optional(),
+    fechaLimite: z.string().optional(),
+    documentoRequerido: z.string().max(200).optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.requiresAction && !data.actionText) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "actionText is required when requiresAction is true",
+      path: ["actionText"],
     }
-    return true;
-  },
-  {
-    message: "actionText is required when requiresAction is true",
-    path: ["actionText"],
-  }
-).refine(
-  (data) => {
-    if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
-      return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
+        return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
+      }
+      return true;
+    },
+    {
+      message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
+      path: ["plazoDias"],
     }
-    return true;
-  },
-  {
-    message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
-    path: ["plazoDias"],
-  }
-).refine(
-  (data) => {
-    if (data.futureActionType === "fechaEspecifica") {
-      return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "fechaEspecifica") {
+        return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "fechaLimite is required for fechaEspecifica type",
+      path: ["fechaLimite"],
     }
-    return true;
-  },
-  {
-    message: "fechaLimite is required for fechaEspecifica type",
-    path: ["fechaLimite"],
-  }
-).refine(
-  (data) => {
-    if (data.futureActionType === "presentacionDocumento") {
-      return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "presentacionDocumento") {
+        return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "documentoRequerido is required for presentacionDocumento type",
+      path: ["documentoRequerido"],
     }
-    return true;
-  },
-  {
-    message: "documentoRequerido is required for presentacionDocumento type",
-    path: ["documentoRequerido"],
-  }
-);
+  );
 
-const updateCategorySchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional(),
-  isActive: z.boolean().optional(),
-  sortOrder: z.number().int().min(0).optional(),
-  categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).optional(),
-  dateMode: z.enum(["single", "range"]).optional(),
-  config: configSchema.optional(),
-  requiresAction: z.boolean().optional(),
-  actionText: z.string().max(500).optional(),
-  futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).optional(),
-  plazoDias: z.number().int().min(1).max(365).optional(),
-  fechaLimite: z.string().optional(),
-  documentoRequerido: z.string().max(200).optional(),
-}).refine(
-  (data) => {
-    if (data.requiresAction && !data.actionText) {
-      return false;
+const updateCategorySchema = z
+  .object({
+    name: z.string().min(1).max(100).optional(),
+    description: z.string().max(500).optional(),
+    isActive: z.boolean().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+    categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).optional(),
+    dateMode: z.enum(["single", "range"]).optional(),
+    config: configSchema.optional(),
+    requiresAction: z.boolean().optional(),
+    actionText: z.string().max(500).optional(),
+    futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).optional(),
+    plazoDias: z.number().int().min(1).max(365).optional(),
+    fechaLimite: z.string().optional(),
+    documentoRequerido: z.string().max(200).optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.requiresAction && !data.actionText) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "actionText is required when requiresAction is true",
+      path: ["actionText"],
     }
-    return true;
-  },
-  {
-    message: "actionText is required when requiresAction is true",
-    path: ["actionText"],
-  }
-).refine(
-  (data) => {
-    if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
-      return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
+        return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
+      }
+      return true;
+    },
+    {
+      message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
+      path: ["plazoDias"],
     }
-    return true;
-  },
-  {
-    message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
-    path: ["plazoDias"],
-  }
-).refine(
-  (data) => {
-    if (data.futureActionType === "fechaEspecifica") {
-      return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "fechaEspecifica") {
+        return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "fechaLimite is required for fechaEspecifica type",
+      path: ["fechaLimite"],
     }
-    return true;
-  },
-  {
-    message: "fechaLimite is required for fechaEspecifica type",
-    path: ["fechaLimite"],
-  }
-).refine(
-  (data) => {
-    if (data.futureActionType === "presentacionDocumento") {
-      return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "presentacionDocumento") {
+        return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "documentoRequerido is required for presentacionDocumento type",
+      path: ["documentoRequerido"],
     }
-    return true;
-  },
-  {
-    message: "documentoRequerido is required for presentacionDocumento type",
-    path: ["documentoRequerido"],
-  }
-);
+  );
 
 const reorderCategoriesSchema = z.object({
-  categories: z.array(
-    z.object({
-      id: z.string(),
-      sortOrder: z.number().int().min(0),
-    })
-  ).min(1),
+  categories: z
+    .array(
+      z.object({
+        id: z.string(),
+        sortOrder: z.number().int().min(0),
+      })
+    )
+    .min(1),
 });
 
 router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -189,7 +205,7 @@ router.put("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) =>
     const userId = req.user!.userId;
     const { categories } = reorderCategoriesSchema.parse(req.body);
 
-    const categoryIds = categories.map(c => c.id);
+    const categoryIds = categories.map((c) => c.id);
     const existingCategories = await OrderCategory.find({
       _id: { $in: categoryIds },
       tenantId: req.tenantObjectId,
@@ -200,9 +216,7 @@ router.put("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) =>
       return;
     }
 
-    const updatePromises = categories.map(({ id, sortOrder }) =>
-      OrderCategory.findByIdAndUpdate(id, { sortOrder }, { new: true })
-    );
+    const updatePromises = categories.map(({ id, sortOrder }) => OrderCategory.findByIdAndUpdate(id, { sortOrder }, { new: true }));
 
     await Promise.all(updatePromises);
 
@@ -242,7 +256,9 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const maxOrderCategory = await OrderCategory.findOne({
       tenantId: req.tenantObjectId,
-    }).sort({ sortOrder: -1 }).limit(1);
+    })
+      .sort({ sortOrder: -1 })
+      .limit(1);
 
     const nextSortOrder = maxOrderCategory ? maxOrderCategory.sortOrder + 1 : 1;
 
@@ -265,7 +281,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       tenantId: req.tenantObjectId,
       userId,
       action: "order_category_created",
-      description: `Created order category: ${category.name}`,
+      description: `Pedido creado category: ${category.name}`,
       entityType: "OrderCategory",
       entityId: category._id,
     });

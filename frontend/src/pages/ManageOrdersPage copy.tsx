@@ -258,7 +258,7 @@ export const ManageOrdersPage: React.FC = () => {
               <div className="overflow-x-auto">
                 <table className="w-full table-fixed">
                   <thead>
-                    <tr>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
@@ -271,7 +271,7 @@ export const ManageOrdersPage: React.FC = () => {
                       {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th> */}
 
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
-                      {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th> */}
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
                     </tr>
                   </thead>
 
@@ -279,14 +279,7 @@ export const ManageOrdersPage: React.FC = () => {
                     {filteredOrders.map((order) => {
                       const badge = getStatusBadge(order.status);
                       return (
-                        <tr
-                          key={order._id}
-                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setShowDetailModal(true);
-                          }}
-                        >
+                        <tr key={order._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           {/* --- TÍTULO --- */}
                           <td className="py-3 px-4">
                             <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
@@ -333,11 +326,10 @@ export const ManageOrdersPage: React.FC = () => {
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
 
                           {/* --- ACCIONES --- */}
-                          {/*                           <td className="py-3 px-4">
+                          <td className="py-3 px-4">
                             <div className="flex items-center justify-center gap-2">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={() => {
                                   setSelectedOrder(order);
                                   setShowDetailModal(true);
                                 }}
@@ -347,7 +339,7 @@ export const ManageOrdersPage: React.FC = () => {
                                 <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                               </button>
                             </div>
-                          </td> */}
+                          </td>
                         </tr>
                       );
                     })}

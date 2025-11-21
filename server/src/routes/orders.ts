@@ -285,7 +285,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       tenantId: req.tenantObjectId,
       userId,
       action: "order_created",
-      description: `Created order: ${order.title}`,
+      description: `Pedido creado: ${order.title}`,
       entityType: "Order",
       entityId: order._id,
     });

@@ -1158,7 +1158,7 @@ export async function seedOnStart() {
           tenantId,
           userId: collab._id,
           action: "order_created",
-          description: "Created order: Standing Desk",
+          description: "Pedido creado: Standing Desk",
           entityType: "Order",
         },
         {

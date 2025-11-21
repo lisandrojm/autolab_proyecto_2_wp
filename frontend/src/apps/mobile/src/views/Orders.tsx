@@ -134,7 +134,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
         validDynamicValue = {
           fechaDesde: dynamicValue.fechaDesde.trim(),
-          fechaHasta: dynamicValue.fechaHasta.trim()
+          fechaHasta: dynamicValue.fechaHasta.trim(),
         };
       } else if (dynamicValue !== undefined && dynamicValue !== null && dynamicValue !== "") {
         validDynamicValue = dynamicValue;
@@ -154,7 +154,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         futureActionDocumento: futureActionDocumento || undefined,
         photo: shouldIncludePhoto ? photo : null,
       });
-      await sweetAlert.success('¡Pedido creado!', 'Tu pedido ha sido enviado correctamente');
+      await sweetAlert.success("¡Pedido creado!", "Tu pedido ha sido enviado correctamente");
       setShowForm(false);
       setProduct("");
       setDescription("");
@@ -179,7 +179,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setPhoto(null);
       setPhotoPreview(null);
     } catch (err: any) {
-      await sweetAlert.error('Error', err.response?.data?.error || "Error al crear pedido");
+      await sweetAlert.error("Error", err.response?.data?.error || "Error al crear pedido");
     } finally {
       setSubmitting(false);
     }
@@ -240,7 +240,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
             </button>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Pedidos</h1>
           </div>
-          <span className="px-2 py-1 rounded-full text-[9px] font-bold bg-green-500 text-white uppercase">Nuevo</span>
+          <span className="px-2 py-1 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase">Nuevo</span>
         </div>
       </div>
 
