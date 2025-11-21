@@ -1,19 +1,21 @@
-import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File, Users, BarChart3, Bell } from "lucide-react";
+import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File, Users, BarChart3, Bell, Sun, Moon, LogOut } from "lucide-react";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
 import { personnelAPI, ActivityRecord } from "../../../../api/personnel";
 import { useState, useEffect } from "react";
+import { useThemeStore } from "../../../../stores/themeStore";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
 }
 
 export default function Home({ onNavigate }: HomeProps) {
-  const { user, hasPermission } = useAuthStore();
+  const { user, hasPermission, logout } = useAuthStore();
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
   const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
+  const { theme, toggleTheme } = useThemeStore();
 
   const isMobileCoordinator = hasPermission("mobile:coordinator");
   const isMobileCollaborator = hasPermission("mobile:collaborator");
@@ -118,10 +120,28 @@ export default function Home({ onNavigate }: HomeProps) {
     return "hace un momento";
   };
 
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
+  };
+
   return (
     <div className="flex-1 pb-24">
-      {/* Notificaciones */}
-      {/*       {!notifLoading && latestNotification && (
+      {/* Header: saludo + botones de tema y salir */}
+      <div className="flex items-center justify-between px-4 pt-4">
+        <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
+        <div className="flex items-center gap-1">
+          <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+          <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Notificaciones (comentado por ahora)
+      {!notifLoading && latestNotification && (
         <div className="p-4">
           <div className="flex items-start gap-3 rounded-xl border border-green-500 bg-green-50 p-4 shadow-sm dark:border-green-400 dark:bg-green-900/40">
             <Bell className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
@@ -144,6 +164,7 @@ export default function Home({ onNavigate }: HomeProps) {
           </div>
         </div>
       )} */}
+
       <div className={`grid ${isMobileCoordinator ? "grid-cols-2" : "grid-cols-2"} gap-4 p-4`}>
         {quickActions.map((action, index) => {
           const Icon = action.icon;
@@ -169,7 +190,9 @@ export default function Home({ onNavigate }: HomeProps) {
           );
         })}
       </div>
+
       <h3 className="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">Actividad Reciente</h3>
+
       {activityLoading ? (
         <div className="flex flex-col gap-3 px-4">
           {[1, 2].map((i) => (

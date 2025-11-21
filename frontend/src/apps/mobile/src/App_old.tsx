@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ViewType } from "./types";
-// import TopBar from "./components/TopBar";
+import TopBar from "./components/TopBar";
 import BottomNav from "./components/BottomNav";
 import Home from "./views/Home";
 import Calendar from "./views/Calendar";
@@ -84,11 +84,7 @@ function App() {
     }
   };
 
-  // const showTopBar =
-  //   currentView === "home" ||
-  //   currentView === "calendar" ||
-  //   currentView === "documents" ||
-  //   currentView === "profile";
+  const showTopBar = currentView === "home" || currentView === "calendar" || currentView === "documents" || currentView === "profile";
 
   if (!hasMobileAccess) {
     return (
@@ -148,15 +144,7 @@ function App() {
   return (
     <div className="w-full dark:bg-gray-900 flex justify-center">
       <div className="relative flex min-h-screen flex-col bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-display w-full xl:w-1/2">
-        {/* {showTopBar && (
-          <TopBar
-            title={getTitle(currentView)}
-            hasNotifications={true}
-            onNotificationClick={() => alert("Notificaciones")}
-            userRole={userRole}
-            userName={user?.firstName || "Usuario"}
-          />
-        )} */}
+        {showTopBar && <TopBar title={getTitle(currentView)} hasNotifications={true} onNotificationClick={() => alert("Notificaciones")} userRole={userRole} userName={user?.firstName || "Usuario"} />}
         {renderView()}
         <BottomNav currentView={currentView} onNavigate={setCurrentView} />
       </div>
