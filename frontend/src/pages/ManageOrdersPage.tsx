@@ -7,6 +7,7 @@ import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
+import { Modal } from "../components/ui/Modal";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -216,6 +217,55 @@ export const ManageOrdersPage: React.FC = () => {
     });
   };
 
+  const renderModalFooter = () => {
+    if (updatingStatus) {
+      return (
+        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <FontAwesomeIcon icon={faSpinner} spin />
+          <span className="text-sm">Actualizando...</span>
+        </div>
+      );
+    }
+
+    if (!selectedOrder) return null;
+
+    if (selectedOrder.status === "pending") {
+      return (
+        <>
+          <button
+            onClick={() => handleStatusChange("rejected")}
+            disabled={updatingStatus}
+            className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Rechazar
+          </button>
+          <button
+            onClick={() => handleStatusChange("approved")}
+            disabled={updatingStatus}
+            className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Aprobar
+          </button>
+        </>
+      );
+    }
+
+    if (selectedOrder.status === "approved") {
+      return (
+        <button
+          onClick={() => handleStatusChange("delivered")}
+          disabled={updatingStatus}
+          className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <FontAwesomeIcon icon={faTruck} />
+          Marcar como Entregado
+        </button>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <PageLayout
       title="Pedidos"
@@ -410,131 +460,89 @@ export const ManageOrdersPage: React.FC = () => {
 
       {viewingImage && <ImageModal imageUrl={viewingImage} alt="Order Photo" isOpen={true} onClose={() => setViewingImage(null)} />}
 
-      {showDetailModal && selectedOrder && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex flex-col h-full">
-              <header className="flex justify-between items-center px-8 py-6 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-4">
-                  <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Detalles del Pedido</h1>
-                </div>
-                <button onClick={() => setShowDetailModal(false)} className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
-                  <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
-                </button>
-              </header>
-
-              <div className="flex-1 overflow-y-auto p-8">
-                <div className="space-y-6">
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        {getUserAvatar(selectedOrder.userId) ? (
-                          <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
-                            {getUserName(selectedOrder.userId)
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2)}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{getUserRole(selectedOrder.userId)}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-lg">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder._id)}</p>
-                          <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p>
-                        </div>
-                        <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</span>
-                      </div>
-                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                      <div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
-                        <p className="font-medium text-slate-800 dark:text-slate-100">{getCategoryName(selectedOrder)}</p>
-                      </div>
-                      {selectedOrder.amount && (
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
-                          <p className="font-medium text-slate-800 dark:text-slate-100">${selectedOrder.amount.toFixed(2)} USD</p>
-                        </div>
-                      )}
-                      {selectedOrder.dynamicValue?.fechaDesde && (
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
-                          <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaDesde)}</p>
-                        </div>
-                      )}
-                      {selectedOrder.dynamicValue?.fechaHasta && (
-                        <div>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
-                          <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaHasta)}</p>
-                        </div>
-                      )}
-                      {selectedOrder.photoUrl && (
-                        <div className="md:col-span-2">
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
-                          <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
-                        </div>
-                      )}
-                    </div>
+      <Modal isOpen={showDetailModal && !!selectedOrder} onClose={() => setShowDetailModal(false)} title="Detalles del Pedido" size="lg" footer={renderModalFooter()}>
+        {selectedOrder && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                {getUserAvatar(selectedOrder.userId) ? (
+                  <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                    {getUserName(selectedOrder.userId)
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)}
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
-                    <div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Solicitud</p>
-                      <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.requestedAt)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Aprobación</p>
-                      <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.approvedAt)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Entrega</p>
-                      <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.deliveredAt)}</p>
-                    </div>
-                  </div>
+                )}
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{getUserRole(selectedOrder.userId)}</p>
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-end items-center gap-4 px-8 py-6 border-t border-slate-200 dark:border-slate-700">
-                {selectedOrder.status === "pending" && (
-                  <>
-                    <button onClick={() => handleStatusChange("rejected")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      Rechazar
-                    </button>
-                    <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      Aprobar
-                    </button>
-                  </>
-                )}
-                {selectedOrder.status === "approved" && (
-                  <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                    <FontAwesomeIcon icon={faTruck} />
-                    Marcar como Entregado
-                  </button>
-                )}
-                {updatingStatus && (
-                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                    <FontAwesomeIcon icon={faSpinner} spin />
-                    <span className="text-sm">Actualizando...</span>
-                  </div>
-                )}
+            <div className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-lg">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder._id)}</p>
+                  <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p>
+                </div>
+                <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</span>
+              </div>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{getCategoryName(selectedOrder)}</p>
+              </div>
+              {selectedOrder.amount && (
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">${selectedOrder.amount.toFixed(2)} USD</p>
+                </div>
+              )}
+              {selectedOrder.dynamicValue?.fechaDesde && (
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaDesde)}</p>
+                </div>
+              )}
+              {selectedOrder.dynamicValue?.fechaHasta && (
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaHasta)}</p>
+                </div>
+              )}
+              {selectedOrder.photoUrl && (
+                <div className="md:col-span-2">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
+                  <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Solicitud</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.requestedAt)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Aprobación</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.approvedAt)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Entrega</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.deliveredAt)}</p>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </PageLayout>
   );
 };
