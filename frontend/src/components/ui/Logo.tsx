@@ -10,7 +10,7 @@ type LogoProps = {
   to?: string;
 };
 
-export const Logo: React.FC<LogoProps> = ({ sizeClass = "text-3xl", wrapperClassName = "flex items-center cursor-pointer hover:opacity-80 transition-opacity", to = "/users" }) => {
+export const Logo: React.FC<LogoProps> = ({ sizeClass = "text-3xl", wrapperClassName = "flex items-center cursor-pointer hover:opacity-80 transition-opacity", to = "hr/orders" }) => {
   const appFirstName = import.meta.env.VITE_APP_FIRST_NAME;
   const appLastName = import.meta.env.VITE_APP_LAST_NAME;
 

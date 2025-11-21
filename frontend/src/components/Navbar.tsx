@@ -511,7 +511,7 @@ export const MobileNavbar: React.FC = () => {
         logout();
         onClick?.();
       }}
-      className={`flex items-center space-x-3 w-full  py-3 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-red-50 dark:hover:bg-blue-900/20 transition-colors ${className}`}
+      className={`flex items-center space-x-3 w-full  py-3 rounded-lg text-red-500 dark:text-red-500 hover:text-red-500/70 dark:hover:text-red-500/80 transition-colors ${className}`}
     >
       <FontAwesomeIcon icon={faRightFromBracket} className="h-5 w-5" />
       <span className="font-medium lg:hidden"></span>
