@@ -232,18 +232,10 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "pending") {
       return (
         <>
-          <button
-            onClick={() => handleStatusChange("rejected")}
-            disabled={updatingStatus}
-            className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <button onClick={() => handleStatusChange("rejected")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Rechazar
           </button>
-          <button
-            onClick={() => handleStatusChange("approved")}
-            disabled={updatingStatus}
-            className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Aprobar
           </button>
         </>
@@ -252,11 +244,7 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (selectedOrder.status === "approved") {
       return (
-        <button
-          onClick={() => handleStatusChange("delivered")}
-          disabled={updatingStatus}
-          className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
+        <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
           <FontAwesomeIcon icon={faTruck} />
           Marcar como Entregado
         </button>
@@ -460,37 +448,42 @@ export const ManageOrdersPage: React.FC = () => {
 
       {viewingImage && <ImageModal imageUrl={viewingImage} alt="Order Photo" isOpen={true} onClose={() => setViewingImage(null)} />}
 
-      <Modal isOpen={showDetailModal && !!selectedOrder} onClose={() => setShowDetailModal(false)} title="Detalles del Pedido" size="lg" footer={renderModalFooter()}>
+      <Modal isOpen={showDetailModal && !!selectedOrder} onClose={() => setShowDetailModal(false)} title="Detalles del Pedido" size="md" footer={renderModalFooter()}>
         {selectedOrder && (
           <div className="space-y-6">
-            <div className="space-y-4">
+            {/* Perfil */}
+            <div className="flex justify-between align-top">
               <div className="flex items-center gap-3">
-                {getUserAvatar(selectedOrder.userId) ? (
-                  <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
-                    {getUserName(selectedOrder.userId)
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2)}
-                  </div>
-                )}
                 <div>
+                  {getUserAvatar(selectedOrder.userId) ? (
+                    <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                      {getUserName(selectedOrder.userId)
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-slate-800">
                   <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{getUserRole(selectedOrder.userId)}</p>
                 </div>
               </div>
+              <div className="flex flex-col gap-3">
+                <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</span>
+              </div>
             </div>
 
             <div className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-lg">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder._id)}</p>
+              <div className="flex justify-between items-start">
+                <div className="flex justify-between items-center w-full">
                   <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder._id)}</p>
                 </div>
-                <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</span>
               </div>
               <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
             </div>
