@@ -1,5 +1,4 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faSun, faMoon, faRightFromBracket, faBuilding, faUser, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import { Bell, Sun, Moon, LogOut } from "lucide-react";
 import { useThemeStore } from "../../../../stores/themeStore";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNavigate } from "react-router-dom";
@@ -32,59 +31,54 @@ export default function TopBar({ title, hasNotifications = false, onNotification
     window.location.href = "/login";
   };
 
-  const userRoleLabel = userRole === "coordinator" ? "Coordinador" : userRole === "collaborator" ? "Colaborador" : null;
+  const roleConfig = {
+    coordinator: {
+      label: "Coordinador",
+      bgColor: "bg-gradient-to-r from-blue-500 to-indigo-600",
+      textColor: "text-white",
+      icon: "👔",
+    },
+    collaborator: {
+      label: "Colaborador",
+      bgColor: "bg-gradient-to-r from-green-500 to-teal-600",
+      textColor: "text-white",
+      icon: "👥",
+    },
+  };
 
+  const currentRole = userRole ? roleConfig[userRole] : null;
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 py-3">
       <div className="flex items-center justify-between p-4 pb-2">
-        {/* ======================= */}
-        {/*   PILLS SUPERIORES     */}
-        {/* ======================= */}
-
-        <div className="flex flex-col lg:flex-row gap-2 w-full items-start">
-          <div className="flex gap-2 items-center">
-            {/* 🏢 TENANT */}
-            {user?.tenantSlug && (
-              <span className="flex items-center capitalize font-semibold justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={user.tenantSlug}>
-                <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 mr-1.5" />
-                {user.tenantSlug}
-              </span>
-            )}
-
-            {/* 👤 USUARIO */}
-            {(userName || user?.firstName) && (
-              <span className="flex items-center font-semibold justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={userName || user?.firstName}>
-                <FontAwesomeIcon icon={faUser} className="h-3 w-3 mr-1.5" />
-                {userName || user?.firstName}
-              </span>
+        {/*         <div className="flex size-12 shrink-0 items-center">
+          <div
+            className="aspect-square size-10 rounded-full bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDnU5QgjujmeNxIQ7pvt9_qea6WcNgYxkcEOwLGTbpmOMgiHIGlCVJThmfNMwgtI2StbRn_-fsM4f2H7D7V7kzSdBD4nl_ux9WkpBnkzSk7BN0kYBID1tvvY2bitI_6gegGrxmOzHiS4cBqDuzypMZcKskWJpeJXG0rzlDTUzQc-HZBlyLAeYLSuh1IcJJvQzn6IscRJR31tvtB3H3azl8Fs8xuNtTR-PeJrgaFtrYj5-SY0PtflPUrD8ogDtnJCfL_bvQfVpffK5c")',
+            }}
+          />
+        </div> */}
+        {currentRole && (
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${currentRole.bgColor} ${currentRole.textColor} text-sm font-semibold shadow-sm`}>
+            <span>{currentRole.icon}</span>
+            <span>{currentRole.label}</span>
+            {userName && (
+              <>
+                <span className="opacity-70">•</span>
+                <span className="font-normal">{userName}</span>
+              </>
             )}
           </div>
-
-          {/* 🛡 ROL */}
-          {userRoleLabel && (
-            <span className="flex items-center font-semibold justify-center px-3 py-1 rounded-full text-[9px] text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={userRoleLabel}>
-              <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 mr-1.5" />
-              {userRoleLabel}
-            </span>
-          )}
-        </div>
-
-        {/* ======================= */}
-        {/*      BOTONES DERECHA    */}
-        {/* ======================= */}
-
+        )}
         <div className="flex items-center gap-1">
           <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
-            {theme === "dark" ? <FontAwesomeIcon icon={faSun} className="w-5 h-5" /> : <FontAwesomeIcon icon={faMoon} className="w-5 h-5" />}
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
-
           <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
-            <FontAwesomeIcon icon={faRightFromBracket} className="w-5 h-5" />
+            <LogOut className="w-5 h-5" />
           </button>
-
           <button onClick={onNotificationClick} className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Notificaciones">
-            <FontAwesomeIcon icon={faBell} className="w-5 h-5" />
-
+            <Bell className="w-5 h-5" />
             {hasNotifications && (
               <span className="absolute right-2 top-2 flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
