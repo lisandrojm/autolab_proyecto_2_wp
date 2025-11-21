@@ -1,7 +1,6 @@
 {
   "rewrites": [
     { "source": "/api/v1/:path*", "destination": "https://autolab.fun:7001/api/v1/:path*" },
-    { "source": "/storage/:tenantId/client/:clientId/brandkit/:file", "destination": "/api/image-proxy/:tenantId/:clientId/:file" },
     { "source": "/((?!.*\\.).*)", "destination": "/" }
   ]
 }
