@@ -85,6 +85,7 @@ export interface Order {
   _id: string;
   tenantId: string;
   userId: any;
+  orderNumber: string;
   title: string;
   description: string;
   category: string;

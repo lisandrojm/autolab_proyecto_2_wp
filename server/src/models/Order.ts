@@ -1,8 +1,10 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { OrderCounter } from "./OrderCounter.js";
 
 export interface IOrder extends Document {
   tenantId: Types.ObjectId;
   userId: Types.ObjectId;
+  orderNumber: string;
   title: string;
   description: string;
   category: string;
@@ -29,6 +31,7 @@ const orderSchema = new Schema<IOrder>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    orderNumber: { type: String, required: true, trim: true, uppercase: true, index: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true, default: "other" },
@@ -61,5 +64,33 @@ orderSchema.index({ tenantId: 1, status: 1, requestedAt: -1 });
 orderSchema.index({ tenantId: 1, category: 1 });
 orderSchema.index({ tenantId: 1, categoryId: 1 });
 orderSchema.index({ categoryId: 1, subcategoryId: 1 });
+orderSchema.index({ tenantId: 1, orderNumber: 1 }, { unique: true });
+
+orderSchema.pre("save", async function (next) {
+  if (!this.isNew) {
+    return next();
+  }
+
+  try {
+    const Tenant = mongoose.model("Tenant");
+    const tenant = await Tenant.findById(this.tenantId);
+
+    if (!tenant) {
+      throw new Error("Tenant not found");
+    }
+
+    const prefix = tenant.slug.toUpperCase().slice(0, 3);
+
+    const sequence = await OrderCounter.getNextSequence(this.tenantId);
+
+    const paddedNumber = sequence.toString().padStart(6, "0");
+
+    this.orderNumber = `${prefix}-${paddedNumber}`;
+
+    next();
+  } catch (error) {
+    next(error as Error);
+  }
+});
 
 export const Order = mongoose.model<IOrder>("Order", orderSchema);

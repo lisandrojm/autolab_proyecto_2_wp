@@ -25,7 +25,9 @@
     "migrate:posts": "NODE_ENV=development tsx src/scripts/migratePostsContentFormat.ts",
     "migrate:posts:prod": "NODE_ENV=production tsx src/scripts/migratePostsContentFormat.ts",
     "migrate:asset-urls": "dotenv -e .env.development -- tsx src/scripts/migrateAssetUrls.ts",
-    "migrate:asset-urls:prod": "dotenv -e .env.production -- tsx src/scripts/migrateAssetUrls.ts"
+    "migrate:asset-urls:prod": "dotenv -e .env.production -- tsx src/scripts/migrateAssetUrls.ts",
+    "migrate:order-numbers": "dotenv -e .env.development -- tsx src/scripts/migrateOrderNumbers.ts",
+    "migrate:order-numbers:prod": "dotenv -e .env.production -- tsx src/scripts/migrateOrderNumbers.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

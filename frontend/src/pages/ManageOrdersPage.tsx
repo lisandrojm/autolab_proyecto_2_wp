@@ -240,9 +240,8 @@ export const ManageOrdersPage: React.FC = () => {
     return category.name || order.category || "Sin categoría";
   };
 
-  const getOrderNumber = (orderId: string): string => {
-    const last5 = orderId.slice(-5).toUpperCase();
-    return `#${last5}`;
+  const getOrderNumber = (order: Order): string => {
+    return `#${order.orderNumber}`;
   };
 
   const getUserRole = (user: any): string => {
@@ -347,7 +346,7 @@ export const ManageOrdersPage: React.FC = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">N° Pedido</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{getOrderNumber(order._id)}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{getOrderNumber(order)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Solicitante</span>
@@ -515,8 +514,8 @@ export const ManageOrdersPage: React.FC = () => {
                               setShowDetailModal(true);
                             }}
                           >
-                            {/* --- TÍTULO --- */}
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300"> #C0E98</td>
+                            {/* --- N° PEDIDO --- */}
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getOrderNumber(order)}</td>
                             <td className="py-3 px-4">
                               <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
                               <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{order.description}</div>
@@ -654,7 +653,7 @@ export const ManageOrdersPage: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div className="flex justify-between items-center w-full">
                   <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder._id)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
                 </div>
               </div>
               <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>

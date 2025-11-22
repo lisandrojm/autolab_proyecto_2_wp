@@ -247,13 +247,21 @@ router.get("/hrdocuments/count", async (req: AuthenticatedRequest & TenantReques
 
 router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { page = 1, limit = 50, status, category, userId } = req.query;
+    const { page = 1, limit = 50, status, category, userId, search } = req.query;
 
     const filter: any = { tenantId: req.tenantObjectId };
 
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (userId) filter.userId = userId;
+
+    if (search && typeof search === "string" && search.trim() !== "") {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { orderNumber: { $regex: search, $options: "i" } },
+      ];
+    }
 
     const skip = (Number(page) - 1) * Number(limit);
 
