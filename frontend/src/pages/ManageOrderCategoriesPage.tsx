@@ -459,7 +459,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div>
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-blue-600" />

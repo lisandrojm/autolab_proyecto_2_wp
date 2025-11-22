@@ -38,11 +38,7 @@ export const ManageActivityLogsPage: React.FC = () => {
   const filteredLogs = logs.filter((log) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
-    return (
-      log.description.toLowerCase().includes(search) ||
-      log.action.toLowerCase().includes(search) ||
-      (log.entityType && log.entityType.toLowerCase().includes(search))
-    );
+    return log.description.toLowerCase().includes(search) || log.action.toLowerCase().includes(search) || (log.entityType && log.entityType.toLowerCase().includes(search));
   });
 
   const formatDate = (dateString: string) => {
@@ -63,20 +59,11 @@ export const ManageActivityLogsPage: React.FC = () => {
 
   return (
     <PageLayout title="Registro de Actividades" subtitle="Visualización y filtrado de logs del sistema">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div>
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
-            <FontAwesomeIcon
-              icon={faSearch}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Buscar en logs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            />
+            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input type="text" placeholder="Buscar en logs..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
           </div>
 
           <select
@@ -132,27 +119,14 @@ export const ManageActivityLogsPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredLogs.map((log) => (
-                    <tr
-                      key={log._id}
-                      className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                    >
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                        {formatDate(log.createdAt)}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
-                        {getUserName(log.userId)}
-                      </td>
+                    <tr key={log._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{formatDate(log.createdAt)}</td>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">{getUserName(log.userId)}</td>
                       <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                          {log.action}
-                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{log.action}</span>
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
-                        {log.description}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                        {log.entityType || "-"}
-                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{log.description}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{log.entityType || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -161,21 +135,13 @@ export const ManageActivityLogsPage: React.FC = () => {
 
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-6">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700">
                   Anterior
                 </button>
                 <span className="text-gray-700 dark:text-gray-300">
                   Página {page} de {totalPages}
                 </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700">
                   Siguiente
                 </button>
               </div>

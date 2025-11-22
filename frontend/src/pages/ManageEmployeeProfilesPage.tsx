@@ -38,16 +38,10 @@ export const ManageEmployeeProfilesPage: React.FC = () => {
 
   return (
     <PageLayout title="Perfiles de Empleados" subtitle="Gestión de perfiles de personal">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div>
         <div className="mb-6 relative">
           <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          />
+          <input type="text" placeholder="Buscar por nombre o email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
         </div>
 
         {loading ? (
@@ -69,7 +63,9 @@ export const ManageEmployeeProfilesPage: React.FC = () => {
                 <tbody>
                   {profiles.map((profile) => (
                     <tr key={profile._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">{profile.firstName} {profile.lastName}</td>
+                      <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {profile.firstName} {profile.lastName}
+                      </td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{profile.email}</td>
                       <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{profile.position || "-"}</td>
                       <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{profile.department || "-"}</td>
@@ -81,9 +77,15 @@ export const ManageEmployeeProfilesPage: React.FC = () => {
 
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-6">
-                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg border">Anterior</button>
-                <span>Página {page} de {totalPages}</span>
-                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg border">Siguiente</button>
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg border">
+                  Anterior
+                </button>
+                <span>
+                  Página {page} de {totalPages}
+                </span>
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg border">
+                  Siguiente
+                </button>
               </div>
             )}
           </>

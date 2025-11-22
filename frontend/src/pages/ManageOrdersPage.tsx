@@ -408,7 +408,7 @@ export const ManageOrdersPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div>
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -426,24 +426,10 @@ export const ManageOrdersPage: React.FC = () => {
               </select>
             </div>
             <div className="hidden md:flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg p-1 bg-gray-50 dark:bg-gray-900">
-              <button
-                onClick={() => setViewMode("cards")}
-                className={`px-4 py-1.5 rounded-md transition-all ${
-                  viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
-                title="Vista de tarjetas"
-                aria-label="Vista de tarjetas"
-              >
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
               </button>
-              <button
-                onClick={() => setViewMode("table")}
-                className={`px-4 py-1.5 rounded-md transition-all ${
-                  viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
-                title="Vista de tabla"
-                aria-label="Vista de tabla"
-              >
+              <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
                 <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
               </button>
             </div>
@@ -460,65 +446,63 @@ export const ManageOrdersPage: React.FC = () => {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full table-fixed">
-                  <thead>
-                    <tr>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
-                      <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
-                      {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th> */}
-                      {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th> */}
-                      {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Acción Futura</th> */}
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                    <thead>
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
+                        <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th> */}
+                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th> */}
+                        {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Acción Futura</th> */}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
 
-                      {/* Imagen movida aquí */}
-                      {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th> */}
+                        {/* Imagen movida aquí */}
+                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th> */}
 
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
-                      {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th> */}
-                    </tr>
-                  </thead>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
+                        {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th> */}
+                      </tr>
+                    </thead>
 
-                  <tbody>
-                    {filteredOrders.map((order) => {
-                      const badge = getStatusBadge(order.status);
-                      return (
-                        <tr
-                          key={order._id}
-                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setShowDetailModal(true);
-                          }}
-                        >
-                          {/* --- TÍTULO --- */}
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300"> #C0E98</td>
-                          <td className="py-3 px-4">
-                            <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{order.description}</div>
-                            {order.amount && <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1">Monto: ${order.amount.toFixed(2)}</div>}
-                          </td>
+                    <tbody>
+                      {filteredOrders.map((order) => {
+                        const badge = getStatusBadge(order.status);
+                        return (
+                          <tr
+                            key={order._id}
+                            className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setShowDetailModal(true);
+                            }}
+                          >
+                            {/* --- TÍTULO --- */}
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300"> #C0E98</td>
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{order.description}</div>
+                              {order.amount && <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1">Monto: ${order.amount.toFixed(2)}</div>}
+                            </td>
 
-                          {/* --- SOLICITANTE --- */}
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
+                            {/* --- SOLICITANTE --- */}
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
 
-                          {/* --- CATEGORÍA --- */}
-                          <td className="py-3 px-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                              {getCategoryName(order)}
-                            </span>
-                          </td>
+                            {/* --- CATEGORÍA --- */}
+                            <td className="py-3 px-4">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{getCategoryName(order)}</span>
+                            </td>
 
-                          {/* --- TIPO --- */}
-                          {/*                           <td className="py-3 px-4">
+                            {/* --- TIPO --- */}
+                            {/*                           <td className="py-3 px-4">
                             <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{typeof order.categoryId === "object" && order.categoryId ? getCategoryTypeName(order.categoryId.categoryType) : "N/A"}</span>
                           </td> */}
 
-                          {/* --- OPCIÓN --- */}
-                          {/*                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{getSubcategoryDisplay(order)}</td> */}
+                            {/* --- OPCIÓN --- */}
+                            {/*                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{getSubcategoryDisplay(order)}</td> */}
 
-                          {/* --- ACCIÓN FUTURA --- */}
-                          {/*                           <td className="py-3 px-4 text-center">
+                            {/* --- ACCIÓN FUTURA --- */}
+                            {/*                           <td className="py-3 px-4 text-center">
                             {hasRequiresAction(order) ? (
                               <span className="inline-flex p-2 items-center justify-center text-blue-600 dark:text-blue-400 text-xs rounded-full bg-orange-100 dark:bg-blue-900/30" title="Requiere acción futura">
                                 Requiere A.F
@@ -528,24 +512,24 @@ export const ManageOrdersPage: React.FC = () => {
                             )}
                           </td> */}
 
-                          {/* --- ESTADO --- */}
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
-                              <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
-                              {badge.label}
-                            </span>
-                          </td>
+                            {/* --- ESTADO --- */}
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
+                                <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
+                                {badge.label}
+                              </span>
+                            </td>
 
-                          {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
-                          {/*                           <td className="py-3 px-4 h-10 w-10">
+                            {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
+                            {/*                           <td className="py-3 px-4 h-10 w-10">
                             <div className="flex justify-center items-center p-3">{order.photoUrl ? <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="w-auto h-auto object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} /> : <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>}</div>
                           </td> */}
 
-                          {/* --- FECHA --- */}
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
+                            {/* --- FECHA --- */}
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
 
-                          {/* --- ACCIONES --- */}
-                          {/*                           <td className="py-3 px-4">
+                            {/* --- ACCIONES --- */}
+                            {/*                           <td className="py-3 px-4">
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={(e) => {
@@ -560,10 +544,10 @@ export const ManageOrdersPage: React.FC = () => {
                               </button>
                             </div>
                           </td> */}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
                   </table>
                 </div>
               )}
