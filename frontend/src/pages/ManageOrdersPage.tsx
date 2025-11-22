@@ -399,7 +399,7 @@ export const ManageOrdersPage: React.FC = () => {
             { label: "Aprobados", value: stats.approved, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
             { label: "Rechazados", value: stats.rejected, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
             { label: "Entregados", value: stats.delivered, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
-            { label: "Cancelados", value: stats.cancelled, color: "bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400" },
+            { label: "Cancelados", value: stats.cancelled, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
           ].map((stat, index) => (
             <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 w- ${stat.color}`}>
               <p className="text-sm font-medium opacity-80">{stat.label}</p>
