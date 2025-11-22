@@ -341,11 +341,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         ) : orders.length > 0 ? (
           <div className="space-y-3">
             {orders.map((order) => (
-              <div
-                key={order._id}
-                className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleOrderClick(order)}
-              >
+              <div key={order._id} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOrderClick(order)}>
                 <div className="flex items-start gap-3 mb-3">
                   {order.photoUrl && (
                     <div className="flex-shrink-0">
@@ -363,17 +359,17 @@ export default function Orders({ onNavigate }: OrdersProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0 mr-2">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800">
-                            {order.orderNumber}
-                          </span>
-                        </div>
                         <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{order.title}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{order.description}</p>
                       </div>
-                      <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
-                        {getStatusIcon(order.status)}
-                        <span className="text-xs font-medium text-slate-900 dark:text-slate-100">{getStatusText(order.status)}</span>
+                      <div className="flex gap-2 items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block px-2 py-0.5 text-[12px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded">#{order.orderNumber}</span>
+                        </div>
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
+                          {getStatusIcon(order.status)}
+                          <span className="text-xs font-medium text-slate-900 dark:text-slate-100">{getStatusText(order.status)}</span>
+                        </div>
                       </div>
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500">
