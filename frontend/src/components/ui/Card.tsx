@@ -16,6 +16,7 @@ interface CardBadge {
   text: string;
   variant?: "default" | "success" | "warning" | "blue" | "info" | "green" | "social" | "purple";
   icon?: IconDefinition;
+  className?: string;
 }
 
 interface CardAvatar {
@@ -153,7 +154,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
               <div className="flex items-center justify-between space-x-2">
                 <div className="flex flex-wrap gap-2">
                   {header.badges?.map((badge, index) => (
-                    <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${getBadgeClasses(badge.variant)}`}>
+                    <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
                       {badge.icon && <FontAwesomeIcon icon={badge.icon} className="h-3 w-3" />}
                       <span>{badge.text}</span>
                     </span>

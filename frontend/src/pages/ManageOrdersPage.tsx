@@ -257,7 +257,7 @@ export const ManageOrdersPage: React.FC = () => {
     return [
       {
         text: statusBadge.label,
-        variant: mapStatusToCardVariant(order.status),
+        className: statusBadge.style,
         icon: getStatusIcon(order.status),
       },
       {
@@ -302,18 +302,6 @@ export const ManageOrdersPage: React.FC = () => {
                     <span>{formatDateShort(order.requestedAt)}</span>
                   </div>
                 ),
-                actions: [
-                  {
-                    icon: faEye,
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      setSelectedOrder(order);
-                      setShowDetailModal(true);
-                    },
-                    title: "Ver detalles",
-                    variant: "default",
-                  },
-                ],
               }}
               onClick={() => {
                 setSelectedOrder(order);
@@ -515,7 +503,11 @@ export const ManageOrdersPage: React.FC = () => {
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
 
                           {/* --- CATEGORÍA --- */}
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getCategoryName(order)}</td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                              {getCategoryName(order)}
+                            </span>
+                          </td>
 
                           {/* --- TIPO --- */}
                           {/*                           <td className="py-3 px-4">
@@ -538,7 +530,10 @@ export const ManageOrdersPage: React.FC = () => {
 
                           {/* --- ESTADO --- */}
                           <td className="py-3 px-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>{badge.label}</span>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
+                              <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
+                              {badge.label}
+                            </span>
                           </td>
 
                           {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
