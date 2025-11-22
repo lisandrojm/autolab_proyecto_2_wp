@@ -35,19 +35,55 @@ export const ManageOrdersPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [isXXL, setIsXXL] = useState(window.innerWidth >= 1536);
 
   const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
-    const saved = localStorage.getItem("orderViewMode");
-    if (saved && (saved === "table" || saved === "cards") && window.innerWidth >= 768) {
-      setViewMode(saved as "table" | "cards");
+    let timeoutId: NodeJS.Timeout;
+
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const isNowXXL = window.innerWidth >= 1536;
+        setIsXXL(isNowXXL);
+
+        if (!isNowXXL) {
+          setViewMode("cards");
+        } else {
+          const saved = localStorage.getItem("orderViewMode");
+          if (saved && (saved === "table" || saved === "cards")) {
+            setViewMode(saved as "table" | "cards");
+          }
+        }
+      }, 150);
+    };
+
+    const isInitialXXL = window.innerWidth >= 1536;
+    setIsXXL(isInitialXXL);
+
+    if (isInitialXXL) {
+      const saved = localStorage.getItem("orderViewMode");
+      if (saved && (saved === "table" || saved === "cards")) {
+        setViewMode(saved as "table" | "cards");
+      }
+    } else {
+      setViewMode("cards");
     }
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("orderViewMode", viewMode);
-  }, [viewMode]);
+    if (isXXL) {
+      localStorage.setItem("orderViewMode", viewMode);
+    }
+  }, [viewMode, isXXL]);
 
   const loadOrders = async () => {
     try {
@@ -425,14 +461,16 @@ export const ManageOrdersPage: React.FC = () => {
                 <option value="cancelled">Cancelados</option>
               </select>
             </div>
-            <div className="hidden md:flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg p-1 bg-gray-50 dark:bg-gray-900">
-              <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-              </button>
-              <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
-                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-              </button>
-            </div>
+            {isXXL && (
+              <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg p-1 bg-gray-50 dark:bg-gray-900">
+                <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                  <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                </button>
+                <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                  <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           {loading ? (
