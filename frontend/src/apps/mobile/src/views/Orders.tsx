@@ -363,6 +363,11 @@ export default function Orders({ onNavigate }: OrdersProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0 mr-2">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800">
+                            {order.orderNumber}
+                          </span>
+                        </div>
                         <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{order.title}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{order.description}</p>
                       </div>

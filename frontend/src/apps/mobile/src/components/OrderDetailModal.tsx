@@ -1,4 +1,4 @@
-import { X, ShoppingCart, Info, Tag, List, CheckSquare, Calendar, User, Image as ImageIcon, Clock, CheckCircle, XCircle, Truck, Ban } from "lucide-react";
+import { X, ShoppingCart, Info, Tag, List, CheckSquare, Calendar, User, Image as ImageIcon, Clock, CheckCircle, XCircle, Truck, Ban, Hash } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { OrderData } from "../../../../api/personnel";
 
@@ -122,6 +122,16 @@ export default function OrderDetailModal({ order, isOpen, onClose }: OrderDetail
               <div className="px-8 py-6 border-r border-slate-600/50">
                 <h3 className="text-xl font-bold text-white mb-6">Información del Pedido</h3>
                 <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30">
+                      <Hash className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-400 mb-1.5">Número de Pedido</p>
+                      <p className="text-lg font-mono font-bold text-emerald-400 tracking-wide">{order.orderNumber}</p>
+                    </div>
+                  </div>
+
                   <div className="flex items-start gap-4">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 border border-blue-500/30">
                       <ShoppingCart className="w-5 h-5 text-blue-400" />

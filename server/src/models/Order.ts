@@ -72,32 +72,20 @@ orderSchema.pre("validate", async function (next) {
   }
 
   try {
-    console.log("🔢 OrderSchema pre-validate - tenantId:", this.tenantId);
-
     const Tenant = mongoose.model("Tenant");
     const tenant = await Tenant.findById(this.tenantId);
-
-    console.log("🔢 Tenant found:", tenant ? { _id: tenant._id, slug: tenant.slug } : "NOT FOUND");
 
     if (!tenant) {
       throw new Error("Tenant not found");
     }
 
     const prefix = tenant.slug.toUpperCase().slice(0, 3);
-    console.log("🔢 Tenant prefix:", prefix);
-
     const sequence = await OrderCounter.getNextSequence(this.tenantId);
-    console.log("🔢 Sequence number:", sequence);
-
     const paddedNumber = sequence.toString().padStart(6, "0");
     this.orderNumber = `${prefix}-${paddedNumber}`;
 
-    console.log("🔢 Generated orderNumber:", this.orderNumber);
-
     next();
   } catch (error) {
-    console.error("❌ OrderSchema pre-validate error:", error);
-    console.error("❌ Error stack:", error instanceof Error ? error.stack : "No stack");
     next(error as Error);
   }
 });
