@@ -31,7 +31,7 @@ const orderSchema = new Schema<IOrder>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    orderNumber: { type: String, required: true, trim: true, uppercase: true, index: true },
+    orderNumber: { type: String, trim: true, uppercase: true, index: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true, default: "other" },
@@ -66,13 +66,13 @@ orderSchema.index({ tenantId: 1, categoryId: 1 });
 orderSchema.index({ categoryId: 1, subcategoryId: 1 });
 orderSchema.index({ tenantId: 1, orderNumber: 1 }, { unique: true });
 
-orderSchema.pre("save", async function (next) {
-  if (!this.isNew) {
+orderSchema.pre("validate", async function (next) {
+  if (!this.isNew || this.orderNumber) {
     return next();
   }
 
   try {
-    console.log("🔢 OrderSchema pre-save - tenantId:", this.tenantId);
+    console.log("🔢 OrderSchema pre-validate - tenantId:", this.tenantId);
 
     const Tenant = mongoose.model("Tenant");
     const tenant = await Tenant.findById(this.tenantId);
@@ -96,7 +96,7 @@ orderSchema.pre("save", async function (next) {
 
     next();
   } catch (error) {
-    console.error("❌ OrderSchema pre-save error:", error);
+    console.error("❌ OrderSchema pre-validate error:", error);
     console.error("❌ Error stack:", error instanceof Error ? error.stack : "No stack");
     next(error as Error);
   }
