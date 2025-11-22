@@ -5,6 +5,7 @@ import { useNotifications } from "../hooks/useNotifications";
 import { personnelAPI, ActivityRecord } from "../../../../api/personnel";
 import { useState, useEffect } from "react";
 import { useThemeStore } from "../../../../stores/themeStore";
+import UserHeader from "../components/UserHeader";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -127,9 +128,9 @@ export default function Home({ onNavigate }: HomeProps) {
 
   return (
     <div className="flex-1 pb-24">
-      {/* Header: saludo + botones de tema y salir */}
+      {/* Header: avatar + nombre + rol + botones de tema y salir */}
       <div className="flex items-center justify-between px-4 pt-4">
-        <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">Hola, {user?.firstName || "Usuario"}</h1>
+        <UserHeader user={user} />
 
         <div className="flex items-center gap-1">
           <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
