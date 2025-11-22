@@ -75,7 +75,7 @@ export const PlatformUsagePage: React.FC = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Todos los tenants ordenados por consumo de almacenamiento</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full bg-slate-800/80">
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
                   <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Tenant</th>

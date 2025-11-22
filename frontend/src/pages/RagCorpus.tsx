@@ -197,7 +197,7 @@ export const RagCorpus: React.FC = () => {
           ) : (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full bg-slate-800/80">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documento</th>

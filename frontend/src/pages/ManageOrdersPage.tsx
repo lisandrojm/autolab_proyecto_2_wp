@@ -483,7 +483,7 @@ export const ManageOrdersPage: React.FC = () => {
                 renderCardsView()
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full table-fixed">
+                  <table className="w-full bg-slate-800/80 table-fixed">
                     <thead>
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>

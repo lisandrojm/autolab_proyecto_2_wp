@@ -256,7 +256,7 @@ export const ManageOrdersPage: React.FC = () => {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full table-fixed">
+                <table className="w-full bg-slate-800/80 table-fixed">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
