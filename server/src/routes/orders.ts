@@ -163,13 +163,29 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
     }
 
+    console.log("📦 Create Order - req.body:", req.body);
+    console.log("📦 Create Order - tenantObjectId:", req.tenantObjectId);
+    console.log("📦 Create Order - userId:", userId);
+
+    let parsedDynamicValue = req.body.dynamicValue;
+    if (typeof parsedDynamicValue === "string") {
+      try {
+        parsedDynamicValue = JSON.parse(parsedDynamicValue);
+      } catch (e) {
+        console.error("Error parsing dynamicValue:", e);
+      }
+    }
+
     const data = createOrderSchema.parse({
       ...req.body,
       amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
       actionCompleted: req.body.actionCompleted === "true" || req.body.actionCompleted === true,
       futureActionPlazoDias: req.body.futureActionPlazoDias ? parseInt(req.body.futureActionPlazoDias) : undefined,
+      dynamicValue: parsedDynamicValue,
       photoUrl,
     });
+
+    console.log("📦 Parsed order data:", data);
 
     if (data.categoryId) {
       const category = await OrderCategory.findOne({
@@ -211,6 +227,8 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
+    console.log("📦 Creating order with tenantId:", req.tenantObjectId);
+
     const order = new Order({
       tenantId: req.tenantObjectId,
       userId,
@@ -219,7 +237,9 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       requestedAt: new Date(),
     });
 
+    console.log("📦 Order instance created, calling save...");
     await order.save();
+    console.log("📦 Order saved successfully with orderNumber:", order.orderNumber);
 
     if (data.categoryId) {
       const category = await OrderCategory.findById(data.categoryId);
@@ -293,11 +313,16 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     res.status(201).json(order);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("❌ Zod validation error:", error.errors);
       res.status(400).json({ error: "Invalid data", details: error.errors });
       return;
     }
-    console.error("Create order error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("❌ Create order error:", error);
+    console.error("❌ Error stack:", error instanceof Error ? error.stack : "No stack trace");
+    res.status(500).json({
+      error: "Internal server error",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });
 
