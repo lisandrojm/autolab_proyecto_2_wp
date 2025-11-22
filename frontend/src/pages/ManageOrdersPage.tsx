@@ -605,7 +605,10 @@ export const ManageOrdersPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-col gap-3">
-                <span className={`text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>{getStatusBadge(selectedOrder.status).label}</span>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>
+                  <FontAwesomeIcon icon={getStatusIcon(selectedOrder.status)} className="h-3 w-3" />
+                  {getStatusBadge(selectedOrder.status).label}
+                </span>
               </div>
             </div>
 
