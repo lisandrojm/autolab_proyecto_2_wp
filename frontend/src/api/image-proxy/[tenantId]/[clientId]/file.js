@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 
         const ab = await r.arrayBuffer();
         res.setHeader("Content-Type", mime);
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        res.setHeader("Cache-Control", "public, max-age=31200000, immutable");
         return res.status(200).send(Buffer.from(ab));
       } catch (_) {
         // probar siguiente

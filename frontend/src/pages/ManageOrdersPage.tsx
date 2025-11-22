@@ -35,7 +35,7 @@ export const ManageOrdersPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
-  const [isXXL, setIsXXL] = useState(window.innerWidth >= 1536);
+  const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
 
   const helpEntry = getHelp(HELP_KEY);
 
@@ -45,7 +45,7 @@ export const ManageOrdersPage: React.FC = () => {
     const handleResize = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        const isNowXXL = window.innerWidth >= 1536;
+        const isNowXXL = window.innerWidth >= 1200;
         setIsXXL(isNowXXL);
 
         if (!isNowXXL) {
@@ -59,7 +59,7 @@ export const ManageOrdersPage: React.FC = () => {
       }, 150);
     };
 
-    const isInitialXXL = window.innerWidth >= 1536;
+    const isInitialXXL = window.innerWidth >= 1200;
     setIsXXL(isInitialXXL);
 
     if (isInitialXXL) {
@@ -315,7 +315,7 @@ export const ManageOrdersPage: React.FC = () => {
 
   const renderCardsView = () => {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredOrders.map((order) => {
           const avatarUrl = getUserAvatar(order.userId);
           return (
@@ -462,11 +462,11 @@ export const ManageOrdersPage: React.FC = () => {
               </select>
             </div>
             {isXXL && (
-              <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg p-1 bg-gray-50 dark:bg-gray-900">
-                <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+              <div className="flex items-center gap-2 ">
+                <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
                   <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
                 </button>
-                <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
                   <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
                 </button>
               </div>

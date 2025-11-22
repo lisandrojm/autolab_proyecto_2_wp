@@ -445,7 +445,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 <FontAwesomeIcon icon={faPlus} />
                 <span className="hidden lg:block">Nuevo Tipo de Pedido</span>
               </button>
-              <button onClick={() => navigate("/orders")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <button onClick={() => navigate("/hr/orders")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faShoppingCart} className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden lg:block">Pedidos</span>
               </button>
