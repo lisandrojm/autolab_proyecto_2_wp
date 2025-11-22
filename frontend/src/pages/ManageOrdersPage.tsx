@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faExclamationTriangle, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
 import { Modal } from "../components/ui/Modal";
+import { Card } from "../components/ui/Card";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -33,8 +34,20 @@ export const ManageOrdersPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
 
   const helpEntry = getHelp(HELP_KEY);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("orderViewMode");
+    if (saved && (saved === "table" || saved === "cards") && window.innerWidth >= 768) {
+      setViewMode(saved as "table" | "cards");
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("orderViewMode", viewMode);
+  }, [viewMode]);
 
   const loadOrders = async () => {
     try {
@@ -217,6 +230,119 @@ export const ManageOrdersPage: React.FC = () => {
     });
   };
 
+  const getStatusIcon = (status: string) => {
+    const icons: Record<string, any> = {
+      pending: faExclamationTriangle,
+      approved: faCheckCircle,
+      rejected: faTimesCircle,
+      delivered: faTruck,
+      cancelled: faBan,
+    };
+    return icons[status] || faInfoCircle;
+  };
+
+  const mapStatusToCardVariant = (status: string): "default" | "success" | "warning" | "blue" | "info" | "green" => {
+    const variants: Record<string, "default" | "success" | "warning" | "blue" | "info" | "green"> = {
+      pending: "warning",
+      approved: "blue",
+      rejected: "default",
+      delivered: "green",
+      cancelled: "default",
+    };
+    return variants[status] || "default";
+  };
+
+  const getCardBadges = (order: Order) => {
+    const statusBadge = getStatusBadge(order.status);
+    return [
+      {
+        text: statusBadge.label,
+        variant: mapStatusToCardVariant(order.status),
+        icon: getStatusIcon(order.status),
+      },
+      {
+        text: getCategoryName(order),
+        variant: "info" as const,
+      },
+    ];
+  };
+
+  const getAvatarFallback = (user: any): string => {
+    const name = getUserName(user);
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const renderCardsView = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filteredOrders.map((order) => {
+          const avatarUrl = getUserAvatar(order.userId);
+          return (
+            <Card
+              key={order._id}
+              header={{
+                title: order.title,
+                subtitle: order.description,
+                avatar: {
+                  src: avatarUrl ? `${import.meta.env.VITE_API_URL}${avatarUrl}` : undefined,
+                  fallback: getAvatarFallback(order.userId),
+                  alt: getUserName(order.userId),
+                },
+                badges: getCardBadges(order),
+              }}
+              footer={{
+                leftContent: (
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <FontAwesomeIcon icon={faCalendar} className="h-3 w-3" />
+                    <span>{formatDateShort(order.requestedAt)}</span>
+                  </div>
+                ),
+                actions: [
+                  {
+                    icon: faEye,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      setSelectedOrder(order);
+                      setShowDetailModal(true);
+                    },
+                    title: "Ver detalles",
+                    variant: "default",
+                  },
+                ],
+              }}
+              onClick={() => {
+                setSelectedOrder(order);
+                setShowDetailModal(true);
+              }}
+            >
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">N° Pedido</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{getOrderNumber(order._id)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Solicitante</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-[150px]">{getUserName(order.userId)}</span>
+                </div>
+                {order.amount && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Importe</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">${order.amount.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderModalFooter = () => {
     if (updatingStatus) {
       return (
@@ -311,6 +437,28 @@ export const ManageOrdersPage: React.FC = () => {
                 <option value="cancelled">Cancelados</option>
               </select>
             </div>
+            <div className="hidden md:flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg p-1 bg-gray-50 dark:bg-gray-900">
+              <button
+                onClick={() => setViewMode("cards")}
+                className={`px-4 py-1.5 rounded-md transition-all ${
+                  viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                title="Vista de tarjetas"
+                aria-label="Vista de tarjetas"
+              >
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`px-4 py-1.5 rounded-md transition-all ${
+                  viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                title="Vista de tabla"
+                aria-label="Vista de tabla"
+              >
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -319,8 +467,11 @@ export const ManageOrdersPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed">
+              {viewMode === "cards" ? (
+                renderCardsView()
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full table-fixed">
                   <thead>
                     <tr>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
@@ -418,8 +569,9 @@ export const ManageOrdersPage: React.FC = () => {
                       );
                     })}
                   </tbody>
-                </table>
-              </div>
+                  </table>
+                </div>
+              )}
 
               {filteredOrders.length === 0 && (
                 <div className="text-center py-12">
