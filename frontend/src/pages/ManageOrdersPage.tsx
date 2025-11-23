@@ -190,6 +190,15 @@ export const ManageOrdersPage: React.FC = () => {
     return user.email || "Usuario desconocido";
   };
 
+  const getUserPosition = (user: any): string => {
+    if (!user) return "Sin puesto asignado";
+    if (typeof user === "string") return "Sin puesto asignado";
+    if (user.positionId && typeof user.positionId === "object" && user.positionId.name) {
+      return user.positionId.name;
+    }
+    return "Sin puesto asignado";
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
@@ -351,7 +360,7 @@ export const ManageOrdersPage: React.FC = () => {
               key={order._id}
               header={{
                 title: getUserName(order.userId),
-                subtitle: order.description,
+                subtitle: getUserPosition(order.userId),
                 avatar: {
                   src: avatarUrl ? `${import.meta.env.VITE_API_URL}${avatarUrl}` : undefined,
                   fallback: getAvatarFallback(order.userId),

@@ -96,6 +96,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       userId,
     })
       .sort({ requestedAt: -1 })
+      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
       .populate("categoryId");
 
@@ -138,7 +139,9 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       _id: req.params.id,
       tenantId: req.tenantObjectId,
       userId,
-    }).populate("approvedBy", "firstName lastName email");
+    })
+      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate("approvedBy", "firstName lastName email");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -313,7 +316,11 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       entityId: order._id,
     });
 
-    res.status(201).json(order);
+    const populatedOrder = await Order.findById(order._id)
+      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate("approvedBy", "firstName lastName email");
+
+    res.status(201).json(populatedOrder);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });
@@ -368,7 +375,11 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
     Object.assign(order, data);
     await order.save();
 
-    res.json(order);
+    const populatedOrder = await Order.findById(order._id)
+      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(populatedOrder);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });

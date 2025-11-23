@@ -265,7 +265,7 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [orders, total] = await Promise.all([Order.find(filter).sort({ requestedAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email").populate("categoryId"), Order.countDocuments(filter)]);
+    const [orders, total] = await Promise.all([Order.find(filter).sort({ requestedAt: -1 }).skip(skip).limit(Number(limit)).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId"), Order.countDocuments(filter)]);
 
     res.json({
       orders,
@@ -327,7 +327,7 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
       entityId: order._id,
     });
 
-    const populatedOrder = await Order.findById(order._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email");
+    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email");
 
     res.status(201).json(populatedOrder);
   } catch (error) {
@@ -377,7 +377,7 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     Object.assign(order, data);
     await order.save();
 
-    const populatedOrder = await Order.findById(order._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email");
+    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email");
 
     res.json(populatedOrder);
   } catch (error) {
