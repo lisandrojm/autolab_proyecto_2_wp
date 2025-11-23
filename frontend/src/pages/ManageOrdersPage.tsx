@@ -715,30 +715,32 @@ export const ManageOrdersPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              {selectedOrder.amount && (
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">${selectedOrder.amount.toFixed(2)} USD</p>
-                </div>
-              )}
-              {selectedOrder.dynamicValue?.fechaDesde && (
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaDesde)}</p>
-                </div>
-              )}
-              {selectedOrder.dynamicValue?.fechaHasta && (
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaHasta)}</p>
-                </div>
-              )}
-              {selectedOrder.photoUrl && (
-                <div className="md:col-span-2">
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
-                  <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
-                </div>
-              )}
+              <div className="lg:col-span-4">
+                {selectedOrder.amount && (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">$ {selectedOrder.amount.toFixed(2)}</p>
+                  </div>
+                )}
+                {selectedOrder.dynamicValue?.fechaDesde && (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaDesde)}</p>
+                  </div>
+                )}
+                {selectedOrder.dynamicValue?.fechaHasta && (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.dynamicValue.fechaHasta)}</p>
+                  </div>
+                )}
+                {selectedOrder.photoUrl && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
+                    <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="bg-slate-100 dark:bg-slate-700/50 p-4 py-3 rounded-lg">
