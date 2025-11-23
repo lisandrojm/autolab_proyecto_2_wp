@@ -485,7 +485,7 @@ export const ManageOrdersPage: React.FC = () => {
               {viewMode === "cards" ? (
                 renderCardsView()
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded border dark:border-slate-800">
                   <table className="w-full bg-slate-800/80 table-fixed">
                     <thead>
                       <tr>
