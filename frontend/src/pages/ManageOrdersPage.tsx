@@ -359,13 +359,13 @@ export const ManageOrdersPage: React.FC = () => {
                 <div>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{getCategoryName(order)}</span>
                 </div>
-                <div className="space-y-3 text-sm">
+                {/*                 <div className="space-y-3 text-sm">
                   {order.amount && (
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-green-600 dark:text-green-400">${order.amount.toFixed(2)}</span>
                     </div>
                   )}
-                </div>
+                </div> */}
               </div>
             </Card>
           );
