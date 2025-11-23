@@ -108,7 +108,7 @@ export const CalendarPage: React.FC = () => {
 
   const fetchPosts = async () => {
     const timeoutId = setTimeout(() => {
-      console.warn('Calendar posts request taking longer than expected');
+      console.warn("Calendar posts request taking longer than expected");
     }, 5000);
 
     try {
@@ -494,7 +494,7 @@ export const CalendarPage: React.FC = () => {
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Estados de Posts</h3>
               <div className="flex flex-wrap gap-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-600"></div>
+                  <div className="w-3 h-3 rounded-full bg-blue-700"></div>
                   <span className="text-xs text-gray-600 dark:text-gray-400">Publicado</span>
                 </div>
                 <div className="flex items-center gap-2">

@@ -13,7 +13,7 @@ function getInitials(firstName?: string, lastName?: string): string {
 }
 
 function getColorFromName(name: string): string {
-  const colors = ["bg-blue-600", "bg-green-600", "bg-purple-600", "bg-orange-600", "bg-teal-600", "bg-pink-600"];
+  const colors = ["bg-blue-600", "bg-blue-600", "bg-purple-600", "bg-orange-600", "bg-teal-600", "bg-pink-600"];
   const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
 }

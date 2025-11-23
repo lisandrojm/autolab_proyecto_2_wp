@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faExclamationTriangle, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -271,7 +271,7 @@ export const ManageOrdersPage: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     const icons: Record<string, any> = {
-      pending: faExclamationTriangle,
+      pending: faClock,
       approved: faCheckCircle,
       rejected: faTimesCircle,
       delivered: faTruck,
@@ -295,13 +295,13 @@ export const ManageOrdersPage: React.FC = () => {
     const statusBadge = getStatusBadge(order.status);
     return [
       {
+        text: getCategoryName(order),
+        variant: "info" as const,
+      },
+      {
         text: statusBadge.label,
         className: statusBadge.style,
         icon: getStatusIcon(order.status),
-      },
-      {
-        text: getCategoryName(order),
-        variant: "info" as const,
       },
     ];
   };
@@ -388,7 +388,7 @@ export const ManageOrdersPage: React.FC = () => {
           <button onClick={() => handleStatusChange("rejected")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Rechazar
           </button>
-          <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Aprobar
           </button>
         </>
@@ -397,7 +397,7 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (selectedOrder.status === "approved") {
       return (
-        <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+        <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
           <FontAwesomeIcon icon={faTruck} />
           Marcar como Entregado
         </button>

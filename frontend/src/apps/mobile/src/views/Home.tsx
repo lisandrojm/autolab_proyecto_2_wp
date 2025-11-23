@@ -153,7 +153,7 @@ export default function Home({ onNavigate }: HomeProps) {
               <p className="text-sm text-green-700 dark:text-green-300">{latestNotification.message}</p>
             </div>
             {unreadCount > 1 && (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600 dark:bg-green-500">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 dark:bg-green-500">
                 <span className="text-xs font-bold text-white">{unreadCount}</span>
               </div>
             )}

@@ -546,7 +546,7 @@ export const ManageOrdersPage: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Control de Estado</h3>
 
                     {selectedOrder.status === "approved" && (
-                      <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="w-full mb-4 py-3 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="w-full mb-4 py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <FontAwesomeIcon icon={faTruck} />
                         Marcar como Entregado
                       </button>

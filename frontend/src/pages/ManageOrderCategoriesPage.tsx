@@ -357,7 +357,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               <button onClick={handleCancelReorder} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
                 <span>Cancelar</span>
               </button>
-              <button onClick={handleSaveReorder} className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2">
+              <button onClick={handleSaveReorder} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2">
                 <span>Guardar Orden</span>
               </button>
             </>
@@ -454,7 +454,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
           <OrderCategoryForm formData={formData} setFormData={setFormData} onSubmit={handleSubmit} submitting={submitting} />
         </div>
       </Modal>
-
     </PageLayout>
   );
 };

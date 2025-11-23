@@ -193,13 +193,13 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "delivered":
-        return <FontAwesomeIcon icon={faTruck} className="w-5 h-5 text-green-600 dark:text-green-400" />;
+        return <FontAwesomeIcon icon={faTruck} className="w-3 h-3 text-green-600 dark:text-green-400" />;
       case "approved":
-        return <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+        return <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3 text-blue-600 dark:text-blue-400" />;
       case "pending":
-        return <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+        return <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />;
       case "rejected":
-        return <FontAwesomeIcon icon={faTimesCircle} className="w-5 h-5 text-red-600 dark:text-red-400" />;
+        return <FontAwesomeIcon icon={faTimesCircle} className="w-3 h-3 text-red-600 dark:text-red-400" />;
       default:
         return null;
     }
