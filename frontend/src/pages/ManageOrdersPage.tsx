@@ -225,10 +225,10 @@ export const ManageOrdersPage: React.FC = () => {
 
     const category = order.categoryId as OrderCategory;
 
-    if (!order.subcategories || order.subcategories.length === 0 || !category.config?.subtipos) return "Sin opciones";
+    if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return "Sin opciones";
 
     const labels = order.subcategories.map(subId => {
-      const selectedSubtype = category.config.subtipos.find((st) => st.id === subId);
+      const selectedSubtype = category.config.subtipos?.find((st) => st.id === subId);
       return selectedSubtype ? selectedSubtype.label : subId;
     });
 

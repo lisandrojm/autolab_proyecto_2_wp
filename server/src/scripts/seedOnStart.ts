@@ -18,6 +18,7 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Types } from "mongoose";
 import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
+import { migrateOrderCategoryImprovements } from "./migrateOrderCategoryImprovements.js";
 
 /* ----------------------------- helpers ----------------------------- */
 
@@ -264,7 +265,10 @@ export async function seedOnStart() {
   }
 
   try {
-    // Run migration first
+    // Run migrations first
+    console.log("🔄 Running OrderCategory improvements migration...");
+    await migrateOrderCategoryImprovements();
+
     console.log("🔄 Running subcategories migration...");
     await migrateSubcategoriesToArray();
 
@@ -767,6 +771,7 @@ export async function seedOnStart() {
         requiresAction: true,
         actionText: "Adjunto todos los comprobantes y facturas originales",
         futureActionType: "sinVencimiento",
+        config: {},
       });
 
       const catEquipamiento = await OrderCategory.create({
@@ -795,6 +800,7 @@ export async function seedOnStart() {
         categoryType: "otros",
         isActive: true,
         sortOrder: 5,
+        config: {},
       });
 
       console.log("✅ OrderCategory seeded (5 categorías representativas)");
@@ -949,7 +955,7 @@ export async function seedOnStart() {
         title: "Licencia médica prolongada y permiso para controles",
         description: "Solicito licencia por intervención quirúrgica y permisos para controles postoperatorios posteriores",
         category: "Licencias y Permisos",
-        categoryId: catLicenciasPermisos._id,
+        categoryId: catLicencias._id,
         subcategories: ["licencia_medica", "permiso_tramite"],
         dynamicValue: {
           fechaDesde: new Date(2024, 2, 10),
@@ -970,7 +976,7 @@ export async function seedOnStart() {
         title: "Adelanto de sueldo y reembolso de viáticos",
         description: "Necesito adelanto para viaje de trabajo y posterior reembolso de gastos adicionales",
         category: "Adelantos y Anticipos",
-        categoryId: catAdelantosAnticipos._id,
+        categoryId: catAdelantos._id,
         subcategories: ["adelanto_sueldo", "adelanto_vacaciones"],
         dynamicValue: {
           montoAdelanto: 100000,

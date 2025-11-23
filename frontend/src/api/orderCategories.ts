@@ -34,7 +34,7 @@ export interface OrderCategory {
   sortOrder: number;
   categoryType: CategoryType;
   dateMode?: DateMode;
-  config?: CategoryConfig;
+  config: CategoryConfig;
   requiresAction?: boolean;
   actionText?: string;
   futureActionType?: TipoAccionFutura;

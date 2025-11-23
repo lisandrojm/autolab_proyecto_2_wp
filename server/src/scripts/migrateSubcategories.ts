@@ -8,7 +8,7 @@ export async function migrateSubcategoriesToArray() {
     // Migrar documentos que tienen subcategoryId
     const result = await Order.updateMany(
       {
-        subcategoryId: { $exists: true, $ne: null, $ne: "" }
+        subcategoryId: { $exists: true, $nin: [null, ""] }
       },
       [
         {

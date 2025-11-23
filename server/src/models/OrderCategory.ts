@@ -41,12 +41,12 @@ export interface IOrderCategory extends Document {
   sortOrder: number;
   categoryType: "fecha" | "dinero" | "objeto" | "otros";
   dateMode?: DateMode;
-  config?: ICategoryConfig;
+  config: ICategoryConfig;
   requiresAction?: boolean;
   actionText?: string;
   futureActionType?: TipoAccionFutura;
   plazoDias?: number;
-  fechaLimite?: string;
+  fechaLimite?: Date;
   documentoRequerido?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -72,7 +72,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
       default: "single",
       trim: true
     },
-    config: { type: Schema.Types.Mixed },
+    config: { type: Schema.Types.Mixed, default: {} },
     requiresAction: { type: Boolean, default: false },
     actionText: { type: String, trim: true },
     futureActionType: {
@@ -82,7 +82,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
       trim: true
     },
     plazoDias: { type: Number, min: 1, max: 365 },
-    fechaLimite: { type: String, trim: true },
+    fechaLimite: { type: Date },
     documentoRequerido: { type: String, trim: true },
   },
   { timestamps: true }

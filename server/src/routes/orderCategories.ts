@@ -35,7 +35,7 @@ const createCategorySchema = z
     actionText: z.string().max(500).optional(),
     futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).default("sinVencimiento").optional(),
     plazoDias: z.number().int().min(1).max(365).optional(),
-    fechaLimite: z.string().optional(),
+    fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
   })
   .refine(
@@ -65,7 +65,7 @@ const createCategorySchema = z
   .refine(
     (data) => {
       if (data.futureActionType === "fechaEspecifica") {
-        return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+        return data.fechaLimite !== undefined;
       }
       return true;
     },
@@ -100,7 +100,7 @@ const updateCategorySchema = z
     actionText: z.string().max(500).optional(),
     futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).optional(),
     plazoDias: z.number().int().min(1).max(365).optional(),
-    fechaLimite: z.string().optional(),
+    fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
   })
   .refine(
@@ -130,7 +130,7 @@ const updateCategorySchema = z
   .refine(
     (data) => {
       if (data.futureActionType === "fechaEspecifica") {
-        return data.fechaLimite !== undefined && data.fechaLimite.length > 0;
+        return data.fechaLimite !== undefined;
       }
       return true;
     },

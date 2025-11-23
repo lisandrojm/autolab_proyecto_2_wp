@@ -163,7 +163,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
       futureActionType: category.futureActionType || "sinVencimiento",
-      subtipos: category.config?.subtipos || [],
+      subtipos: category.config.subtipos || [],
       plazoDias: category.plazoDias,
       fechaLimite: category.fechaLimite,
       documentoRequerido: category.documentoRequerido,

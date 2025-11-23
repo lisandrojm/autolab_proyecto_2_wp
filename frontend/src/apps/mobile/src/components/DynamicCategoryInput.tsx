@@ -21,7 +21,7 @@ interface DynamicCategoryInputProps {
 export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange }) => {
   if (!category) return null;
 
-  const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
+  const hasSubcategories = category.config.subtipos && category.config.subtipos.length > 0;
 
   const renderDynamicInput = () => {
     switch (category.categoryType) {
@@ -133,7 +133,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subcategorías (selecciona todas las que apliquen)</label>
           <div className="space-y-2 bg-slate-50 dark:bg-slate-800/30 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
-            {category.config?.subtipos?.map((subtipo) => (
+            {category.config.subtipos?.map((subtipo) => (
               <label key={subtipo.id} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
                 <input
                   type="checkbox"
