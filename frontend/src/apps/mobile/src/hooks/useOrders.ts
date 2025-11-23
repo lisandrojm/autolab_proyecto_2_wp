@@ -25,8 +25,7 @@ export const useOrders = () => {
     description: string;
     category?: string;
     categoryId?: string;
-    subcategoryId?: string;
-    subcategoryLabel?: string;
+    subcategories?: string[];
     dynamicValue?: any;
     actionCompleted?: boolean;
     amount?: number;
