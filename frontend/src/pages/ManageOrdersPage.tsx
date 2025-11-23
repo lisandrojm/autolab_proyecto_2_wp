@@ -354,10 +354,6 @@ export const ManageOrdersPage: React.FC = () => {
               }}
             >
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Solicitante</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-[150px]">{getUserName(order.userId)}</span>
-                </div>
                 {order.amount && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">Importe</span>
