@@ -82,6 +82,7 @@ export default function Home({ onNavigate }: HomeProps) {
       description: "Administra tu equipo",
       view: "home" as ViewType,
       roles: ["coordinator"],
+      disabled: true,
     },
     {
       icon: faChartBar,
@@ -89,6 +90,7 @@ export default function Home({ onNavigate }: HomeProps) {
       description: "Ver métricas y estadísticas",
       view: "home" as ViewType,
       roles: ["coordinator"],
+      disabled: true,
     },
   ];
 

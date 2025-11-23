@@ -217,6 +217,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
         return status;
     }
   };
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "delivered":
+        return "text-green-600 dark:text-green-400";
+      case "approved":
+        return "text-blue-600 dark:text-blue-400";
+      case "pending":
+        return "text-yellow-600 dark:text-yellow-400";
+      case "rejected":
+        return "text-red-600 dark:text-red-400";
+      default:
+        return "text-slate-600 dark:text-slate-400";
+    }
+  };
 
   const handleOrderClick = (order: OrderData) => {
     setSelectedOrder(order);
@@ -363,11 +377,11 @@ export default function Orders({ onNavigate }: OrdersProps) {
                       </div>
                       <div className="flex gap-2 items-center">
                         <div className="flex items-center gap-2">
-                          <span className="inline-block px-2 py-0.5 text-[12px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded">{getOrderNumber(order)}</span>
+                          <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
                         </div>
                         <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
                           {getStatusIcon(order.status)}
-                          <span className="text-xs font-medium text-slate-900 dark:text-slate-100">{getStatusText(order.status)}</span>
+                          <span className={`text-xs font-medium ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
                         </div>
                       </div>
                     </div>
