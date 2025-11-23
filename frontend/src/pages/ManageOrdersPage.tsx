@@ -242,10 +242,12 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return [];
 
-    const labels = order.subcategories.map((subId) => {
-      const selectedSubtype = category.config.subtipos?.find((st) => st.id === subId);
-      return selectedSubtype ? selectedSubtype.label : null;
-    }).filter((label): label is string => Boolean(label));
+    const labels = order.subcategories
+      .map((subId) => {
+        const selectedSubtype = category.config.subtipos?.find((st) => st.id === subId);
+        return selectedSubtype ? selectedSubtype.label : null;
+      })
+      .filter((label): label is string => Boolean(label));
 
     return labels;
   };
@@ -372,12 +374,9 @@ export const ManageOrdersPage: React.FC = () => {
             >
               <div className="flex py-2 items-center justify-between flex-wrap">
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(order)}</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-400">{getCategoryName(order)}</span>
                   {getSubcategoriesArray(order).map((subcategory, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
-                    >
+                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                       {subcategory}
                     </span>
                   ))}
@@ -513,7 +512,7 @@ export const ManageOrdersPage: React.FC = () => {
                 renderCardsView()
               ) : (
                 <div className="overflow-x-auto rounded border dark:border-slate-800">
-                  <table className="w-full dark:bg-slate-800/80 table-fixed">
+                  <table className="w-full dark:bg-slate-800/80 table-auto">
                     <thead>
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
@@ -560,14 +559,13 @@ export const ManageOrdersPage: React.FC = () => {
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
 
                             {/* --- CATEGORÍA --- */}
-                            <td className="py-3 px-4">
-                              <div className="flex flex-wrap gap-1.5">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(order)}</span>
+                            {/* --- CATEGORÍA --- */}
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <div className="flex flex-nowrap items-center gap-x-1.5">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-400">{getCategoryName(order)}</span>
+
                                 {getSubcategoriesArray(order).map((subcategory, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
-                                  >
+                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                                     {subcategory}
                                   </span>
                                 ))}
@@ -707,12 +705,9 @@ export const ManageOrdersPage: React.FC = () => {
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(selectedOrder)}</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-400">{getCategoryName(selectedOrder)}</span>
                   {getSubcategoriesArray(selectedOrder).map((subcategory, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
-                    >
+                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                       {subcategory}
                     </span>
                   ))}
