@@ -14,7 +14,7 @@ interface OrdersProps {
 }
 
 export default function Orders({ onNavigate }: OrdersProps) {
-  const { orders, loading, error, createOrder, deleteOrder } = useOrders();
+  const { orders, loading, error, createOrder, deleteOrder, updateOrderStatus } = useOrders();
   const [showForm, setShowForm] = useState(false);
   const [product, setProduct] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
@@ -398,6 +398,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
           setShowDetailModal(false);
           setSelectedOrder(null);
         }}
+        onStatusUpdate={updateOrderStatus}
       />
 
       {viewingImage && (

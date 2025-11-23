@@ -57,6 +57,18 @@ export const useOrders = () => {
     }
   };
 
+  const updateOrderStatus = async (id: string, status: string) => {
+    try {
+      setError(null);
+      const updatedOrder = await personnelAPI.updateOrder(id, { status: status as any });
+      setOrders(orders.map(order => order._id === id ? updatedOrder : order));
+      return updatedOrder;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al actualizar pedido');
+      throw err;
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -68,5 +80,6 @@ export const useOrders = () => {
     refetch: fetchOrders,
     createOrder,
     deleteOrder,
+    updateOrderStatus,
   };
 };
