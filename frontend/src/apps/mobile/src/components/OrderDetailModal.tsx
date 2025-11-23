@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { OrderData } from "../../../../api/personnel";
-import { Modal } from "./Modal";
+import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getStatusBadge, getCategoryName, getOrderNumber, getSubcategoriesArray, getStatusIcon } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -68,9 +68,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           {/* Nº Pedido y Status Badge */}
           <div className="flex justify-between align-top">
             <div>
-              <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">
-                Nº Pedido: {getOrderNumber(order)}
-              </p>
+              <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(order)}</p>
             </div>
             <div className="flex flex-col gap-3">
               <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badge.style}`}>
@@ -84,11 +82,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           <div className="flex items-center gap-3">
             <div>
               {getUserAvatar(order.userId) ? (
-                <img
-                  alt={`Foto de perfil de ${getUserName(order.userId)}`}
-                  className="w-10 h-10 rounded-full object-cover"
-                  src={`${import.meta.env.VITE_API_URL}${getUserAvatar(order.userId)}`}
-                />
+                <img alt={`Foto de perfil de ${getUserName(order.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(order.userId)}`} />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
                   {getUserName(order.userId)
@@ -101,12 +95,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               )}
             </div>
             <div>
-              <p className="font-semibold text-slate-800 dark:text-slate-100">
-                {getUserName(order.userId)}
-              </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                {getUserRole(order.userId)}
-              </p>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(order.userId)}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{getUserPosition(order.userId)}</p>
             </div>
           </div>
 
@@ -115,14 +105,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             <div className="lg:col-span-8">
               <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
-                  {getCategoryName(order)}
-                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
                 {getSubcategoriesArray(order).map((subcategory, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
-                  >
+                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                     {subcategory}
                   </span>
                 ))}
@@ -132,38 +117,25 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               {order.amount && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">
-                    $ {order.amount.toFixed(2)}
-                  </p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">$ {order.amount.toFixed(2)}</p>
                 </div>
               )}
               {order.dynamicValue?.fechaDesde && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">
-                    {formatDateShort(order.dynamicValue.fechaDesde)}
-                  </p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(order.dynamicValue.fechaDesde)}</p>
                 </div>
               )}
               {order.dynamicValue?.fechaHasta && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">
-                    {formatDateShort(order.dynamicValue.fechaHasta)}
-                  </p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(order.dynamicValue.fechaHasta)}</p>
                 </div>
               )}
               {order.photoUrl && (
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                    Imagen adjunta
-                  </p>
-                  <img
-                    src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`}
-                    alt={order.title}
-                    className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)}
-                  />
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
+                  <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
                 </div>
               )}
             </div>
@@ -173,35 +145,25 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           <div className="bg-slate-100 dark:bg-slate-700/50 p-4 py-3 rounded-lg">
             <div className="flex justify-between items-start">
               <div className="flex justify-between items-center w-full">
-                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">
-                  Descripción
-                </p>
+                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Descripción</p>
               </div>
             </div>
-            <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">
-              {order.description}
-            </p>
+            <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>
           </div>
 
           {/* Fechas importantes */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Solicitud</p>
-              <p className="font-medium text-slate-800 dark:text-slate-100">
-                {formatDateShort(order.requestedAt)}
-              </p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(order.requestedAt)}</p>
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Aprobación</p>
-              <p className="font-medium text-slate-800 dark:text-slate-100">
-                {formatDateShort(order.approvedAt)}
-              </p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(order.approvedAt)}</p>
             </div>
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Entrega</p>
-              <p className="font-medium text-slate-800 dark:text-slate-100">
-                {formatDateShort(order.deliveredAt)}
-              </p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(order.deliveredAt)}</p>
             </div>
           </div>
         </div>

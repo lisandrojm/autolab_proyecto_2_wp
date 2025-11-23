@@ -1,6 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,19 +11,14 @@ interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl" | "fullscreen";
   footer?: React.ReactNode;
   zIndex?: number;
+  customHeader?: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  subtitle,
-  children,
-  size = "md",
-  footer,
-  zIndex = 50
-}) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, children, size = "md", footer, zIndex = 50, customHeader }) => {
   if (!isOpen) return null;
+
+  const titleId = "modal-title";
+  const subtitleId = subtitle ? "modal-subtitle" : undefined;
 
   const getSizeClasses = () => {
     switch (size) {
@@ -44,58 +39,43 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div className="fixed inset-0 overflow-y-auto" style={{ zIndex }}>
-      <div className={`flex min-h-screen items-center justify-center ${isFullscreen ? 'p-2' : 'p-4'}`}>
+      <div className={`flex min-h-screen items-center justify-center ${isFullscreen ? "p-2" : "p-4"}`}>
         {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm transition duration-200"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200" />
 
         {/* Panel */}
-        <div
-          className={`relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full ${getSizeClasses()} ${
-            isFullscreen ? 'overflow-hidden flex flex-col' : 'max-h-[95vh] overflow-y-auto'
-          }`}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
+        <div className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full ${getSizeClasses()} ${isFullscreen ? "overflow-hidden flex flex-col" : "max-h-[95vh] overflow-y-auto"}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-slate-600/50 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-0 z-50">
-            <div>
-              <h2 id="modal-title" className="text-xl font-bold text-slate-900 dark:text-white">
-                {title}
-              </h2>
-              {subtitle && (
-                typeof subtitle === 'string' ? (
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    {subtitle}
-                  </p>
-                ) : (
-                  <div className="mt-1">{subtitle}</div>
-                )
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              aria-label="Cerrar modal"
-            >
-              <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-slate-500 dark:text-slate-400" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className={isFullscreen ? 'flex-1 overflow-hidden' : 'p-6'}>
-            {children}
-          </div>
-
-          {/* Footer */}
-          {footer && (
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 sticky bottom-0 z-50">
-              {footer}
+          {customHeader ? (
+            customHeader
+          ) : (
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
+              <div>
+                <h2 id={titleId} className="text-xl font-bold text-gray-900 dark:text-white">
+                  {title}
+                </h2>
+                {subtitle &&
+                  (typeof subtitle === "string" ? (
+                    <p id={subtitleId} className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      {subtitle}
+                    </p>
+                  ) : (
+                    <div id={subtitleId} className="mt-1">
+                      {subtitle}
+                    </div>
+                  ))}
+              </div>
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
+                <FontAwesomeIcon icon={faXmark} className="h-5 w-5 text-gray-500" />
+              </button>
             </div>
           )}
+
+          {/* Content */}
+          <div className={isFullscreen ? "flex-1 overflow-hidden" : "p-6"}>{children}</div>
+
+          {/* Footer */}
+          {footer && <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 py-3 z-50">{footer}</div>}
         </div>
       </div>
     </div>

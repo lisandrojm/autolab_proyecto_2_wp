@@ -700,7 +700,7 @@ export const ManageOrdersPage: React.FC = () => {
               </div>
               <div className="bg-slate-800">
                 <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{getUserRole(selectedOrder.userId)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{getUserPosition(selectedOrder.userId)}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-4 gap-y-6">
