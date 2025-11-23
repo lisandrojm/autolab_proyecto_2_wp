@@ -34,7 +34,7 @@ export const ManageOrdersPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
 
   const helpEntry = getHelp(HELP_KEY);
@@ -54,6 +54,8 @@ export const ManageOrdersPage: React.FC = () => {
           const saved = localStorage.getItem("orderViewMode");
           if (saved && (saved === "table" || saved === "cards")) {
             setViewMode(saved as "table" | "cards");
+          } else {
+            setViewMode("table");
           }
         }
       }, 150);
@@ -66,6 +68,8 @@ export const ManageOrdersPage: React.FC = () => {
       const saved = localStorage.getItem("orderViewMode");
       if (saved && (saved === "table" || saved === "cards")) {
         setViewMode(saved as "table" | "cards");
+      } else {
+        setViewMode("table");
       }
     } else {
       setViewMode("cards");
