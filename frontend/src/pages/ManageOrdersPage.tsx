@@ -673,25 +673,8 @@ export const ManageOrdersPage: React.FC = () => {
           <div className="space-y-6">
             {/* Perfil */}
             <div className="flex justify-between align-top">
-              <div className="flex items-center gap-3">
-                <div>
-                  {getUserAvatar(selectedOrder.userId) ? (
-                    <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
-                      {getUserName(selectedOrder.userId)
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)}
-                    </div>
-                  )}
-                </div>
-                <div className="bg-slate-800">
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{getUserRole(selectedOrder.userId)}</p>
-                </div>
+              <div>
+                <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
               </div>
               <div className="flex flex-col gap-3">
                 <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>
@@ -700,24 +683,33 @@ export const ManageOrdersPage: React.FC = () => {
                 </span>
               </div>
             </div>
-
-            <div className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-lg">
-              <div className="flex justify-between items-start">
-                <div className="flex justify-between items-center w-full">
-                  <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
-                </div>
-              </div>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            <div className="flex items-center gap-3">
               <div>
+                {getUserAvatar(selectedOrder.userId) ? (
+                  <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                    {getUserName(selectedOrder.userId)
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)}
+                  </div>
+                )}
+              </div>
+              <div className="bg-slate-800">
+                <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{getUserRole(selectedOrder.userId)}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-4 gap-y-6">
+              <div className="lg:col-span-8">
                 <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(selectedOrder)}</span>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(selectedOrder)}</span>
                   {getSubcategoriesArray(selectedOrder).map((subcategory, index) => (
-                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                       {subcategory}
                     </span>
                   ))}
@@ -747,6 +739,16 @@ export const ManageOrdersPage: React.FC = () => {
                   <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
                 </div>
               )}
+            </div>
+
+            <div className="bg-slate-100 dark:bg-slate-700/50 p-4 py-3 rounded-lg">
+              <div className="flex justify-between items-start">
+                <div className="flex justify-between items-center w-full">
+                  {/* <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p> */}
+                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Descripción</p>
+                </div>
+              </div>
+              <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
