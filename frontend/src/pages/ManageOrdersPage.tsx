@@ -386,7 +386,7 @@ export const ManageOrdersPage: React.FC = () => {
           <button onClick={() => handleStatusChange("rejected")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Rechazar
           </button>
-          <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Aprobar
           </button>
         </>
@@ -395,7 +395,7 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (selectedOrder.status === "approved") {
       return (
-        <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+        <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
           <FontAwesomeIcon icon={faTruck} />
           Marcar como Entregado
         </button>
