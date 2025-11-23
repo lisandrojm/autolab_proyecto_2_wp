@@ -331,7 +331,7 @@ export const ManageOrdersPage: React.FC = () => {
             <Card
               key={order._id}
               header={{
-                title: order.title,
+                title: getUserName(order.userId),
                 subtitle: order.description,
                 avatar: {
                   src: avatarUrl ? `${import.meta.env.VITE_API_URL}${avatarUrl}` : undefined,
@@ -354,10 +354,6 @@ export const ManageOrdersPage: React.FC = () => {
               }}
             >
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">N° Pedido</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{getOrderNumber(order)}</span>
-                </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400">Solicitante</span>
                   <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-[150px]">{getUserName(order.userId)}</span>
