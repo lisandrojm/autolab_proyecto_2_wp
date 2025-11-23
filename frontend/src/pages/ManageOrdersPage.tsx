@@ -235,6 +235,21 @@ export const ManageOrdersPage: React.FC = () => {
     return labels.join(", ");
   };
 
+  const getSubcategoriesArray = (order: Order): string[] => {
+    if (!order.categoryId || typeof order.categoryId === "string") return [];
+
+    const category = order.categoryId as OrderCategory;
+
+    if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return [];
+
+    const labels = order.subcategories.map((subId) => {
+      const selectedSubtype = category.config.subtipos?.find((st) => st.id === subId);
+      return selectedSubtype ? selectedSubtype.label : null;
+    }).filter((label): label is string => Boolean(label));
+
+    return labels;
+  };
+
   const hasRequiresAction = (order: Order): boolean => {
     if (!order.categoryId || typeof order.categoryId === "string") return false;
     const category = order.categoryId as OrderCategory;
@@ -356,8 +371,16 @@ export const ManageOrdersPage: React.FC = () => {
               }}
             >
               <div className="flex py-2 items-center justify-between flex-wrap">
-                <div>
+                <div className="flex flex-wrap gap-1.5">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(order)}</span>
+                  {getSubcategoriesArray(order).map((subcategory, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
+                    >
+                      {subcategory}
+                    </span>
+                  ))}
                 </div>
                 {/*                 <div className="space-y-3 text-sm">
                   {order.amount && (
@@ -538,7 +561,17 @@ export const ManageOrdersPage: React.FC = () => {
 
                             {/* --- CATEGORÍA --- */}
                             <td className="py-3 px-4">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(order)}</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(order)}</span>
+                                {getSubcategoriesArray(order).map((subcategory, index) => (
+                                  <span
+                                    key={index}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
+                                  >
+                                    {subcategory}
+                                  </span>
+                                ))}
+                              </div>
                             </td>
 
                             {/* --- TIPO --- */}
@@ -673,7 +706,17 @@ export const ManageOrdersPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
-                <p className="font-medium text-slate-800 dark:text-slate-100">{getCategoryName(selectedOrder)}</p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(selectedOrder)}</span>
+                  {getSubcategoriesArray(selectedOrder).map((subcategory, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
+                    >
+                      {subcategory}
+                    </span>
+                  ))}
+                </div>
               </div>
               {selectedOrder.amount && (
                 <div>
