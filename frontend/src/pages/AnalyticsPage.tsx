@@ -239,8 +239,8 @@ export const AnalyticsPage: React.FC = () => {
               {/* Performance Metrics */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Métricas de Rendimiento por Plataforma</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full bg-slate-800/80">
+                <div className=" rounded border dark:border-slate-800">
+                  <table className="w-full dark:bg-slate-800/80">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
                         <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Plataforma</th>

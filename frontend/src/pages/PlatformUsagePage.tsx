@@ -74,8 +74,8 @@ export const PlatformUsagePage: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Detalle de Uso por Tenant</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Todos los tenants ordenados por consumo de almacenamiento</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full bg-slate-800/80">
+          <div className=" rounded border dark:border-slate-800">
+            <table className="w-full dark:bg-slate-800/80">
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
                   <th className="text-left py-3 px-6 text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Tenant</th>

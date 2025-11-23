@@ -397,8 +397,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                 </div>
               )}
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <div className="overflow-x-auto">
-                  <table className="w-full bg-slate-800/80">
+                <div className=" rounded border dark:border-slate-800">
+                  <table className="w-full dark:bg-slate-800/80">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">Ordenar</th>
