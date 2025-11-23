@@ -13,7 +13,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
     { id: "calendar" as ViewType, icon: faCalendar, label: "Calendario", disabled: true },
     { id: "documents" as ViewType, icon: faFolderOpen, label: "Documentos", disabled: true },
     { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: true },
-    { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: false, notifications: true },
+    { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: true, notifications: true },
   ];
 
   return (
