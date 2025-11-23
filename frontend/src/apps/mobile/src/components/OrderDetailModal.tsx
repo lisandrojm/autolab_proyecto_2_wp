@@ -3,7 +3,22 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { OrderData } from "../../../../api/personnel";
 import { Modal } from "./Modal";
+<<<<<<< HEAD
 import { getUserName, getUserRole, getUserAvatar, formatDateShort, getStatusBadge, getCategoryName, getOrderNumber } from "../utils/orderHelpers";
+=======
+import {
+  getUserName,
+  getUserRole,
+  getUserPosition,
+  getUserAvatar,
+  formatDateShort,
+  getStatusBadge,
+  getCategoryName,
+  getOrderNumber,
+  getSubcategoriesArray,
+  getStatusIcon
+} from "../utils/orderHelpers";
+>>>>>>> ee92cd16472253203668ba73427785821f7d6571
 import { sweetAlert } from "../utils/sweetAlert";
 
 interface OrderDetailModalProps {
@@ -65,8 +80,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Detalles del Pedido" size="md" footer={renderFooter()}>
         <div className="space-y-6">
-          {/* Perfil del usuario */}
+          {/* Nº Pedido y Status Badge */}
           <div className="flex justify-between align-top">
+<<<<<<< HEAD
             <div className="flex items-center gap-3">
               <div>
                 {getUserAvatar(order.userId) ? (
@@ -101,13 +117,72 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               </div>
             </div>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>
+=======
+            <div>
+              <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">
+                Nº Pedido: {getOrderNumber(order)}
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badge.style}`}>
+                <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
+                {badge.label}
+              </span>
+            </div>
           </div>
 
-          {/* Detalles del pedido */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          {/* Avatar y Usuario */}
+          <div className="flex items-center gap-3">
             <div>
+              {getUserAvatar(order.userId) ? (
+                <img
+                  alt={`Foto de perfil de ${getUserName(order.userId)}`}
+                  className="w-10 h-10 rounded-full object-cover"
+                  src={`${import.meta.env.VITE_API_URL}${getUserAvatar(order.userId)}`}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                  {getUserName(order.userId)
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">
+                {getUserName(order.userId)}
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {getUserPosition(order.userId)}
+              </p>
+            </div>
+>>>>>>> ee92cd16472253203668ba73427785821f7d6571
+          </div>
+
+          {/* Grid con Tipo de Pedido y Detalles */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-4 gap-y-6">
+            <div className="lg:col-span-8">
               <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
+<<<<<<< HEAD
               <p className="font-medium text-slate-800 dark:text-slate-100">{getCategoryName(order)}</p>
+=======
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
+                  {getCategoryName(order)}
+                </span>
+                {getSubcategoriesArray(order).map((subcategory, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400"
+                  >
+                    {subcategory}
+                  </span>
+                ))}
+              </div>
+>>>>>>> ee92cd16472253203668ba73427785821f7d6571
             </div>
 
             {order.amount && (
@@ -137,6 +212,20 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
               </div>
             )}
+          </div>
+
+          {/* Descripción */}
+          <div className="bg-slate-100 dark:bg-slate-700/50 p-4 py-3 rounded-lg">
+            <div className="flex justify-between items-start">
+              <div className="flex justify-between items-center w-full">
+                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">
+                  Descripción
+                </p>
+              </div>
+            </div>
+            <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">
+              {order.description}
+            </p>
           </div>
 
           {/* Fechas importantes */}
