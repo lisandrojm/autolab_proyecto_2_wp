@@ -342,7 +342,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
           <div className="space-y-3">
             {orders.map((order) => (
               <div key={order._id} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOrderClick(order)}>
-                <div className="flex items-start gap-3 mb-3">
+                <div className="flex items-start gap-3">
                   {order.photoUrl && (
                     <div className="flex-shrink-0">
                       <img
