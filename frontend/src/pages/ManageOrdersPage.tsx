@@ -383,7 +383,7 @@ export const ManageOrdersPage: React.FC = () => {
             >
               <div className="flex py-2 items-center justify-between flex-wrap">
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-400">{getCategoryName(order)}</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
                   {getSubcategoriesArray(order).map((subcategory, index) => (
                     <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                       {subcategory}
@@ -525,9 +525,10 @@ export const ManageOrdersPage: React.FC = () => {
                     <thead>
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         {/*                         <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th> */}
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th> */}
                         {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Acción Futura</th> */}
@@ -557,6 +558,18 @@ export const ManageOrdersPage: React.FC = () => {
                             <td className="py-3 px-4">
                               <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getOrderNumber(order)}</span>
                             </td>
+                            {/* --- Tipo --- */}
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              <div className="flex flex-nowrap items-center gap-x-1.5">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
+
+                                {getSubcategoriesArray(order).map((subcategory, index) => (
+                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                                    {subcategory}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
 
                             {/*                             <td className="py-3 px-4">
                               <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
@@ -566,20 +579,8 @@ export const ManageOrdersPage: React.FC = () => {
 
                             {/* --- SOLICITANTE --- */}
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
-
-                            {/* --- CATEGORÍA --- */}
-                            {/* --- CATEGORÍA --- */}
-                            <td className="py-3 px-4 whitespace-nowrap">
-                              <div className="flex flex-nowrap items-center gap-x-1.5">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-400">{getCategoryName(order)}</span>
-
-                                {getSubcategoriesArray(order).map((subcategory, index) => (
-                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
-                                    {subcategory}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
+                            {/* --- Cargo --- */}
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(order.userId)}</td>
 
                             {/* --- TIPO --- */}
                             {/*                           <td className="py-3 px-4">
@@ -714,7 +715,7 @@ export const ManageOrdersPage: React.FC = () => {
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-400">{getCategoryName(selectedOrder)}</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(selectedOrder)}</span>
                   {getSubcategoriesArray(selectedOrder).map((subcategory, index) => (
                     <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                       {subcategory}
