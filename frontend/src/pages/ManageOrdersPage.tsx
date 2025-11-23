@@ -357,7 +357,7 @@ export const ManageOrdersPage: React.FC = () => {
             >
               <div className="flex py-2 items-center justify-between flex-wrap">
                 <div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{getCategoryName(order)}</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(order)}</span>
                 </div>
                 {/*                 <div className="space-y-3 text-sm">
                   {order.amount && (
@@ -538,7 +538,7 @@ export const ManageOrdersPage: React.FC = () => {
 
                             {/* --- CATEGORÍA --- */}
                             <td className="py-3 px-4">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{getCategoryName(order)}</span>
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{getCategoryName(order)}</span>
                             </td>
 
                             {/* --- TIPO --- */}
