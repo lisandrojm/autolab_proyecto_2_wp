@@ -17,6 +17,7 @@ import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Types } from "mongoose";
+import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
 
 /* ----------------------------- helpers ----------------------------- */
 
@@ -263,6 +264,10 @@ export async function seedOnStart() {
   }
 
   try {
+    // Run migration first
+    console.log("🔄 Running subcategories migration...");
+    await migrateSubcategoriesToArray();
+
     console.log(`🌱 Ensuring seed data for tenant slug: ${tenantSlug}`);
 
     // TENANT
@@ -802,8 +807,7 @@ export async function seedOnStart() {
         description: "Solicito licencia por cuadro gripal con certificado médico",
         category: "Licencias y Permisos",
         categoryId: catLicencias._id,
-        subcategoryId: "licencia_medica",
-        subcategoryLabel: "Licencia Médica",
+        subcategories: ["licencia_medica"],
         dynamicValue: { startDate: new Date(2024, 1, 5), endDate: new Date(2024, 1, 7) },
         status: "approved",
         approvedBy: adminId,
@@ -820,8 +824,7 @@ export async function seedOnStart() {
         description: "Necesito presentarme a examen final de la carrera de grado el 20 de marzo",
         category: "Licencias y Permisos",
         categoryId: catLicencias._id,
-        subcategoryId: "permiso_estudio",
-        subcategoryLabel: "Permiso por Estudio",
+        subcategories: ["permiso_estudio"],
         dynamicValue: { startDate: new Date(2025, 2, 20), endDate: new Date(2025, 2, 20) },
         status: "pending",
         requestedAt: new Date(),
@@ -836,8 +839,7 @@ export async function seedOnStart() {
         description: "Solicito adelanto de $150.000 por gastos médicos urgentes",
         category: "Adelantos y Anticipos",
         categoryId: catAdelantos._id,
-        subcategoryId: "adelanto_sueldo",
-        subcategoryLabel: "Adelanto de Sueldo",
+        subcategories: ["adelanto_sueldo"],
         dynamicValue: 150000,
         amount: 150000,
         status: "pending",
@@ -853,6 +855,7 @@ export async function seedOnStart() {
         description: "Gastos de hospedaje, traslados y comidas durante conferencia en Córdoba",
         category: "Reembolsos de Gastos",
         categoryId: catReembolsos._id,
+        subcategories: [],
         dynamicValue: 85000,
         amount: 85000,
         status: "approved",
@@ -870,8 +873,7 @@ export async function seedOnStart() {
         description: "Necesito un adelanto urgente por hospitalización de familiar directo",
         category: "Adelantos y Anticipos",
         categoryId: catAdelantos._id,
-        subcategoryId: "adelanto_emergencia",
-        subcategoryLabel: "Adelanto por Emergencia",
+        subcategories: ["adelanto_emergencia"],
         dynamicValue: 80000,
         amount: 80000,
         status: "rejected",
@@ -885,8 +887,7 @@ export async function seedOnStart() {
         description: "Solicito notebook para trabajo remoto: Lenovo ThinkPad E14, 16GB RAM, 512GB SSD",
         category: "Equipamiento y Materiales",
         categoryId: catEquipamiento._id,
-        subcategoryId: "tecnologia",
-        subcategoryLabel: "Tecnología",
+        subcategories: ["tecnologia"],
         dynamicValue: "Lenovo ThinkPad E14 Gen 4 - Intel i7 - 16GB RAM - 512GB SSD",
         status: "delivered",
         approvedBy: adminId,
@@ -904,8 +905,7 @@ export async function seedOnStart() {
         description: "Necesito renovar EPP: barbijo N95, guantes de seguridad y antiparras",
         category: "Equipamiento y Materiales",
         categoryId: catEquipamiento._id,
-        subcategoryId: "seguridad_higiene",
-        subcategoryLabel: "Seguridad e Higiene",
+        subcategories: ["seguridad_higiene"],
         dynamicValue: "Kit EPP completo: barbijos N95 (caja x50), guantes nitrilo (caja x100), antiparras protección UV",
         status: "pending",
         requestedAt: new Date(),
@@ -920,6 +920,7 @@ export async function seedOnStart() {
         description: "Tuve que realizar trámite urgente en ANSES el día 10/01. Adjunto comprobante de turno",
         category: "Solicitudes Especiales",
         categoryId: catSolicitudesEspeciales._id,
+        subcategories: [],
         dynamicValue: "Trámite en ANSES - Comprobante de turno adjunto",
         status: "approved",
         approvedBy: adminId,
@@ -934,6 +935,7 @@ export async function seedOnStart() {
         description: "Por razones personales solicito cambio de horario de entrada: de 9:00 a 10:00 hs",
         category: "Solicitudes Especiales",
         categoryId: catSolicitudesEspeciales._id,
+        subcategories: [],
         dynamicValue: "Propuesta: Horario de 10:00 a 19:00 hs en lugar de 9:00 a 18:00 hs",
         status: "pending",
         requestedAt: new Date(),
@@ -941,7 +943,50 @@ export async function seedOnStart() {
         requiereAccionFutura: true,
       });
 
-      console.log("✅ Order seeded (9 pedidos representativos con estados variados)");
+      const order10 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Licencia médica prolongada y permiso para controles",
+        description: "Solicito licencia por intervención quirúrgica y permisos para controles postoperatorios posteriores",
+        category: "Licencias y Permisos",
+        categoryId: catLicenciasPermisos._id,
+        subcategories: ["licencia_medica", "permiso_tramite"],
+        dynamicValue: {
+          fechaDesde: new Date(2024, 2, 10),
+          fechaHasta: new Date(2024, 2, 20),
+          observaciones: "Cirugía programada con 3 controles postoperatorios posteriores"
+        },
+        status: "approved",
+        approvedBy: adminId,
+        approvedAt: new Date(2024, 2, 5),
+        requestedAt: new Date(2024, 2, 1),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order11 = await Order.create({
+        tenantId,
+        userId: coord._id,
+        title: "Adelanto de sueldo y reembolso de viáticos",
+        description: "Necesito adelanto para viaje de trabajo y posterior reembolso de gastos adicionales",
+        category: "Adelantos y Anticipos",
+        categoryId: catAdelantosAnticipos._id,
+        subcategories: ["adelanto_sueldo", "adelanto_vacaciones"],
+        dynamicValue: {
+          montoAdelanto: 100000,
+          montoReembolso: 35000,
+          motivo: "Viaje urgente de trabajo a sucursal exterior"
+        },
+        amount: 135000,
+        status: "approved",
+        approvedBy: adminId,
+        approvedAt: new Date(),
+        requestedAt: new Date(2024, 1, 20),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      console.log("✅ Order seeded (11 pedidos representativos con estados variados, incluyendo ejemplos con múltiples subcategorías)");
 
       const futureActionsCount = await FutureAction.countDocuments({ tenantId });
       if (futureActionsCount === 0) {

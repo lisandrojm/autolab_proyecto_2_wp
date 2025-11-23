@@ -69,8 +69,7 @@ const createOrderSchema = z.object({
   description: z.string().min(1),
   category: z.string().default("other"),
   categoryId: z.string().optional(),
-  subcategoryId: z.string().optional(),
-  subcategoryLabel: z.string().optional(),
+  subcategories: z.array(z.string()).default([]),
   actionCompleted: z.boolean().optional(),
   dynamicValue: z.any().optional(),
   amount: z.number().min(0).optional(),
@@ -172,12 +171,23 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
+    let parsedSubcategories = req.body.subcategories || [];
+    if (typeof parsedSubcategories === "string") {
+      try {
+        parsedSubcategories = JSON.parse(parsedSubcategories);
+      } catch (e) {
+        console.error("Error parsing subcategories:", e);
+        parsedSubcategories = [];
+      }
+    }
+
     const data = createOrderSchema.parse({
       ...req.body,
       amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
       actionCompleted: req.body.actionCompleted === "true" || req.body.actionCompleted === true,
       futureActionPlazoDias: req.body.futureActionPlazoDias ? parseInt(req.body.futureActionPlazoDias) : undefined,
       dynamicValue: parsedDynamicValue,
+      subcategories: parsedSubcategories,
       photoUrl,
     });
 
@@ -193,10 +203,12 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
         return;
       }
 
-      if (data.subcategoryId && category.config?.subtipos) {
-        const subtypeExists = category.config.subtipos.some((st: any) => st.id === data.subcategoryId);
-        if (!subtypeExists) {
-          res.status(400).json({ error: "Invalid subcategory for this category" });
+      if (data.subcategories && data.subcategories.length > 0 && category.config?.subtipos) {
+        const validSubtypes = category.config.subtipos.map((st: any) => st.id);
+        const invalidSubs = data.subcategories.filter(sub => !validSubtypes.includes(sub));
+
+        if (invalidSubs.length > 0) {
+          res.status(400).json({ error: `Invalid subcategories: ${invalidSubs.join(", ")}` });
           return;
         }
       }
@@ -225,6 +237,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       tenantId: req.tenantObjectId,
       userId,
       ...data,
+      subcategories: data.subcategories || [],
       status: "pending",
       requestedAt: new Date(),
     });

@@ -31,7 +31,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const [subcategoryId, setSubcategoryId] = useState("");
+  const [subcategories, setSubcategories] = useState<string[]>([]);
   const [dynamicValue, setDynamicValue] = useState<any>("");
   const [actionCompleted, setActionCompleted] = useState(false);
   const [futureActionPlazoDias, setFutureActionPlazoDias] = useState<number | undefined>(undefined);
@@ -59,7 +59,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   }, []);
 
   useEffect(() => {
-    setSubcategoryId("");
+    setSubcategories([]);
 
     // Initialize dynamicValue based on category type and date mode
     if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
@@ -121,8 +121,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setSubmitting(true);
 
     try {
-      const subcategoryLabel = selectedCategory?.config?.subtipos?.find((s) => s.id === subcategoryId)?.label;
-
       const shouldIncludePhoto = selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros";
 
       let validDynamicValue: any = undefined;
@@ -150,8 +148,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         description,
         category: selectedCategory?.name || "other",
         categoryId: selectedCategoryId,
-        subcategoryId: subcategoryId || undefined,
-        subcategoryLabel: subcategoryLabel || undefined,
+        subcategories: subcategories.length > 0 ? subcategories : undefined,
         dynamicValue: validDynamicValue,
         actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
@@ -163,7 +160,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setShowForm(false);
       setProduct("");
       setDescription("");
-      setSubcategoryId("");
+      setSubcategories([]);
 
       if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
         setDynamicValue({ fechaDesde: "", fechaHasta: "" });
@@ -290,7 +287,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe tu solicitud..." />
               </div>
 
-              <DynamicCategoryInput category={selectedCategory} subcategoryValue={subcategoryId} onSubcategoryChange={setSubcategoryId} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} />
+              <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} />
 
               {(selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros") && (
                 <div>

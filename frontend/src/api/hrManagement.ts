@@ -90,8 +90,7 @@ export interface Order {
   description: string;
   category: string;
   categoryId?: OrderCategory | string;
-  subcategoryId?: string;
-  subcategoryLabel?: string;
+  subcategories: string[];
   status: "pending" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: string;
   approvedBy?: any;

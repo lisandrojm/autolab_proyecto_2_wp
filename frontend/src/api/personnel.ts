@@ -170,8 +170,7 @@ export interface OrderData {
   description: string;
   category: string;
   categoryId?: string;
-  subcategoryId?: string;
-  subcategoryLabel?: string;
+  subcategories: string[];
   dynamicValue?: any;
   actionCompleted?: boolean;
   amount?: number;
@@ -283,8 +282,7 @@ export const personnelAPI = {
     description: string;
     category?: string;
     categoryId?: string;
-    subcategoryId?: string;
-    subcategoryLabel?: string;
+    subcategories?: string[];
     dynamicValue?: any;
     actionCompleted?: boolean;
     amount?: number;
@@ -298,8 +296,7 @@ export const personnelAPI = {
     formData.append('description', orderData.description);
     if (orderData.category) formData.append('category', orderData.category);
     if (orderData.categoryId) formData.append('categoryId', orderData.categoryId);
-    if (orderData.subcategoryId) formData.append('subcategoryId', orderData.subcategoryId);
-    if (orderData.subcategoryLabel) formData.append('subcategoryLabel', orderData.subcategoryLabel);
+    if (orderData.subcategories && orderData.subcategories.length > 0) formData.append('subcategories', JSON.stringify(orderData.subcategories));
     if (orderData.dynamicValue !== undefined) formData.append('dynamicValue', JSON.stringify(orderData.dynamicValue));
     if (orderData.actionCompleted !== undefined) formData.append('actionCompleted', orderData.actionCompleted.toString());
     if (orderData.amount !== undefined) formData.append('amount', orderData.amount.toString());

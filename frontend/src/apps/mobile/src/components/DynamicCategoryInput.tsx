@@ -4,8 +4,8 @@ import { tipoAccionFuturaLabels } from "../../../../types/futureAction";
 
 interface DynamicCategoryInputProps {
   category: OrderCategory | null;
-  subcategoryValue: string;
-  onSubcategoryChange: (value: string) => void;
+  subcategories: string[];
+  onSubcategoriesChange: (value: string[]) => void;
   dynamicValue: any;
   onDynamicValueChange: (value: any) => void;
   actionCompleted: boolean;
@@ -18,7 +18,7 @@ interface DynamicCategoryInputProps {
   onFutureActionDocumentoChange?: (value: string) => void;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategoryValue, onSubcategoryChange, dynamicValue, onDynamicValueChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange }) => {
   if (!category) return null;
 
   const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
@@ -119,19 +119,32 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
     }
   };
 
+  const handleSubcategoryToggle = (subtipoId: string) => {
+    if (subcategories.includes(subtipoId)) {
+      onSubcategoriesChange(subcategories.filter(id => id !== subtipoId));
+    } else {
+      onSubcategoriesChange([...subcategories, subtipoId]);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {hasSubcategories && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subcategoría *</label>
-          <select value={subcategoryValue} onChange={(e) => onSubcategoryChange(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none">
-            <option value="">Selecciona una opción</option>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subcategorías (selecciona todas las que apliquen)</label>
+          <div className="space-y-2 bg-slate-50 dark:bg-slate-800/30 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
             {category.config?.subtipos?.map((subtipo) => (
-              <option key={subtipo.id} value={subtipo.id}>
-                {subtipo.label}
-              </option>
+              <label key={subtipo.id} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={subcategories.includes(subtipo.id)}
+                  onChange={() => handleSubcategoryToggle(subtipo.id)}
+                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-200 flex-1">{subtipo.label}</span>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
       )}
 

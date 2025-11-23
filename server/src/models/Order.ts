@@ -9,8 +9,7 @@ export interface IOrder extends Document {
   description: string;
   category: string;
   categoryId?: Types.ObjectId;
-  subcategoryId?: string;
-  subcategoryLabel?: string;
+  subcategories: string[];
   status: "pending" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: Date;
   approvedBy?: Types.ObjectId;
@@ -36,8 +35,7 @@ const orderSchema = new Schema<IOrder>(
     description: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true, default: "other" },
     categoryId: { type: Schema.Types.ObjectId, ref: "OrderCategory", index: true },
-    subcategoryId: { type: String, trim: true, index: true },
-    subcategoryLabel: { type: String, trim: true },
+    subcategories: { type: [String], default: [], index: true },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected", "delivered", "cancelled"],
@@ -63,7 +61,7 @@ orderSchema.index({ tenantId: 1, userId: 1, status: 1 });
 orderSchema.index({ tenantId: 1, status: 1, requestedAt: -1 });
 orderSchema.index({ tenantId: 1, category: 1 });
 orderSchema.index({ tenantId: 1, categoryId: 1 });
-orderSchema.index({ categoryId: 1, subcategoryId: 1 });
+orderSchema.index({ tenantId: 1, subcategories: 1 });
 orderSchema.index({ tenantId: 1, orderNumber: 1 }, { unique: true });
 
 orderSchema.pre("validate", async function (next) {
