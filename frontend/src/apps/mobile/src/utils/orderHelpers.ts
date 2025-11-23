@@ -57,5 +57,7 @@ export const getCategoryName = (order: OrderData): string => {
 };
 
 export const getOrderNumber = (order: OrderData): string => {
-  return `#${order.orderNumber}`;
+  const parts = order.orderNumber.split('-');
+  const numericPart = parts.length > 1 ? parts[1] : order.orderNumber;
+  return `#${numericPart}`;
 };

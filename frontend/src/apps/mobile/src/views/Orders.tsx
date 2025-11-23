@@ -9,6 +9,7 @@ import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
 import { sweetAlert } from "../utils/sweetAlert";
 import OrderDetailModal from "../components/OrderDetailModal";
 import { OrderData } from "../../../../api/personnel";
+import { getOrderNumber } from "../utils/orderHelpers";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -362,7 +363,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                       </div>
                       <div className="flex gap-2 items-center">
                         <div className="flex items-center gap-2">
-                          <span className="inline-block px-2 py-0.5 text-[12px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded">#{order.orderNumber}</span>
+                          <span className="inline-block px-2 py-0.5 text-[12px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded">{getOrderNumber(order)}</span>
                         </div>
                         <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
                           {getStatusIcon(order.status)}
