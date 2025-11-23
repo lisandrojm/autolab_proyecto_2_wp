@@ -1,4 +1,5 @@
-import { Mail, Phone, MapPin, Briefcase, Calendar, LogOut, Settings, Shield, UserCheck } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEnvelope, faPhone, faMapMarkerAlt, faBriefcase, faCalendar, faSignOutAlt, faCog, faShield, faUserCheck } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../../../stores/authStore';
 import { sweetAlert } from '../utils/sweetAlert';
 
@@ -23,8 +24,8 @@ export default function Profile() {
   };
 
   const stats = [
-    { label: 'Días trabajados', value: '1,450', icon: Calendar },
-    { label: 'Días de vacaciones', value: '18', icon: Briefcase },
+    { label: 'Días trabajados', value: '1,450', icon: faCalendar },
+    { label: 'Días de vacaciones', value: '18', icon: faBriefcase },
   ];
 
   const handleLogout = async () => {
@@ -51,19 +52,19 @@ export default function Profile() {
 
   const menuItems = [
     {
-      icon: Settings,
+      icon: faCog,
       label: 'Configuración',
       description: 'Preferencias y ajustes',
       onClick: handleSettings,
     },
     {
-      icon: Shield,
+      icon: faShield,
       label: 'Privacidad',
       description: 'Seguridad y datos',
       onClick: handlePrivacy,
     },
     {
-      icon: LogOut,
+      icon: faSignOutAlt,
       label: 'Cerrar Sesión',
       description: 'Salir de la aplicación',
       danger: true,
@@ -90,7 +91,7 @@ export default function Profile() {
             <p className="text-sm text-slate-400 dark:text-slate-500">{userInfo.department}</p>
             <div className="flex gap-2 mt-4">
               <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 ${roleColor}`}>
-                <UserCheck className="w-4 h-4" />
+                <FontAwesomeIcon icon={faUserCheck} className="w-4 h-4" />
                 <p className="text-sm font-semibold">{userRole}</p>
               </div>
               <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
@@ -101,7 +102,7 @@ export default function Profile() {
 
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <Mail className="w-5 h-5 text-primary" />
+              <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Email</p>
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{userInfo.email}</p>
@@ -109,7 +110,7 @@ export default function Profile() {
             </div>
 
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <Phone className="w-5 h-5 text-primary" />
+              <FontAwesomeIcon icon={faPhone} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Teléfono</p>
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{userInfo.phone}</p>
@@ -117,7 +118,7 @@ export default function Profile() {
             </div>
 
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <MapPin className="w-5 h-5 text-primary" />
+              <FontAwesomeIcon icon={faMapMarkerAlt} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Ubicación</p>
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{userInfo.location}</p>
@@ -125,7 +126,7 @@ export default function Profile() {
             </div>
 
             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-              <Briefcase className="w-5 h-5 text-primary" />
+              <FontAwesomeIcon icon={faBriefcase} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Fecha de ingreso</p>
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -142,10 +143,10 @@ export default function Profile() {
 
         <div className="grid grid-cols-2 gap-4 mb-6">
           {stats.map((stat, index) => {
-            const Icon = stat.icon;
+            const icon = stat.icon;
             return (
               <div key={index} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
-                <Icon className="w-6 h-6 text-primary mb-2" />
+                <FontAwesomeIcon icon={icon} className="w-6 h-6 text-primary mb-2" />
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">{stat.value}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{stat.label}</p>
               </div>
@@ -155,7 +156,7 @@ export default function Profile() {
 
         <div className="space-y-3">
           {menuItems.map((item, index) => {
-            const Icon = item.icon;
+            const icon = item.icon;
             return (
               <button
                 key={index}
@@ -173,7 +174,8 @@ export default function Profile() {
                       : 'bg-slate-100 dark:bg-slate-800'
                   }`}
                 >
-                  <Icon
+                  <FontAwesomeIcon
+                    icon={icon}
                     className={`w-6 h-6 ${
                       item.danger
                         ? 'text-red-600 dark:text-red-400'

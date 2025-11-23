@@ -1,4 +1,5 @@
-import { Home, Calendar, FolderOpen, User, Bell } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faHome, faCalendar, faFolderOpen, faUser, faBell } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 
 interface BottomNavProps {
@@ -8,11 +9,11 @@ interface BottomNavProps {
 
 export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
   const navItems = [
-    { id: "home" as ViewType, icon: Home, label: "Inicio", disabled: false },
-    { id: "calendar" as ViewType, icon: Calendar, label: "Calendario", disabled: true },
-    { id: "documents" as ViewType, icon: FolderOpen, label: "Documentos", disabled: true },
-    { id: "profile" as ViewType, icon: User, label: "Perfil", disabled: true },
-    { id: "notifications" as ViewType, icon: Bell, label: "Notificaciones", disabled: false, notifications: true },
+    { id: "home" as ViewType, icon: faHome, label: "Inicio", disabled: false },
+    { id: "calendar" as ViewType, icon: faCalendar, label: "Calendario", disabled: true },
+    { id: "documents" as ViewType, icon: faFolderOpen, label: "Documentos", disabled: true },
+    { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: true },
+    { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: false, notifications: true },
   ];
 
   return (
@@ -20,7 +21,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
       <div className="fixed bottom-0 left-0 z-30 w-full flex justify-center">
         <div className="z-10 w-full xl:w-1/2 backdrop-blur-sm border-t border-slate-800 py-1">
           <div className="mx-auto grid h-16 max-w-md grid-cols-5 px-2">
-            {navItems.map(({ id, icon: Icon, label, disabled, notifications }) => {
+            {navItems.map(({ id, icon, label, disabled, notifications }) => {
               const isActive = currentView === id;
               const isClickable = !disabled;
 
@@ -35,7 +36,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
                     ${disabled ? "text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60" : isActive ? "text-primary" : "text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary"}`}
                 >
                   <div className="relative">
-                    <Icon className="w-6 h-6" />
+                    <FontAwesomeIcon icon={icon} className="w-6 h-6" />
 
                     {/* 🔥 Puntito rojo de notificaciones */}
                     {notifications && (

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ArrowLeft, Send } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { requestsAPI } from '../../../../../api/requests';
 import { sweetAlert } from '../../utils/sweetAlert';
 
@@ -50,7 +51,7 @@ export default function RequestMobileNewPage({ onBack, onSuccess }: RequestMobil
             className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             disabled={submitting}
           >
-            <ArrowLeft className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+            <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-gray-900 dark:text-gray-100" />
           </button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Nueva Solicitud</h1>
         </div>
@@ -131,7 +132,7 @@ export default function RequestMobileNewPage({ onBack, onSuccess }: RequestMobil
             </>
           ) : (
             <>
-              <Send className="w-5 h-5" />
+              <FontAwesomeIcon icon={faPaperPlane} className="w-5 h-5" />
               Enviar Solicitud
             </>
           )}

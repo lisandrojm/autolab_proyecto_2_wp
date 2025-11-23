@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, User, Clock, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faCalendar, faUser, faClock, faCheckCircle, faTimesCircle, faBan } from '@fortawesome/free-solid-svg-icons';
 import { requestsAPI, RequestData } from '../../../../../api/requests';
 import { sweetAlert } from '../../utils/sweetAlert';
 
@@ -58,15 +59,15 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-800 dark:text-green-300', icon: CheckCircle, label: 'Aprobada' };
+        return { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-800 dark:text-green-300', icon: faCheckCircle, label: 'Aprobada' };
       case 'pending':
-        return { bg: 'bg-yellow-100 dark:bg-yellow-900/50', text: 'text-yellow-800 dark:text-yellow-300', icon: Clock, label: 'Pendiente' };
+        return { bg: 'bg-yellow-100 dark:bg-yellow-900/50', text: 'text-yellow-800 dark:text-yellow-300', icon: faClock, label: 'Pendiente' };
       case 'rejected':
-        return { bg: 'bg-red-100 dark:bg-red-900/50', text: 'text-red-800 dark:text-red-300', icon: XCircle, label: 'Rechazada' };
+        return { bg: 'bg-red-100 dark:bg-red-900/50', text: 'text-red-800 dark:text-red-300', icon: faTimesCircle, label: 'Rechazada' };
       case 'cancelled':
-        return { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-300', icon: Ban, label: 'Cancelada' };
+        return { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-300', icon: faBan, label: 'Cancelada' };
       default:
-        return { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-300', icon: Clock, label: status };
+        return { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-300', icon: faClock, label: status };
     }
   };
 
@@ -121,7 +122,7 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
             onClick={onBack}
             className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <ArrowLeft className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+            <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-gray-900 dark:text-gray-100" />
           </button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Detalle de Solicitud</h1>
         </div>
@@ -135,7 +136,7 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
                 {getTypeLabel(request.type)}
               </h2>
               <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
-                <StatusIcon className="w-4 h-4" />
+                <FontAwesomeIcon icon={statusBadge.icon} className="w-4 h-4" />
                 <span className="text-sm font-medium">{statusBadge.label}</span>
               </div>
             </div>
@@ -145,7 +146,7 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Fechas</p>
               <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                <Calendar className="w-4 h-4 text-gray-400" />
+                <FontAwesomeIcon icon={faCalendar} className="w-4 h-4 text-gray-400" />
                 <span>{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
               </div>
             </div>
@@ -178,7 +179,7 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
                   {request.status === 'approved' ? 'Aprobado por' : 'Evaluado por'}
                 </p>
                 <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                  <User className="w-4 h-4 text-gray-400" />
+                  <FontAwesomeIcon icon={faUser} className="w-4 h-4 text-gray-400" />
                   <div>
                     <p>{approver.firstName} {approver.lastName}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{approver.email}</p>
@@ -196,7 +197,7 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Reemplazo asignado</p>
                 <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                  <User className="w-4 h-4 text-gray-400" />
+                  <FontAwesomeIcon icon={faUser} className="w-4 h-4 text-gray-400" />
                   <div>
                     <p>{replacement.firstName} {replacement.lastName}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{replacement.email}</p>

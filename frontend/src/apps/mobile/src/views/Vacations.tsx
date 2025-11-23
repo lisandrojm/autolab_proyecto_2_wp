@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowLeft, Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faCalendar, faCheckCircle, faClock, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -41,11 +42,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "approved":
-        return <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />;
+        return <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5 text-green-600 dark:text-green-400" />;
       case "pending":
-        return <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+        return <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
       case "rejected":
-        return <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />;
+        return <FontAwesomeIcon icon={faTimesCircle} className="w-5 h-5 text-red-600 dark:text-red-400" />;
       default:
         return null;
     }
@@ -86,7 +87,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       <div className="sticky top-0 z-10 p-4 pb-2 order-t border-b border-slate-800 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800">
-            <ArrowLeft className="w-6 h-6 text-slate-900 dark:text-slate-100" />
+            <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
           </button>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vacaciones</h1>
         </div>
@@ -99,7 +100,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <p className="text-sm text-slate-500 dark:text-slate-400">Días disponibles</p>
               {loading ? <div className="h-9 w-16 bg-slate-200 dark:bg-slate-700 rounded mt-1" /> : <p className="text-3xl font-bold text-primary">{availableDays?.available || 0}</p>}
             </div>
-            <Calendar className="w-12 h-12 text-primary opacity-20" />
+            <FontAwesomeIcon icon={faCalendar} className="w-12 h-12 text-primary opacity-20" />
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import React from "react";
-import { X } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTimes } from "@fortawesome/free-solid-svg-icons";
 
 interface ModalProps {
   isOpen: boolean;
@@ -80,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({
               className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               aria-label="Cerrar modal"
             >
-              <X className="h-5 w-5 text-slate-500 dark:text-slate-400" />
+              <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-slate-500 dark:text-slate-400" />
             </button>
           </div>
 

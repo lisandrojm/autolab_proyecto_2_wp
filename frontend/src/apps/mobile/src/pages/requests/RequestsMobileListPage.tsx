@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Calendar, Clock, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faPlus, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan } from '@fortawesome/free-solid-svg-icons';
 import { requestsAPI, RequestData } from '../../../../../api/requests';
 
 interface RequestsMobileListPageProps {
@@ -32,13 +33,13 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved':
-        return <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />;
+        return <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5 text-green-600 dark:text-green-400" />;
       case 'pending':
-        return <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+        return <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
       case 'rejected':
-        return <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />;
+        return <FontAwesomeIcon icon={faTimesCircle} className="w-5 h-5 text-red-600 dark:text-red-400" />;
       case 'cancelled':
-        return <Ban className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
+        return <FontAwesomeIcon icon={faBan} className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
       default:
         return null;
     }
@@ -98,7 +99,7 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
               onClick={onBack}
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <ArrowLeft className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+              <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-gray-900 dark:text-gray-100" />
             </button>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mis Pedidos</h1>
           </div>
@@ -106,7 +107,7 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
             onClick={() => onNavigate('new')}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
           >
-            <Plus className="w-5 h-5" />
+            <FontAwesomeIcon icon={faPlus} className="w-5 h-5" />
             Nuevo
           </button>
         </div>
@@ -125,7 +126,7 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
           </div>
         ) : requests.length === 0 ? (
           <div className="text-center py-12">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <FontAwesomeIcon icon={faCalendar} className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 dark:text-gray-400 mb-4">No tienes solicitudes</p>
             <button
               onClick={() => onNavigate('new')}
@@ -150,7 +151,7 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
                       {getTypeLabel(request.type)}
                     </h3>
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Calendar className="w-4 h-4" />
+                      <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />
                       <span>
                         {new Date(request.startDate).toLocaleDateString()} -{' '}
                         {new Date(request.endDate).toLocaleDateString()}
@@ -172,7 +173,7 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
                 {request.postponeCount > 0 && (
                   <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
                     <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                      <Clock className="w-3 h-3" />
+                      <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
                       <span>Pospuesta {request.postponeCount}/3 veces</span>
                     </div>
                   </div>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Calendar, DollarSign, User, Image as ImageIcon, Loader, X } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { OrderData } from "../../../../api/personnel";
 import { Modal } from "./Modal";
 import {
@@ -59,7 +60,7 @@ export default function OrderDetailModal({
     if (updatingStatus) {
       return (
         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-          <Loader className="w-4 h-4 animate-spin" />
+          <FontAwesomeIcon icon={faSpinner} className="w-4 h-4" spin />
           <span className="text-sm">Actualizando...</span>
         </div>
       );
@@ -232,7 +233,7 @@ export default function OrderDetailModal({
               onClick={() => setViewingImage(null)}
               className="absolute -top-4 -right-4 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg z-10"
             >
-              <X className="w-5 h-5" />
+              <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
             </button>
             <img
               src={viewingImage}

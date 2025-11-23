@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronLeft, faChevronRight, faCalendar } from '@fortawesome/free-solid-svg-icons';
 import { useState } from 'react';
 
 export default function Calendar() {
@@ -108,7 +109,7 @@ export default function Calendar() {
       <div className="px-4 pt-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Calendario</h1>
-          <CalendarIcon className="w-8 h-8 text-primary" />
+          <FontAwesomeIcon icon={faCalendar} className="w-8 h-8 text-primary" />
         </div>
 
         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-6">
@@ -117,7 +118,7 @@ export default function Calendar() {
               onClick={previousMonth}
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              <ChevronLeft className="w-5 h-5 text-slate-900 dark:text-slate-100" />
+              <FontAwesomeIcon icon={faChevronLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -126,7 +127,7 @@ export default function Calendar() {
               onClick={nextMonth}
               className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              <ChevronRight className="w-5 h-5 text-slate-900 dark:text-slate-100" />
+              <FontAwesomeIcon icon={faChevronRight} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
           </div>
 

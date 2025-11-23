@@ -1,4 +1,5 @@
-import { FileText, Download, File, Award } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileAlt, faDownload, faFile, faAward } from '@fortawesome/free-solid-svg-icons';
 import { sweetAlert } from '../utils/sweetAlert';
 
 export default function Documents() {
@@ -43,13 +44,13 @@ export default function Documents() {
   const getDocumentIcon = (type: string) => {
     switch (type) {
       case 'contract':
-        return <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />;
+        return <FontAwesomeIcon icon={faFileAlt} className="w-6 h-6 text-blue-600 dark:text-blue-400" />;
       case 'payslip':
-        return <File className="w-6 h-6 text-green-600 dark:text-green-400" />;
+        return <FontAwesomeIcon icon={faFile} className="w-6 h-6 text-green-600 dark:text-green-400" />;
       case 'certificate':
-        return <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />;
+        return <FontAwesomeIcon icon={faAward} className="w-6 h-6 text-purple-600 dark:text-purple-400" />;
       default:
-        return <File className="w-6 h-6 text-slate-600 dark:text-slate-400" />;
+        return <FontAwesomeIcon icon={faFile} className="w-6 h-6 text-slate-600 dark:text-slate-400" />;
     }
   };
 
@@ -143,7 +144,7 @@ export default function Documents() {
                   onClick={() => handleDownload(doc.name)}
                   className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
-                  <Download className="w-5 h-5 text-primary" />
+                  <FontAwesomeIcon icon={faDownload} className="w-5 h-5 text-primary" />
                 </button>
               </div>
             </div>

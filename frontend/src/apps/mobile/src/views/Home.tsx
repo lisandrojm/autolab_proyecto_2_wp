@@ -1,4 +1,5 @@
-import { ShoppingCart, Umbrella, FileText, Receipt, CheckCircle, File, Users, BarChart3, Bell, Sun, Moon, LogOut } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faShoppingCart, faUmbrella, faFileAlt, faReceipt, faCheckCircle, faFile, faUsers, faChartBar, faBell, faSun, faMoon, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -41,7 +42,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const baseActions = [
     {
-      icon: ShoppingCart,
+      icon: faShoppingCart,
       title: "Mis Pedidos",
       description: "Gestiona tus pedidos",
       view: "orders" as ViewType,
@@ -49,7 +50,7 @@ export default function Home({ onNavigate }: HomeProps) {
       badge: "Nuevo",
     },
     {
-      icon: Umbrella,
+      icon: faUmbrella,
       title: "Solicitar Vacaciones",
       description: "Solicita tus días libres",
       view: "vacations" as ViewType,
@@ -57,7 +58,7 @@ export default function Home({ onNavigate }: HomeProps) {
       disabled: true,
     },
     {
-      icon: FileText,
+      icon: faFileAlt,
       title: "Mis Contratos",
       description: "Consulta tus documentos",
       view: "documents" as ViewType,
@@ -65,7 +66,7 @@ export default function Home({ onNavigate }: HomeProps) {
       disabled: true,
     },
     {
-      icon: Receipt,
+      icon: faReceipt,
       title: "Mis Recibos",
       description: "Accede a tus nóminas",
       view: "documents" as ViewType,
@@ -76,14 +77,14 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const coordinatorActions = [
     {
-      icon: Users,
+      icon: faUsers,
       title: "Gestión de Equipo",
       description: "Administra tu equipo",
       view: "home" as ViewType,
       roles: ["coordinator"],
     },
     {
-      icon: BarChart3,
+      icon: faChartBar,
       title: "Reportes",
       description: "Ver métricas y estadísticas",
       view: "home" as ViewType,
@@ -94,10 +95,10 @@ export default function Home({ onNavigate }: HomeProps) {
   const quickActions = isMobileCoordinator ? [...baseActions, ...coordinatorActions] : baseActions;
 
   const getActivityIcon = (action: string) => {
-    if (action.includes("vacation")) return CheckCircle;
-    if (action.includes("order")) return ShoppingCart;
-    if (action.includes("document")) return File;
-    return CheckCircle;
+    if (action.includes("vacation")) return faCheckCircle;
+    if (action.includes("order")) return faShoppingCart;
+    if (action.includes("document")) return faFile;
+    return faCheckCircle;
   };
 
   const getActivityColor = (action: string) => {
@@ -134,10 +135,10 @@ export default function Home({ onNavigate }: HomeProps) {
 
         <div className="flex items-center gap-1">
           <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
-            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
           </button>
           <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
-            <LogOut className="w-5 h-5" />
+            <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -169,7 +170,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
       <div className={`grid ${isMobileCoordinator ? "grid-cols-2" : "grid-cols-2"} gap-4 p-4`}>
         {quickActions.map((action, index) => {
-          const Icon = action.icon;
+          const icon = action.icon;
           const isCoordinatorOnly = action.roles?.includes("coordinator") && !action.roles?.includes("collaborator");
 
           return (
@@ -183,7 +184,7 @@ export default function Home({ onNavigate }: HomeProps) {
     ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
               {(action as any).badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase z-10">{(action as any).badge}</span>}
-              <Icon className={`h-6 w-6 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
+              <FontAwesomeIcon icon={icon} className={`h-6 w-6 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">
                 <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
                 <p className="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">{action.description}</p>
@@ -210,12 +211,12 @@ export default function Home({ onNavigate }: HomeProps) {
       ) : recentActivity.length > 0 ? (
         <div className="flex flex-col gap-3 px-4">
           {recentActivity.map((activity) => {
-            const Icon = getActivityIcon(activity.action);
+            const icon = getActivityIcon(activity.action);
             const colors = getActivityColor(activity.action);
             return (
               <div key={activity._id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${colors.bg}`}>
-                  <Icon className={`h-5 w-5 ${colors.icon}`} />
+                  <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${colors.icon}`} />
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-slate-800 dark:text-slate-200">{activity.description}</p>

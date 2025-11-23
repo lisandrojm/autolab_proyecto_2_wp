@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Package, CheckCircle, Clock, XCircle, Truck, Camera, Image as ImageIcon, X } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
@@ -192,13 +193,13 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "delivered":
-        return <Truck className="w-5 h-5 text-green-600 dark:text-green-400" />;
+        return <FontAwesomeIcon icon={faTruck} className="w-5 h-5 text-green-600 dark:text-green-400" />;
       case "approved":
-        return <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+        return <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
       case "pending":
-        return <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+        return <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
       case "rejected":
-        return <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />;
+        return <FontAwesomeIcon icon={faTimesCircle} className="w-5 h-5 text-red-600 dark:text-red-400" />;
       default:
         return null;
     }
@@ -245,7 +246,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800">
-              <ArrowLeft className="w-6 h-6 text-slate-900 dark:text-slate-100" />
+              <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
             </button>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Pedidos</h1>
           </div>
@@ -255,7 +256,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
       <div className="px-4 pt-4">
         <button onClick={() => setShowForm(!showForm)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 hover:bg-blue-500/90 text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
-          <Package className="w-5 h-5" />
+          <FontAwesomeIcon icon={faBox} className="w-5 h-5" />
           {showForm ? "Cancelar" : "Nuevo Pedido"}
         </button>
 
@@ -298,20 +299,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
                       <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
                       <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
-                        <X className="w-4 h-4" />
+                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
                     <div className="flex gap-2">
                       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
                       <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
-                        <Camera className="w-6 h-6 text-slate-400" />
+                        <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-slate-400" />
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
                       </button>
 
                       <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
                       <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
-                        <ImageIcon className="w-6 h-6 text-slate-400" />
+                        <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Imagen</span>
                       </button>
                     </div>
@@ -405,7 +406,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
           <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-4 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg z-10">
-              <X className="w-5 h-5" />
+              <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
             </button>
             <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
           </div>

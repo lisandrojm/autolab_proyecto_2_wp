@@ -1,4 +1,5 @@
-import { Bell, Sun, Moon, LogOut } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBell, faSun, faMoon, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { useThemeStore } from "../../../../stores/themeStore";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNavigate } from "react-router-dom";
@@ -72,13 +73,13 @@ export default function TopBar({ title, hasNotifications = false, onNotification
         )}
         <div className="flex items-center gap-1">
           <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
-            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
           </button>
           <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
-            <LogOut className="w-5 h-5" />
+            <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>
           <button onClick={onNotificationClick} className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Notificaciones">
-            <Bell className="w-5 h-5" />
+            <FontAwesomeIcon icon={faBell} className="w-5 h-5" />
             {hasNotifications && (
               <span className="absolute right-2 top-2 flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
