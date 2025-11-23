@@ -293,7 +293,13 @@ export const ManageOrdersPage: React.FC = () => {
 
   const getCardBadges = (order: Order) => {
     const statusBadge = getStatusBadge(order.status);
+
     return [
+      {
+        // Nro de pedido — mismo estilo que pasaste
+        text: getOrderNumber(order),
+        className: "text-xs bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400 px-2 py-1 rounded",
+      },
       {
         text: getCategoryName(order),
         variant: "info" as const,
@@ -490,7 +496,7 @@ export const ManageOrdersPage: React.FC = () => {
                     <thead>
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
-                        <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th>
+                        {/*                         <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th> */}
@@ -519,12 +525,15 @@ export const ManageOrdersPage: React.FC = () => {
                             }}
                           >
                             {/* --- N° PEDIDO --- */}
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getOrderNumber(order)}</td>
                             <td className="py-3 px-4">
+                              <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getOrderNumber(order)}</span>
+                            </td>
+
+                            {/*                             <td className="py-3 px-4">
                               <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
                               <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{order.description}</div>
                               {order.amount && <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1">Monto: ${order.amount.toFixed(2)}</div>}
-                            </td>
+                            </td> */}
 
                             {/* --- SOLICITANTE --- */}
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
