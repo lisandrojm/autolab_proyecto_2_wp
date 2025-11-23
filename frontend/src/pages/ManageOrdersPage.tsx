@@ -485,7 +485,7 @@ export const ManageOrdersPage: React.FC = () => {
               {viewMode === "cards" ? (
                 renderCardsView()
               ) : (
-                <div className=" rounded border dark:border-slate-800 rounded border dark:border-slate-800">
+                <div className="overflow-x-auto rounded border dark:border-slate-800overflow-x-auto rounded border dark:border-slate-800">
                   <table className="w-full dark:bg-slate-800/80 table-fixed">
                     <thead>
                       <tr>

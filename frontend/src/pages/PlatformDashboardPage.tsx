@@ -238,7 +238,7 @@ export const PlatformDashboardPage: React.FC = () => {
         {/* Top Consumers */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 5 Tenants por Consumo de Almacenamiento</h2>
-          <div className=" rounded border dark:border-slate-800">
+          <div className="overflow-x-auto rounded border dark:border-slate-800">
             <table className="w-full dark:bg-slate-800/80">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">

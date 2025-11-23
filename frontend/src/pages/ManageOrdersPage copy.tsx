@@ -255,7 +255,7 @@ export const ManageOrdersPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className=" rounded border dark:border-slate-800">
+              <div className="overflow-x-auto rounded border dark:border-slate-800">
                 <table className="w-full dark:bg-slate-800/80 table-fixed">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">

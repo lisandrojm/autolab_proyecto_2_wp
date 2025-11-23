@@ -36,7 +36,7 @@ export const RequestTable: React.FC<RequestTableProps> = ({ requests, onApprove,
   };
 
   return (
-    <div className=" rounded border dark:border-slate-800">
+    <div className="overflow-x-auto rounded border dark:border-slate-800">
       <table className="min-w-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
         <thead className="bg-gray-50 dark:bg-gray-900">
           <tr>
