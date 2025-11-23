@@ -227,7 +227,7 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return "Sin opciones";
 
-    const labels = order.subcategories.map(subId => {
+    const labels = order.subcategories.map((subId) => {
       const selectedSubtype = category.config.subtipos?.find((st) => st.id === subId);
       return selectedSubtype ? selectedSubtype.label : subId;
     });
@@ -249,7 +249,7 @@ export const ManageOrdersPage: React.FC = () => {
   };
 
   const getOrderNumber = (order: Order): string => {
-    const parts = order.orderNumber.split('-');
+    const parts = order.orderNumber.split("-");
     const numericPart = parts.length > 1 ? parts[1] : order.orderNumber;
     return `#${numericPart}`;
   };
@@ -307,10 +307,6 @@ export const ManageOrdersPage: React.FC = () => {
         className: "text-xs bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400 px-2 py-1 rounded",
       },
       {
-        text: getCategoryName(order),
-        variant: "info" as const,
-      },
-      {
         text: statusBadge.label,
         className: statusBadge.style,
         icon: getStatusIcon(order.status),
@@ -359,13 +355,17 @@ export const ManageOrdersPage: React.FC = () => {
                 setShowDetailModal(true);
               }}
             >
-              <div className="space-y-3 text-sm">
-                {order.amount && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Importe</span>
-                    <span className="font-semibold text-green-600 dark:text-green-400">${order.amount.toFixed(2)}</span>
-                  </div>
-                )}
+              <div className="flex py-2 items-center justify-between flex-wrap">
+                <div>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{getCategoryName(order)}</span>
+                </div>
+                <div className="space-y-3 text-sm">
+                  {order.amount && (
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-green-600 dark:text-green-400">${order.amount.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </Card>
           );
@@ -489,7 +489,7 @@ export const ManageOrdersPage: React.FC = () => {
               {viewMode === "cards" ? (
                 renderCardsView()
               ) : (
-                <div className="overflow-x-auto rounded border dark:border-slate-800overflow-x-auto rounded border dark:border-slate-800">
+                <div className="overflow-x-auto rounded border dark:border-slate-800">
                   <table className="w-full dark:bg-slate-800/80 table-fixed">
                     <thead>
                       <tr>

@@ -179,7 +179,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
               {renderBreadcrumbs()}
 
               {/* Avatar/Icon + Title */}
-              <div className="flex items-center space-x-3 flex-1 min-w-0 mt-2">
+              <div className="flex items-center space-x-3 flex-1 min-w-0 mt-4">
                 {header.avatar && (
                   <div className="w-10 h-10 flex-shrink-0">
                     {header.avatar.src ? (
