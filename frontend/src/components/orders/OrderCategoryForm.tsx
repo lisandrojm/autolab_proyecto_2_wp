@@ -77,22 +77,6 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           </div>
         );
 
-      case "vencimientoSistema":
-        return (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo Predefinido (Dias) *</label>
-            <input type="number" min="1" max="365" value={formData.plazoDias || 7} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || 7 })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema define automaticamente este plazo segun reglas internas</p>
-          </div>
-        );
-
-      case "vencimientoInterno":
-        return (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">Un area interna debe evaluar y asignar una fecha de vencimiento. El pedido quedara en estado &quot;En Revision&quot; hasta que se cargue la fecha limite.</p>
-          </div>
-        );
-
       case "sinVencimiento":
         return (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
@@ -242,8 +226,6 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                   <option value="plazoDias">{tipoAccionFuturaLabels.plazoDias}</option>
                   <option value="fechaEspecifica">{tipoAccionFuturaLabels.fechaEspecifica}</option>
                   <option value="presentacionDocumento">{tipoAccionFuturaLabels.presentacionDocumento}</option>
-                  <option value="vencimientoSistema">{tipoAccionFuturaLabels.vencimientoSistema}</option>
-                  <option value="vencimientoInterno">{tipoAccionFuturaLabels.vencimientoInterno}</option>
                 </select>
               </div>
 
@@ -299,14 +281,6 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <div>
               <strong className="text-blue-600 dark:text-blue-400">Presentacion de Documento:</strong>
               <p className="text-sm mt-1">Requiere que el usuario suba un documento especifico.</p>
-            </div>
-            <div>
-              <strong className="text-blue-600 dark:text-blue-400">Vencimiento por Sistema:</strong>
-              <p className="text-sm mt-1">La fecha de vencimiento viene definida por un sistema externo o reglas predefinidas.</p>
-            </div>
-            <div>
-              <strong className="text-blue-600 dark:text-blue-400">Vencimiento Interno:</strong>
-              <p className="text-sm mt-1">La empresa fija la fecha de vencimiento manualmente despues de revisar el pedido.</p>
             </div>
             <div>
               <strong className="text-blue-600 dark:text-blue-400">Sin Vencimiento:</strong>

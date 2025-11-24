@@ -183,20 +183,6 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             </>
           )}
 
-          {category.futureActionType === "vencimientoSistema" && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Plazo Predefinido (Días) *</label>
-              <input type="number" min="1" max="365" value={futureActionPlazoDias || 7} onChange={(e) => onFutureActionPlazoDiasChange?.(parseInt(e.target.value) || 7)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">El sistema define automáticamente este plazo según reglas internas</p>
-            </div>
-          )}
-
-          {category.futureActionType === "vencimientoInterno" && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-              <p className="text-sm text-slate-700 dark:text-slate-200">Un área interna debe evaluar y asignar una fecha de vencimiento. El pedido quedará en estado "En Revisión" hasta que se cargue la fecha límite.</p>
-            </div>
-          )}
-
           {category.futureActionType === "sinVencimiento" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <p className="text-sm text-slate-700 dark:text-slate-200">No tiene fecha límite, pero debe ser gestionada y marcada como cumplida manualmente.</p>

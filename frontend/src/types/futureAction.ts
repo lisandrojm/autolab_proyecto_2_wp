@@ -2,8 +2,6 @@ export type TipoAccionFutura =
   | "plazoDias"
   | "fechaEspecifica"
   | "presentacionDocumento"
-  | "vencimientoSistema"
-  | "vencimientoInterno"
   | "sinVencimiento";
 
 export type EstadoAccion = "pendiente" | "cumplida" | "vencida" | "en_revision";
@@ -85,8 +83,6 @@ export const tipoAccionFuturaLabels: Record<TipoAccionFutura, string> = {
   plazoDias: "Plazo en Días",
   fechaEspecifica: "Fecha Específica",
   presentacionDocumento: "Presentación de Documento",
-  vencimientoSistema: "Vencimiento Definido por Sistema",
-  vencimientoInterno: "Vencimiento Definido Internamente",
   sinVencimiento: "Sin Vencimiento",
 };
 

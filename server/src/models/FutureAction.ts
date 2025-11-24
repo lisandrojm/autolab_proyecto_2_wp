@@ -4,8 +4,6 @@ export type TipoAccionFutura =
   | "plazoDias"
   | "fechaEspecifica"
   | "presentacionDocumento"
-  | "vencimientoSistema"
-  | "vencimientoInterno"
   | "sinVencimiento";
 
 export type EstadoAccion = "pendiente" | "cumplida" | "vencida" | "en_revision";
@@ -58,8 +56,6 @@ const futureActionSchema = new Schema<IFutureAction>(
         "plazoDias",
         "fechaEspecifica",
         "presentacionDocumento",
-        "vencimientoSistema",
-        "vencimientoInterno",
         "sinVencimiento",
       ],
       required: true,
@@ -127,10 +123,6 @@ futureActionSchema.pre("save", function (next) {
   if (this.tipoAccionFutura === "plazoDias" && this.plazoDias && !this.fechaLimite) {
     const creationDate = this.fechaCreacionAccion || new Date();
     this.fechaLimite = new Date(creationDate.getTime() + this.plazoDias * 24 * 60 * 60 * 1000);
-  }
-
-  if (this.tipoAccionFutura === "vencimientoInterno" && !this.fechaLimite && this.estadoAccion === "pendiente") {
-    this.estadoAccion = "en_revision";
   }
 
   next();

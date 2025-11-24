@@ -7,8 +7,6 @@ export const createFutureActionSchema = z
       "plazoDias",
       "fechaEspecifica",
       "presentacionDocumento",
-      "vencimientoSistema",
-      "vencimientoInterno",
       "sinVencimiento",
     ]),
     descripcionAccion: z.string().min(1, "Description is required").max(1000),
@@ -55,18 +53,7 @@ export const createFutureActionSchema = z
       path: ["documentoRequerido"],
     }
   )
-  .refine(
-    (data) => {
-      if (data.tipoAccionFutura === "vencimientoSistema" && !data.plazoDias) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "plazoDias is required when tipoAccionFutura is 'vencimientoSistema'",
-      path: ["plazoDias"],
-    }
-  );
+;
 
 export const updateFutureActionSchema = z.object({
   estadoAccion: z.enum(["pendiente", "cumplida", "vencida", "en_revision"]).optional(),
@@ -83,8 +70,6 @@ export const queryFutureActionsSchema = z.object({
       "plazoDias",
       "fechaEspecifica",
       "presentacionDocumento",
-      "vencimientoSistema",
-      "vencimientoInterno",
       "sinVencimiento",
     ])
     .optional(),
