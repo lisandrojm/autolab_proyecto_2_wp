@@ -118,4 +118,22 @@ export const sweetAlert = {
   close: () => {
     Swal.close();
   },
+
+  confirmOrder: (informacion: string) => {
+    return Swal.fire({
+      title: "Confirmación del Pedido",
+      html: informacion.replace(/\n/g, "<br>"),
+      icon: "info",
+      showCancelButton: true,
+      confirmButtonColor: "#3b82f6",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Aceptar",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+      customClass: {
+        popup: 'mobile-swal-popup',
+        title: 'mobile-swal-title',
+      },
+    });
+  },
 };
