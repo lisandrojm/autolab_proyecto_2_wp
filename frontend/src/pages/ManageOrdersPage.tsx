@@ -550,6 +550,7 @@ export const ManageOrdersPage: React.FC = () => {
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th> */}
                         {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Acción Futura</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
 
                         {/* Imagen movida aquí */}
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th> */}
@@ -620,27 +621,31 @@ export const ManageOrdersPage: React.FC = () => {
 
                             {/* --- ESTADO --- */}
                             <td className="py-3 px-4">
-                              <div className="flex gap-2 flex-wrap">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
-                                  <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
-                                  {badge.label}
-                                </span>
-                                {(() => {
-                                  const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
-                                  const badgeStyle = getDocumentBadgeStyle(futureAction);
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
+                                <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
+                                {badge.label}
+                              </span>
+                            </td>
 
-                                  if (!badgeStyle) return null;
+                            {/* --- DOCUMENTO --- */}
+                            <td className="py-3 px-4">
+                              {(() => {
+                                const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+                                const badgeStyle = getDocumentBadgeStyle(futureAction);
 
-                                  return (
-                                    <span
-                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}
-                                    >
-                                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                                      {badgeStyle.label}
-                                    </span>
-                                  );
-                                })()}
-                              </div>
+                                if (!badgeStyle) {
+                                  return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
+                                }
+
+                                return (
+                                  <span
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}
+                                  >
+                                    <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                                    {badgeStyle.label}
+                                  </span>
+                                );
+                              })()}
                             </td>
 
                             {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
