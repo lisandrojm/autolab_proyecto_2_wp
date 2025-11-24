@@ -8,6 +8,8 @@ interface DynamicCategoryInputProps {
   onSubcategoriesChange: (value: string) => void;
   dynamicValue: any;
   onDynamicValueChange: (value: any) => void;
+  amount?: number;
+  onAmountChange?: (value: number) => void;
   actionCompleted: boolean;
   onActionCompletedChange: (value: boolean) => void;
   futureActionPlazoDias?: number;
@@ -18,7 +20,7 @@ interface DynamicCategoryInputProps {
   onFutureActionDocumentoChange?: (value: string) => void;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange }) => {
   if (!category) return null;
 
   const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
@@ -90,7 +92,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       case "dinero":
         const maxMonto = category.montoMaximo || 10000000;
         const stepMonto = 50000;
-        const currentMonto = typeof dynamicValue === "number" ? dynamicValue : 0;
+        const currentMonto = typeof amount === "number" ? amount : 0;
 
         return (
           <div>
@@ -102,7 +104,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
               </div>
 
               <div className="space-y-2">
-                <input type="range" min="0" max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onDynamicValueChange(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb" required />
+                <input type="range" min="0" max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onAmountChange?.(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb" required />
 
                 <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>$ 0</span>

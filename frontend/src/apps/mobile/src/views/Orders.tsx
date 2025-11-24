@@ -33,6 +33,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   const [subcategories, setSubcategories] = useState<string>("");
   const [dynamicValue, setDynamicValue] = useState<any>("");
+  const [amount, setAmount] = useState<number>(0);
   const [actionCompleted, setActionCompleted] = useState(false);
   const [futureActionPlazoDias, setFutureActionPlazoDias] = useState<number | undefined>(undefined);
   const [futureActionFechaLimite, setFutureActionFechaLimite] = useState("");
@@ -67,6 +68,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
     } else if (selectedCategory?.categoryType === "fecha") {
       setDynamicValue("");
     } else if (selectedCategory?.categoryType === "dinero") {
+      setAmount(0);
       setDynamicValue("");
     } else {
       setDynamicValue("");
@@ -149,6 +151,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         categoryId: selectedCategoryId,
         subcategories: subcategories ? [subcategories] : undefined,
         dynamicValue: validDynamicValue,
+        amount: selectedCategory?.categoryType === "dinero" ? amount : undefined,
         actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
         futureActionFechaLimite: futureActionFechaLimite || undefined,
@@ -180,6 +183,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         setDynamicValue("");
       }
 
+      setAmount(0);
       setActionCompleted(false);
 
       if (selectedCategory?.futureActionType === "plazoDias" && selectedCategory.plazoDias) {
@@ -314,7 +318,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
                 {/* Opciones */}
                 <div className="pt-3">
-                  <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} />
+                  <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} />
                 </div>
               </div>
               {/* Descripción */}
