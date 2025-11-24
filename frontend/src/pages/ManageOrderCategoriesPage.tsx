@@ -153,6 +153,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       requiresAction: false,
       actionText: "",
       futureActionType: "sinVencimiento",
+      deadlineMode: "none",
       subtipos: [],
       plazoDias: undefined,
       fechaLimite: undefined,
