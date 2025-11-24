@@ -84,6 +84,7 @@ const updateOrderSchema = z.object({
   description: z.string().min(1).optional(),
   category: z.string().optional(),
   amount: z.number().min(0).optional(),
+  status: z.enum(["pending", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
 });
 
@@ -346,7 +347,17 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
       return;
     }
 
-    if (order.status !== "pending") {
+    if (req.body.status === "cancelled" && order.status !== "pending") {
+      res.status(400).json({ error: "Solo puedes cancelar pedidos en estado pendiente" });
+      return;
+    }
+
+    if (req.body.status && req.body.status !== "cancelled") {
+      res.status(403).json({ error: "Solo puedes cancelar tus propios pedidos. Otros cambios de estado están restringidos" });
+      return;
+    }
+
+    if (order.status !== "pending" && !req.body.status) {
       res.status(400).json({ error: "Only pending orders can be updated" });
       return;
     }
@@ -374,6 +385,17 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
 
     Object.assign(order, data);
     await order.save();
+
+    if (req.body.status === "cancelled") {
+      await ActivityLog.create({
+        tenantId: req.tenantObjectId,
+        userId,
+        action: "order_cancelled",
+        description: `Pedido cancelado: ${order.title}`,
+        entityType: "Order",
+        entityId: order._id,
+      });
+    }
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
