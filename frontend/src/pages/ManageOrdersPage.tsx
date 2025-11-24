@@ -30,7 +30,7 @@ export const ManageOrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stats, setStats] = useState<any>({ pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
-  const [docStats, setDocStats] = useState({ total: 0, normal: 0, urgent: 0, overdue: 0 });
+  const [docStats, setDocStats] = useState({ total: 0, normal: 0, urgent: 0, overdue: 0, uploaded: 0 });
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -108,7 +108,7 @@ export const ManageOrdersPage: React.FC = () => {
       );
       setStats(newStats);
 
-      const docCounts = { total: 0, normal: 0, urgent: 0, overdue: 0 };
+      const docCounts = { total: 0, normal: 0, urgent: 0, overdue: 0, uploaded: 0 };
 
       data.orders.forEach((order) => {
         const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
@@ -119,8 +119,10 @@ export const ManageOrdersPage: React.FC = () => {
 
           if (badgeStyle.label === "Doc. Vencido") {
             docCounts.overdue++;
-          } else if (badgeStyle.borderClass.includes("border-orange")) {
+          } else if (badgeStyle.label === "Doc. por Vencer") {
             docCounts.urgent++;
+          } else if (badgeStyle.label === "Doc. Subido") {
+            docCounts.uploaded++;
           } else {
             docCounts.normal++;
           }
@@ -886,37 +888,48 @@ export const ManageOrdersPage: React.FC = () => {
 
       <Modal isOpen={showDocModal} onClose={() => setShowDocModal(false)} title="Estado de Documentos">
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 dark:border-orange-400">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-400">
             <div className="flex items-center gap-3">
-              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-red-600 dark:text-red-400" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-orange-400">Documentos Pendientes</p>
-                <p className="text-xs text-gray-600 dark:text-orange-400">Más de 3 días restantes</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Documentos Vencidos</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Fecha límite superada</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-green-600 dark:text-orange-400">{docStats.normal}</span>
+            <span className="text-2xl font-bold text-red-600 dark:text-red-400 animate-pulse">{docStats.overdue}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-400">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
             <div className="flex items-center gap-3">
               <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-orange-400">Documentos por Vencer</p>
-                <p className="text-xs text-gray-600 dark:text-orange-400">3 días o menos restantes</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Documentos por Vencer</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">3 días o menos restantes</p>
               </div>
             </div>
             <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">{docStats.urgent}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-500 dark:border-red-400">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
             <div className="flex items-center gap-3">
-              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-green-600 dark:text-green-400" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-red-400">Documentos Vencidos</p>
-                <p className="text-xs text-gray-600 dark:text-red-400">Fecha límite superada</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Documentos Pendientes</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Más de 3 días restantes</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-red-600 dark:text-red-400">{docStats.overdue}</span>
+            <span className="text-2xl font-bold text-green-600 dark:text-green-400">{docStats.normal}</span>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3">
+              <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Documentos Subidos</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Pendientes de revisión</p>
+              </div>
+            </div>
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{docStats.uploaded}</span>
           </div>
 
           {docStats.total === 0 && (

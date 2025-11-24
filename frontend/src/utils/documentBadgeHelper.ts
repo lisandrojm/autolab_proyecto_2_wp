@@ -41,6 +41,16 @@ export function getDocumentBadgeStyle(futureAction: FutureAction | null): Docume
     return null;
   }
 
+  if (futureAction.estadoAccion === "documento_presentado") {
+    return {
+      bgClass: "bg-blue-50 dark:bg-blue-900/20",
+      textClass: "text-blue-600 dark:text-blue-400",
+      borderClass: "border border-blue-400 dark:border-blue-400",
+      label: "Doc. Subido",
+      shouldAnimate: false,
+    };
+  }
+
   if (futureAction.estadoAccion !== "pendiente_documento") {
     return null;
   }
