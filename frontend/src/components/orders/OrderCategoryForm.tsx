@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faCircleInfo, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
+
 import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderCategories";
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/futureAction";
@@ -109,12 +110,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
       <div className="space-y-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modo de Vencimiento *</label>
-          <select
-            required
-            value={formData.deadlineMode || "none"}
-            onChange={(e) => handleDeadlineModeChange(e.target.value as DeadlineMode)}
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-          >
+          <select required value={formData.deadlineMode || "none"} onChange={(e) => handleDeadlineModeChange(e.target.value as DeadlineMode)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
             <option value="none">{deadlineModeLabels.none}</option>
             <option value="plazoDias">{deadlineModeLabels.plazoDias}</option>
             <option value="fechaEspecifica">{deadlineModeLabels.fechaEspecifica}</option>
@@ -124,16 +120,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         {formData.deadlineMode === "plazoDias" && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo en Días *</label>
-            <input
-              type="number"
-              min="1"
-              max="365"
-              value={formData.plazoDias || ""}
-              onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })}
-              required
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              placeholder="Ej: 10"
-            />
+            <input type="number" min="1" max="365" value={formData.plazoDias || ""} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: 10" />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema calculará automáticamente la fecha límite</p>
           </div>
         )}
@@ -141,14 +128,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         {formData.deadlineMode === "fechaEspecifica" && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite *</label>
-            <input
-              type="date"
-              value={formData.fechaLimite || ""}
-              onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })}
-              required
-              min={new Date().toISOString().split("T")[0]}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
+            <input type="date" value={formData.fechaLimite || ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
           </div>
         )}
       </div>
@@ -187,45 +167,11 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <option value="otros">Otros</option>
           </select>
         </div>
-
-        {formData.categoryType === "fecha" && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modo de Fecha *</label>
-              <button type="button" onClick={() => setShowDateModeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
-                <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-              </button>
-            </div>
-            <select required value={formData.dateMode} onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="single">Fecha unica</option>
-              <option value="range">Rango de fechas (Desde - Hasta)</option>
-            </select>
-          </div>
-        )}
-
-        {formData.categoryType === "dinero" && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto Maximo (opcional)</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={formData.montoMaximo || ""}
-                onChange={(e) => setFormData({ ...formData, montoMaximo: e.target.value ? parseFloat(e.target.value) : undefined })}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="Sin limite"
-              />
-            </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define el monto maximo que puede solicitar el usuario. Si no lo defines, no habra limite.</p>
-          </div>
-        )}
-
+        {/* Opciones del Tipo de Dato */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Opciones del Pedido (opcional)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Opciones del Tipo de Dato (opcional)</label>
               <button type="button" onClick={() => setShowSubcategoriesInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
                 <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
               </button>
@@ -278,8 +224,35 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           )}
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-          <div className="flex items-center gap-2 mb-3">
+        {formData.categoryType === "fecha" && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modo de Fecha *</label>
+              <button type="button" onClick={() => setShowDateModeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
+                <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+              </button>
+            </div>
+            <select required value={formData.dateMode} onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+              <option value="single">Fecha unica</option>
+              <option value="range">Rango de fechas (Desde - Hasta)</option>
+            </select>
+          </div>
+        )}
+
+        {/* Monto Máximo */}
+        {formData.categoryType === "dinero" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto Maximo (opcional)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+              <input type="number" min="0" step="1" value={formData.montoMaximo || ""} onChange={(e) => setFormData({ ...formData, montoMaximo: e.target.value ? parseFloat(e.target.value) : undefined })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Sin limite" />
+            </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define el monto maximo que puede solicitar el usuario. Si no lo defines, no habra limite.</p>
+          </div>
+        )}
+
+        <div className="border border-gray-200 dark:border-gray-600 p-4 rounded">
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="requiresAction"
@@ -298,14 +271,14 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
             />
             <label htmlFor="requiresAction" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Requiere accion futura del usuario
+              Requiere acción futura del usuario
             </label>
           </div>
 
           {formData.requiresAction && (
             <div className="space-y-4">
               <div>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 my-3">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Accion Futura *</label>
                   <button type="button" onClick={() => setShowActionTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
@@ -334,11 +307,17 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <input type="checkbox" id="isActive" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-          <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Activa (visible en el formulario)
-          </label>
+        <div className="pt-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Visivilidad en el formulario</label>
+          <button
+            type="button"
+            onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors inline-flex items-center flex-nowrap
+      ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}
+          >
+            <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
+            {formData.isActive ? "Activa" : "Inactiva"}
+          </button>
         </div>
       </form>
 
@@ -378,7 +357,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             </div>
           </div>
           <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
-            <p className="text-sm">El <strong>modo de vencimiento</strong> (plazo en días, fecha específica, o sin vencimiento) se configura por separado.</p>
+            <p className="text-sm">
+              El <strong>modo de vencimiento</strong> (plazo en días, fecha específica, o sin vencimiento) se configura por separado.
+            </p>
           </div>
         </div>
       </InfoModal>
