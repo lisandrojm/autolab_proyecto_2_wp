@@ -44,7 +44,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
         <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
       </td>
       <td className="py-3 px-4 text-center">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length > 0 ? "bg-gray-200 text-gray-600 dark:bg-gray-400/20 dark:text-gray-200" : "bg-gray-200 text-gray-400 dark:bg-gray-600/20 dark:text-gray-500"}`}>{category.config?.subtipos?.length > 0 ? "Sí" : "No"}</span>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
 
       <td className="py-3 px-4">
