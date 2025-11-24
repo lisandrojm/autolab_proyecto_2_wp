@@ -28,7 +28,6 @@ export interface OrderCategory {
   _id: string;
   tenantId: string;
   name: string;
-  description?: string;
   informacion?: string;
   icon?: string;
   isActive: boolean;
@@ -61,7 +60,6 @@ export const orderCategoriesAPI = {
 
   create: async (categoryData: {
     name: string;
-    description?: string;
     informacion?: string;
     isActive?: boolean;
     sortOrder?: number;
@@ -84,7 +82,6 @@ export const orderCategoriesAPI = {
     id: string,
     updates: {
       name?: string;
-      description?: string;
       informacion?: string;
       isActive?: boolean;
       sortOrder?: number;

@@ -725,7 +725,6 @@ export async function seedOnStart() {
       const catLicencias = await OrderCategory.create({
         tenantId,
         name: "Licencias y Permisos",
-        description: "Solicitud de licencias médicas, permisos por estudio, cuidado familiar, matrimonio, etc.",
         categoryType: "fecha",
         dateMode: "range",
         isActive: true,
@@ -746,7 +745,6 @@ export async function seedOnStart() {
       const catAdelantos = await OrderCategory.create({
         tenantId,
         name: "Adelantos y Anticipos",
-        description: "Adelantos de sueldo y anticipos por emergencias",
         categoryType: "dinero",
         isActive: true,
         sortOrder: 2,
@@ -764,7 +762,6 @@ export async function seedOnStart() {
       const catReembolsos = await OrderCategory.create({
         tenantId,
         name: "Reembolsos de Gastos",
-        description: "Reembolsos por viáticos, gastos con factura y otros gastos laborales",
         categoryType: "dinero",
         isActive: true,
         sortOrder: 3,
@@ -777,7 +774,6 @@ export async function seedOnStart() {
       const catEquipamiento = await OrderCategory.create({
         tenantId,
         name: "Equipamiento y Materiales",
-        description: "Solicitud de equipamiento tecnológico, elementos de seguridad e higiene, y materiales de oficina",
         categoryType: "objeto",
         isActive: true,
         sortOrder: 4,
@@ -796,7 +792,6 @@ export async function seedOnStart() {
       const catSolicitudesEspeciales = await OrderCategory.create({
         tenantId,
         name: "Solicitudes Especiales",
-        description: "Solicitudes generales, justificaciones, comunicaciones y pedidos no categorizados",
         categoryType: "otros",
         isActive: true,
         sortOrder: 5,

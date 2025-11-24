@@ -26,7 +26,6 @@ const configSchema = z
 const createCategorySchema = z
   .object({
     name: z.string().min(1).max(100),
-    description: z.string().max(500).optional(),
     informacion: z.string().max(1000).optional(),
     isActive: z.boolean().default(true),
     categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).default("otros"),
@@ -92,7 +91,6 @@ const createCategorySchema = z
 const updateCategorySchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
-    description: z.string().max(500).optional(),
     informacion: z.string().max(1000).optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().min(0).optional(),

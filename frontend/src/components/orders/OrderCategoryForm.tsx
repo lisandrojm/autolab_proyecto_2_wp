@@ -8,7 +8,6 @@ import { tipoAccionFuturaLabels } from "../../types/futureAction";
 interface OrderCategoryFormProps {
   formData: {
     name: string;
-    description: string;
     informacion: string;
     isActive: boolean;
     categoryType: CategoryType;
@@ -98,11 +97,6 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
           <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Nombre del tipo de pedido" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción (opcional)</label>
-          <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Describe el tipo de pedido..." />
         </div>
 
         <div>

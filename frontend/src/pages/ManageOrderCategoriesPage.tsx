@@ -47,10 +47,6 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
-
-      <td className="py-3 px-4">
-        <div className="text-sm text-gray-600 dark:text-gray-400">{category.description || "-"}</div>
-      </td>
       <td className="py-3 px-4">
         <div className="text-sm text-gray-600 dark:text-gray-400">{category.informacion || "-"}</div>
       </td>
@@ -84,7 +80,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<OrderCategory | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
-    description: string;
     informacion: string;
     isActive: boolean;
     categoryType: CategoryType;
@@ -99,7 +94,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     documentoRequerido?: string;
   }>({
     name: "",
-    description: "",
     informacion: "",
     isActive: true,
     categoryType: "fecha",
@@ -149,7 +143,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setEditingCategory(null);
     setFormData({
       name: "",
-      description: "",
       informacion: "",
       isActive: true,
       categoryType: "fecha",
@@ -170,7 +163,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setEditingCategory(category);
     setFormData({
       name: category.name,
-      description: category.description || "",
       informacion: category.informacion || "",
       isActive: category.isActive,
       categoryType: category.categoryType || "fecha",
@@ -242,7 +234,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
       const payload: any = {
         name: formData.name,
-        description: formData.description,
         informacion: formData.informacion,
         isActive: formData.isActive,
         categoryType: formData.categoryType,
@@ -425,7 +416,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Descripción</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Información</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-48">Acciones</th>
