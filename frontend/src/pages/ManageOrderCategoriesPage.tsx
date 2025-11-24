@@ -250,16 +250,29 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
 
-      if (formData.requiresAction && formData.futureActionType) {
+      if (!formData.requiresAction) {
+        payload.futureActionType = undefined;
+        payload.deadlineMode = undefined;
+        payload.plazoDias = undefined;
+        payload.fechaLimite = undefined;
+        payload.documentoRequerido = undefined;
+      } else {
+        // mantiene fecha o días si corresponden, SIN borrarlos por error
+        // --- copiar EXACTAMENTE la lógica de plazoDias pero aplicada a fechaLimite ---
         if (formData.deadlineMode === "plazoDias") {
-          payload.plazoDias = formData.plazoDias;
-        } else {
-          payload.plazoDias = undefined;
+          payload.plazoDias = formData.plazoDias || undefined;
+          payload.fechaLimite = undefined;
         }
 
         if (formData.deadlineMode === "fechaEspecifica") {
-          payload.fechaLimite = formData.fechaLimite;
-        } else {
+          // convertir correctamente la fecha al formato YYYY-MM-DD
+          const raw = formData.fechaLimite;
+          payload.fechaLimite = raw ? new Date(raw).toISOString().split("T")[0] : undefined;
+          payload.plazoDias = undefined;
+        }
+
+        if (formData.deadlineMode === "none") {
+          payload.plazoDias = undefined;
           payload.fechaLimite = undefined;
         }
 
@@ -268,11 +281,6 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         } else {
           payload.documentoRequerido = undefined;
         }
-      } else {
-        payload.deadlineMode = undefined;
-        payload.plazoDias = undefined;
-        payload.fechaLimite = undefined;
-        payload.documentoRequerido = undefined;
       }
 
       if (editingCategory) {

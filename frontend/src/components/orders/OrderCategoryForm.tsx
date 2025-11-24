@@ -43,15 +43,20 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   };
 
   const handleFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
-    setFormData({
-      ...formData,
+    setFormData((prev: { deadlineMode: any; plazoDias: any; fechaLimite: any; documentoRequerido: any; actionText: any }) => ({
+      ...prev,
       futureActionType: newType,
-      deadlineMode: "none",
-      plazoDias: undefined,
-      fechaLimite: undefined,
-      documentoRequerido: undefined,
-      actionText: newType ? DEFAULT_ACTION_TEXTS[newType] : "",
-    });
+
+      // 🔥 NUNCA tocar deadlineMode si ya existe
+      deadlineMode: prev.deadlineMode ?? "none",
+
+      // 🔥 NUNCA resetear fecha o días si ya estaban cargados
+      plazoDias: prev.plazoDias,
+      fechaLimite: prev.fechaLimite,
+
+      documentoRequerido: newType === "documento" ? prev.documentoRequerido : prev.documentoRequerido,
+      actionText: newType ? DEFAULT_ACTION_TEXTS[newType] : prev.actionText,
+    }));
   };
 
   const handleDeadlineModeChange = (newMode: DeadlineMode) => {
@@ -135,7 +140,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         {formData.deadlineMode === "fechaEspecifica" && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite *</label>
-            <input type="date" value={formData.fechaLimite || ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+            <input type="date" value={formData.fechaLimite ? new Date(formData.fechaLimite).toISOString().split("T")[0] : ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
           </div>
         )}
       </div>
@@ -270,9 +275,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                   requiresAction: e.target.checked,
                   futureActionType: e.target.checked ? formData.futureActionType || "sinVencimiento" : "",
                   actionText: e.target.checked ? formData.actionText || (formData.futureActionType ? DEFAULT_ACTION_TEXTS[formData.futureActionType] : "") : "",
-
                   plazoDias: e.target.checked ? formData.plazoDias : undefined,
                   fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
+
                   documentoRequerido: e.target.checked ? formData.documentoRequerido : undefined,
                 })
               }
