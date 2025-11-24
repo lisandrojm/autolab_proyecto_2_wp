@@ -147,27 +147,14 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               <input
                 type="number"
                 min="0"
-                step="50000"
+                step="1"
                 value={formData.montoMaximo || ""}
-                onKeyDown={(e) => {
-                  if (e.key === '.' || e.key === ',' || e.key === ' ') {
-                    e.preventDefault();
-                  }
-                }}
-                onChange={(e) => {
-                  const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                  if (value !== undefined && value > 0) {
-                    const rounded = Math.round(value / 50000) * 50000;
-                    setFormData({ ...formData, montoMaximo: rounded });
-                  } else {
-                    setFormData({ ...formData, montoMaximo: undefined });
-                  }
-                }}
+                onChange={(e) => setFormData({ ...formData, montoMaximo: e.target.value ? parseFloat(e.target.value) : undefined })}
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="Sin limite"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define el monto maximo en incrementos de $50.000. Si no lo defines, no habra limite.</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define el monto maximo que puede solicitar el usuario. Si no lo defines, no habra limite.</p>
           </div>
         )}
 
