@@ -133,7 +133,8 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       .sort({ requestedAt: -1 })
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId");
+      .populate("categoryId")
+      .populate("futureActionId");
 
     res.json(orders);
   } catch (error) {
@@ -149,14 +150,22 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const orders = await Order.find({
       tenantId: req.tenantObjectId,
       userId,
-    });
+    }).populate("futureActionId");
 
     const stats = orders.reduce(
-      (acc, order) => {
+      (acc: any, order: any) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
+
+        if (order.futureActionId &&
+            typeof order.futureActionId === 'object' &&
+            order.futureActionId.tipoAccionFutura === "documento" &&
+            order.futureActionId.estadoAccion === "pendiente_documento") {
+          acc.pendingDocuments = (acc.pendingDocuments || 0) + 1;
+        }
+
         return acc;
       },
-      { pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
+      { pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0, pendingDocuments: 0 }
     );
 
     res.json(stats);
@@ -176,7 +185,9 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       userId,
     })
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
-      .populate("approvedBy", "firstName lastName email");
+      .populate("approvedBy", "firstName lastName email")
+      .populate("categoryId")
+      .populate("futureActionId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -392,7 +403,9 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
-      .populate("approvedBy", "firstName lastName email");
+      .populate("approvedBy", "firstName lastName email")
+      .populate("categoryId")
+      .populate("futureActionId");
 
     res.status(201).json(populatedOrder);
   } catch (error) {
@@ -476,7 +489,9 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
-      .populate("approvedBy", "firstName lastName email");
+      .populate("approvedBy", "firstName lastName email")
+      .populate("categoryId")
+      .populate("futureActionId");
 
     res.json(populatedOrder);
   } catch (error) {
@@ -536,7 +551,8 @@ router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRe
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId");
+      .populate("categoryId")
+      .populate("futureActionId");
 
     res.json(populatedOrder);
   } catch (error) {

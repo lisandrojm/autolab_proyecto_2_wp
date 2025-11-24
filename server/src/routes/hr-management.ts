@@ -266,7 +266,7 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [orders, total] = await Promise.all([Order.find(filter).sort({ requestedAt: -1 }).skip(skip).limit(Number(limit)).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId"), Order.countDocuments(filter)]);
+    const [orders, total] = await Promise.all([Order.find(filter).sort({ requestedAt: -1 }).skip(skip).limit(Number(limit)).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId").populate("futureActionId"), Order.countDocuments(filter)]);
 
     res.json({
       orders,
