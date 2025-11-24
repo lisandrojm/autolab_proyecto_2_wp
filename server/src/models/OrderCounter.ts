@@ -13,8 +13,8 @@ const orderCounterSchema = new Schema<IOrderCounter>(
       type: Schema.Types.ObjectId,
       ref: "Tenant",
       required: true,
-      unique: true,
-      index: true,
+      // unique: true,   // 👈 removido
+      // index: true,    // 👈 removido
     },
     sequence: {
       type: Number,
@@ -25,16 +25,11 @@ const orderCounterSchema = new Schema<IOrderCounter>(
   { timestamps: true }
 );
 
+// Dejamos **un solo** índice único sobre tenantId
 orderCounterSchema.index({ tenantId: 1 }, { unique: true });
 
-orderCounterSchema.statics.getNextSequence = async function (
-  tenantId: Types.ObjectId
-): Promise<number> {
-  const counter = await this.findOneAndUpdate(
-    { tenantId },
-    { $inc: { sequence: 1 } },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  );
+orderCounterSchema.statics.getNextSequence = async function (tenantId: Types.ObjectId): Promise<number> {
+  const counter = await this.findOneAndUpdate({ tenantId }, { $inc: { sequence: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true });
 
   return counter.sequence;
 };
@@ -43,7 +38,4 @@ export interface IOrderCounterModel extends mongoose.Model<IOrderCounter> {
   getNextSequence(tenantId: Types.ObjectId): Promise<number>;
 }
 
-export const OrderCounter = mongoose.model<IOrderCounter, IOrderCounterModel>(
-  "OrderCounter",
-  orderCounterSchema
-);
+export const OrderCounter = mongoose.model<IOrderCounter, IOrderCounterModel>("OrderCounter", orderCounterSchema);
