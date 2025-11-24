@@ -59,7 +59,7 @@ export function getDocumentBadgeStyle(futureAction: FutureAction | null): Docume
 
   if (daysRemaining !== null && daysRemaining <= DOCUMENT_BADGE_CONFIG.urgentDaysThreshold) {
     return {
-      bgClass: "bg-orange-100 dark:bg-orange-900/30 animate-pulse",
+      bgClass: "bg-orange-100 dark:bg-orange-900/30",
       textClass: "text-orange-800 dark:text-orange-400",
       borderClass: "border border-orange-400 dark:border-orange-400",
       label: "Doc. por Vencer",

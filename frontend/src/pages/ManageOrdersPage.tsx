@@ -897,11 +897,11 @@ export const ManageOrdersPage: React.FC = () => {
             <span className="text-2xl font-bold text-green-600 dark:text-orange-400">{docStats.normal}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-400 animate-pulse">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-400">
             <div className="flex items-center gap-3">
               <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-orange-400">Documentos Urgentes</p>
+                <p className="font-semibold text-gray-900 dark:text-orange-400">Documentos por Vencer</p>
                 <p className="text-xs text-gray-600 dark:text-orange-400">3 días o menos restantes</p>
               </div>
             </div>
@@ -916,7 +916,7 @@ export const ManageOrdersPage: React.FC = () => {
                 <p className="text-xs text-gray-600 dark:text-red-400">Fecha límite superada</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-red-600 dark:text-red-400 animate-pulse">{docStats.overdue}</span>
+            <span className="text-2xl font-bold text-red-600 dark:text-red-400">{docStats.overdue}</span>
           </div>
 
           {docStats.total === 0 && (
