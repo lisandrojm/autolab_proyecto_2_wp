@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes, faBan } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes, faBan, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
@@ -311,6 +311,16 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 ) : (
                   <div className="w-full rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
                 )}
+
+                {selectedCategory?.description && selectedCategory.description.trim() && (
+                  <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex gap-2">
+                    <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
+                      {selectedCategory.description}
+                    </p>
+                  </div>
+                )}
+
                 {/* Opciones */}
                 <div className="pt-3">
                   <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} />
