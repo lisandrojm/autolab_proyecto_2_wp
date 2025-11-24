@@ -35,6 +35,12 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   const [showActionTypeInfo, setShowActionTypeInfo] = useState(false);
   const [showActionTextInfo, setShowActionTextInfo] = useState(false);
   const [showInformacionInfo, setShowInformacionInfo] = useState(false);
+  const DEFAULT_ACTION_TEXTS: Record<TipoAccionFutura, string> = {
+    accion: "Me comprometo a completar la acción requerida en tiempo y forma.",
+    documento: "Me comprometo a presentar la documentación o comprobantes solicitados.",
+    condicion: "Declaro haber leído y aceptar las condiciones establecidas.",
+    sinVencimiento: "Me comprometo a cumplir con esta solicitud según lo requerido.",
+  };
 
   const handleFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
     setFormData({
@@ -44,6 +50,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
       plazoDias: undefined,
       fechaLimite: undefined,
       documentoRequerido: undefined,
+      actionText: newType ? DEFAULT_ACTION_TEXTS[newType] : "",
     });
   };
 
@@ -262,7 +269,8 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                   ...formData,
                   requiresAction: e.target.checked,
                   futureActionType: e.target.checked ? formData.futureActionType || "sinVencimiento" : "",
-                  actionText: e.target.checked ? formData.actionText : "",
+                  actionText: e.target.checked ? formData.actionText || (formData.futureActionType ? DEFAULT_ACTION_TEXTS[formData.futureActionType] : "") : "",
+
                   plazoDias: e.target.checked ? formData.plazoDias : undefined,
                   fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
                   documentoRequerido: e.target.checked ? formData.documentoRequerido : undefined,
