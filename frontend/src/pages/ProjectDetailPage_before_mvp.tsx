@@ -832,7 +832,7 @@ export const ProjectDetailPage: React.FC = () => {
           <Card
             key={c._id}
             onClick={() => navigate(`/projects/${projectId}/campaigns/${c._id}`)}
-            className="hover:scale-[1.02] hover:shadow-lg transition-all duration-200"
+            className="hover:scale-[1.01] hover:shadow-lg transition-all duration-200"
             header={{
               title: c.name,
               subtitle: c.description,

@@ -600,7 +600,7 @@ export const ManageOrdersPage: React.FC = () => {
                         const activeColors = activeColorClasses[status.color];
 
                         return (
-                          <button key={status.value} onClick={() => handleStatusChange(status.value)} disabled={updatingStatus} className={`w-full p-4 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isActive ? `${activeColors.bg} ${activeColors.border} ${activeColors.text} shadow-md` : `${inactiveClasses} hover:shadow-md hover:scale-[1.02]`}`}>
+                          <button key={status.value} onClick={() => handleStatusChange(status.value)} disabled={updatingStatus} className={`w-full p-4 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isActive ? `${activeColors.bg} ${activeColors.border} ${activeColors.text} shadow-md` : `${inactiveClasses} hover:shadow-md hover:scale-[1.01]`}`}>
                             <div className="flex items-center gap-3">
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isActive ? activeColors.border : "border-blue-300 dark:border-blue-600"}`}>{isActive && <div className={`w-3 h-3 rounded-full ${activeColors.dotBg}`} />}</div>
                               <FontAwesomeIcon icon={status.icon} className="h-5 w-5" />

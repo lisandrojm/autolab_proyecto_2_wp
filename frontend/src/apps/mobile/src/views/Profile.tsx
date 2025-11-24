@@ -1,72 +1,67 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faPhone, faMapMarkerAlt, faBriefcase, faCalendar, faSignOutAlt, faCog, faShield, faUserCheck } from '@fortawesome/free-solid-svg-icons';
-import { useAuthStore } from '../../../../stores/authStore';
-import { sweetAlert } from '../utils/sweetAlert';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope, faPhone, faMapMarkerAlt, faBriefcase, faCalendar, faSignOutAlt, faCog, faShield, faUserCheck } from "@fortawesome/free-solid-svg-icons";
+import { useAuthStore } from "../../../../stores/authStore";
+import { sweetAlert } from "../utils/sweetAlert";
 
 export default function Profile() {
   const { user, hasPermission, logout } = useAuthStore();
 
-  const isMobileCoordinator = hasPermission('mobile:coordinator');
-  const isMobileCollaborator = hasPermission('mobile:collaborator');
+  const isMobileCoordinator = hasPermission("mobile:coordinator");
+  const isMobileCollaborator = hasPermission("mobile:collaborator");
 
-  const userRole = isMobileCoordinator ? 'Coordinador' : isMobileCollaborator ? 'Colaborador' : 'Usuario';
-  const roleColor = isMobileCoordinator ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
+  const userRole = isMobileCoordinator ? "Coordinador" : isMobileCollaborator ? "Colaborador" : "Usuario";
+  const roleColor = isMobileCoordinator ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
 
   const userInfo = {
-    name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || 'Usuario',
-    position: 'Desarrollador Senior',
-    department: 'Tecnología',
-    email: user?.email || 'usuario@empresa.com',
-    phone: '+34 612 345 678',
-    location: 'Madrid, España',
-    startDate: '2020-03-15',
-    employeeId: user?.id?.slice(-8).toUpperCase() || 'EMP-001',
+    name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || "Usuario",
+    position: "Desarrollador Senior",
+    department: "Tecnología",
+    email: user?.email || "usuario@empresa.com",
+    phone: "+34 612 345 678",
+    location: "Madrid, España",
+    startDate: "2020-03-15",
+    employeeId: user?.id?.slice(-8).toUpperCase() || "EMP-001",
   };
 
   const stats = [
-    { label: 'Días trabajados', value: '1,450', icon: faCalendar },
-    { label: 'Días de vacaciones', value: '18', icon: faBriefcase },
+    { label: "Días trabajados", value: "1,450", icon: faCalendar },
+    { label: "Días de vacaciones", value: "18", icon: faBriefcase },
   ];
 
   const handleLogout = async () => {
-    const result = await sweetAlert.confirm(
-      '¿Cerrar sesión?',
-      '¿Estás seguro de que deseas salir de la aplicación?',
-      'Sí, cerrar sesión',
-      'Cancelar'
-    );
+    const result = await sweetAlert.confirm("¿Cerrar sesión?", "¿Estás seguro de que deseas salir de la aplicación?", "Sí, cerrar sesión", "Cancelar");
 
     if (result.isConfirmed) {
       logout();
-      await sweetAlert.success('Sesión cerrada', 'Has salido correctamente');
+      await sweetAlert.success("Sesión cerrada", "Has salido correctamente");
     }
   };
 
   const handleSettings = async () => {
-    await sweetAlert.info('Próximamente', 'Esta función estará disponible pronto');
+    await sweetAlert.info("Próximamente", "Esta función estará disponible pronto");
   };
 
   const handlePrivacy = async () => {
-    await sweetAlert.info('Próximamente', 'Esta función estará disponible pronto');
+    await sweetAlert.info("Próximamente", "Esta función estará disponible pronto");
   };
 
   const menuItems = [
     {
       icon: faCog,
-      label: 'Configuración',
-      description: 'Preferencias y ajustes',
+      label: "Configuración",
+      description: "Preferencias y ajustes",
       onClick: handleSettings,
     },
     {
       icon: faShield,
-      label: 'Privacidad',
-      description: 'Seguridad y datos',
+      label: "Privacidad",
+      description: "Seguridad y datos",
       onClick: handlePrivacy,
     },
     {
       icon: faSignOutAlt,
-      label: 'Cerrar Sesión',
-      description: 'Salir de la aplicación',
+      label: "Cerrar Sesión",
+      description: "Salir de la aplicación",
       danger: true,
       onClick: handleLogout,
     },
@@ -82,8 +77,7 @@ export default function Profile() {
             <div
               className="w-24 h-24 rounded-full bg-cover bg-center bg-no-repeat mb-4"
               style={{
-                backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDnU5QgjujmeNxIQ7pvt9_qea6WcNgYxkcEOwLGTbpmOMgiHIGlCVJThmfNMwgtI2StbRn_-fsM4f2H7D7V7kzSdBD4nl_ux9WkpBnkzSk7BN0kYBID1tvvY2bitI_6gegGrxmOzHiS4cBqDuzypMZcKskWJpeJXG0rzlDTUzQc-HZBlyLAeYLSuh1IcJJvQzn6IscRJR31tvtB3H3azl8Fs8xuNtTR-PeJrgaFtrYj5-SY0PtflPUrD8ogDtnJCfL_bvQfVpffK5c")',
+                backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDnU5QgjujmeNxIQ7pvt9_qea6WcNgYxkcEOwLGTbpmOMgiHIGlCVJThmfNMwgtI2StbRn_-fsM4f2H7D7V7kzSdBD4nl_ux9WkpBnkzSk7BN0kYBID1tvvY2bitI_6gegGrxmOzHiS4cBqDuzypMZcKskWJpeJXG0rzlDTUzQc-HZBlyLAeYLSuh1IcJJvQzn6IscRJR31tvtB3H3azl8Fs8xuNtTR-PeJrgaFtrYj5-SY0PtflPUrD8ogDtnJCfL_bvQfVpffK5c")',
               }}
             />
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">{userInfo.name}</h2>
@@ -130,10 +124,10 @@ export default function Profile() {
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Fecha de ingreso</p>
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {new Date(userInfo.startDate).toLocaleDateString('es-ES', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
+                  {new Date(userInfo.startDate).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
                   })}
                 </p>
               </div>
@@ -158,41 +152,12 @@ export default function Profile() {
           {menuItems.map((item, index) => {
             const icon = item.icon;
             return (
-              <button
-                key={index}
-                onClick={item.onClick}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                  item.danger
-                    ? 'bg-red-50 dark:bg-red-900/20'
-                    : 'bg-white dark:bg-slate-900/70'
-                }`}
-              >
-                <div
-                  className={`flex items-center justify-center w-12 h-12 rounded-xl ${
-                    item.danger
-                      ? 'bg-red-100 dark:bg-red-900/50'
-                      : 'bg-slate-100 dark:bg-slate-800'
-                  }`}
-                >
-                  <FontAwesomeIcon
-                    icon={icon}
-                    className={`w-6 h-6 ${
-                      item.danger
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-primary'
-                    }`}
-                  />
+              <button key={index} onClick={item.onClick} className={`w-full flex items-center gap-4 p-4 rounded-xl shadow-sm transition-transform duration-200 hover:scale-[1.01] active:scale-[0.98] ${item.danger ? "bg-red-50 dark:bg-red-900/20" : "bg-white dark:bg-slate-900/70"}`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${item.danger ? "bg-red-100 dark:bg-red-900/50" : "bg-slate-100 dark:bg-slate-800"}`}>
+                  <FontAwesomeIcon icon={icon} className={`w-6 h-6 ${item.danger ? "text-red-600 dark:text-red-400" : "text-primary"}`} />
                 </div>
                 <div className="flex-1 text-left">
-                  <p
-                    className={`font-semibold ${
-                      item.danger
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-slate-900 dark:text-slate-100'
-                    }`}
-                  >
-                    {item.label}
-                  </p>
+                  <p className={`font-semibold ${item.danger ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-slate-100"}`}>{item.label}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
                 </div>
               </button>
