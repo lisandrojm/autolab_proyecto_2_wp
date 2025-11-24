@@ -36,6 +36,7 @@ export interface IOrderCategory extends Document {
   tenantId: Types.ObjectId;
   name: string;
   description?: string;
+  informacion?: string;
   icon?: string;
   isActive: boolean;
   sortOrder: number;
@@ -58,6 +59,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
+    informacion: { type: String, trim: true },
     icon: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },

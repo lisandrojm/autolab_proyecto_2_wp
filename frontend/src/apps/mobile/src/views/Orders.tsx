@@ -8,6 +8,7 @@ import { OrderCategory } from "../../../../api/orderCategories";
 import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
 import { sweetAlert } from "../utils/sweetAlert";
 import OrderDetailModal from "../components/OrderDetailModal";
+import { ConfirmationModal } from "../components/ConfirmationModal";
 import { OrderData } from "../../../../api/personnel";
 import { getOrderNumber, getCategoryName, getSubcategoriesArray } from "../utils/orderHelpers";
 
@@ -28,6 +29,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [pendingOrderData, setPendingOrderData] = useState<any>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -143,7 +146,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         validDynamicValue = dynamicValue;
       }
 
-      await createOrder({
+      const orderData = {
         description,
         category: selectedCategory?.name || "other",
         categoryId: selectedCategoryId,
@@ -154,7 +157,16 @@ export default function Orders({ onNavigate }: OrdersProps) {
         futureActionFechaLimite: futureActionFechaLimite || undefined,
         futureActionDocumento: futureActionDocumento || undefined,
         photo: shouldIncludePhoto ? photo : null,
-      });
+      };
+
+      if (selectedCategory?.informacion && selectedCategory.informacion.trim()) {
+        setPendingOrderData(orderData);
+        setShowConfirmationModal(true);
+        setSubmitting(false);
+        return;
+      }
+
+      await createOrder(orderData);
       await sweetAlert.success("¡Pedido creado!", "Tu pedido ha sido enviado correctamente");
       setShowForm(false);
       setDescription("");
@@ -183,6 +195,48 @@ export default function Orders({ onNavigate }: OrdersProps) {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleConfirmOrder = async () => {
+    setShowConfirmationModal(false);
+    setSubmitting(true);
+
+    try {
+      await createOrder(pendingOrderData);
+      await sweetAlert.success("¡Pedido creado!", "Tu pedido ha sido enviado correctamente");
+      setShowForm(false);
+      setDescription("");
+      setSubcategories("");
+
+      if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
+        setDynamicValue({ fechaDesde: "", fechaHasta: "" });
+      } else {
+        setDynamicValue("");
+      }
+
+      setActionCompleted(false);
+
+      if (selectedCategory?.futureActionType === "plazoDias" && selectedCategory.plazoDias) {
+        setFutureActionPlazoDias(selectedCategory.plazoDias);
+      } else {
+        setFutureActionPlazoDias(undefined);
+      }
+
+      setFutureActionFechaLimite("");
+      setFutureActionDocumento("");
+      setPhoto(null);
+      setPhotoPreview(null);
+      setPendingOrderData(null);
+    } catch (err: any) {
+      await sweetAlert.error("Error", err.response?.data?.error || "Error al crear pedido");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancelConfirmation = () => {
+    setShowConfirmationModal(false);
+    setPendingOrderData(null);
   };
 
   const getStatusIcon = (status: string) => {
@@ -427,6 +481,13 @@ export default function Orders({ onNavigate }: OrdersProps) {
           setSelectedOrder(null);
         }}
         onStatusUpdate={updateOrderStatus}
+      />
+
+      <ConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={handleCancelConfirmation}
+        onConfirm={handleConfirmOrder}
+        informacionText={selectedCategory?.informacion || ""}
       />
 
       {viewingImage && (

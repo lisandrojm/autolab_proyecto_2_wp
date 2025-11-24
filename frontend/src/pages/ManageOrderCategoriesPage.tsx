@@ -86,6 +86,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
+    informacion: string;
     isActive: boolean;
     categoryType: CategoryType;
     dateMode: DateMode;
@@ -100,6 +101,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
   }>({
     name: "",
     description: "",
+    informacion: "",
     isActive: true,
     categoryType: "fecha",
     dateMode: "single",
@@ -149,6 +151,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setFormData({
       name: "",
       description: "",
+      informacion: "",
       isActive: true,
       categoryType: "fecha",
       dateMode: "single",
@@ -169,6 +172,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setFormData({
       name: category.name,
       description: category.description || "",
+      informacion: category.informacion || "",
       isActive: category.isActive,
       categoryType: category.categoryType || "fecha",
       dateMode: category.dateMode || "single",
@@ -240,6 +244,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       const payload: any = {
         name: formData.name,
         description: formData.description,
+        informacion: formData.informacion,
         isActive: formData.isActive,
         categoryType: formData.categoryType,
         dateMode: formData.categoryType === "fecha" ? formData.dateMode : undefined,
