@@ -846,40 +846,35 @@ export const ManageOrdersPage: React.FC = () => {
                         Documento Pendiente
                       </h4>
                       <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
-                        Este pedido requiere que subas un documento para completar la solicitud.
+                        Este pedido requiere que el usuario presente un documento para completar la solicitud.
                       </p>
                       <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
                         {futureAction.descripcionAccion}
                       </p>
                       {futureAction.documentoRequerido && (
                         <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
-                          <strong>Requerido:</strong> {futureAction.documentoRequerido}
+                          <strong>Documento requerido:</strong> {futureAction.documentoRequerido}
                         </p>
                       )}
                       {daysRemaining !== null && (
-                        <p className={`text-sm font-medium ${
+                        <p className={`text-sm font-medium mb-3 ${
                           daysRemaining <= 2
                             ? 'text-red-600 dark:text-red-400'
                             : 'text-orange-600 dark:text-orange-400'
                         }`}>
                           {daysRemaining > 0
-                            ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''}`
+                            ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} para presentar el documento`
                             : daysRemaining === 0
-                            ? 'Vence hoy'
-                            : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? 's' : ''}`
+                            ? 'El plazo vence hoy'
+                            : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? 's' : ''}`
                           }
                         </p>
                       )}
 
-                      <div className="mt-4 flex gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm transition-colors">
-                          <FontAwesomeIcon icon={faCamera} />
-                          Tomar Foto
-                        </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm transition-colors">
-                          <FontAwesomeIcon icon={faUpload} />
-                          Subir Archivo
-                        </button>
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          ℹ️ El usuario puede subir el documento desde su aplicación móvil
+                        </p>
                       </div>
                     </div>
                   </div>

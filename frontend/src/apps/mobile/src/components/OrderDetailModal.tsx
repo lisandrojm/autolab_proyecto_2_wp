@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { OrderData, personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getStatusBadge, getCategoryName, getOrderNumber, getSubcategoriesArray, getStatusIcon } from "../utils/orderHelpers";
@@ -25,6 +25,28 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
   if (!order) return null;
 
   const needsDocument = order.categoryId && !order.documentoUrl;
+
+  const getDocumentBadge = (order: OrderData) => {
+    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+
+    if (!futureAction || futureAction.tipoAccionFutura !== 'documento') {
+      return null;
+    }
+
+    if (futureAction.estadoAccion !== 'pendiente_documento') {
+      return null;
+    }
+
+    const isUrgent = futureAction.fechaLimite
+      ? (new Date(futureAction.fechaLimite).getTime() - Date.now()) <= (2 * 24 * 60 * 60 * 1000)
+      : false;
+
+    return {
+      label: "Doc. Pendiente",
+      style: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+      isUrgent,
+    };
+  };
 
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,6 +161,21 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
                 {badge.label}
               </span>
+              {(() => {
+                const docBadge = getDocumentBadge(order);
+                if (!docBadge) return null;
+
+                return (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${docBadge.style} ${
+                      docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400 animate-pulse' : ''
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                    {docBadge.label}
+                  </span>
+                );
+              })()}
             </div>
           </div>
 
@@ -215,64 +252,99 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>
           </div>
 
-          {/* Document Upload Section */}
-          {needsDocument && order.status === 'pending' && (
-            <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-800 rounded-lg p-4">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
-                  <FontAwesomeIcon icon={faUpload} className="w-4 h-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">Documento Pendiente</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    Este pedido requiere que subas un documento para completar la solicitud.
-                  </p>
-                </div>
-              </div>
+          {/* Document Upload Section with Future Action */}
+          {(() => {
+            const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
 
-              {documentPreview ? (
-                <div className="space-y-3">
-                  <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
-                    <img src={documentPreview} alt="Preview" className="w-full h-48 object-cover" />
-                    <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
-                      <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+            if (!futureAction || futureAction.tipoAccionFutura !== 'documento' ||
+                futureAction.estadoAccion !== 'pendiente_documento') {
+              return null;
+            }
+
+            const daysRemaining = futureAction.fechaLimite
+              ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+              : null;
+
+            return (
+              <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg">
+                <div className="flex items-start gap-3 mb-3">
+                  <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">
+                      Documento Pendiente
+                    </h4>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
+                      Este pedido requiere que subas un documento para completar la solicitud.
+                    </p>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
+                      {futureAction.descripcionAccion}
+                    </p>
+                    {futureAction.documentoRequerido && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
+                        <strong>Requerido:</strong> {futureAction.documentoRequerido}
+                      </p>
+                    )}
+                    {daysRemaining !== null && (
+                      <p className={`text-sm font-medium mb-3 ${
+                        daysRemaining <= 2
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-orange-600 dark:text-orange-400'
+                      }`}>
+                        {daysRemaining > 0
+                          ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''}`
+                          : daysRemaining === 0
+                          ? 'Vence hoy'
+                          : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? 's' : ''}`
+                        }
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {documentPreview ? (
+                  <div className="space-y-3">
+                    <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                      <img src={documentPreview} alt="Preview" className="w-full h-48 object-cover" />
+                      <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
+                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleUploadDocument}
+                      disabled={uploadingDocument}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {uploadingDocument ? (
+                        <>
+                          <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
+                          <span>Subiendo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
+                          <span>Enviar Documento</span>
+                        </>
+                      )}
                     </button>
                   </div>
-                  <button
-                    onClick={handleUploadDocument}
-                    disabled={uploadingDocument}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {uploadingDocument ? (
-                      <>
-                        <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
-                        <span>Subiendo...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
-                        <span>Enviar Documento</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                  <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-orange-300 dark:border-orange-600 bg-white dark:bg-slate-800 py-4 px-3 hover:bg-orange-50 dark:hover:bg-orange-900/10">
-                    <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-orange-500" />
-                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
-                  </button>
+                ) : (
+                  <div className="flex gap-3">
+                    <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white py-2.5 px-4 transition-colors shadow-sm">
+                      <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
+                      <span className="text-sm font-medium">Tomar Foto</span>
+                    </button>
 
-                  <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
-                  <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-orange-300 dark:border-orange-600 bg-white dark:bg-slate-800 py-4 px-3 hover:bg-orange-50 dark:hover:bg-orange-900/10">
-                    <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-orange-500" />
-                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Archivo</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                    <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white py-2.5 px-4 transition-colors shadow-sm">
+                      <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
+                      <span className="text-sm font-medium">Subir Archivo</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Show uploaded document */}
           {order.documentoUrl && (

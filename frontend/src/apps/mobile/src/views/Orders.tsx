@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes, faBan } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes, faBan, faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
@@ -270,6 +270,28 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setShowDetailModal(true);
   };
 
+  const getDocumentBadge = (order: OrderData) => {
+    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+
+    if (!futureAction || futureAction.tipoAccionFutura !== 'documento') {
+      return null;
+    }
+
+    if (futureAction.estadoAccion !== 'pendiente_documento') {
+      return null;
+    }
+
+    const isUrgent = futureAction.fechaLimite
+      ? (new Date(futureAction.fechaLimite).getTime() - Date.now()) <= (2 * 24 * 60 * 60 * 1000)
+      : false;
+
+    return {
+      label: "Doc. Pendiente",
+      style: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+      isUrgent,
+    };
+  };
+
   const getStatusBg = (status: string) => {
     switch (status) {
       case "delivered":
@@ -410,9 +432,26 @@ export default function Orders({ onNavigate }: OrdersProps) {
                         <div className="flex items-center gap-2">
                           <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
                         </div>
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
-                          {getStatusIcon(order.status)}
-                          <span className={`text-xs font-medium ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
+                            {getStatusIcon(order.status)}
+                            <span className={`text-xs font-medium ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
+                          </div>
+                          {(() => {
+                            const docBadge = getDocumentBadge(order);
+                            if (!docBadge) return null;
+
+                            return (
+                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 bg-orange-100 dark:bg-orange-900/30 ${
+                                docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400' : ''
+                              }`}>
+                                <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                                <span className="text-xs font-medium text-orange-800 dark:text-orange-400">
+                                  {docBadge.label}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                       {/* Tipos */}
