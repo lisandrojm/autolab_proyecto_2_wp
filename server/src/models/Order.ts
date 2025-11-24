@@ -27,7 +27,7 @@ export interface IOrder extends Document {
 
 const orderSchema = new Schema<IOrder>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     orderNumber: { type: String, trim: true, uppercase: true, index: true },
     description: { type: String, required: true, trim: true },

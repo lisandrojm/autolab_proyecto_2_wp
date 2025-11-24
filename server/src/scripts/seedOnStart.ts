@@ -1088,7 +1088,7 @@ export async function seedOnStart() {
           tenantId,
           orderId: order9._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: "vencimientoInterno",
+          tipoAccionFutura: "sinVencimiento",
           descripcionAccion: "El área de RRHH debe evaluar la solicitud y definir si es viable el cambio de horario",
           responsableAccion: "area_interna",
           quienDefineVencimiento: "area_interna",
