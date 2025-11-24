@@ -241,6 +241,11 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
           return;
         }
       }
+
+      // Sincronizar dynamicValue a amount para categorías de dinero
+      if (category.categoryType === "dinero" && typeof data.dynamicValue === 'number') {
+        data.amount = data.dynamicValue;
+      }
     }
 
     const order = new Order({

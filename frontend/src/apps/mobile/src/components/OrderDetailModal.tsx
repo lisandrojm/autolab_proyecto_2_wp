@@ -66,6 +66,14 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
   const badge = getStatusBadge(order.status);
 
+  const getMonto = (): number | null => {
+    if (order.amount) return order.amount;
+    if (typeof order.dynamicValue === 'number') return order.dynamicValue;
+    return null;
+  };
+
+  const monto = getMonto();
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Detalles del Pedido" size="md" footer={renderFooter()}>
@@ -119,10 +127,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               </div>
             </div>
             <div className="flex gap-10">
-              {order.amount && (
+              {monto !== null && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">$ {order.amount.toFixed(2)}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">$ {monto.toLocaleString('es-AR')}</p>
                 </div>
               )}
               {order.dynamicValue?.fechaDesde && (
