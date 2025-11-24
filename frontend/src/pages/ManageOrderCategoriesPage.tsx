@@ -42,11 +42,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       </td>
       <td className="py-3 px-4">
         <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
-        {category.categoryType === 'dinero' && category.montoMaximo && (
-          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            Max: ${category.montoMaximo.toLocaleString('es-ES')}
-          </div>
-        )}
+        {category.categoryType === "dinero" && category.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${category.montoMaximo.toLocaleString("es-ES")}</div>}
       </td>
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
@@ -54,6 +50,9 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
 
       <td className="py-3 px-4">
         <div className="text-sm text-gray-600 dark:text-gray-400">{category.description || "-"}</div>
+      </td>
+      <td className="py-3 px-4">
+        <div className="text-sm text-gray-600 dark:text-gray-400">{category.informacion || "-"}</div>
       </td>
       <td className="py-3 px-4 text-center">
         <button onClick={() => onToggleActive(category)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${category.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
@@ -239,7 +238,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         }
       }
 
-      const validSubtipos = formData.subtipos.filter(subtipo => subtipo.label.trim() !== "");
+      const validSubtipos = formData.subtipos.filter((subtipo) => subtipo.label.trim() !== "");
 
       const payload: any = {
         name: formData.name,
@@ -427,6 +426,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Descripción</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Información</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-48">Acciones</th>
                       </tr>

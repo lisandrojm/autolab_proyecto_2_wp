@@ -94,8 +94,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
         return (
           <div>
-            2xl
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto ($) *</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto ($)</label>
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 mb-3">
               <div className="text-center mb-4">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">$ {currentMonto.toLocaleString("es-ES")}</div>
