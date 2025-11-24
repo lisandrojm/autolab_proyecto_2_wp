@@ -17,7 +17,6 @@ export const OrdersPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderData | null>(null);
   const [formData, setFormData] = useState({
-    title: "",
     description: "",
     category: "",
     amount: undefined as number | undefined,
@@ -117,7 +116,6 @@ export const OrdersPage: React.FC = () => {
     }
     setEditingOrder(order);
     setFormData({
-      title: order.title,
       description: order.description,
       category: order.category,
       amount: order.amount,
@@ -128,7 +126,7 @@ export const OrdersPage: React.FC = () => {
 
   const openCreate = () => {
     setEditingOrder(null);
-    setFormData({ title: "", description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined, dynamicValue: undefined });
+    setFormData({ description: "", category: categories.length > 0 ? categories[0].name : "", amount: undefined, dynamicValue: undefined });
     setShowModal(true);
   };
 
@@ -291,8 +289,8 @@ export const OrdersPage: React.FC = () => {
               <Card
                 key={order._id}
                 header={{
-                  title: order.title,
-                  subtitle: getCategoryLabel(order.category),
+                  title: `${getCategoryLabel(order.category)}${order.subcategories && order.subcategories.length > 0 ? ' - ' + order.subcategories.join(', ') : ''}`,
+                  subtitle: `Pedido #${order.orderNumber}`,
                   icon: faClipboardList,
                   badges: [{ text: badge.text, variant: badge.variant }],
                 }}

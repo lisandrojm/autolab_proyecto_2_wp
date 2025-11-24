@@ -22,7 +22,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
   const handleCancelOrder = async () => {
     if (!order || !onStatusUpdate) return;
 
-    const result = await sweetAlert.confirm("¿Cancelar este pedido?", `¿Estás seguro de cancelar el pedido "${order.title}"?`, "Sí, cancelar", "No cancelar");
+    const categoryName = getCategoryName(order);
+    const subcategoryText = getSubcategoriesArray(order).length > 0 ? ` - ${getSubcategoriesArray(order).join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    const result = await sweetAlert.confirm("¿Cancelar este pedido?", `¿Estás seguro de cancelar el pedido "${orderDisplayName}"?`, "Sí, cancelar", "No cancelar");
 
     if (!result.isConfirmed) return;
 
@@ -136,7 +140,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               {order.photoUrl && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
-                  <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
+                  <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt="Imagen del pedido" className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
                 </div>
               )}
             </div>

@@ -166,7 +166,6 @@ export interface OrderData {
     email: string;
   };
   orderNumber: string;
-  title: string;
   description: string;
   category: string;
   categoryId?: string;

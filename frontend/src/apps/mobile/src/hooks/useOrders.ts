@@ -21,7 +21,6 @@ export const useOrders = () => {
   };
 
   const createOrder = async (orderData: {
-    title: string;
     description: string;
     category?: string;
     categoryId?: string;

@@ -177,7 +177,11 @@ export const ManageOrdersPage: React.FC = () => {
   };
 
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch = !searchTerm || order.title.toLowerCase().includes(searchTerm.toLowerCase()) || order.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const categoryName = typeof order.categoryId === 'object' && order.categoryId?.name ? order.categoryId.name : order.category;
+    const subcategoryText = order.subcategories?.join(", ") || "";
+    const orderDisplayName = `${categoryName} ${subcategoryText}`.toLowerCase();
+
+    const matchesSearch = !searchTerm || orderDisplayName.includes(searchTerm.toLowerCase()) || order.description.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
 

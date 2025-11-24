@@ -65,7 +65,6 @@ const uploadOrderImage = multer({
 }).single("photo");
 
 const createOrderSchema = z.object({
-  title: z.string().min(1),
   description: z.string().min(1),
   category: z.string().default("other"),
   categoryId: z.string().optional(),
@@ -80,7 +79,6 @@ const createOrderSchema = z.object({
 });
 
 const updateOrderSchema = z.object({
-  title: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
   category: z.string().optional(),
   amount: z.number().min(0).optional(),
@@ -308,11 +306,15 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
+    const categoryName = data.categoryId ? (await OrderCategory.findById(data.categoryId))?.name || data.category : data.category;
+    const subcategoryText = data.subcategories && data.subcategories.length > 0 ? ` - ${data.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
     await ActivityLog.create({
       tenantId: req.tenantObjectId,
       userId,
       action: "order_created",
-      description: `Pedido creado: ${order.title}`,
+      description: `Pedido creado: ${orderDisplayName}`,
       entityType: "Order",
       entityId: order._id,
     });
@@ -387,11 +389,15 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
     await order.save();
 
     if (req.body.status === "cancelled") {
+      const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+      const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+      const orderDisplayName = `${categoryName}${subcategoryText}`;
+
       await ActivityLog.create({
         tenantId: req.tenantObjectId,
         userId,
         action: "order_cancelled",
-        description: `Pedido cancelado: ${order.title}`,
+        description: `Pedido cancelado: ${orderDisplayName}`,
         entityType: "Order",
         entityId: order._id,
       });

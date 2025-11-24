@@ -11,6 +11,7 @@ import { CalendarEvent } from "../models/CalendarEvent.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
+import { OrderCategory } from "../models/OrderCategory.js";
 import { VacationRequest } from "../models/VacationRequest.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -318,11 +319,15 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
 
     await order.save();
 
+    const categoryName = data.categoryId ? (await OrderCategory.findById(data.categoryId))?.name || data.category : data.category;
+    const subcategoryText = data.subcategories && data.subcategories.length > 0 ? ` - ${data.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
     await ActivityLog.create({
       tenantId: req.tenantObjectId,
       userId,
       action: "order_created",
-      description: `Pedido creado: ${order.title}`,
+      description: `Pedido creado: ${orderDisplayName}`,
       entityType: "Order",
       entityId: order._id,
     });
@@ -395,11 +400,15 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     await order.save();
 
     if (req.body.status === "cancelled") {
+      const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+      const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+      const orderDisplayName = `${categoryName}${subcategoryText}`;
+
       await ActivityLog.create({
         tenantId: req.tenantObjectId,
         userId,
         action: "order_cancelled",
-        description: `Pedido cancelado: ${order.title}`,
+        description: `Pedido cancelado: ${orderDisplayName}`,
         entityType: "Order",
         entityId: order._id,
       });

@@ -18,7 +18,6 @@ interface OrdersProps {
 export default function Orders({ onNavigate }: OrdersProps) {
   const { orders, loading, error, createOrder, deleteOrder, updateOrderStatus } = useOrders();
   const [showForm, setShowForm] = useState(false);
-  const [product, setProduct] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [categories, setCategories] = useState<OrderCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -145,7 +144,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
       }
 
       await createOrder({
-        title: product,
         description,
         category: selectedCategory?.name || "other",
         categoryId: selectedCategoryId,
@@ -159,7 +157,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
       });
       await sweetAlert.success("¡Pedido creado!", "Tu pedido ha sido enviado correctamente");
       setShowForm(false);
-      setProduct("");
       setDescription("");
       setSubcategories("");
 
@@ -298,11 +295,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 ) : (
                   <div className="w-full rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Título del pedido *</label>
-                <input type="text" value={product} onChange={(e) => setProduct(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Necesito ..." />
               </div>
 
               <div>

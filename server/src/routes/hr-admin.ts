@@ -4,6 +4,7 @@ import { User } from "../models/User.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
 import { Order } from "../models/Order.js";
+import { OrderCategory } from "../models/OrderCategory.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { HRDocument } from "../models/Document.js";
 import { Notification } from "../models/Notification.js";
@@ -380,12 +381,16 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
 
     await order.save();
 
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
     await Notification.create({
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
       title: "Order Approved",
-      message: `Your order "${order.title}" has been approved.`,
+      message: `Your order "${orderDisplayName}" has been approved.`,
       linkUrl: `/orders/${order._id}`,
     });
 
@@ -393,7 +398,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_approved",
-      description: `Order "${order.title}" approved by manager`,
+      description: `Order "${orderDisplayName}" approved by manager`,
       entityType: "Order",
       entityId: order._id,
     });
@@ -426,12 +431,16 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
 
     await order.save();
 
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
     await Notification.create({
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
       title: "Order Rejected",
-      message: `Your order "${order.title}" has been rejected.`,
+      message: `Your order "${orderDisplayName}" has been rejected.`,
       linkUrl: `/orders/${order._id}`,
     });
 
@@ -464,12 +473,16 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
 
     await order.save();
 
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
     await Notification.create({
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
       title: "Order Delivered",
-      message: `Your order "${order.title}" has been delivered.`,
+      message: `Your order "${orderDisplayName}" has been delivered.`,
       linkUrl: `/orders/${order._id}`,
     });
 
