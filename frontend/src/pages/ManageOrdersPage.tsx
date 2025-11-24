@@ -111,15 +111,15 @@ export const ManageOrdersPage: React.FC = () => {
       const docCounts = { total: 0, normal: 0, urgent: 0, overdue: 0 };
 
       data.orders.forEach((order) => {
-        const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+        const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
         const badgeStyle = getDocumentBadgeStyle(futureAction);
 
         if (badgeStyle) {
           docCounts.total++;
 
-          if (badgeStyle.label === 'Doc. Vencido') {
+          if (badgeStyle.label === "Doc. Vencido") {
             docCounts.overdue++;
-          } else if (badgeStyle.borderClass.includes('border-orange')) {
+          } else if (badgeStyle.borderClass.includes("border-orange")) {
             docCounts.urgent++;
           } else {
             docCounts.normal++;
@@ -245,7 +245,6 @@ export const ManageOrdersPage: React.FC = () => {
     return { style: styles[status] || styles.pending, label: labels[status] || status };
   };
 
-
   const getCategoryLabel = (category: string) => category;
 
   const getCategoryTypeName = (categoryType?: CategoryType): string => {
@@ -354,7 +353,7 @@ export const ManageOrdersPage: React.FC = () => {
 
   const getCardBadges = (order: Order) => {
     const statusBadge = getStatusBadge(order.status);
-    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+    const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
     const docBadgeStyle = getDocumentBadgeStyle(futureAction);
 
     const badges = [
@@ -507,7 +506,7 @@ export const ManageOrdersPage: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="flex flex-wrap gap-4">
           {[
             { label: "Pendientes", value: stats.pending, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
             { label: "Aprobados", value: stats.approved, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
@@ -516,24 +515,11 @@ export const ManageOrdersPage: React.FC = () => {
             { label: "Cancelados", value: stats.cancelled, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
             { label: "Documentos", value: docStats.total, color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" },
           ].map((stat, index) => (
-            <div
-              key={index}
-              className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${
-                stat.label === 'Documentos'
-                  ? 'cursor-pointer hover:ring-2 hover:ring-orange-300 dark:hover:ring-orange-600 transition-all'
-                  : ''
-              } ${
-                stat.label === 'Documentos' && docStats.overdue > 0
-                  ? 'ring-2 ring-red-500 dark:ring-red-400'
-                  : ''
-              }`}
-              onClick={() => stat.label === 'Documentos' && setShowDocModal(true)}
-              title={stat.label === 'Documentos' && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}
-            >
+            <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${stat.label === "Documentos" ? "cursor-pointer hover:ring-orange-300 dark:hover:ring-orange-600 transition-all" : ""} ${stat.label === "Documentos" && docStats.overdue > 0 ? "ring-red-500 dark:ring-red-400" : ""}`} onClick={() => stat.label === "Documentos" && setShowDocModal(true)} title={stat.label === "Documentos" && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}>
               <p className="text-sm font-medium opacity-80">{stat.label}</p>
               <p className="text-lg font-bold">{stat.value}</p>
-              {stat.label === 'Documentos' && docStats.overdue > 0 && (
-                <span className="animate-pulse text-red-500" title="Hay documentos vencidos">
+              {stat.label === "Documentos" && docStats.overdue > 0 && (
+                <span className="text-red-500" title="Hay documentos vencidos">
                   <FontAwesomeIcon icon={faFileArrowUp} className="h-4 w-4" />
                 </span>
               )}
@@ -672,7 +658,7 @@ export const ManageOrdersPage: React.FC = () => {
                             {/* --- DOCUMENTO --- */}
                             <td className="py-3 px-4">
                               {(() => {
-                                const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+                                const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
                                 const badgeStyle = getDocumentBadgeStyle(futureAction);
 
                                 if (!badgeStyle) {
@@ -680,9 +666,7 @@ export const ManageOrdersPage: React.FC = () => {
                                 }
 
                                 return (
-                                  <span
-                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}
-                                  >
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
                                     <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                                     {badgeStyle.label}
                                   </span>
@@ -763,17 +747,13 @@ export const ManageOrdersPage: React.FC = () => {
                   {getStatusBadge(selectedOrder.status).label}
                 </span>
                 {(() => {
-                  const futureAction = typeof selectedOrder.futureActionId === 'object' ? selectedOrder.futureActionId : null;
+                  const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
                   const badgeStyle = getDocumentBadgeStyle(futureAction);
 
                   if (!badgeStyle) return null;
 
                   return (
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${
-                        badgeStyle.shouldAnimate ? 'animate-pulse' : ''
-                      }`}
-                    >
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
                       <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                       {badgeStyle.label}
                     </span>
@@ -854,57 +834,31 @@ export const ManageOrdersPage: React.FC = () => {
 
             {/* Sección de Documento Pendiente */}
             {(() => {
-              const futureAction = typeof selectedOrder.futureActionId === 'object'
-                ? selectedOrder.futureActionId
-                : null;
+              const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
 
-              if (!futureAction || futureAction.tipoAccionFutura !== 'documento' ||
-                  futureAction.estadoAccion !== 'pendiente_documento') {
+              if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "pendiente_documento") {
                 return null;
               }
 
-              const daysRemaining = futureAction.fechaLimite
-                ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
-                : null;
+              const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
               return (
                 <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg">
                   <div className="flex items-start gap-3">
                     <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">
-                        Documento Pendiente
-                      </h4>
-                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
-                        Este pedido requiere que el usuario presente un documento para completar la solicitud.
-                      </p>
-                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
-                        {futureAction.descripcionAccion}
-                      </p>
+                      <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">Documento Pendiente</h4>
+                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que el usuario presente un documento para completar la solicitud.</p>
+                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p>
                       {futureAction.documentoRequerido && (
                         <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
                           <strong>Documento requerido:</strong> {futureAction.documentoRequerido}
                         </p>
                       )}
-                      {daysRemaining !== null && (
-                        <p className={`text-sm font-medium mb-3 ${
-                          daysRemaining <= 2
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-orange-600 dark:text-orange-400'
-                        }`}>
-                          {daysRemaining > 0
-                            ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} para presentar el documento`
-                            : daysRemaining === 0
-                            ? 'El plazo vence hoy'
-                            : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? 's' : ''}`
-                          }
-                        </p>
-                      )}
+                      {daysRemaining !== null && <p className={`text-sm font-medium mb-3 ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""} para presentar el documento` : daysRemaining === 0 ? "El plazo vence hoy" : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
 
                       <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs text-blue-700 dark:text-blue-300">
-                          ℹ️ El usuario puede subir el documento desde su aplicación móvil
-                        </p>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">ℹ️ El usuario puede subir el documento desde su aplicación móvil</p>
                       </div>
                     </div>
                   </div>
@@ -930,70 +884,39 @@ export const ManageOrdersPage: React.FC = () => {
         )}
       </Modal>
 
-      <Modal
-        isOpen={showDocModal}
-        onClose={() => setShowDocModal(false)}
-        title="Estado de Documentos"
-      >
+      <Modal isOpen={showDocModal} onClose={() => setShowDocModal(false)} title="Estado de Documentos">
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 dark:border-orange-400">
             <div className="flex items-center gap-3">
-              <FontAwesomeIcon
-                icon={faFileArrowUp}
-                className="h-5 w-5 text-green-600 dark:text-green-400"
-              />
+              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">
-                  Documentos Normales
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Más de 3 días restantes
-                </p>
+                <p className="font-semibold text-gray-900 dark:text-orange-400">Documentos Pendientes</p>
+                <p className="text-xs text-gray-600 dark:text-orange-400">Más de 3 días restantes</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {docStats.normal}
-            </span>
+            <span className="text-2xl font-bold text-green-600 dark:text-orange-400">{docStats.normal}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-400 animate-pulse">
             <div className="flex items-center gap-3">
-              <FontAwesomeIcon
-                icon={faFileArrowUp}
-                className="h-5 w-5 text-orange-600 dark:text-orange-400"
-              />
+              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">
-                  Documentos Urgentes
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  3 días o menos restantes
-                </p>
+                <p className="font-semibold text-gray-900 dark:text-orange-400">Documentos Urgentes</p>
+                <p className="text-xs text-gray-600 dark:text-orange-400">3 días o menos restantes</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              {docStats.urgent}
-            </span>
+            <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">{docStats.urgent}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-400">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-500 dark:border-red-400">
             <div className="flex items-center gap-3">
-              <FontAwesomeIcon
-                icon={faFileArrowUp}
-                className="h-5 w-5 text-red-600 dark:text-red-400"
-              />
+              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-red-600 dark:text-red-400" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">
-                  Documentos Vencidos
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Fecha límite superada
-                </p>
+                <p className="font-semibold text-gray-900 dark:text-red-400">Documentos Vencidos</p>
+                <p className="text-xs text-gray-600 dark:text-red-400">Fecha límite superada</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-red-600 dark:text-red-400 animate-pulse">
-              {docStats.overdue}
-            </span>
+            <span className="text-2xl font-bold text-red-600 dark:text-red-400 animate-pulse">{docStats.overdue}</span>
           </div>
 
           {docStats.total === 0 && (
