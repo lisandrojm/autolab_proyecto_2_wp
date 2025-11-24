@@ -428,7 +428,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
               {categories.length === 0 && (
                 <div className="text-center py-12">
                   <FontAwesomeIcon icon={faList} className="h-16 w-16 text-gray-400 mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">No hay los tipos de pedido registradas</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">No hay los tipos de pedido registrados</p>
                   <button onClick={openCreateModal} className="btn-primary">
                     Crear Primer Tipo de Pedido
                   </button>
