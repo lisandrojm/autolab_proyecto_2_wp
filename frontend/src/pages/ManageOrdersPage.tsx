@@ -30,10 +30,12 @@ export const ManageOrdersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stats, setStats] = useState<any>({ pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
+  const [docStats, setDocStats] = useState({ total: 0, normal: 0, urgent: 0, overdue: 0 });
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showDocModal, setShowDocModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
@@ -105,6 +107,27 @@ export const ManageOrdersPage: React.FC = () => {
         { pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
       );
       setStats(newStats);
+
+      const docCounts = { total: 0, normal: 0, urgent: 0, overdue: 0 };
+
+      data.orders.forEach((order) => {
+        const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+        const badgeStyle = getDocumentBadgeStyle(futureAction);
+
+        if (badgeStyle) {
+          docCounts.total++;
+
+          if (badgeStyle.label === 'Doc. Vencido') {
+            docCounts.overdue++;
+          } else if (badgeStyle.borderClass.includes('border-orange')) {
+            docCounts.urgent++;
+          } else {
+            docCounts.normal++;
+          }
+        }
+      });
+
+      setDocStats(docCounts);
     } catch (error) {
       console.error("Error loading orders:", error);
     } finally {
@@ -484,17 +507,36 @@ export const ManageOrdersPage: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
             { label: "Pendientes", value: stats.pending, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
             { label: "Aprobados", value: stats.approved, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
             { label: "Rechazados", value: stats.rejected, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
             { label: "Entregados", value: stats.delivered, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
             { label: "Cancelados", value: stats.cancelled, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
+            { label: "Documentos", value: docStats.total, color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" },
           ].map((stat, index) => (
-            <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 w- ${stat.color}`}>
+            <div
+              key={index}
+              className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${
+                stat.label === 'Documentos'
+                  ? 'cursor-pointer hover:ring-2 hover:ring-orange-300 dark:hover:ring-orange-600 transition-all'
+                  : ''
+              } ${
+                stat.label === 'Documentos' && docStats.overdue > 0
+                  ? 'ring-2 ring-red-500 dark:ring-red-400'
+                  : ''
+              }`}
+              onClick={() => stat.label === 'Documentos' && setShowDocModal(true)}
+              title={stat.label === 'Documentos' && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}
+            >
               <p className="text-sm font-medium opacity-80">{stat.label}</p>
               <p className="text-lg font-bold">{stat.value}</p>
+              {stat.label === 'Documentos' && docStats.overdue > 0 && (
+                <span className="animate-pulse text-red-500" title="Hay documentos vencidos">
+                  <FontAwesomeIcon icon={faFileArrowUp} className="h-4 w-4" />
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -886,6 +928,81 @@ export const ManageOrdersPage: React.FC = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showDocModal}
+        onClose={() => setShowDocModal(false)}
+        title="Estado de Documentos"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3">
+              <FontAwesomeIcon
+                icon={faFileArrowUp}
+                className="h-5 w-5 text-green-600 dark:text-green-400"
+              />
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  Documentos Normales
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Más de 3 días restantes
+                </p>
+              </div>
+            </div>
+            <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {docStats.normal}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+            <div className="flex items-center gap-3">
+              <FontAwesomeIcon
+                icon={faFileArrowUp}
+                className="h-5 w-5 text-orange-600 dark:text-orange-400"
+              />
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  Documentos Urgentes
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  3 días o menos restantes
+                </p>
+              </div>
+            </div>
+            <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {docStats.urgent}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-400">
+            <div className="flex items-center gap-3">
+              <FontAwesomeIcon
+                icon={faFileArrowUp}
+                className="h-5 w-5 text-red-600 dark:text-red-400"
+              />
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  Documentos Vencidos
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Fecha límite superada
+                </p>
+              </div>
+            </div>
+            <span className="text-2xl font-bold text-red-600 dark:text-red-400 animate-pulse">
+              {docStats.overdue}
+            </span>
+          </div>
+
+          {docStats.total === 0 && (
+            <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+              <FontAwesomeIcon icon={faCheckCircle} className="h-12 w-12 mb-2" />
+              <p className="font-medium">No hay documentos pendientes</p>
+            </div>
+          )}
+        </div>
       </Modal>
     </PageLayout>
   );
