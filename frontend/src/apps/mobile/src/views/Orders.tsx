@@ -9,7 +9,7 @@ import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
 import { sweetAlert } from "../utils/sweetAlert";
 import OrderDetailModal from "../components/OrderDetailModal";
 import { OrderData } from "../../../../api/personnel";
-import { getOrderNumber } from "../utils/orderHelpers";
+import { getOrderNumber, getCategoryName, getSubcategoriesArray } from "../utils/orderHelpers";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -368,7 +368,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     <div className="flex-shrink-0">
                       <img
                         src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`}
-                        alt={order.title}
+                        alt="Imagen del pedido"
                         className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -380,7 +380,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0 mr-2">
-                        <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{order.title}</p>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
+                          {getSubcategoriesArray(order).map((subcategory, index) => (
+                            <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                              {subcategory}
+                            </span>
+                          ))}
+                        </div>
                         <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{order.description}</p>
                       </div>
                       <div className="flex gap-2 items-center">
