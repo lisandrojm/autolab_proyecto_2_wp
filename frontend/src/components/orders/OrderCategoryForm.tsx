@@ -101,13 +101,18 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción (opcional)</label>
+          <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Describe el tipo de pedido..." />
+        </div>
+
+        <div>
           <div className="flex items-center gap-2 mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Información (opcional)</label>
-            <button type="button" onClick={() => setShowInformacionInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Información de Confirmación (opcional)</label>
+            <button type="button" onClick={() => setShowInformacionInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
-          <textarea value={formData.informacion} onChange={(e) => setFormData({ ...formData, informacion: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Información que se mostrará al usuario al finalizar el formulario..." />
+          <textarea value={formData.informacion} onChange={(e) => setFormData({ ...formData, informacion: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Texto de confirmación que se mostrará al usuario antes de enviar el pedido..." />
         </div>
 
         <div>
