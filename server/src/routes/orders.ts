@@ -384,7 +384,9 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
             break;
         }
 
-        await FutureAction.create(futureActionData);
+        const futureAction = await FutureAction.create(futureActionData);
+        order.futureActionId = futureAction._id;
+        await order.save();
       }
     }
 

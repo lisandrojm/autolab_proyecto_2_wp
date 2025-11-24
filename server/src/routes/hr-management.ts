@@ -332,7 +332,7 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
       entityId: order._id,
     });
 
-    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email");
+    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId").populate("futureActionId");
 
     res.status(201).json(populatedOrder);
   } catch (error) {
@@ -358,19 +358,21 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     }
 
     const userId = req.user!.userId;
+    const userRole = req.user!.role;
     const isOwner = order.userId.toString() === userId;
+    const isAdmin = userRole === "admin" || userRole === "superadmin";
 
-    if (req.body.status && !isOwner) {
+    if (req.body.status && !isOwner && !isAdmin) {
       res.status(403).json({ error: "No tienes permisos para modificar este pedido" });
       return;
     }
 
-    if (req.body.status === "cancelled" && order.status !== "pending") {
+    if (req.body.status === "cancelled" && order.status !== "pending" && !isAdmin) {
       res.status(400).json({ error: "Solo puedes cancelar pedidos en estado pendiente" });
       return;
     }
 
-    if (req.body.status && req.body.status !== "cancelled" && isOwner) {
+    if (req.body.status && req.body.status !== "cancelled" && isOwner && !isAdmin) {
       res.status(403).json({ error: "Solo puedes cancelar tus propios pedidos. Otros cambios de estado están restringidos" });
       return;
     }
@@ -414,7 +416,7 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
       });
     }
 
-    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email");
+    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId").populate("futureActionId");
 
     res.json(populatedOrder);
   } catch (error) {
