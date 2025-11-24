@@ -81,6 +81,27 @@ export interface HRDocument {
   updatedAt: string;
 }
 
+export interface FutureAction {
+  _id: string;
+  tenantId: string;
+  orderId: string;
+  requiereAccionFutura: boolean;
+  tipoAccionFutura: "documento" | "condicion" | "accion" | "presentacionDocumento" | "vencimientoSistema" | "vencimientoInterno" | "sinVencimiento";
+  deadlineMode?: "plazoDias" | "fechaEspecifica" | "none";
+  plazoDias?: number;
+  fechaLimite?: string;
+  descripcionAccion: string;
+  responsableAccion: "usuario" | "area_interna";
+  documentoRequerido?: string;
+  documentoUrl?: string;
+  quienDefineVencimiento?: "sistema" | "area_interna";
+  estadoAccion: "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
+  fechaCreacionAccion: string;
+  fechaCumplimiento?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Order {
   _id: string;
   tenantId: string;
@@ -100,6 +121,7 @@ export interface Order {
   actionCompleted?: boolean;
   dynamicValue?: any;
   requiereAccionFutura?: boolean;
+  futureActionId?: FutureAction | string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;

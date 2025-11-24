@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -221,6 +221,28 @@ export const ManageOrdersPage: React.FC = () => {
     return { style: styles[status] || styles.pending, label: labels[status] || status };
   };
 
+  const getDocumentBadge = (order: Order) => {
+    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+
+    if (!futureAction || futureAction.tipoAccionFutura !== 'documento') {
+      return null;
+    }
+
+    if (futureAction.estadoAccion !== 'pendiente_documento') {
+      return null;
+    }
+
+    const isUrgent = futureAction.fechaLimite
+      ? (new Date(futureAction.fechaLimite).getTime() - Date.now()) <= (2 * 24 * 60 * 60 * 1000)
+      : false;
+
+    return {
+      label: "Doc. Pendiente",
+      style: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+      isUrgent,
+    };
+  };
+
   const getCategoryLabel = (category: string) => category;
 
   const getCategoryTypeName = (categoryType?: CategoryType): string => {
@@ -329,10 +351,10 @@ export const ManageOrdersPage: React.FC = () => {
 
   const getCardBadges = (order: Order) => {
     const statusBadge = getStatusBadge(order.status);
+    const docBadge = getDocumentBadge(order);
 
-    return [
+    const badges = [
       {
-        // Nro de pedido — mismo estilo que pasaste
         text: getOrderNumber(order),
         className: "text-xs bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400 px-2 py-1 rounded",
       },
@@ -342,6 +364,16 @@ export const ManageOrdersPage: React.FC = () => {
         icon: getStatusIcon(order.status),
       },
     ];
+
+    if (docBadge) {
+      badges.push({
+        text: docBadge.label,
+        className: `${docBadge.style} ${docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400' : ''}`,
+        icon: faFileArrowUp,
+      });
+    }
+
+    return badges;
   };
 
   const getAvatarFallback = (user: any): string => {
@@ -607,10 +639,27 @@ export const ManageOrdersPage: React.FC = () => {
 
                             {/* --- ESTADO --- */}
                             <td className="py-3 px-4">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
-                                <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
-                                {badge.label}
-                              </span>
+                              <div className="flex gap-2 flex-wrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
+                                  <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
+                                  {badge.label}
+                                </span>
+                                {(() => {
+                                  const docBadge = getDocumentBadge(order);
+                                  if (!docBadge) return null;
+
+                                  return (
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${docBadge.style} ${
+                                        docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400' : ''
+                                      }`}
+                                    >
+                                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                                      {docBadge.label}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                             </td>
 
                             {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
@@ -685,6 +734,21 @@ export const ManageOrdersPage: React.FC = () => {
                   <FontAwesomeIcon icon={getStatusIcon(selectedOrder.status)} className="h-3 w-3" />
                   {getStatusBadge(selectedOrder.status).label}
                 </span>
+                {(() => {
+                  const docBadge = getDocumentBadge(selectedOrder);
+                  if (!docBadge) return null;
+
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${docBadge.style} ${
+                        docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400 animate-pulse' : ''
+                      }`}
+                    >
+                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                      {docBadge.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -757,6 +821,71 @@ export const ManageOrdersPage: React.FC = () => {
               </div>
               <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
             </div>
+
+            {/* Sección de Documento Pendiente */}
+            {(() => {
+              const futureAction = typeof selectedOrder.futureActionId === 'object'
+                ? selectedOrder.futureActionId
+                : null;
+
+              if (!futureAction || futureAction.tipoAccionFutura !== 'documento' ||
+                  futureAction.estadoAccion !== 'pendiente_documento') {
+                return null;
+              }
+
+              const daysRemaining = futureAction.fechaLimite
+                ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+                : null;
+
+              return (
+                <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">
+                        Documento Pendiente
+                      </h4>
+                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
+                        Este pedido requiere que subas un documento para completar la solicitud.
+                      </p>
+                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
+                        {futureAction.descripcionAccion}
+                      </p>
+                      {futureAction.documentoRequerido && (
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
+                          <strong>Requerido:</strong> {futureAction.documentoRequerido}
+                        </p>
+                      )}
+                      {daysRemaining !== null && (
+                        <p className={`text-sm font-medium ${
+                          daysRemaining <= 2
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-orange-600 dark:text-orange-400'
+                        }`}>
+                          {daysRemaining > 0
+                            ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''}`
+                            : daysRemaining === 0
+                            ? 'Vence hoy'
+                            : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? 's' : ''}`
+                          }
+                        </p>
+                      )}
+
+                      <div className="mt-4 flex gap-3">
+                        <button className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm transition-colors">
+                          <FontAwesomeIcon icon={faCamera} />
+                          Tomar Foto
+                        </button>
+                        <button className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm transition-colors">
+                          <FontAwesomeIcon icon={faUpload} />
+                          Subir Archivo
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
               <div>
