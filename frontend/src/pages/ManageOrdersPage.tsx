@@ -9,6 +9,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
 import { Modal } from "../components/ui/Modal";
 import { Card } from "../components/ui/Card";
+import { getDocumentBadgeStyle } from "../utils/documentBadgeHelper";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -221,27 +222,6 @@ export const ManageOrdersPage: React.FC = () => {
     return { style: styles[status] || styles.pending, label: labels[status] || status };
   };
 
-  const getDocumentBadge = (order: Order) => {
-    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
-
-    if (!futureAction || futureAction.tipoAccionFutura !== 'documento') {
-      return null;
-    }
-
-    if (futureAction.estadoAccion !== 'pendiente_documento') {
-      return null;
-    }
-
-    const isUrgent = futureAction.fechaLimite
-      ? (new Date(futureAction.fechaLimite).getTime() - Date.now()) <= (2 * 24 * 60 * 60 * 1000)
-      : false;
-
-    return {
-      label: "Doc. Pendiente",
-      style: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-      isUrgent,
-    };
-  };
 
   const getCategoryLabel = (category: string) => category;
 
@@ -351,7 +331,8 @@ export const ManageOrdersPage: React.FC = () => {
 
   const getCardBadges = (order: Order) => {
     const statusBadge = getStatusBadge(order.status);
-    const docBadge = getDocumentBadge(order);
+    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+    const docBadgeStyle = getDocumentBadgeStyle(futureAction);
 
     const badges = [
       {
@@ -365,10 +346,10 @@ export const ManageOrdersPage: React.FC = () => {
       },
     ];
 
-    if (docBadge) {
+    if (docBadgeStyle) {
       badges.push({
-        text: docBadge.label,
-        className: `${docBadge.style} ${docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400' : ''}`,
+        text: docBadgeStyle.label,
+        className: `${docBadgeStyle.bgClass} ${docBadgeStyle.textClass} ${docBadgeStyle.borderClass}`,
         icon: faFileArrowUp,
       });
     }
@@ -645,17 +626,17 @@ export const ManageOrdersPage: React.FC = () => {
                                   {badge.label}
                                 </span>
                                 {(() => {
-                                  const docBadge = getDocumentBadge(order);
-                                  if (!docBadge) return null;
+                                  const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+                                  const badgeStyle = getDocumentBadgeStyle(futureAction);
+
+                                  if (!badgeStyle) return null;
 
                                   return (
                                     <span
-                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${docBadge.style} ${
-                                        docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400' : ''
-                                      }`}
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}
                                     >
                                       <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                                      {docBadge.label}
+                                      {badgeStyle.label}
                                     </span>
                                   );
                                 })()}
@@ -735,17 +716,19 @@ export const ManageOrdersPage: React.FC = () => {
                   {getStatusBadge(selectedOrder.status).label}
                 </span>
                 {(() => {
-                  const docBadge = getDocumentBadge(selectedOrder);
-                  if (!docBadge) return null;
+                  const futureAction = typeof selectedOrder.futureActionId === 'object' ? selectedOrder.futureActionId : null;
+                  const badgeStyle = getDocumentBadgeStyle(futureAction);
+
+                  if (!badgeStyle) return null;
 
                   return (
                     <span
-                      className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${docBadge.style} ${
-                        docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400 animate-pulse' : ''
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${
+                        badgeStyle.shouldAnimate ? 'animate-pulse' : ''
                       }`}
                     >
                       <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                      {docBadge.label}
+                      {badgeStyle.label}
                     </span>
                   );
                 })()}

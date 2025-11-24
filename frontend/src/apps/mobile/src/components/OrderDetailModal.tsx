@@ -5,6 +5,7 @@ import { OrderData, personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getStatusBadge, getCategoryName, getOrderNumber, getSubcategoriesArray, getStatusIcon } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
+import { getDocumentBadgeStyle } from "../../../../utils/documentBadgeHelper";
 
 interface OrderDetailModalProps {
   order: OrderData | null;
@@ -25,28 +26,6 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
   if (!order) return null;
 
   const needsDocument = order.categoryId && !order.documentoUrl;
-
-  const getDocumentBadge = (order: OrderData) => {
-    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
-
-    if (!futureAction || futureAction.tipoAccionFutura !== 'documento') {
-      return null;
-    }
-
-    if (futureAction.estadoAccion !== 'pendiente_documento') {
-      return null;
-    }
-
-    const isUrgent = futureAction.fechaLimite
-      ? (new Date(futureAction.fechaLimite).getTime() - Date.now()) <= (2 * 24 * 60 * 60 * 1000)
-      : false;
-
-    return {
-      label: "Doc. Pendiente",
-      style: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-      isUrgent,
-    };
-  };
 
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -162,17 +141,19 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 {badge.label}
               </span>
               {(() => {
-                const docBadge = getDocumentBadge(order);
-                if (!docBadge) return null;
+                const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+                const badgeStyle = getDocumentBadgeStyle(futureAction);
+
+                if (!badgeStyle) return null;
 
                 return (
                   <span
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${docBadge.style} ${
-                      docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400 animate-pulse' : ''
+                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${
+                      badgeStyle.shouldAnimate ? 'animate-pulse' : ''
                     }`}
                   >
                     <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                    {docBadge.label}
+                    {badgeStyle.label}
                   </span>
                 );
               })()}

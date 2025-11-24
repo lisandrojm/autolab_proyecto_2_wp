@@ -10,6 +10,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import OrderDetailModal from "../components/OrderDetailModal";
 import { OrderData } from "../../../../api/personnel";
 import { getOrderNumber, getCategoryName, getSubcategoriesArray } from "../utils/orderHelpers";
+import { getDocumentBadgeStyle } from "../../../../utils/documentBadgeHelper";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -270,28 +271,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setShowDetailModal(true);
   };
 
-  const getDocumentBadge = (order: OrderData) => {
-    const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
-
-    if (!futureAction || futureAction.tipoAccionFutura !== 'documento') {
-      return null;
-    }
-
-    if (futureAction.estadoAccion !== 'pendiente_documento') {
-      return null;
-    }
-
-    const isUrgent = futureAction.fechaLimite
-      ? (new Date(futureAction.fechaLimite).getTime() - Date.now()) <= (2 * 24 * 60 * 60 * 1000)
-      : false;
-
-    return {
-      label: "Doc. Pendiente",
-      style: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-      isUrgent,
-    };
-  };
-
   const getStatusBg = (status: string) => {
     switch (status) {
       case "delivered":
@@ -438,16 +417,16 @@ export default function Orders({ onNavigate }: OrdersProps) {
                             <span className={`text-xs font-medium ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
                           </div>
                           {(() => {
-                            const docBadge = getDocumentBadge(order);
-                            if (!docBadge) return null;
+                            const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+                            const badgeStyle = getDocumentBadgeStyle(futureAction);
+
+                            if (!badgeStyle) return null;
 
                             return (
-                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 bg-orange-100 dark:bg-orange-900/30 ${
-                                docBadge.isUrgent ? 'ring-2 ring-red-500 dark:ring-red-400' : ''
-                              }`}>
-                                <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-                                <span className="text-xs font-medium text-orange-800 dark:text-orange-400">
-                                  {docBadge.label}
+                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
+                                <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                                <span className="text-xs font-medium">
+                                  {badgeStyle.label}
                                 </span>
                               </div>
                             );
