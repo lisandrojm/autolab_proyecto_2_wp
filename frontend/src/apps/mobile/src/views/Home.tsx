@@ -43,7 +43,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const baseActions = [
     {
       icon: faShoppingCart,
-      title: "Mis Pedidos",
+      title: "Pedidos",
       description: "Gestiona tus pedidos",
       view: "orders" as ViewType,
       roles: ["coordinator", "collaborator"],
@@ -51,24 +51,24 @@ export default function Home({ onNavigate }: HomeProps) {
     },
     {
       icon: faUmbrella,
-      title: "Solicitar Vacaciones",
-      description: "Solicita tus días libres",
+      title: "Vacaciones",
+      description: "Solicitá tus días libres",
       view: "vacations" as ViewType,
       roles: ["coordinator", "collaborator"],
       disabled: true,
     },
     {
       icon: faFileAlt,
-      title: "Mis Contratos",
-      description: "Consulta tus documentos",
+      title: "Contratos",
+      description: "Consultá tus documentos",
       view: "documents" as ViewType,
       roles: ["coordinator", "collaborator"],
       disabled: true,
     },
     {
       icon: faReceipt,
-      title: "Mis Recibos",
-      description: "Accede a tus nóminas",
+      title: "Recibos",
+      description: "Accedé a tus nóminas",
       view: "documents" as ViewType,
       roles: ["coordinator", "collaborator"],
       disabled: true,
@@ -186,7 +186,7 @@ export default function Home({ onNavigate }: HomeProps) {
     ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
               {(action as any).badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase z-10">{(action as any).badge}</span>}
-              <FontAwesomeIcon icon={icon} className={`h-6 w-6 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
+              <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">
                 <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
                 <p className="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">{action.description}</p>

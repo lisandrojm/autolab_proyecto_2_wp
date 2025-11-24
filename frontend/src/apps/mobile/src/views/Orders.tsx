@@ -363,8 +363,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
           <div className="space-y-3">
             {orders.map((order) => (
               <div key={order._id} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOrderClick(order)}>
-                <div className="flex items-start gap-3">
-                  {order.photoUrl && (
+                <div className="flex flex-col items-start gap-3">
+                  {/*                   {order.photoUrl && (
                     <div className="flex-shrink-0">
                       <img
                         src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`}
@@ -376,21 +376,11 @@ export default function Orders({ onNavigate }: OrdersProps) {
                         }}
                       />
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0 mr-2">
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
-                          {getSubcategoriesArray(order).map((subcategory, index) => (
-                            <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
-                              {subcategory}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{order.description}</p>
-                      </div>
-                      <div className="flex gap-2 items-center">
+                  )} */}
+                  <div className="flex-1 w-full">
+                    <div className="flex flex-col items-start justify-between mb-2 w-full space-y-2">
+                      {/* Pedido | Status */}
+                      <div className="flex justify-between gap-2 items-center w-full">
                         <div className="flex items-center gap-2">
                           <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
                         </div>
@@ -399,6 +389,21 @@ export default function Orders({ onNavigate }: OrdersProps) {
                           <span className={`text-xs font-medium ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
                         </div>
                       </div>
+                      {/* Tipos */}
+                      <div className="flex items-center w-full">
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
+                          {getSubcategoriesArray(order).map((subcategory, index) => (
+                            <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                              {subcategory}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Description */}
+                      {/*        <div className="w-full">
+                        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{order.description}</p>
+                      </div> */}
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500">
                       {new Date(order.requestedAt).toLocaleDateString("es-ES", {
@@ -430,7 +435,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       />
 
       {viewingImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
           <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-4 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg z-10">
               <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
