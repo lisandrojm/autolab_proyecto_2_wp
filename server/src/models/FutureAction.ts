@@ -1,10 +1,12 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 export type TipoAccionFutura =
-  | "plazoDias"
-  | "fechaEspecifica"
-  | "presentacionDocumento"
+  | "accion"
+  | "documento"
+  | "condicion"
   | "sinVencimiento";
+
+export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
 export type EstadoAccion = "pendiente" | "cumplida" | "vencida" | "en_revision";
 
@@ -17,6 +19,7 @@ export interface IFutureAction extends Document {
   orderId: Types.ObjectId;
   requiereAccionFutura: boolean;
   tipoAccionFutura: TipoAccionFutura;
+  deadlineMode?: DeadlineMode;
   descripcionAccion: string;
   responsableAccion: ResponsableAccion;
   documentoRequerido?: string;
@@ -52,13 +55,17 @@ const futureActionSchema = new Schema<IFutureAction>(
     tipoAccionFutura: {
       type: String,
       enum: [
-        "plazoDias",
-        "fechaEspecifica",
-        "presentacionDocumento",
+        "accion",
+        "documento",
+        "condicion",
         "sinVencimiento",
       ],
       required: true,
       index: true,
+    },
+    deadlineMode: {
+      type: String,
+      enum: ["none", "plazoDias", "fechaEspecifica"],
     },
     descripcionAccion: {
       type: String,
@@ -119,7 +126,7 @@ futureActionSchema.index({ tenantId: 1, responsableAccion: 1, estadoAccion: 1 })
 futureActionSchema.index({ estadoAccion: 1, fechaLimite: 1 });
 
 futureActionSchema.pre("save", function (next) {
-  if (this.tipoAccionFutura === "plazoDias" && this.plazoDias && !this.fechaLimite) {
+  if (this.deadlineMode === "plazoDias" && this.plazoDias && !this.fechaLimite) {
     const creationDate = this.fechaCreacionAccion || new Date();
     this.fechaLimite = new Date(creationDate.getTime() + this.plazoDias * 24 * 60 * 60 * 1000);
   }

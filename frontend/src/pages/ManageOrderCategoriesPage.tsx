@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
-import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura } from "../api/orderCategories";
+import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -88,6 +88,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     requiresAction: boolean;
     actionText: string;
     futureActionType: TipoAccionFutura | "";
+    deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
     plazoDias?: number;
     fechaLimite?: string;
@@ -102,6 +103,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     requiresAction: false,
     actionText: "",
     futureActionType: "sinVencimiento",
+    deadlineMode: "none",
     subtipos: [],
     plazoDias: undefined,
     fechaLimite: undefined,
@@ -171,6 +173,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
       futureActionType: category.futureActionType || "sinVencimiento",
+      deadlineMode: category.deadlineMode || "none",
       subtipos: category.config?.subtipos ?? [],
       plazoDias: category.plazoDias,
       fechaLimite: category.fechaLimite,
@@ -197,7 +200,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       }
 
       if (formData.requiresAction && formData.futureActionType) {
-        if (formData.futureActionType === "plazoDias" || formData.futureActionType === "vencimientoSistema") {
+        if (formData.deadlineMode === "plazoDias") {
           if (!formData.plazoDias || formData.plazoDias < 1 || formData.plazoDias > 365) {
             sweetAlert.error("Error", "El plazo en días debe estar entre 1 y 365");
             setSubmitting(false);
@@ -205,7 +208,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
           }
         }
 
-        if (formData.futureActionType === "fechaEspecifica") {
+        if (formData.deadlineMode === "fechaEspecifica") {
           if (!formData.fechaLimite) {
             sweetAlert.error("Error", "Debes especificar una fecha límite");
             setSubmitting(false);
@@ -221,7 +224,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
           }
         }
 
-        if (formData.futureActionType === "presentacionDocumento") {
+        if (formData.futureActionType === "documento") {
           if (!formData.documentoRequerido || !formData.documentoRequerido.trim()) {
             sweetAlert.error("Error", "Debes especificar el documento requerido");
             setSubmitting(false);
@@ -242,28 +245,30 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction ? formData.actionText : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
+        deadlineMode: formData.requiresAction && formData.futureActionType !== "sinVencimiento" ? formData.deadlineMode : undefined,
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
 
       if (formData.requiresAction && formData.futureActionType) {
-        if (formData.futureActionType === "plazoDias" || formData.futureActionType === "vencimientoSistema") {
+        if (formData.deadlineMode === "plazoDias") {
           payload.plazoDias = formData.plazoDias;
         } else {
           payload.plazoDias = undefined;
         }
 
-        if (formData.futureActionType === "fechaEspecifica" || (formData.futureActionType === "presentacionDocumento" && formData.fechaLimite)) {
+        if (formData.deadlineMode === "fechaEspecifica") {
           payload.fechaLimite = formData.fechaLimite;
         } else {
           payload.fechaLimite = undefined;
         }
 
-        if (formData.futureActionType === "presentacionDocumento") {
+        if (formData.futureActionType === "documento") {
           payload.documentoRequerido = formData.documentoRequerido;
         } else {
           payload.documentoRequerido = undefined;
         }
       } else {
+        payload.deadlineMode = undefined;
         payload.plazoDias = undefined;
         payload.fechaLimite = undefined;
         payload.documentoRequerido = undefined;

@@ -165,6 +165,40 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
     }
   };
 
+  const renderDeadlineInfo = () => {
+    if (!category.deadlineMode || category.deadlineMode === "none") {
+      return null;
+    }
+
+    if (category.deadlineMode === "plazoDias" && category.plazoDias) {
+      const fechaLimite = new Date();
+      fechaLimite.setDate(fechaLimite.getDate() + category.plazoDias);
+      return (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mt-2">
+          <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+            Debes completar antes de: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+          </p>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            Plazo: {category.plazoDias} días desde la solicitud
+          </p>
+        </div>
+      );
+    }
+
+    if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
+      const fechaLimite = new Date(category.fechaLimite);
+      return (
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mt-2">
+          <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">
+            Fecha límite: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+          </p>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="space-y-4">
       {hasSubcategories && (
@@ -185,55 +219,31 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
       {category.requiresAction && category.futureActionType && (
         <div className="space-y-3">
-          {/*           <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex gap-2">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Acción Futura</p>
-            <span className="text-sm text-slate-600 dark:text-slate-400">{tipoAccionFuturaLabels[category.futureActionType]}</span>
-          </div> */}
-
-          {category.futureActionType === "plazoDias" && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg border border-blue-500  flex items-center justify-center">
-                  <span className="text-white text-lg font-bold">{category.plazoDias}</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Plazo: {category.plazoDias} días</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">El sistema calculará automáticamente la fecha límite desde el día de la solicitud</p>
-                </div>
-              </div>
-              {category.plazoDias && category.plazoDias > 0 && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                  <p className="text-sm text-green-700 dark:text-green-300 font-medium">✓ Fecha límite estimada: {new Date(Date.now() + category.plazoDias * 24 * 60 * 60 * 1000).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {category.futureActionType === "fechaEspecifica" && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha Límite</label>
-              <input type="date" value={futureActionFechaLimite || ""} onChange={(e) => onFutureActionFechaLimiteChange?.(e.target.value)} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
-            </div>
-          )}
-
-          {category.futureActionType === "presentacionDocumento" && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Documento Requerido</label>
-                <input type="text" value={futureActionDocumento || ""} onChange={(e) => onFutureActionDocumentoChange?.(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Ej: DNI escaneado, Certificado médico..." />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha Límite (Opcional)</label>
-                <input type="date" value={futureActionFechaLimite || ""} onChange={(e) => onFutureActionFechaLimiteChange?.(e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
-              </div>
-            </>
-          )}
-
-          {/*           {category.futureActionType === "sinVencimiento" && (
+          {category.futureActionType === "accion" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm text-slate-700 dark:text-slate-200">No tiene fecha límite, pero debe ser gestionada y marcada como cumplida manualmente.</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Acción Requerida</p>
+              {renderDeadlineInfo()}
             </div>
-          )} */}
+          )}
+
+          {category.futureActionType === "documento" && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Documento Requerido</p>
+              {category.documentoRequerido && (
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                  {category.documentoRequerido}
+                </p>
+              )}
+              {renderDeadlineInfo()}
+            </div>
+          )}
+
+          {category.futureActionType === "condicion" && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Condición de Aceptación</p>
+              {renderDeadlineInfo()}
+            </div>
+          )}
 
           {category.actionText && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">

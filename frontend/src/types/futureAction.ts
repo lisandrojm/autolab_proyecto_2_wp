@@ -1,8 +1,10 @@
 export type TipoAccionFutura =
-  | "plazoDias"
-  | "fechaEspecifica"
-  | "presentacionDocumento"
+  | "accion"
+  | "documento"
+  | "condicion"
   | "sinVencimiento";
+
+export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
 export type EstadoAccion = "pendiente" | "cumplida" | "vencida" | "en_revision";
 
@@ -16,6 +18,7 @@ export interface FutureAction {
   orderId: string;
   requiereAccionFutura: boolean;
   tipoAccionFutura: TipoAccionFutura;
+  deadlineMode?: DeadlineMode;
   descripcionAccion: string;
   responsableAccion: ResponsableAccion;
   documentoRequerido?: string;
@@ -80,10 +83,16 @@ export interface FutureActionResponse {
 }
 
 export const tipoAccionFuturaLabels: Record<TipoAccionFutura, string> = {
-  plazoDias: "Plazo en Días",
-  fechaEspecifica: "Fecha Específica",
-  presentacionDocumento: "Presentación de Documento",
+  accion: "Acción Requerida",
+  documento: "Presentación de Documento",
+  condicion: "Aceptación de Condición",
   sinVencimiento: "Sin Vencimiento",
+};
+
+export const deadlineModeLabels: Record<DeadlineMode, string> = {
+  none: "Sin vencimiento",
+  plazoDias: "Plazo en días",
+  fechaEspecifica: "Fecha específica",
 };
 
 export const estadoAccionLabels: Record<EstadoAccion, string> = {

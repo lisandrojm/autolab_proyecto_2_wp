@@ -731,7 +731,10 @@ export async function seedOnStart() {
         sortOrder: 1,
         requiresAction: true,
         actionText: "Me comprometo a presentar el certificado correspondiente",
-        futureActionType: "sinVencimiento",
+        futureActionType: "documento",
+        deadlineMode: "plazoDias",
+        plazoDias: 5,
+        documentoRequerido: "Certificado médico o permiso oficial",
         config: {
           subtipos: [
             { id: "licencia_medica", label: "Licencia Médica", requiere_certificado: true },
@@ -750,7 +753,9 @@ export async function seedOnStart() {
         sortOrder: 2,
         requiresAction: true,
         actionText: "Acepto el descuento en cuotas según el plazo acordado",
-        futureActionType: "sinVencimiento",
+        futureActionType: "condicion",
+        deadlineMode: "fechaEspecifica",
+        fechaLimite: new Date(2025, 11, 31),
         config: {
           subtipos: [
             { id: "adelanto_sueldo", label: "Adelanto de Sueldo" },
@@ -767,7 +772,8 @@ export async function seedOnStart() {
         sortOrder: 3,
         requiresAction: true,
         actionText: "Adjunto todos los comprobantes y facturas originales",
-        futureActionType: "sinVencimiento",
+        futureActionType: "accion",
+        deadlineMode: "none",
         config: {},
       });
 
@@ -779,7 +785,9 @@ export async function seedOnStart() {
         sortOrder: 4,
         requiresAction: true,
         actionText: "Me comprometo a confirmar la recepción en buen estado",
-        futureActionType: "sinVencimiento",
+        futureActionType: "accion",
+        deadlineMode: "plazoDias",
+        plazoDias: 7,
         config: {
           subtipos: [
             { id: "tecnologia", label: "Tecnología" },
@@ -795,6 +803,10 @@ export async function seedOnStart() {
         categoryType: "otros",
         isActive: true,
         sortOrder: 5,
+        requiresAction: true,
+        actionText: "Entiendo que mi solicitud será evaluada por el área correspondiente",
+        futureActionType: "sinVencimiento",
+        deadlineMode: "none",
         config: {},
       });
 
@@ -995,7 +1007,9 @@ export async function seedOnStart() {
           tenantId,
           orderId: order1._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: "presentacionDocumento",
+          tipoAccionFutura: "documento",
+          deadlineMode: "plazoDias",
+          plazoDias: 5,
           descripcionAccion: "Presentar certificado médico que justifique la ausencia por enfermedad",
           responsableAccion: "usuario",
           documentoRequerido: "Certificado médico original o escaneado",
@@ -1009,7 +1023,9 @@ export async function seedOnStart() {
           tenantId,
           orderId: order2._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: "presentacionDocumento",
+          tipoAccionFutura: "documento",
+          deadlineMode: "plazoDias",
+          plazoDias: 5,
           descripcionAccion: "Presentar certificado de inscripción o constancia de examen",
           responsableAccion: "usuario",
           documentoRequerido: "Certificado de alumno regular y constancia de examen",
@@ -1019,16 +1035,15 @@ export async function seedOnStart() {
         order2.futureActionId = fa2._id as any;
         await order2.save();
 
-        const limitDate3 = new Date();
-        limitDate3.setDate(limitDate3.getDate() + 30);
+        const limitDate3 = new Date(2025, 11, 31);
         const fa3 = await FutureAction.create({
           tenantId,
           orderId: order3._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: "plazoDias",
-          descripcionAccion: "El monto será descontado en 3 cuotas mensuales según lo acordado",
+          tipoAccionFutura: "condicion",
+          deadlineMode: "fechaEspecifica",
+          descripcionAccion: "Aceptar descuento en cuotas mensuales según lo acordado",
           responsableAccion: "usuario",
-          plazoDias: 30,
           fechaLimite: limitDate3,
           fechaCreacionAccion: order3.requestedAt,
           estadoAccion: "pendiente",
@@ -1040,26 +1055,28 @@ export async function seedOnStart() {
           tenantId,
           orderId: order4._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: "fechaEspecifica",
+          tipoAccionFutura: "accion",
+          deadlineMode: "none",
           descripcionAccion: "Comprobantes y facturas originales presentados correctamente",
           responsableAccion: "usuario",
-          fechaLimite: new Date(2024, 1, 18),
           fechaCreacionAccion: order4.requestedAt,
           estadoAccion: "cumplida",
         });
         order4.futureActionId = fa4._id as any;
         await order4.save();
 
+        const limitDate6 = new Date(2024, 0, 22);
         const fa6 = await FutureAction.create({
           tenantId,
           orderId: order6._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: "plazoDias",
+          tipoAccionFutura: "accion",
+          deadlineMode: "plazoDias",
+          plazoDias: 7,
           descripcionAccion: "Confirmar recepción del equipamiento en buen estado",
           responsableAccion: "usuario",
-          plazoDias: 7,
           quienDefineVencimiento: "sistema",
-          fechaLimite: new Date(2024, 0, 22),
+          fechaLimite: limitDate6,
           fechaCreacionAccion: order6.requestedAt,
           estadoAccion: "cumplida",
         });
@@ -1072,10 +1089,11 @@ export async function seedOnStart() {
           tenantId,
           orderId: order7._id,
           requiereAccionFutura: true,
-          tipoAccionFutura: "plazoDias",
+          tipoAccionFutura: "accion",
+          deadlineMode: "plazoDias",
+          plazoDias: 7,
           descripcionAccion: "Confirmar recepción de los elementos de protección personal",
           responsableAccion: "usuario",
-          plazoDias: 7,
           quienDefineVencimiento: "sistema",
           fechaLimite: limitDate7,
           fechaCreacionAccion: order7.requestedAt,
@@ -1089,6 +1107,7 @@ export async function seedOnStart() {
           orderId: order9._id,
           requiereAccionFutura: true,
           tipoAccionFutura: "sinVencimiento",
+          deadlineMode: "none",
           descripcionAccion: "El área de RRHH debe evaluar la solicitud y definir si es viable el cambio de horario",
           responsableAccion: "area_interna",
           quienDefineVencimiento: "area_interna",

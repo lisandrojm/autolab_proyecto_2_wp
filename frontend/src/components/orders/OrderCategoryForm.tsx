@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
-import { CategoryType, DateMode, Subtype, TipoAccionFutura } from "../../api/orderCategories";
+import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderCategories";
 import { InfoModal } from "../ui/InfoModal";
-import { tipoAccionFuturaLabels } from "../../types/futureAction";
+import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/futureAction";
 
 interface OrderCategoryFormProps {
   formData: {
@@ -16,6 +16,7 @@ interface OrderCategoryFormProps {
     requiresAction: boolean;
     actionText: string;
     futureActionType: TipoAccionFutura | "";
+    deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
     plazoDias?: number;
     fechaLimite?: string;
@@ -38,9 +39,19 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     setFormData({
       ...formData,
       futureActionType: newType,
+      deadlineMode: "none",
       plazoDias: undefined,
       fechaLimite: undefined,
       documentoRequerido: undefined,
+    });
+  };
+
+  const handleDeadlineModeChange = (newMode: DeadlineMode) => {
+    setFormData({
+      ...formData,
+      deadlineMode: newMode,
+      plazoDias: newMode === "plazoDias" ? formData.plazoDias : undefined,
+      fechaLimite: newMode === "fechaEspecifica" ? formData.fechaLimite : undefined,
     });
   };
 
@@ -48,47 +59,100 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     if (!formData.futureActionType) return null;
 
     switch (formData.futureActionType) {
-      case "plazoDias":
+      case "accion":
         return (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo en Dias *</label>
-            <input type="number" min="1" max="365" value={formData.plazoDias || ""} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: 10" />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema calculara automaticamente la fecha limite</p>
+          <div className="space-y-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm text-gray-700 dark:text-gray-200">Acción requerida del usuario</p>
+            </div>
+            {renderDeadlineFields()}
           </div>
         );
 
-      case "fechaEspecifica":
-        return (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Limite *</label>
-            <input type="date" value={formData.fechaLimite || ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
-          </div>
-        );
-
-      case "presentacionDocumento":
+      case "documento":
         return (
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Documento Requerido *</label>
-              <input type="text" value={formData.documentoRequerido || ""} onChange={(e) => setFormData({ ...formData, documentoRequerido: e.target.value })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: DNI escaneado, Certificado medico..." />
+              <input type="text" value={formData.documentoRequerido || ""} onChange={(e) => setFormData({ ...formData, documentoRequerido: e.target.value })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: DNI escaneado, Certificado médico..." />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Limite (Opcional)</label>
-              <input type="date" value={formData.fechaLimite || ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+            {renderDeadlineFields()}
+          </div>
+        );
+
+      case "condicion":
+        return (
+          <div className="space-y-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm text-gray-700 dark:text-gray-200">Condición que debe aceptar el usuario</p>
             </div>
+            {renderDeadlineFields()}
           </div>
         );
 
       case "sinVencimiento":
         return (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">No tiene fecha limite, pero debe ser gestionada y marcada como cumplida manualmente.</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200">No requiere vencimiento ni condiciones adicionales</p>
           </div>
         );
 
       default:
         return null;
     }
+  };
+
+  const renderDeadlineFields = () => {
+    if (formData.futureActionType === "sinVencimiento") return null;
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modo de Vencimiento *</label>
+          <select
+            required
+            value={formData.deadlineMode || "none"}
+            onChange={(e) => handleDeadlineModeChange(e.target.value as DeadlineMode)}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="none">{deadlineModeLabels.none}</option>
+            <option value="plazoDias">{deadlineModeLabels.plazoDias}</option>
+            <option value="fechaEspecifica">{deadlineModeLabels.fechaEspecifica}</option>
+          </select>
+        </div>
+
+        {formData.deadlineMode === "plazoDias" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo en Días *</label>
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={formData.plazoDias || ""}
+              onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })}
+              required
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              placeholder="Ej: 10"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema calculará automáticamente la fecha límite</p>
+          </div>
+        )}
+
+        {formData.deadlineMode === "fechaEspecifica" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite *</label>
+            <input
+              type="date"
+              value={formData.fechaLimite || ""}
+              onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })}
+              required
+              min={new Date().toISOString().split("T")[0]}
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -248,10 +312,10 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                   </button>
                 </div>
                 <select required={formData.requiresAction} value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                  <option value="accion">{tipoAccionFuturaLabels.accion}</option>
+                  <option value="documento">{tipoAccionFuturaLabels.documento}</option>
+                  <option value="condicion">{tipoAccionFuturaLabels.condicion}</option>
                   <option value="sinVencimiento">{tipoAccionFuturaLabels.sinVencimiento}</option>
-                  <option value="plazoDias">{tipoAccionFuturaLabels.plazoDias}</option>
-                  <option value="fechaEspecifica">{tipoAccionFuturaLabels.fechaEspecifica}</option>
-                  <option value="presentacionDocumento">{tipoAccionFuturaLabels.presentacionDocumento}</option>
                 </select>
               </div>
 
@@ -292,26 +356,29 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         </div>
       </InfoModal>
 
-      <InfoModal isOpen={showActionTypeInfo} onClose={() => setShowActionTypeInfo(false)} title="Tipos de Accion Futura" size="md">
+      <InfoModal isOpen={showActionTypeInfo} onClose={() => setShowActionTypeInfo(false)} title="Tipos de Acción Futura" size="md">
         <div className="text-gray-700 dark:text-gray-300 space-y-3">
-          <p className="font-medium mb-3">Cada tipo de accion futura tiene caracteristicas especificas:</p>
+          <p className="font-medium mb-3">Cada tipo de acción futura define QUÉ debe hacer el usuario:</p>
           <div className="space-y-2">
             <div>
-              <strong className="text-blue-600 dark:text-blue-400">Plazo en Dias:</strong>
-              <p className="text-sm mt-1">Genera un vencimiento automatico basado en dias desde la creacion del pedido.</p>
+              <strong className="text-blue-600 dark:text-blue-400">Acción Requerida:</strong>
+              <p className="text-sm mt-1">Acción general que el usuario debe completar.</p>
             </div>
             <div>
-              <strong className="text-blue-600 dark:text-blue-400">Fecha Especifica:</strong>
-              <p className="text-sm mt-1">Asigna una fecha fija como limite para completar la accion.</p>
+              <strong className="text-blue-600 dark:text-blue-400">Presentación de Documento:</strong>
+              <p className="text-sm mt-1">Requiere que el usuario presente un documento específico.</p>
             </div>
             <div>
-              <strong className="text-blue-600 dark:text-blue-400">Presentacion de Documento:</strong>
-              <p className="text-sm mt-1">Requiere que el usuario suba un documento especifico.</p>
+              <strong className="text-blue-600 dark:text-blue-400">Aceptación de Condición:</strong>
+              <p className="text-sm mt-1">El usuario debe aceptar términos o condiciones específicas.</p>
             </div>
             <div>
               <strong className="text-blue-600 dark:text-blue-400">Sin Vencimiento:</strong>
-              <p className="text-sm mt-1">No requiere fecha limite, pero debe ser completada y marcada manualmente.</p>
+              <p className="text-sm mt-1">No requiere ni acción ni vencimiento específico.</p>
             </div>
+          </div>
+          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+            <p className="text-sm">El <strong>modo de vencimiento</strong> (plazo en días, fecha específica, o sin vencimiento) se configura por separado.</p>
           </div>
         </div>
       </InfoModal>

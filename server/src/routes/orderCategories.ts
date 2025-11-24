@@ -34,7 +34,8 @@ const createCategorySchema = z
     montoMaximo: z.number().min(0).optional(),
     requiresAction: z.boolean().default(false),
     actionText: z.string().max(500).optional(),
-    futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).default("sinVencimiento").optional(),
+    futureActionType: z.enum(["accion", "documento", "condicion", "sinVencimiento"]).default("sinVencimiento").optional(),
+    deadlineMode: z.enum(["none", "plazoDias", "fechaEspecifica"]).optional(),
     plazoDias: z.number().int().min(1).max(365).optional(),
     fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
@@ -53,37 +54,37 @@ const createCategorySchema = z
   )
   .refine(
     (data) => {
-      if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
+      if (data.deadlineMode === "plazoDias") {
         return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
       }
       return true;
     },
     {
-      message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
+      message: "plazoDias is required and must be between 1 and 365 when deadlineMode is plazoDias",
       path: ["plazoDias"],
     }
   )
   .refine(
     (data) => {
-      if (data.futureActionType === "fechaEspecifica") {
+      if (data.deadlineMode === "fechaEspecifica") {
         return data.fechaLimite !== undefined;
       }
       return true;
     },
     {
-      message: "fechaLimite is required for fechaEspecifica type",
+      message: "fechaLimite is required when deadlineMode is fechaEspecifica",
       path: ["fechaLimite"],
     }
   )
   .refine(
     (data) => {
-      if (data.futureActionType === "presentacionDocumento") {
+      if (data.futureActionType === "documento") {
         return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
       }
       return true;
     },
     {
-      message: "documentoRequerido is required for presentacionDocumento type",
+      message: "documentoRequerido is required when futureActionType is documento",
       path: ["documentoRequerido"],
     }
   );
@@ -100,7 +101,8 @@ const updateCategorySchema = z
     montoMaximo: z.number().min(0).optional(),
     requiresAction: z.boolean().optional(),
     actionText: z.string().max(500).optional(),
-    futureActionType: z.enum(["plazoDias", "fechaEspecifica", "presentacionDocumento", "vencimientoSistema", "vencimientoInterno", "sinVencimiento"]).optional(),
+    futureActionType: z.enum(["accion", "documento", "condicion", "sinVencimiento"]).optional(),
+    deadlineMode: z.enum(["none", "plazoDias", "fechaEspecifica"]).optional(),
     plazoDias: z.number().int().min(1).max(365).optional(),
     fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
@@ -119,37 +121,37 @@ const updateCategorySchema = z
   )
   .refine(
     (data) => {
-      if (data.futureActionType === "plazoDias" || data.futureActionType === "vencimientoSistema") {
+      if (data.deadlineMode === "plazoDias") {
         return data.plazoDias !== undefined && data.plazoDias >= 1 && data.plazoDias <= 365;
       }
       return true;
     },
     {
-      message: "plazoDias is required and must be between 1 and 365 for plazoDias or vencimientoSistema types",
+      message: "plazoDias is required and must be between 1 and 365 when deadlineMode is plazoDias",
       path: ["plazoDias"],
     }
   )
   .refine(
     (data) => {
-      if (data.futureActionType === "fechaEspecifica") {
+      if (data.deadlineMode === "fechaEspecifica") {
         return data.fechaLimite !== undefined;
       }
       return true;
     },
     {
-      message: "fechaLimite is required for fechaEspecifica type",
+      message: "fechaLimite is required when deadlineMode is fechaEspecifica",
       path: ["fechaLimite"],
     }
   )
   .refine(
     (data) => {
-      if (data.futureActionType === "presentacionDocumento") {
+      if (data.futureActionType === "documento") {
         return data.documentoRequerido !== undefined && data.documentoRequerido.length > 0;
       }
       return true;
     },
     {
-      message: "documentoRequerido is required for presentacionDocumento type",
+      message: "documentoRequerido is required when futureActionType is documento",
       path: ["documentoRequerido"],
     }
   );
