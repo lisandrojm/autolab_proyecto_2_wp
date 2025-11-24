@@ -32,7 +32,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const [subcategories, setSubcategories] = useState<string[]>([]);
+  const [subcategories, setSubcategories] = useState<string>("");
   const [dynamicValue, setDynamicValue] = useState<any>("");
   const [actionCompleted, setActionCompleted] = useState(false);
   const [futureActionPlazoDias, setFutureActionPlazoDias] = useState<number | undefined>(undefined);
@@ -60,7 +60,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   }, []);
 
   useEffect(() => {
-    setSubcategories([]);
+    setSubcategories("");
 
     // Initialize dynamicValue based on category type and date mode
     if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
@@ -149,7 +149,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         description,
         category: selectedCategory?.name || "other",
         categoryId: selectedCategoryId,
-        subcategories: subcategories.length > 0 ? subcategories : undefined,
+        subcategories: subcategories ? [subcategories] : undefined,
         dynamicValue: validDynamicValue,
         actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
@@ -161,7 +161,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setShowForm(false);
       setProduct("");
       setDescription("");
-      setSubcategories([]);
+      setSubcategories("");
 
       if (selectedCategory?.categoryType === "fecha" && selectedCategory.dateMode === "range") {
         setDynamicValue({ fechaDesde: "", fechaHasta: "" });
