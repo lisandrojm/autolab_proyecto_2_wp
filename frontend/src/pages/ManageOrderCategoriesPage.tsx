@@ -226,6 +226,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         }
       }
 
+      const validSubtipos = formData.subtipos.filter(subtipo => subtipo.label.trim() !== "");
+
       const payload: any = {
         name: formData.name,
         description: formData.description,
@@ -235,7 +237,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction ? formData.actionText : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
-        config: formData.subtipos.length > 0 ? { subtipos: formData.subtipos } : undefined,
+        config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
 
       if (formData.requiresAction && formData.futureActionType) {
