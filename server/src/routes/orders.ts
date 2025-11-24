@@ -233,6 +233,14 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
           }
         }
       }
+
+      if (category.categoryType === "dinero" && category.montoMaximo) {
+        const montoSolicitado = typeof data.dynamicValue === 'number' ? data.dynamicValue : 0;
+        if (montoSolicitado > category.montoMaximo) {
+          res.status(400).json({ error: `El monto solicitado ($${montoSolicitado.toLocaleString('es-ES')}) excede el máximo permitido ($${category.montoMaximo.toLocaleString('es-ES')})` });
+          return;
+        }
+      }
     }
 
     const order = new Order({
