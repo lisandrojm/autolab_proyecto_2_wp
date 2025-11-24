@@ -42,6 +42,11 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       </td>
       <td className="py-3 px-4">
         <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
+        {category.categoryType === 'dinero' && category.montoMaximo && (
+          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            Max: ${category.montoMaximo.toLocaleString('es-ES')}
+          </div>
+        )}
       </td>
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
@@ -84,6 +89,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     isActive: boolean;
     categoryType: CategoryType;
     dateMode: DateMode;
+    montoMaximo?: number;
     requiresAction: boolean;
     actionText: string;
     futureActionType: TipoAccionFutura | "";
@@ -97,6 +103,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     isActive: true,
     categoryType: "fecha",
     dateMode: "single",
+    montoMaximo: undefined,
     requiresAction: false,
     actionText: "",
     futureActionType: "sinVencimiento",
@@ -145,6 +152,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       isActive: true,
       categoryType: "fecha",
       dateMode: "single",
+      montoMaximo: undefined,
       requiresAction: false,
       actionText: "",
       futureActionType: "sinVencimiento",
@@ -164,6 +172,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       isActive: category.isActive,
       categoryType: category.categoryType || "fecha",
       dateMode: category.dateMode || "single",
+      montoMaximo: category.montoMaximo,
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
       futureActionType: category.futureActionType || "sinVencimiento",
@@ -234,6 +243,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         isActive: formData.isActive,
         categoryType: formData.categoryType,
         dateMode: formData.categoryType === "fecha" ? formData.dateMode : undefined,
+        montoMaximo: formData.categoryType === "dinero" && formData.montoMaximo ? formData.montoMaximo : undefined,
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction ? formData.actionText : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,

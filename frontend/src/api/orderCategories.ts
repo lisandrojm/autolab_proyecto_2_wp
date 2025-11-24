@@ -35,6 +35,7 @@ export interface OrderCategory {
   categoryType: CategoryType;
   dateMode?: DateMode;
   config: CategoryConfig;
+  montoMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
   futureActionType?: TipoAccionFutura;
@@ -65,6 +66,7 @@ export const orderCategoriesAPI = {
     categoryType?: CategoryType;
     dateMode?: DateMode;
     config?: CategoryConfig;
+    montoMaximo?: number;
     requiresAction?: boolean;
     actionText?: string;
     futureActionType?: TipoAccionFutura;
@@ -86,6 +88,7 @@ export const orderCategoriesAPI = {
       categoryType?: CategoryType;
       dateMode?: DateMode;
       config?: CategoryConfig;
+      montoMaximo?: number;
       requiresAction?: boolean;
       actionText?: string;
       futureActionType?: TipoAccionFutura;

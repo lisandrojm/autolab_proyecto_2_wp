@@ -42,6 +42,7 @@ export interface IOrderCategory extends Document {
   categoryType: "fecha" | "dinero" | "objeto" | "otros";
   dateMode?: DateMode;
   config: ICategoryConfig;
+  montoMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
   futureActionType?: TipoAccionFutura;
@@ -73,6 +74,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
       trim: true
     },
     config: { type: Schema.Types.Mixed, default: {} },
+    montoMaximo: { type: Number, min: 0 },
     requiresAction: { type: Boolean, default: false },
     actionText: { type: String, trim: true },
     futureActionType: {

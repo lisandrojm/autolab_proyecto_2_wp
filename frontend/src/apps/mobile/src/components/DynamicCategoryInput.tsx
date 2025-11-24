@@ -88,13 +88,72 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         }
 
       case "dinero":
+        const maxMonto = category.montoMaximo || 10000000;
+        const stepMonto = 50000;
+        const currentMonto = typeof dynamicValue === 'number' ? dynamicValue : 0;
+
         return (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto ($) *</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">$</span>
-              <input type="number" step="0.01" min="0" value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(parseFloat(e.target.value) || 0)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-8 pr-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="0.00" />
+
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 mb-3">
+              <div className="text-center mb-4">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  $ {currentMonto.toLocaleString('es-ES')}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Monto seleccionado
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min="0"
+                  max={maxMonto}
+                  step={stepMonto}
+                  value={currentMonto}
+                  onChange={(e) => onDynamicValueChange(parseFloat(e.target.value))}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                  required
+                />
+
+                <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span>$ 0</span>
+                  <span>$ {maxMonto.toLocaleString('es-ES')}</span>
+                </div>
+              </div>
             </div>
+
+            <style>{`
+              .slider-thumb::-webkit-slider-thumb {
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #3b82f6;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+              }
+
+              .slider-thumb::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #3b82f6;
+                cursor: pointer;
+                border: none;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+              }
+
+              .slider-thumb::-webkit-slider-thumb:hover {
+                background: #2563eb;
+              }
+
+              .slider-thumb::-moz-range-thumb:hover {
+                background: #2563eb;
+              }
+            `}</style>
           </div>
         );
 
