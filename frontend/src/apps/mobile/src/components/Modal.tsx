@@ -1,7 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-soli<button class="relative flex flex-col flex-1 gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
-    bg-white hover:scale-[1.01] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600">…</button>flexd-svg-icons";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
 interface ModalProps {
   isOpen: boolean;

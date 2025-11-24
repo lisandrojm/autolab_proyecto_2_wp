@@ -303,8 +303,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
               </div>
               {/* Descripción */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Información</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describí la información de tu pedido..." />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descripción</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describí tu pedido..." />
               </div>
 
               {(selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros") && (

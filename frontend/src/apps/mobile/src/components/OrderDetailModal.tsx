@@ -150,7 +150,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           <div className="bg-slate-100 dark:bg-slate-700/50 p-3 rounded-lg">
             <div className="flex justify-between items-start">
               <div className="flex justify-between items-center w-full">
-                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
+                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Descripción</p>
               </div>
             </div>
             <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>

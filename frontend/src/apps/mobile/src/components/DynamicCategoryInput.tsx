@@ -94,37 +94,23 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
         return (
           <div>
+            2xl
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto ($) *</label>
-
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 mb-3">
               <div className="text-center mb-4">
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                  $ {currentMonto.toLocaleString('es-ES')}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Monto seleccionado
-                </div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">$ {currentMonto.toLocaleString("es-ES")}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Monto seleccionado</div>
               </div>
 
               <div className="space-y-2">
-                <input
-                  type="range"
-                  min="0"
-                  max={maxMonto}
-                  step={stepMonto}
-                  value={currentMonto}
-                  onChange={(e) => onDynamicValueChange(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb"
-                  required
-                />
+                <input type="range" min="0" max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onDynamicValueChange(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb" required />
 
                 <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>$ 0</span>
-                  <span>$ {maxMonto.toLocaleString('es-ES')}</span>
+                  <span>$ {maxMonto.toLocaleString("es-ES")}</span>
                 </div>
               </div>
             </div>
-
             <style>{`
               .slider-thumb::-webkit-slider-thumb {
                 appearance: none;

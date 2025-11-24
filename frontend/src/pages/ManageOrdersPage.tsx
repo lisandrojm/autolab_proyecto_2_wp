@@ -752,7 +752,7 @@ export const ManageOrdersPage: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div className="flex justify-between items-center w-full">
                   {/* <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p> */}
-                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
+                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Descripción</p>
                 </div>
               </div>
               <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
