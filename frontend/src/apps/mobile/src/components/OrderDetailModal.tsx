@@ -106,8 +106,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           </div>
 
           {/* Grid con Tipo de Pedido y Detalles */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-4 gap-y-6">
-            <div className="lg:col-span-8">
+          <div className="flex flex-col gap-4">
+            <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
@@ -118,7 +118,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 ))}
               </div>
             </div>
-            <div className="lg:col-span-4 space-y-4">
+            <div className="flex gap-10">
               {order.amount && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
@@ -147,10 +147,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           </div>
 
           {/* Descripción */}
-          <div className="bg-slate-100 dark:bg-slate-700/50 p-4 py-3 rounded-lg">
+          <div className="bg-slate-100 dark:bg-slate-700/50 p-3 rounded-lg">
             <div className="flex justify-between items-start">
               <div className="flex justify-between items-center w-full">
-                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Descripción</p>
+                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
               </div>
             </div>
             <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>
