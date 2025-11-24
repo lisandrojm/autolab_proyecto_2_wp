@@ -999,7 +999,108 @@ export async function seedOnStart() {
         requiereAccionFutura: true,
       });
 
-      console.log("✅ Order seeded (11 pedidos representativos con estados variados, incluyendo ejemplos con múltiples subcategorías)");
+      const catDocumentos = await OrderCategory.create({
+        tenantId,
+        name: "Documentos Pendientes",
+        categoryType: "objeto",
+        isActive: true,
+        sortOrder: 6,
+        requiresAction: true,
+        actionText: "Me comprometo a presentar el documento requerido en el plazo establecido",
+        futureActionType: "documento",
+        deadlineMode: "plazoDias",
+        plazoDias: 7,
+        documentoRequerido: "Documento solicitado según el tipo de trámite",
+        config: {
+          subtipos: [
+            { id: "dni", label: "DNI / Documento de Identidad" },
+            { id: "certificado", label: "Certificado" },
+            { id: "comprobante", label: "Comprobante" },
+            { id: "titulo", label: "Título / Diploma" },
+          ],
+        },
+      });
+
+      const order12 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Fotocopia de DNI actualizado",
+        description: "Necesito presentar fotocopia de DNI actualizado para legajo personal",
+        category: "Documentos Pendientes",
+        categoryId: catDocumentos._id,
+        subcategories: ["dni"],
+        dynamicValue: "DNI frente y dorso legible",
+        status: "pending",
+        requestedAt: new Date(),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order13 = await Order.create({
+        tenantId,
+        userId: coord._id,
+        title: "Certificado de estudios secundarios",
+        description: "Para completar legajo según nuevo requisito de RRHH",
+        category: "Documentos Pendientes",
+        categoryId: catDocumentos._id,
+        subcategories: ["certificado"],
+        dynamicValue: "Certificado analítico o constancia de título secundario",
+        status: "approved",
+        approvedBy: adminId,
+        approvedAt: new Date(),
+        requestedAt: new Date(),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order14 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Comprobante de domicilio actualizado",
+        description: "Solicito actualización de domicilio, requiero presentar comprobante de no más de 3 meses",
+        category: "Documentos Pendientes",
+        categoryId: catDocumentos._id,
+        subcategories: ["comprobante"],
+        dynamicValue: "Factura de servicio (luz, gas, agua) a nombre del titular",
+        status: "pending",
+        requestedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order15 = await Order.create({
+        tenantId,
+        userId: coord._id,
+        title: "Título universitario para legajo",
+        description: "Presentación de título de grado para formalizar ascenso y ajuste salarial",
+        category: "Documentos Pendientes",
+        categoryId: catDocumentos._id,
+        subcategories: ["titulo"],
+        dynamicValue: "Título de Licenciatura en Administración - Universidad Nacional",
+        status: "pending",
+        requestedAt: new Date(),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      const order16 = await Order.create({
+        tenantId,
+        userId: collab._id,
+        title: "Certificado médico preocupacional",
+        description: "Certificado de apto físico para inicio de actividades según protocolo de seguridad e higiene",
+        category: "Documentos Pendientes",
+        categoryId: catDocumentos._id,
+        subcategories: ["certificado"],
+        dynamicValue: "Examen preocupacional completo con firma y sello del médico laboral",
+        status: "approved",
+        approvedBy: adminId,
+        approvedAt: new Date(),
+        requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        actionCompleted: true,
+        requiereAccionFutura: true,
+      });
+
+      console.log("✅ Order seeded (16 pedidos representativos con estados variados, incluyendo 5 con documentos pendientes)");
 
       const futureActionsCount = await FutureAction.countDocuments({ tenantId });
       if (futureActionsCount === 0) {
@@ -1117,7 +1218,102 @@ export async function seedOnStart() {
         order9.futureActionId = fa9._id as any;
         await order9.save();
 
-        console.log("✅ FutureAction seeded (7 acciones vinculadas con estados variados)");
+        const limitDate12 = new Date();
+        limitDate12.setDate(limitDate12.getDate() + 2);
+        const fa12 = await FutureAction.create({
+          tenantId,
+          orderId: order12._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "documento",
+          deadlineMode: "plazoDias",
+          plazoDias: 2,
+          descripcionAccion: "Presentar fotocopia de DNI frente y dorso legible",
+          responsableAccion: "usuario",
+          documentoRequerido: "DNI actualizado (frente y dorso)",
+          fechaLimite: limitDate12,
+          fechaCreacionAccion: order12.requestedAt,
+          estadoAccion: "pendiente_documento",
+        });
+        order12.futureActionId = fa12._id as any;
+        await order12.save();
+
+        const limitDate13 = new Date();
+        limitDate13.setDate(limitDate13.getDate() + 7);
+        const fa13 = await FutureAction.create({
+          tenantId,
+          orderId: order13._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "documento",
+          deadlineMode: "plazoDias",
+          plazoDias: 7,
+          descripcionAccion: "Presentar certificado analítico o constancia de título secundario",
+          responsableAccion: "usuario",
+          documentoRequerido: "Certificado de estudios secundarios completo",
+          fechaLimite: limitDate13,
+          fechaCreacionAccion: order13.requestedAt,
+          estadoAccion: "pendiente_documento",
+        });
+        order13.futureActionId = fa13._id as any;
+        await order13.save();
+
+        const limitDate14 = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+        limitDate14.setDate(limitDate14.getDate() + 7);
+        const fa14 = await FutureAction.create({
+          tenantId,
+          orderId: order14._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "documento",
+          deadlineMode: "plazoDias",
+          plazoDias: 7,
+          descripcionAccion: "Presentar comprobante de domicilio actualizado (no mayor a 3 meses)",
+          responsableAccion: "usuario",
+          documentoRequerido: "Factura de servicio a nombre del titular",
+          fechaLimite: limitDate14,
+          fechaCreacionAccion: order14.requestedAt,
+          estadoAccion: "pendiente_documento",
+        });
+        order14.futureActionId = fa14._id as any;
+        await order14.save();
+
+        const limitDate15 = new Date();
+        limitDate15.setDate(limitDate15.getDate() + 5);
+        const fa15 = await FutureAction.create({
+          tenantId,
+          orderId: order15._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "documento",
+          deadlineMode: "fechaEspecifica",
+          descripcionAccion: "Presentar título universitario original o copia certificada",
+          responsableAccion: "usuario",
+          documentoRequerido: "Título de grado universitario",
+          fechaLimite: limitDate15,
+          fechaCreacionAccion: order15.requestedAt,
+          estadoAccion: "pendiente_documento",
+        });
+        order15.futureActionId = fa15._id as any;
+        await order15.save();
+
+        const limitDate16 = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+        limitDate16.setDate(limitDate16.getDate() + 7);
+        const fa16 = await FutureAction.create({
+          tenantId,
+          orderId: order16._id,
+          requiereAccionFutura: true,
+          tipoAccionFutura: "documento",
+          deadlineMode: "plazoDias",
+          plazoDias: 7,
+          descripcionAccion: "Presentar certificado médico preocupacional firmado y sellado por médico laboral",
+          responsableAccion: "usuario",
+          documentoRequerido: "Certificado médico preocupacional completo",
+          fechaLimite: limitDate16,
+          fechaCreacionAccion: order16.requestedAt,
+          estadoAccion: "documento_presentado",
+          documentoUrl: "/storage/demo-tenant/documents/certificado_preocupacional_mock.pdf",
+        });
+        order16.futureActionId = fa16._id as any;
+        await order16.save();
+
+        console.log("✅ FutureAction seeded (12 acciones vinculadas: 7 originales + 5 documentos pendientes con estados variados)");
       } else {
         console.log("✔️ FutureAction already present");
       }
