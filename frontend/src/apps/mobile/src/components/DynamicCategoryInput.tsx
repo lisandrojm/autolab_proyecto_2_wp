@@ -21,7 +21,7 @@ interface DynamicCategoryInputProps {
 export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange }) => {
   if (!category) return null;
 
-  const hasSubcategories = category.config.subtipos && category.config.subtipos.length > 0;
+  const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
 
   const renderDynamicInput = () => {
     switch (category.categoryType) {
