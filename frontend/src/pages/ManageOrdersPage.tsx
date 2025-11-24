@@ -506,7 +506,7 @@ export const ManageOrdersPage: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 justify-between">
           {[
             { label: "Pendientes", value: stats.pending, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
             { label: "Aprobados", value: stats.approved, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
