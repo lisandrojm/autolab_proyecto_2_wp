@@ -43,11 +43,15 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       <td className="py-3 px-4">
         <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
       </td>
+      <td className="py-3 px-4 text-center">
+        <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length > 0 ? "bg-gray-200 text-gray-600 dark:bg-gray-400/20 dark:text-gray-200" : "bg-gray-200 text-gray-400 dark:bg-gray-600/20 dark:text-gray-500"}`}>{category.config?.subtipos?.length > 0 ? "Sí" : "No"}</span>
+      </td>
+
       <td className="py-3 px-4">
         <div className="text-sm text-gray-600 dark:text-gray-400">{category.description || "-"}</div>
       </td>
       <td className="py-3 px-4 text-center">
-        <button onClick={() => onToggleActive(category)} disabled={isReorderMode} className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${category.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
+        <button onClick={() => onToggleActive(category)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${category.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
           <FontAwesomeIcon icon={category.isActive ? faToggleOn : faToggleOff} className="mr-1" />
           {category.isActive ? "Activa" : "Inactiva"}
         </button>
@@ -163,7 +167,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
       futureActionType: category.futureActionType || "sinVencimiento",
-      subtipos: category.config.subtipos || [],
+      subtipos: category.config?.subtipos ?? [],
       plazoDias: category.plazoDias,
       fechaLimite: category.fechaLimite,
       documentoRequerido: category.documentoRequerido,
@@ -403,7 +407,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                       <tr className="border-b border-gray-200 dark:border-gray-700">
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">Ordenar</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Descripción</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-48">Acciones</th>
