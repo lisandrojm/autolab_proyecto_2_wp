@@ -32,6 +32,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       await sweetAlert.success("Pedido cancelado", "El pedido ha sido cancelado correctamente");
       onClose();
     } catch (error: any) {
+      console.error("Error canceling order:", error);
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo cancelar el pedido");
     } finally {
       setUpdatingStatus(false);

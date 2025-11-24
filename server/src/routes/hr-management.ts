@@ -352,6 +352,24 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
       return;
     }
 
+    const userId = req.user!.userId;
+    const isOwner = order.userId.toString() === userId;
+
+    if (req.body.status && !isOwner) {
+      res.status(403).json({ error: "No tienes permisos para modificar este pedido" });
+      return;
+    }
+
+    if (req.body.status === "cancelled" && order.status !== "pending") {
+      res.status(400).json({ error: "Solo puedes cancelar pedidos en estado pendiente" });
+      return;
+    }
+
+    if (req.body.status && req.body.status !== "cancelled" && isOwner) {
+      res.status(403).json({ error: "Solo puedes cancelar tus propios pedidos. Otros cambios de estado están restringidos" });
+      return;
+    }
+
     let photoUrl: string | undefined = order.photoUrl;
 
     if (req.file) {
@@ -364,7 +382,6 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
         }
       }
       const tenantId = req.tenantId || "unknown_tenant";
-      const userId = req.user!.userId;
       photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
     }
 
@@ -376,6 +393,17 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
 
     Object.assign(order, data);
     await order.save();
+
+    if (req.body.status === "cancelled") {
+      await ActivityLog.create({
+        tenantId: req.tenantObjectId,
+        userId,
+        action: "order_cancelled",
+        description: `Pedido cancelado: ${order.title}`,
+        entityType: "Order",
+        entityId: order._id,
+      });
+    }
 
     const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email");
 
