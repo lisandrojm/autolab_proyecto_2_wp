@@ -37,7 +37,6 @@ const futureActionSchema = new Schema<IFutureAction>(
       type: Schema.Types.ObjectId,
       ref: "Tenant",
       required: true,
-      index: true,
     },
     orderId: {
       type: Schema.Types.ObjectId,
