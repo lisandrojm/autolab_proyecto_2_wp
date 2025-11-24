@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes, faBan } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
@@ -196,6 +196,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
         return <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3 text-blue-600 dark:text-blue-400" />;
       case "pending":
         return <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />;
+      case "cancelled":
+        return <FontAwesomeIcon icon={faBan} className="w-3 h-3 text-gray-400 dark:text-slate-400" />;
       case "rejected":
         return <FontAwesomeIcon icon={faTimesCircle} className="w-3 h-3 text-red-600 dark:text-red-400" />;
       default:
@@ -205,6 +207,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case "cancelled":
+        return "Cancelado";
       case "delivered":
         return "Entregado";
       case "approved":
@@ -227,6 +231,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
         return "text-yellow-600 dark:text-yellow-400";
       case "rejected":
         return "text-red-600 dark:text-red-400";
+      case "cancelled":
+        return "text-slate-600 dark:text-slate-400";
       default:
         return "text-slate-600 dark:text-slate-400";
     }
@@ -247,6 +253,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
         return "bg-yellow-100 dark:bg-yellow-900/50";
       case "rejected":
         return "bg-red-100 dark:bg-red-900/50";
+      case "cancelled":
+        return "bg-slate-100 dark:bg-slate-800";
       default:
         return "bg-slate-100 dark:bg-slate-800";
     }
