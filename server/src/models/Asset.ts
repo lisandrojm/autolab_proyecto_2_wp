@@ -38,7 +38,7 @@ export interface IAsset extends Document {
 
 const AssetSchema = new Schema<IAsset>(
   {
-    tenantId: { type: String, required: true, index: true },
+    tenantId: { type: String, required: true },
     clientId: { type: String, required: true, index: true },
     campaignId: { type: String, index: true },
     projectId: { type: String, index: true },

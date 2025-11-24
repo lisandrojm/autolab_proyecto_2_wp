@@ -72,7 +72,7 @@ export interface IBrief extends Document {
 
 const briefSchema = new Schema<IBrief>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", required: true, index: true },
     campaignId: { type: Schema.Types.ObjectId, ref: "Campaign", index: true },
 

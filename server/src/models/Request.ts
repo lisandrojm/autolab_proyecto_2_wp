@@ -22,7 +22,7 @@ export interface IRequest extends Document {
 
 const requestSchema = new Schema<IRequest>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     employeeId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     typeKey: {
       type: String,

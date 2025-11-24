@@ -12,7 +12,7 @@ export interface IRole extends Document {
 
 const roleSchema = new Schema<IRole>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", index: true, required: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     permissions: { type: [String], default: [] },

@@ -25,7 +25,7 @@ export interface IWorkflowTask extends Document {
 
 const workflowTaskSchema = new Schema<IWorkflowTask>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
 
     campaignId: { type: Schema.Types.ObjectId, ref: "Campaign", required: true, index: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", required: true, index: true },

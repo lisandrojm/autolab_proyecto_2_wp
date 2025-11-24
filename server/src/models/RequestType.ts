@@ -14,7 +14,7 @@ export interface IRequestType extends Document {
 
 const requestTypeSchema = new Schema<IRequestType>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
     key: { type: String, required: true, trim: true },
     description: { type: String, trim: true },

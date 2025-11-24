@@ -55,7 +55,7 @@ export interface IClient extends Document {
 
 const clientSchema = new Schema<IClient>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     slug: { type: String, index: true },
     ownerUserId: { type: Schema.Types.ObjectId, ref: "User" },
 

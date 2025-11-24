@@ -17,7 +17,7 @@ export interface IVacationRequest extends Document {
 
 const vacationRequestSchema = new Schema<IVacationRequest>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },

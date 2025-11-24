@@ -26,7 +26,7 @@ export interface ICampaign extends Document {
 
 const campaignSchema = new Schema<ICampaign>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", required: true, index: true },
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true, index: true },
 

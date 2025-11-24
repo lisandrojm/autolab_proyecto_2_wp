@@ -24,7 +24,7 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true, minlength: 6 },
     roles: { type: [Schema.Types.ObjectId], ref: "Role", default: [] },
     clientIds: { type: [Schema.Types.ObjectId], ref: "Client", default: [] },
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     firstName: {
       type: String,
       trim: true,

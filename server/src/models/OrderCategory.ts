@@ -55,7 +55,7 @@ export interface IOrderCategory extends Document {
 
 const orderCategorySchema = new Schema<IOrderCategory>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
     informacion: { type: String, trim: true },
     icon: { type: String, trim: true },

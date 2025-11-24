@@ -95,7 +95,7 @@ export interface IPost extends Document {
 
 const postSchema = new Schema<IPost>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
+    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
 
     campaignId: { type: Schema.Types.ObjectId, ref: "Campaign", required: true, index: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", required: true, index: true },
