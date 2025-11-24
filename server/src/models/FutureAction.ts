@@ -8,7 +8,7 @@ export type TipoAccionFutura =
 
 export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
-export type EstadoAccion = "pendiente" | "cumplida" | "vencida" | "en_revision";
+export type EstadoAccion = "pendiente" | "pendiente_documento" | "documento_presentado" | "cumplida" | "vencida" | "en_revision";
 
 export type ResponsableAccion = "usuario" | "cliente" | "area_interna";
 
@@ -23,6 +23,7 @@ export interface IFutureAction extends Document {
   descripcionAccion: string;
   responsableAccion: ResponsableAccion;
   documentoRequerido?: string;
+  documentoUrl?: string;
   plazoDias?: number;
   fechaLimite?: Date;
   fechaCreacionAccion: Date;
@@ -82,6 +83,10 @@ const futureActionSchema = new Schema<IFutureAction>(
       type: String,
       trim: true,
     },
+    documentoUrl: {
+      type: String,
+      trim: true,
+    },
     plazoDias: {
       type: Number,
       min: 0,
@@ -101,7 +106,7 @@ const futureActionSchema = new Schema<IFutureAction>(
     },
     estadoAccion: {
       type: String,
-      enum: ["pendiente", "cumplida", "vencida", "en_revision"],
+      enum: ["pendiente", "pendiente_documento", "documento_presentado", "cumplida", "vencida", "en_revision"],
       default: "pendiente",
       required: true,
       index: true,

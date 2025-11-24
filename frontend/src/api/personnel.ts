@@ -174,6 +174,7 @@ export interface OrderData {
   actionCompleted?: boolean;
   amount?: number;
   photoUrl?: string;
+  documentoUrl?: string;
   status: 'pending' | 'approved' | 'rejected' | 'delivered' | 'cancelled';
   requestedAt: string;
   approvedBy?: {
@@ -286,6 +287,7 @@ export const personnelAPI = {
     actionCompleted?: boolean;
     amount?: number;
     photo?: File | null;
+    document?: File | null;
     futureActionPlazoDias?: number;
     futureActionFechaLimite?: string;
     futureActionDocumento?: string;
@@ -303,8 +305,21 @@ export const personnelAPI = {
     if (orderData.futureActionFechaLimite) formData.append('futureActionFechaLimite', orderData.futureActionFechaLimite);
     if (orderData.futureActionDocumento) formData.append('futureActionDocumento', orderData.futureActionDocumento);
     if (orderData.photo) formData.append('photo', orderData.photo);
+    if (orderData.document) formData.append('document', orderData.document);
 
     const { data } = await axios.post('/orders', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
+  uploadOrderDocument: async (orderId: string, document: File): Promise<OrderData> => {
+    const formData = new FormData();
+    formData.append('document', document);
+
+    const { data } = await axios.patch(`/orders/${orderId}/upload-document`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useRef } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCamera, faImage, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { OrderCategory } from "../../../../api/orderCategories";
 import { tipoAccionFuturaLabels } from "../../../../types/futureAction";
 
@@ -18,12 +20,44 @@ interface DynamicCategoryInputProps {
   onFutureActionFechaLimiteChange?: (value: string) => void;
   futureActionDocumento?: string;
   onFutureActionDocumentoChange?: (value: string) => void;
+  document?: File | null;
+  onDocumentChange?: (file: File | null) => void;
+  documentPreview?: string | null;
+  onDocumentPreviewChange?: (preview: string | null) => void;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange }) => {
   if (!category) return null;
 
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
   const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onDocumentChange && onDocumentPreviewChange) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert("El archivo debe ser menor a 10MB");
+        return;
+      }
+      onDocumentChange(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onDocumentPreviewChange(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveDocument = () => {
+    if (onDocumentChange && onDocumentPreviewChange) {
+      onDocumentChange(null);
+      onDocumentPreviewChange(null);
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      if (galleryInputRef.current) galleryInputRef.current.value = "";
+    }
+  };
 
   const renderDynamicInput = () => {
     switch (category.categoryType) {
@@ -235,6 +269,32 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                 </p>
               )}
               {renderDeadlineInfo()}
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subir Documento</label>
+                {documentPreview ? (
+                  <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                    <img src={documentPreview} alt="Preview" className="w-full h-48 object-cover" />
+                    <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
+                      <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
+                      <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-slate-400" />
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
+                    </button>
+
+                    <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
+                      <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Archivo</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -64,6 +64,41 @@ const uploadOrderImage = multer({
   },
 }).single("photo");
 
+const documentStorage = multer.diskStorage({
+  destination: async (req: any, _file, cb) => {
+    try {
+      const tenantId = req.tenantId || "unknown_tenant";
+      const userId = req.user?.userId || "unknown_user";
+      const dir = path.join(__dirname, "../../storage", tenantId, userId, "documents");
+      await ensureDir(dir);
+      cb(null, dir);
+    } catch (err) {
+      console.error("Error in multer destination:", err);
+      cb(err as any, "");
+    }
+  },
+  filename: (_req: any, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const docId = new mongoose.Types.ObjectId();
+    const filename = `document_${docId}${ext}`;
+    cb(null, filename);
+  },
+});
+
+const uploadDocument = multer({
+  storage: documentStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|pdf/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = /jpeg|jpg|png|pdf|application\/pdf/i.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png) y archivos PDF"));
+  },
+}).single("document");
+
 const createOrderSchema = z.object({
   description: z.string().min(1),
   category: z.string().default("other"),
@@ -73,6 +108,7 @@ const createOrderSchema = z.object({
   dynamicValue: z.any().optional(),
   amount: z.number().min(0).optional(),
   photoUrl: z.string().optional(),
+  documentoUrl: z.string().optional(),
   futureActionPlazoDias: z.number().min(1).max(365).optional(),
   futureActionFechaLimite: z.string().optional(),
   futureActionDocumento: z.string().optional(),
@@ -158,10 +194,17 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
   try {
     const userId = req.user!.userId;
     let photoUrl: string | undefined;
+    let documentoUrl: string | undefined;
 
     if (req.file) {
       const tenantId = req.tenantId || "unknown_tenant";
-      photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+      const fieldName = req.file.fieldname;
+
+      if (fieldName === "photo") {
+        photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+      } else if (fieldName === "document") {
+        documentoUrl = `/storage/${tenantId}/${userId}/documents/${req.file.filename}`;
+      }
     }
 
     let parsedDynamicValue = req.body.dynamicValue;
@@ -191,6 +234,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       dynamicValue: parsedDynamicValue,
       subcategories: parsedSubcategories,
       photoUrl,
+      documentoUrl,
     });
 
     if (data.categoryId) {
@@ -282,6 +326,25 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
           case "fechaEspecifica":
             if (data.futureActionFechaLimite) {
               futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+            }
+            break;
+
+          case "documento":
+            if (category.documentoRequerido) {
+              futureActionData.documentoRequerido = category.documentoRequerido;
+            }
+            if (documentoUrl) {
+              futureActionData.documentoUrl = documentoUrl;
+              futureActionData.estadoAccion = "documento_presentado";
+            } else {
+              futureActionData.estadoAccion = "pendiente_documento";
+            }
+            if (category.deadlineMode === "plazoDias" && category.plazoDias) {
+              futureActionData.plazoDias = category.plazoDias;
+              futureActionData.deadlineMode = "plazoDias";
+            } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
+              futureActionData.fechaLimite = new Date(category.fechaLimite);
+              futureActionData.deadlineMode = "fechaEspecifica";
             }
             break;
 
@@ -422,6 +485,62 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
       return;
     }
     console.error("Update order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+      userId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: "No document file provided" });
+      return;
+    }
+
+    const tenantId = req.tenantId || "unknown_tenant";
+    const documentoUrl = `/storage/${tenantId}/${userId}/documents/${req.file.filename}`;
+
+    order.documentoUrl = documentoUrl;
+    await order.save();
+
+    if (order.futureActionId) {
+      const futureAction = await FutureAction.findById(order.futureActionId);
+      if (futureAction && futureAction.tipoAccionFutura === "documento") {
+        futureAction.documentoUrl = documentoUrl;
+        futureAction.estadoAccion = "documento_presentado";
+        await futureAction.save();
+      }
+    }
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId,
+      action: "document_uploaded",
+      description: `Documento subido para pedido ${order.orderNumber}`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate("approvedBy", "firstName lastName email")
+      .populate("categoryId");
+
+    res.json(populatedOrder);
+  } catch (error) {
+    console.error("Upload document error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

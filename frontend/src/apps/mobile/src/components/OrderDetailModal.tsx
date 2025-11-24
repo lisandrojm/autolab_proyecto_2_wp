@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
-import { OrderData } from "../../../../api/personnel";
+import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { OrderData, personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getStatusBadge, getCategoryName, getOrderNumber, getSubcategoriesArray, getStatusIcon } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -16,8 +16,59 @@ interface OrderDetailModalProps {
 export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdate }: OrderDetailModalProps) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [documentToUpload, setDocumentToUpload] = useState<File | null>(null);
+  const [documentPreview, setDocumentPreview] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   if (!order) return null;
+
+  const needsDocument = order.categoryId && !order.documentoUrl;
+
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        sweetAlert.warning("Archivo muy grande", "El archivo debe ser menor a 10MB");
+        return;
+      }
+      setDocumentToUpload(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDocumentPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveDocument = () => {
+    setDocumentToUpload(null);
+    setDocumentPreview(null);
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
+  };
+
+  const handleUploadDocument = async () => {
+    if (!documentToUpload || !order) return;
+
+    try {
+      setUploadingDocument(true);
+      await personnelAPI.uploadOrderDocument(order._id, documentToUpload);
+      await sweetAlert.success("Documento subido", "El documento se ha subido correctamente");
+      setDocumentToUpload(null);
+      setDocumentPreview(null);
+      onClose();
+      if (onStatusUpdate) {
+        await onStatusUpdate(order._id, order.status);
+      }
+    } catch (error: any) {
+      console.error("Error uploading document:", error);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo subir el documento");
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
 
   const handleCancelOrder = async () => {
     if (!order || !onStatusUpdate) return;
@@ -163,6 +214,80 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             </div>
             <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>
           </div>
+
+          {/* Document Upload Section */}
+          {needsDocument && order.status === 'pending' && (
+            <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-800 rounded-lg p-4">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
+                  <FontAwesomeIcon icon={faUpload} className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">Documento Pendiente</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    Este pedido requiere que subas un documento para completar la solicitud.
+                  </p>
+                </div>
+              </div>
+
+              {documentPreview ? (
+                <div className="space-y-3">
+                  <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                    <img src={documentPreview} alt="Preview" className="w-full h-48 object-cover" />
+                    <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
+                      <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleUploadDocument}
+                    disabled={uploadingDocument}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {uploadingDocument ? (
+                      <>
+                        <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
+                        <span>Subiendo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
+                        <span>Enviar Documento</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
+                  <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-orange-300 dark:border-orange-600 bg-white dark:bg-slate-800 py-4 px-3 hover:bg-orange-50 dark:hover:bg-orange-900/10">
+                    <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-orange-500" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
+                  </button>
+
+                  <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
+                  <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-orange-300 dark:border-orange-600 bg-white dark:bg-slate-800 py-4 px-3 hover:bg-orange-50 dark:hover:bg-orange-900/10">
+                    <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-orange-500" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Archivo</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show uploaded document */}
+          {order.documentoUrl && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-semibold text-green-800 dark:text-green-300">Documento Presentado</p>
+              </div>
+              <img
+                src={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`}
+                alt="Documento subido"
+                className="w-full h-auto rounded-lg border border-green-200 dark:border-green-600 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)}
+              />
+            </div>
+          )}
 
           {/* Fechas importantes */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">

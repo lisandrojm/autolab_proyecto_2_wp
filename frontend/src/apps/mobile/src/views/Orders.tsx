@@ -24,6 +24,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [document, setDocument] = useState<File | null>(null);
+  const [documentPreview, setDocumentPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
@@ -93,6 +95,10 @@ export default function Orders({ onNavigate }: OrdersProps) {
       if (cameraInputRef.current) cameraInputRef.current.value = "";
       if (galleryInputRef.current) galleryInputRef.current.value = "";
     }
+
+    // Clear document when switching categories
+    setDocument(null);
+    setDocumentPreview(null);
   }, [selectedCategoryId, selectedCategory]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +151,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
         validDynamicValue = dynamicValue;
       }
 
+      const isDocumentType = selectedCategory?.futureActionType === "documento";
+
       const orderData = {
         description,
         category: selectedCategory?.name || "other",
@@ -157,6 +165,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         futureActionFechaLimite: futureActionFechaLimite || undefined,
         futureActionDocumento: futureActionDocumento || undefined,
         photo: shouldIncludePhoto ? photo : null,
+        document: isDocumentType ? document : null,
       };
 
       if (selectedCategory?.informacion && selectedCategory.informacion.trim()) {
@@ -196,6 +205,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setFutureActionDocumento("");
       setPhoto(null);
       setPhotoPreview(null);
+      setDocument(null);
+      setDocumentPreview(null);
     } catch (err: any) {
       await sweetAlert.error("Error", err.response?.data?.error || "Error al crear pedido");
     } finally {
@@ -318,7 +329,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
                 {/* Opciones */}
                 <div className="pt-3">
-                  <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} />
+                  <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} />
                 </div>
               </div>
               {/* Descripción */}

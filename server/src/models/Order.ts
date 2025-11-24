@@ -16,6 +16,7 @@ export interface IOrder extends Document {
   deliveredAt?: Date;
   amount?: number;
   photoUrl?: string;
+  documentoUrl?: string;
   actionCompleted?: boolean;
   dynamicValue?: any;
   requiereAccionFutura?: boolean;
@@ -46,6 +47,7 @@ const orderSchema = new Schema<IOrder>(
     deliveredAt: { type: Date },
     amount: { type: Number, min: 0 },
     photoUrl: { type: String, trim: true },
+    documentoUrl: { type: String, trim: true },
     actionCompleted: { type: Boolean },
     dynamicValue: { type: Schema.Types.Mixed },
     requiereAccionFutura: { type: Boolean, default: false },

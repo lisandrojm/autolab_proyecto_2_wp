@@ -29,6 +29,7 @@ export const useOrders = () => {
     actionCompleted?: boolean;
     amount?: number;
     photo?: File | null;
+    document?: File | null;
     futureActionPlazoDias?: number;
     futureActionFechaLimite?: string;
     futureActionDocumento?: string;
