@@ -120,7 +120,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
   const getMonto = (): number | null => {
     if (order.amount) return order.amount;
-    if (typeof order.dynamicValue === 'number') return order.dynamicValue;
+    if (typeof order.dynamicValue === "number") return order.dynamicValue;
     return null;
   };
 
@@ -141,20 +141,16 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 {badge.label}
               </span>
               {(() => {
-                const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+                const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
                 const badgeStyle = getDocumentBadgeStyle(futureAction);
 
                 if (!badgeStyle) return null;
 
-                const isDocumentUploaded = badgeStyle.label === 'Doc. Subido' && order.documentoUrl;
+                const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && order.documentoUrl;
 
                 if (isDocumentUploaded) {
                   return (
-                    <button
-                      onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)}
-                      className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`}
-                      title="Ver documento"
-                    >
+                    <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
                       <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                       {badgeStyle.label}
                     </button>
@@ -162,11 +158,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 }
 
                 return (
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${
-                      badgeStyle.shouldAnimate ? 'animate-pulse' : ''
-                    }`}
-                  >
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
                     <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                     {badgeStyle.label}
                   </span>
@@ -214,7 +206,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               {monto !== null && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">$ {monto.toLocaleString('es-AR')}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">$ {monto.toLocaleString("es-AR")}</p>
                 </div>
               )}
               {order.dynamicValue?.fechaDesde && (
@@ -250,50 +242,28 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
           {/* Document Upload Section with Future Action */}
           {(() => {
-            const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+            const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
 
-            if (!futureAction || futureAction.tipoAccionFutura !== 'documento' ||
-                futureAction.estadoAccion !== 'pendiente_documento') {
+            if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "pendiente_documento") {
               return null;
             }
 
-            const daysRemaining = futureAction.fechaLimite
-              ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
-              : null;
+            const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
             return (
               <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
                   <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                   <div className="flex-1">
-                    <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">
-                      Documento Pendiente
-                    </h4>
-                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
-                      Este pedido requiere que subas un documento para completar la solicitud.
-                    </p>
-                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
-                      {futureAction.descripcionAccion}
-                    </p>
+                    <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">Documento Pendiente</h4>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que subas un documento para completar la solicitud.</p>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p>
                     {futureAction.documentoRequerido && (
                       <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
                         <strong>Requerido:</strong> {futureAction.documentoRequerido}
                       </p>
                     )}
-                    {daysRemaining !== null && (
-                      <p className={`text-sm font-medium mb-3 ${
-                        daysRemaining <= 2
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-orange-600 dark:text-orange-400'
-                      }`}>
-                        {daysRemaining > 0
-                          ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''}`
-                          : daysRemaining === 0
-                          ? 'Vence hoy'
-                          : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? 's' : ''}`
-                        }
-                      </p>
-                    )}
+                    {daysRemaining !== null && <p className={`text-sm font-medium mb-3 ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""}` : daysRemaining === 0 ? "Vence hoy" : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
                   </div>
                 </div>
 
@@ -305,11 +275,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                         <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                       </button>
                     </div>
-                    <button
-                      onClick={handleUploadDocument}
-                      disabled={uploadingDocument}
-                      className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <button onClick={handleUploadDocument} disabled={uploadingDocument} className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       {uploadingDocument ? (
                         <>
                           <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
@@ -348,12 +314,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               <div className="flex items-center justify-between mb-2">
                 <p className="font-semibold text-green-800 dark:text-green-300">Documento Presentado</p>
               </div>
-              <img
-                src={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`}
-                alt="Documento subido"
-                className="w-full h-auto rounded-lg border border-green-200 dark:border-green-600 cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)}
-              />
+              <img src={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} alt="Documento subido" className="w-full h-auto rounded-lg border border-green-200 dark:border-green-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} />
             </div>
           )}
 
@@ -377,20 +338,12 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
       {/* Modal de imagen en pantalla completa */}
       {viewingImage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
-          <div className="relative max-w-full max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-4 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg z-10">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 w-full" onClick={() => setViewingImage(null)}>
+          <div className="relative w-full flex justify-center max-h-[70svh]" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-0 p-2 rounded-full text-gray-400">
               <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
             </button>
-            {viewingImage.toLowerCase().endsWith('.pdf') ? (
-              <iframe
-                src={viewingImage}
-                className="w-full h-[90vh] rounded-lg shadow-2xl bg-white"
-                title="Documento"
-              />
-            ) : (
-              <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
-            )}
+            {viewingImage.toLowerCase().endsWith(".pdf") ? <iframe src={viewingImage} className="w-full h-[90vh] rounded-lg shadow-2xl bg-white" title="Documento" /> : <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />}
           </div>
         </div>
       )}
