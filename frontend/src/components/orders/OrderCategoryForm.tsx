@@ -268,12 +268,16 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                     setFormData({ ...formData, montoMaximo: undefined });
                     return;
                   }
+                  setFormData({ ...formData, montoMaximo: parseFloat(value) });
+                }}
+                onBlur={(e) => {
+                  const value = e.target.value;
+                  if (!value) return;
+
                   const numValue = parseFloat(value);
                   if (numValue % 50 !== 0) {
                     const rounded = Math.round(numValue / 50) * 50;
                     setFormData({ ...formData, montoMaximo: rounded > 0 ? rounded : 50 });
-                  } else {
-                    setFormData({ ...formData, montoMaximo: numValue });
                   }
                 }}
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
