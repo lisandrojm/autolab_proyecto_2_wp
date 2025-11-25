@@ -208,13 +208,9 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       const fechaLimite = new Date();
       fechaLimite.setDate(fechaLimite.getDate() + category.plazoDias);
       return (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mt-2">
-          <p className="text-sm text-green-700 dark:text-green-300 font-medium">
-            Debes completar antes de: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-          </p>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            Plazo: {category.plazoDias} días desde la solicitud
-          </p>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-2">
+          <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Debes completar antes de: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Plazo: {category.plazoDias} días desde la solicitud</p>
         </div>
       );
     }
@@ -223,9 +219,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       const fechaLimite = new Date(category.fechaLimite);
       return (
         <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mt-2">
-          <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">
-            Fecha límite: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-          </p>
+          <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">Fecha límite: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
       );
     }
@@ -263,11 +257,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           {category.futureActionType === "documento" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Documento Requerido</p>
-              {category.documentoRequerido && (
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
-                  {category.documentoRequerido}
-                </p>
-              )}
+              {category.documentoRequerido && <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">{category.documentoRequerido}</p>}
               {renderDeadlineInfo()}
 
               <div className="mt-3">
