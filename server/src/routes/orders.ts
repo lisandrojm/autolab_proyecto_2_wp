@@ -328,21 +328,22 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
         };
 
         switch (actionType) {
-          case "plazoDias":
+          case "accion":
             if (data.futureActionPlazoDias) {
               futureActionData.plazoDias = data.futureActionPlazoDias;
-            }
-            break;
-
-          case "fechaEspecifica":
-            if (data.futureActionFechaLimite) {
+              futureActionData.deadlineMode = "plazoDias";
+            } else if (data.futureActionFechaLimite) {
               futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+              futureActionData.deadlineMode = "fechaEspecifica";
             }
             break;
 
           case "documento":
             if (category.documentoRequerido) {
               futureActionData.documentoRequerido = category.documentoRequerido;
+            }
+            if (data.futureActionDocumento) {
+              futureActionData.documentoRequerido = data.futureActionDocumento;
             }
             if (documentoUrl) {
               futureActionData.documentoUrl = documentoUrl;
@@ -356,31 +357,31 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
             } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
               futureActionData.fechaLimite = new Date(category.fechaLimite);
               futureActionData.deadlineMode = "fechaEspecifica";
-            }
-            break;
-
-          case "presentacionDocumento":
-            if (data.futureActionDocumento) {
-              futureActionData.documentoRequerido = data.futureActionDocumento;
-            }
-            if (data.futureActionFechaLimite) {
+            } else if (data.futureActionPlazoDias) {
+              futureActionData.plazoDias = data.futureActionPlazoDias;
+              futureActionData.deadlineMode = "plazoDias";
+            } else if (data.futureActionFechaLimite) {
               futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+              futureActionData.deadlineMode = "fechaEspecifica";
             }
             break;
 
-          case "vencimientoSistema":
+          case "condicion":
             if (data.futureActionPlazoDias) {
               futureActionData.plazoDias = data.futureActionPlazoDias;
+              futureActionData.deadlineMode = "plazoDias";
               futureActionData.quienDefineVencimiento = "sistema";
+            } else if (data.futureActionFechaLimite) {
+              futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+              futureActionData.deadlineMode = "fechaEspecifica";
+            } else {
+              futureActionData.quienDefineVencimiento = "area_interna";
+              futureActionData.estadoAccion = "en_revision";
             }
-            break;
-
-          case "vencimientoInterno":
-            futureActionData.quienDefineVencimiento = "area_interna";
-            futureActionData.estadoAccion = "en_revision";
             break;
 
           case "sinVencimiento":
+            futureActionData.deadlineMode = "none";
             break;
         }
 

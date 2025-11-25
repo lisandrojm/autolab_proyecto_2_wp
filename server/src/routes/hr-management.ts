@@ -71,6 +71,8 @@ const createOrderSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   category: z.string().default("other"),
+  categoryId: z.string().optional(),
+  subcategories: z.array(z.string()).default([]),
   amount: z.number().min(0).optional(),
   photoUrl: z.string().optional(),
 });
@@ -319,8 +321,8 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
 
     await order.save();
 
-    const categoryName = data.categoryId ? (await OrderCategory.findById(data.categoryId))?.name || data.category : data.category;
-    const subcategoryText = data.subcategories && data.subcategories.length > 0 ? ` - ${data.subcategories.join(", ")}` : "";
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
     await ActivityLog.create({
