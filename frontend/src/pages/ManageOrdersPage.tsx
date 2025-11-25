@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -780,23 +780,11 @@ export const ManageOrdersPage: React.FC = () => {
         customHeader={
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
             <div className="flex items-center gap-3">
-              <button
-                onClick={handlePreviousOrder}
-                disabled={!hasPreviousOrder}
-                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                title="Pedido anterior (←)"
-              >
+              <button onClick={handlePreviousOrder} disabled={!hasPreviousOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior (←)">
                 <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
               </button>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Detalles del Pedido
-              </h2>
-              <button
-                onClick={handleNextOrder}
-                disabled={!hasNextOrder}
-                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                title="Siguiente pedido (→)"
-              >
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
+              <button onClick={handleNextOrder} disabled={!hasNextOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido (→)">
                 <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
               </button>
               {currentOrderIndex >= 0 && (
@@ -805,12 +793,7 @@ export const ManageOrdersPage: React.FC = () => {
                 </span>
               )}
             </div>
-            <button
-              onClick={() => setShowDetailModal(false)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Cerrar modal"
-              title="Cerrar"
-            >
+            <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
               <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
             </button>
           </div>
@@ -936,23 +919,19 @@ export const ManageOrdersPage: React.FC = () => {
               const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
               return (
-                <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg">
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-500/50 p-4 rounded-lg">
                   <div className="flex items-start gap-3">
                     <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                     <div className="flex-1">
                       <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">Documento Pendiente</h4>
-                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que el usuario presente un documento para completar la solicitud.</p>
-                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p>
                       {futureAction.documentoRequerido && (
-                        <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
-                          <strong>Documento requerido:</strong> {futureAction.documentoRequerido}
+                        <p className="text-sm text-orange-600 dark:text-orange-400 mb-3">
+                          <strong>"{futureAction.documentoRequerido}"</strong>
                         </p>
                       )}
-                      {daysRemaining !== null && <p className={`text-sm font-medium mb-3 ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""} para presentar el documento` : daysRemaining === 0 ? "El plazo vence hoy" : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
-
-                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs text-blue-700 dark:text-blue-300">ℹ️ El usuario puede subir el documento desde su aplicación móvil</p>
-                      </div>
+                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que el usuario presente un documento para completar la solicitud.</p>
+                      {/*<p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p> */}
+                      {daysRemaining !== null && <p className={`text-sm font-medium ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""} para presentar el documento` : daysRemaining === 0 ? "El plazo vence hoy" : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
                     </div>
                   </div>
                 </div>

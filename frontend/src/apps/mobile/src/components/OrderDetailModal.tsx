@@ -14,7 +14,7 @@ interface OrderDetailModalProps {
   onStatusUpdate?: (orderId: string, newStatus: string) => Promise<void>;
   currentIndex?: number;
   totalOrders?: number;
-  onNavigate?: (direction: 'prev' | 'next') => void;
+  onNavigate?: (direction: "prev" | "next") => void;
 }
 
 export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdate, currentIndex = -1, totalOrders = 0, onNavigate }: OrderDetailModalProps) {
@@ -144,23 +144,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           onNavigate ? (
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => onNavigate('prev')}
-                  disabled={!hasPrevious}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Pedido anterior"
-                >
+                <button onClick={() => onNavigate("prev")} disabled={!hasPrevious} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior">
                   <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </button>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Detalles del Pedido
-                </h2>
-                <button
-                  onClick={() => onNavigate('next')}
-                  disabled={!hasNext}
-                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title="Siguiente pedido"
-                >
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
+                <button onClick={() => onNavigate("next")} disabled={!hasNext} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido">
                   <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </button>
                 {currentIndex >= 0 && totalOrders > 0 && (
@@ -169,12 +157,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   </span>
                 )}
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label="Cerrar modal"
-                title="Cerrar"
-              >
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
                 <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
               </button>
             </div>
@@ -303,19 +286,19 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
             return (
-              <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-lg">
+              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-500/50 p-4 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
                   <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                   <div className="flex-1">
                     <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">Documento Pendiente</h4>
-                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que subas un documento para completar la solicitud.</p>
-                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p>
                     {futureAction.documentoRequerido && (
-                      <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
-                        <strong>Requerido:</strong> {futureAction.documentoRequerido}
+                      <p className="text-sm text-orange-600 dark:text-orange-400 mb-3">
+                        <strong>"{futureAction.documentoRequerido}"</strong>
                       </p>
                     )}
-                    {daysRemaining !== null && <p className={`text-sm font-medium mb-3 ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""}` : daysRemaining === 0 ? "Vence hoy" : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que subas un documento para completar la solicitud.</p>
+                    {/*                     <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p> */}
+                    {daysRemaining !== null && <p className={`text- font-medium mb-3 ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""}` : daysRemaining === 0 ? "Vence hoy" : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
                   </div>
                 </div>
 
@@ -344,13 +327,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 ) : (
                   <div className="flex gap-3">
                     <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-600 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
                       <span className="text-sm font-medium">Tomar Foto</span>
                     </button>
 
                     <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-600 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                       <span className="text-sm font-medium">Subir Archivo</span>
                     </button>
