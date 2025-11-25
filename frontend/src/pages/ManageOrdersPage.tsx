@@ -669,22 +669,24 @@ export const ManageOrdersPage: React.FC = () => {
 
                                 const isDocumentUploaded = badgeStyle.label === 'Doc. Subido' && order.documentoUrl;
 
-                                return (
-                                  <div className="flex items-center gap-2">
-                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
+                                if (isDocumentUploaded) {
+                                  return (
+                                    <button
+                                      onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)}
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`}
+                                      title="Ver documento"
+                                    >
                                       <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                                       {badgeStyle.label}
-                                    </span>
-                                    {isDocumentUploaded && (
-                                      <button
-                                        onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)}
-                                        className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/60 transition-colors"
-                                        title="Ver documento"
-                                      >
-                                        <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
+                                    </button>
+                                  );
+                                }
+
+                                return (
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
+                                    <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                                    {badgeStyle.label}
+                                  </span>
                                 );
                               })()}
                             </td>
@@ -769,22 +771,24 @@ export const ManageOrdersPage: React.FC = () => {
 
                   const isDocumentUploaded = badgeStyle.label === 'Doc. Subido' && selectedOrder.documentoUrl;
 
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
+                  if (isDocumentUploaded) {
+                    return (
+                      <button
+                        onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)}
+                        className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`}
+                        title="Ver documento"
+                      >
                         <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                         {badgeStyle.label}
-                      </span>
-                      {isDocumentUploaded && (
-                        <button
-                          onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/60 transition-colors"
-                          title="Ver documento"
-                        >
-                          <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
+                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                      {badgeStyle.label}
+                    </span>
                   );
                 })()}
               </div>
