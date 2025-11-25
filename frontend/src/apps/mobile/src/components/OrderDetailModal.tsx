@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faEye } from "@fortawesome/free-solid-svg-icons";
 import { OrderData, personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getStatusBadge, getCategoryName, getOrderNumber, getSubcategoriesArray, getStatusIcon } from "../utils/orderHelpers";
@@ -146,15 +146,28 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
                 if (!badgeStyle) return null;
 
+                const isDocumentUploaded = badgeStyle.label === 'Doc. Subido' && order.documentoUrl;
+
                 return (
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${
-                      badgeStyle.shouldAnimate ? 'animate-pulse' : ''
-                    }`}
-                  >
-                    <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                    {badgeStyle.label}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${
+                        badgeStyle.shouldAnimate ? 'animate-pulse' : ''
+                      }`}
+                    >
+                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                      {badgeStyle.label}
+                    </span>
+                    {isDocumentUploaded && (
+                      <button
+                        onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/60 transition-colors"
+                        title="Ver documento"
+                      >
+                        <FontAwesomeIcon icon={faEye} className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 );
               })()}
             </div>
@@ -363,11 +376,19 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       {/* Modal de imagen en pantalla completa */}
       {viewingImage && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
-          <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-full max-h-full w-full" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-4 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg z-10">
               <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
             </button>
-            <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+            {viewingImage.toLowerCase().endsWith('.pdf') ? (
+              <iframe
+                src={viewingImage}
+                className="w-full h-[90vh] rounded-lg shadow-2xl bg-white"
+                title="Documento"
+              />
+            ) : (
+              <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+            )}
           </div>
         </div>
       )}
