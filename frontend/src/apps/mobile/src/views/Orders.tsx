@@ -271,6 +271,16 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setShowDetailModal(true);
   };
 
+  const currentOrderIndex = selectedOrder ? orders.findIndex((o) => o._id === selectedOrder._id) : -1;
+
+  const handleNavigateOrder = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentOrderIndex > 0) {
+      setSelectedOrder(orders[currentOrderIndex - 1]);
+    } else if (direction === 'next' && currentOrderIndex >= 0 && currentOrderIndex < orders.length - 1) {
+      setSelectedOrder(orders[currentOrderIndex + 1]);
+    }
+  };
+
   const getStatusBg = (status: string) => {
     switch (status) {
       case "delivered":
@@ -476,6 +486,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
           setSelectedOrder(null);
         }}
         onStatusUpdate={updateOrderStatus}
+        currentIndex={currentOrderIndex}
+        totalOrders={orders.length}
+        onNavigate={handleNavigateOrder}
       />
 
 

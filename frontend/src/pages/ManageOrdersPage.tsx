@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -213,6 +213,39 @@ export const ManageOrdersPage: React.FC = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  const currentOrderIndex = selectedOrder ? filteredOrders.findIndex((o) => o._id === selectedOrder._id) : -1;
+  const hasPreviousOrder = currentOrderIndex > 0;
+  const hasNextOrder = currentOrderIndex >= 0 && currentOrderIndex < filteredOrders.length - 1;
+
+  const handlePreviousOrder = () => {
+    if (hasPreviousOrder) {
+      setSelectedOrder(filteredOrders[currentOrderIndex - 1]);
+    }
+  };
+
+  const handleNextOrder = () => {
+    if (hasNextOrder) {
+      setSelectedOrder(filteredOrders[currentOrderIndex + 1]);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showDetailModal && selectedOrder) {
+        if (e.key === "ArrowLeft" && hasPreviousOrder) {
+          e.preventDefault();
+          handlePreviousOrder();
+        } else if (e.key === "ArrowRight" && hasNextOrder) {
+          e.preventDefault();
+          handleNextOrder();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showDetailModal, selectedOrder, hasPreviousOrder, hasNextOrder]);
 
   const getUserName = (user: any) => {
     if (!user) return "Usuario desconocido";
@@ -738,7 +771,51 @@ export const ManageOrdersPage: React.FC = () => {
 
       {viewingImage && <ImageModal imageUrl={viewingImage} alt="Order Photo" isOpen={true} onClose={() => setViewingImage(null)} />}
 
-      <Modal isOpen={showDetailModal && !!selectedOrder} onClose={() => setShowDetailModal(false)} title="Detalles del Pedido" size="md" footer={renderModalFooter()}>
+      <Modal
+        isOpen={showDetailModal && !!selectedOrder}
+        onClose={() => setShowDetailModal(false)}
+        title="Detalles del Pedido"
+        size="md"
+        footer={renderModalFooter()}
+        customHeader={
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handlePreviousOrder}
+                disabled={!hasPreviousOrder}
+                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="Pedido anterior (←)"
+              >
+                <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+              </button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Detalles del Pedido
+              </h2>
+              <button
+                onClick={handleNextOrder}
+                disabled={!hasNextOrder}
+                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="Siguiente pedido (→)"
+              >
+                <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+              </button>
+              {currentOrderIndex >= 0 && (
+                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                  {currentOrderIndex + 1} de {filteredOrders.length}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowDetailModal(false)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label="Cerrar modal"
+              title="Cerrar"
+            >
+              <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+        }
+      >
         {selectedOrder && (
           <div className="space-y-6">
             {/* Perfil */}
