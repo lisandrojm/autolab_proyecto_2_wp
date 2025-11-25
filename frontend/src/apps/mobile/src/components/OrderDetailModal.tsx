@@ -61,7 +61,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       setDocumentPreview(null);
       onClose();
       if (onStatusUpdate) {
-        await onStatusUpdate(order._id, order.status);
+        window.location.reload();
       }
     } catch (error: any) {
       console.error("Error uploading document:", error);
