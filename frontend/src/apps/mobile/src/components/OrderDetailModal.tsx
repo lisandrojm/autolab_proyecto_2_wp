@@ -135,7 +135,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             <div>
               <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(order)}</p>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
               <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badge.style}`}>
                 <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
                 {badge.label}
@@ -309,14 +309,14 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           })()}
 
           {/* Show uploaded document */}
-          {order.documentoUrl && (
+          {/*           {order.documentoUrl && (
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-semibold text-green-800 dark:text-green-300">Documento Presentado</p>
               </div>
               <img src={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} alt="Documento subido" className="w-full h-auto rounded-lg border border-green-200 dark:border-green-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} />
             </div>
-          )}
+          )} */}
 
           {/* Fechas importantes */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">

@@ -743,7 +743,7 @@ export const ManageOrdersPage: React.FC = () => {
               <div>
                 <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
                 <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>
                   <FontAwesomeIcon icon={getStatusIcon(selectedOrder.status)} className="h-3 w-3" />
                   {getStatusBadge(selectedOrder.status).label}
@@ -754,15 +754,11 @@ export const ManageOrdersPage: React.FC = () => {
 
                   if (!badgeStyle) return null;
 
-                  const isDocumentUploaded = badgeStyle.label === 'Doc. Subido' && selectedOrder.documentoUrl;
+                  const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && selectedOrder.documentoUrl;
 
                   if (isDocumentUploaded) {
                     return (
-                      <button
-                        onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)}
-                        className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`}
-                        title="Ver documento"
-                      >
+                      <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
                         <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                         {badgeStyle.label}
                       </button>
