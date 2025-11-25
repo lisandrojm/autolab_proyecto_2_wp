@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -510,19 +510,22 @@ export const ManageOrdersPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex flex-wrap gap-4 justify-between">
           {[
-            { label: "Pendientes", value: stats.pending, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-            { label: "Aprobados", value: stats.approved, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
-            { label: "Rechazados", value: stats.rejected, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
-            { label: "Entregados", value: stats.delivered, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
-            { label: "Cancelados", value: stats.cancelled, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
-            { label: "Documentos", value: docStats.total, color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" },
+            { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
+            { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+            { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
+            { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
+            { label: "Cancelados", value: stats.cancelled, icon: faBan, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
+            { label: "Documentos", value: docStats.total, icon: faFileAlt, color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" },
           ].map((stat, index) => (
             <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${stat.label === "Documentos" ? "cursor-pointer hover:ring-orange-300 dark:hover:ring-orange-600 transition-all" : ""} ${stat.label === "Documentos" && docStats.overdue > 0 ? "ring-red-500 dark:ring-red-400" : ""}`} onClick={() => stat.label === "Documentos" && setShowDocModal(true)} title={stat.label === "Documentos" && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}>
-              <p className="text-sm font-medium opacity-80">{stat.label}</p>
-              <p className="text-lg font-bold">{stat.value}</p>
+              <FontAwesomeIcon icon={stat.icon} className="h-5 w-5 opacity-80" />
+              <div className="flex gap-2 items-center">
+                <span className="text-sm font-medium opacity-80">{stat.label}</span>
+                <span className="text-lg font-bold">{stat.value}</span>
+              </div>
               {stat.label === "Documentos" && docStats.overdue > 0 && (
                 <span className="text-red-500" title="Hay documentos vencidos">
-                  <FontAwesomeIcon icon={faFileArrowUp} className="h-4 w-4" />
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
                 </span>
               )}
             </div>
