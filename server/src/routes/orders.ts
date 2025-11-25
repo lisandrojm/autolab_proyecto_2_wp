@@ -391,8 +391,20 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
-    const categoryName = data.categoryId ? (await OrderCategory.findById(data.categoryId))?.name || data.category : data.category;
-    const subcategoryText = data.subcategories && data.subcategories.length > 0 ? ` - ${data.subcategories.join(", ")}` : "";
+    const categoryDoc = data.categoryId ? await OrderCategory.findById(data.categoryId) : null;
+    const categoryName = categoryDoc?.name || data.category;
+
+    let subcategoryText = "";
+    if (data.subcategories && data.subcategories.length > 0 && categoryDoc?.config?.subtipos) {
+      const subcategoryLabels = data.subcategories.map((subId) => {
+        const subtipo = categoryDoc.config.subtipos?.find((s) => s.id === subId);
+        return subtipo?.label || subId;
+      });
+      subcategoryText = ` - ${subcategoryLabels.join(", ")}`;
+    } else if (data.subcategories && data.subcategories.length > 0) {
+      subcategoryText = ` - ${data.subcategories.join(", ")}`;
+    }
+
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
     await ActivityLog.create({

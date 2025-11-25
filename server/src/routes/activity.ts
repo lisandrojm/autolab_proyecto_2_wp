@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { ActivityLog } from "../models/ActivityLog.js";
+import { Order } from "../models/Order.js";
+import { OrderCategory } from "../models/OrderCategory.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -18,7 +20,40 @@ router.get("/recent", async (req: AuthenticatedRequest & TenantRequest, res) => 
       .sort({ createdAt: -1 })
       .limit(10);
 
-    res.json(activities);
+    const enrichedActivities = await Promise.all(
+      activities.map(async (activity) => {
+        const activityObj = activity.toObject();
+
+        if (activity.action === "order_created" && activity.entityId) {
+          try {
+            const order = await Order.findById(activity.entityId).populate("categoryId");
+            if (order && order.categoryId) {
+              const category = order.categoryId as any;
+              const categoryName = category.name || order.category;
+
+              let subcategoryText = "";
+              if (order.subcategories && order.subcategories.length > 0 && category.config?.subtipos) {
+                const subcategoryLabels = order.subcategories.map((subId) => {
+                  const subtipo = category.config.subtipos?.find((s: any) => s.id === subId);
+                  return subtipo?.label || subId;
+                });
+                subcategoryText = ` - ${subcategoryLabels.join(", ")}`;
+              } else if (order.subcategories && order.subcategories.length > 0) {
+                subcategoryText = ` - ${order.subcategories.join(", ")}`;
+              }
+
+              activityObj.description = `Pedido creado: ${categoryName}${subcategoryText}`;
+            }
+          } catch (err) {
+            console.error("Error enriching activity:", err);
+          }
+        }
+
+        return activityObj;
+      })
+    );
+
+    res.json(enrichedActivities);
   } catch (error) {
     console.error("Get recent activity error:", error);
     res.status(500).json({ error: "Internal server error" });
