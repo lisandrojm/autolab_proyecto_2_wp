@@ -321,7 +321,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         </div>
 
         <div className="pt-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Visivilidad en el formulario</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Visibilidad en el formulario</label>
           <button
             type="button"
             onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
