@@ -200,6 +200,14 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         return;
       }
 
+      if (formData.categoryType === "dinero" && formData.montoMaximo) {
+        if (formData.montoMaximo % 50 !== 0) {
+          sweetAlert.error("Error", "El monto máximo debe ser un múltiplo de 50 (Ej: 50, 100, 150, 200...)");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       if (formData.requiresAction && formData.futureActionType) {
         if (formData.deadlineMode === "plazoDias") {
           if (!formData.plazoDias || formData.plazoDias < 1 || formData.plazoDias > 365) {

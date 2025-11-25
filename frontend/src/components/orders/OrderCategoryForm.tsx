@@ -257,9 +257,32 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto Maximo (opcional)</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
-              <input type="number" min="0" step="1" value={formData.montoMaximo || ""} onChange={(e) => setFormData({ ...formData, montoMaximo: e.target.value ? parseFloat(e.target.value) : undefined })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Sin limite" />
+              <input
+                type="number"
+                min="0"
+                step="50"
+                value={formData.montoMaximo || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!value) {
+                    setFormData({ ...formData, montoMaximo: undefined });
+                    return;
+                  }
+                  const numValue = parseFloat(value);
+                  if (numValue % 50 !== 0) {
+                    const rounded = Math.round(numValue / 50) * 50;
+                    setFormData({ ...formData, montoMaximo: rounded > 0 ? rounded : 50 });
+                  } else {
+                    setFormData({ ...formData, montoMaximo: numValue });
+                  }
+                }}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                placeholder="Sin limite"
+              />
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define el monto maximo que puede solicitar el usuario. Si no lo defines, no habra limite.</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Define el monto maximo en multiplos de 50 (Ej: 50, 100, 150, 200...). Si no lo defines, no habra limite.
+            </p>
           </div>
         )}
 
