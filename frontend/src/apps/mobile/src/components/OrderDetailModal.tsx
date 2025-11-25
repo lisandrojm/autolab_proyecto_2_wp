@@ -144,13 +144,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           onNavigate ? (
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
               <div className="flex items-center gap-3">
-                <button onClick={() => onNavigate("prev")} disabled={!hasPrevious} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior">
+                {/*                 <button onClick={() => onNavigate("prev")} disabled={!hasPrevious} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior">
                   <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-                </button>
+                </button> */}
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
-                <button onClick={() => onNavigate("next")} disabled={!hasNext} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido">
+                {/*                 <button onClick={() => onNavigate("next")} disabled={!hasNext} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido">
                   <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-                </button>
+                </button> */}
                 {currentIndex >= 0 && totalOrders > 0 && (
                   <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                     {currentIndex + 1} de {totalOrders}
@@ -327,13 +327,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 ) : (
                   <div className="flex gap-3">
                     <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-600 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
                       <span className="text-sm font-medium">Tomar Foto</span>
                     </button>
 
                     <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-600 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                       <span className="text-sm font-medium">Subir Archivo</span>
                     </button>

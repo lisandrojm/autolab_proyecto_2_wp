@@ -218,7 +218,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
     if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
       const fechaLimite = new Date(category.fechaLimite);
       return (
-        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mt-2">
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-600 rounded-lg p-3 mt-2">
           <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">Fecha límite: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
       );
