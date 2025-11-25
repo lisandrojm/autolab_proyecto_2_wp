@@ -138,58 +138,52 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
         isOpen={isOpen}
         onClose={onClose}
         title="Detalles del Pedido"
-        size="lg"
+        size="md"
         footer={renderFooter()}
         customHeader={
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Detalles del Pedido
-              </h2>
-              {currentIndex >= 0 && totalOrders > 0 && (
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  ({currentIndex + 1} de {totalOrders})
-                </span>
-              )}
+          onNavigate ? (
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => onNavigate('prev')}
+                  disabled={!hasPrevious}
+                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Pedido anterior"
+                >
+                  <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+                </button>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Detalles del Pedido
+                </h2>
+                <button
+                  onClick={() => onNavigate('next')}
+                  disabled={!hasNext}
+                  className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Siguiente pedido"
+                >
+                  <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+                </button>
+                {currentIndex >= 0 && totalOrders > 0 && (
+                  <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                    {currentIndex + 1} de {totalOrders}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Cerrar modal"
+                title="Cerrar"
+              >
+                <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Cerrar modal"
-              title="Cerrar"
-            >
-              <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
-            </button>
-          </div>
+          ) : undefined
         }
       >
-        <div className="relative h-[80vh]">
-          {onNavigate && (
-            <>
-              <button
-                onClick={() => onNavigate('prev')}
-                disabled={!hasPrevious}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-50 p-2.5 rounded-full bg-gray-800/70 dark:bg-gray-200/70 hover:bg-gray-900 dark:hover:bg-white backdrop-blur-sm shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-                title="Pedido anterior"
-              >
-                <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-white dark:text-gray-900" />
-              </button>
-
-              <button
-                onClick={() => onNavigate('next')}
-                disabled={!hasNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-50 p-2.5 rounded-full bg-gray-800/70 dark:bg-gray-200/70 hover:bg-gray-900 dark:hover:bg-white backdrop-blur-sm shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-                title="Siguiente pedido"
-              >
-                <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-white dark:text-gray-900" />
-              </button>
-            </>
-          )}
-
-          <div className="h-full overflow-y-auto px-6 py-4">
-            <div className="space-y-6">
-              {/* Nº Pedido y Status Badge */}
-              <div className="flex justify-between align-top">
+        <div className="space-y-6">
+          {/* Nº Pedido y Status Badge */}
+          <div className="flex justify-between align-top">
             <div>
               <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(order)}</p>
             </div>
@@ -392,8 +386,6 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             </div>
           </div>
         </div>
-      </div>
-    </div>
       </Modal>
 
       {/* Modal de imagen en pantalla completa */}
