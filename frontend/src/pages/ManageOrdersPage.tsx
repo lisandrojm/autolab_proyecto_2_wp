@@ -667,21 +667,6 @@ export const ManageOrdersPage: React.FC = () => {
                                   return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
                                 }
 
-                                const isDocumentUploaded = badgeStyle.label === 'Doc. Subido' && order.documentoUrl;
-
-                                if (isDocumentUploaded) {
-                                  return (
-                                    <button
-                                      onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)}
-                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`}
-                                      title="Ver documento"
-                                    >
-                                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                                      {badgeStyle.label}
-                                    </button>
-                                  );
-                                }
-
                                 return (
                                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
                                     <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
