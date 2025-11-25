@@ -775,33 +775,17 @@ export const ManageOrdersPage: React.FC = () => {
         isOpen={showDetailModal && !!selectedOrder}
         onClose={() => setShowDetailModal(false)}
         title="Detalles del Pedido"
-        size="md"
+        size="lg"
         footer={renderModalFooter()}
         customHeader={
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handlePreviousOrder}
-                disabled={!hasPreviousOrder}
-                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                title="Pedido anterior (←)"
-              >
-                <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
+            <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Detalles del Pedido
               </h2>
-              <button
-                onClick={handleNextOrder}
-                disabled={!hasNextOrder}
-                className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                title="Siguiente pedido (→)"
-              >
-                <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
               {currentOrderIndex >= 0 && (
-                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                  {currentOrderIndex + 1} de {filteredOrders.length}
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  ({currentOrderIndex + 1} de {filteredOrders.length})
                 </span>
               )}
             </div>
@@ -817,10 +801,30 @@ export const ManageOrdersPage: React.FC = () => {
         }
       >
         {selectedOrder && (
-          <div className="space-y-6">
-            {/* Perfil */}
-            <div className="flex justify-between align-top">
-              <div>
+          <div className="relative h-[80vh]">
+            <button
+              onClick={handlePreviousOrder}
+              disabled={!hasPreviousOrder}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-50 p-3 rounded-full bg-gray-800/70 dark:bg-gray-200/70 hover:bg-gray-900 dark:hover:bg-white backdrop-blur-sm shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              title="Pedido anterior (←)"
+            >
+              <FontAwesomeIcon icon={faChevronLeft} className="h-5 w-5 text-white dark:text-gray-900" />
+            </button>
+
+            <button
+              onClick={handleNextOrder}
+              disabled={!hasNextOrder}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-50 p-3 rounded-full bg-gray-800/70 dark:bg-gray-200/70 hover:bg-gray-900 dark:hover:bg-white backdrop-blur-sm shadow-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              title="Siguiente pedido (→)"
+            >
+              <FontAwesomeIcon icon={faChevronRight} className="h-5 w-5 text-white dark:text-gray-900" />
+            </button>
+
+            <div className="h-full overflow-y-auto px-6 py-4">
+              <div className="space-y-6">
+                {/* Perfil */}
+                <div className="flex justify-between align-top">
+                  <div>
                 <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
               </div>
               <div className="flex gap-3">
@@ -974,6 +978,8 @@ export const ManageOrdersPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
         )}
       </Modal>
 
