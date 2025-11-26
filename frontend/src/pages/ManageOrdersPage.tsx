@@ -541,7 +541,7 @@ export const ManageOrdersPage: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-4 justify-between">
+        <div className="flex flex-wrap gap-4 lg:justify-between">
           {[
             { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
             { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
@@ -553,7 +553,7 @@ export const ManageOrdersPage: React.FC = () => {
             <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${stat.label === "Documentos" ? "cursor-pointer hover:ring-orange-300 dark:hover:ring-orange-600 transition-all" : ""} ${stat.label === "Documentos" && docStats.overdue > 0 ? "ring-red-500 dark:ring-red-400" : ""}`} onClick={() => stat.label === "Documentos" && setShowDocModal(true)} title={stat.label === "Documentos" && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}>
               <FontAwesomeIcon icon={stat.icon} className="h-5 w-5 opacity-80" />
               <div className="flex gap-2 items-center">
-                <span className="text-sm font-medium opacity-80">{stat.label}</span>
+                <span className="text-sm font-medium opacity-80 hidden lg:block">{stat.label}</span>
                 <span className="text-lg font-bold">{stat.value}</span>
               </div>
               {stat.label === "Documentos" && docStats.overdue > 0 && (
@@ -780,13 +780,13 @@ export const ManageOrdersPage: React.FC = () => {
         customHeader={
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
             <div className="flex items-center gap-3">
-              <button onClick={handlePreviousOrder} disabled={!hasPreviousOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior (←)">
+              {/*               <button onClick={handlePreviousOrder} disabled={!hasPreviousOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior (←)">
                 <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
+              </button> */}
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
-              <button onClick={handleNextOrder} disabled={!hasNextOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido (→)">
+              {/*               <button onClick={handleNextOrder} disabled={!hasNextOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido (→)">
                 <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
+              </button> */}
               {currentOrderIndex >= 0 && (
                 <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                   {currentOrderIndex + 1} de {filteredOrders.length}

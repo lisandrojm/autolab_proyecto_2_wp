@@ -156,7 +156,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                   {header.badges?.map((badge, index) => (
                     <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
                       {badge.icon && <FontAwesomeIcon icon={badge.icon} className="h-3 w-3" />}
-                      <span>{badge.text}</span>
+                      <span className="text-nowrap">{badge.text}</span>
                     </span>
                   ))}
                 </div>
