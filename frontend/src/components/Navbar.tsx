@@ -590,7 +590,7 @@ export const MobileNavbar: React.FC = () => {
         </div>
 
         {open && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" onClick={() => setOpen(false)} />}
-        <div className={`fixed top-0 left-0 z-50 h-full w-80 bg-white dark:bg-gray-800 transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"}`} aria-hidden={!open}>
+        <div className={`fixed top-0 left-0 z-50 h-svh w-80 bg-white dark:bg-gray-800 transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"}`} aria-hidden={!open}>
           <div className="p-4 pb-0">
             <div className="flex items-start justify-between border-b border-gray-700 mb-2">
               <div>
