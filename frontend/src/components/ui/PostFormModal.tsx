@@ -189,26 +189,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
 
   // Asset Gallery Hook
   const currentClientId = campaignContext?.clientId || clientId;
-  const {
-    images: galleryImages,
-    loading: galleryLoading,
-    error: galleryError,
-    total: totalAssets,
-    newImagesCount,
-    fetchAssets,
-    refreshGallery,
-    includeUserAssets,
-    setIncludeUserAssets,
-    pendingIncludeUserAssets,
-    setPendingIncludeUserAssets,
-    applyFilters,
-    activeFilters,
-    removeFilter,
-    sortBy,
-    setSortBy,
-    sortOrder,
-    setSortOrder
-  } = useAssetGallery(currentClientId, selectedCampaignId);
+  const { images: galleryImages, loading: galleryLoading, error: galleryError, total: totalAssets, newImagesCount, fetchAssets, refreshGallery, includeUserAssets, setIncludeUserAssets, pendingIncludeUserAssets, setPendingIncludeUserAssets, applyFilters, activeFilters, removeFilter, sortBy, setSortBy, sortOrder, setSortOrder } = useAssetGallery(currentClientId, selectedCampaignId);
 
   useEffect(() => {
     if (isOpen && availableProjects.length > 0) {
@@ -282,14 +263,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
 
       // Restore selectedAssetIds from usedAssets when editing a post
       if ((initialData as any).usedAssets && Array.isArray((initialData as any).usedAssets)) {
-        const assetIds = (initialData as any).usedAssets.map((asset: any) =>
-          typeof asset === 'string' ? asset : asset._id || asset
-        );
+        const assetIds = (initialData as any).usedAssets.map((asset: any) => (typeof asset === "string" ? asset : asset._id || asset));
         setSelectedAssetIds(assetIds);
         setSelectedGalleryImages(assetIds);
 
         // Mark these images for tracking so we know they're from the gallery
-        console.log('[PostFormModal] Loaded usedAssets:', assetIds);
+        console.log("[PostFormModal] Loaded usedAssets:", assetIds);
       }
     }
 
@@ -317,12 +296,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
 
       // For existing images, we need to check if they are already in existingImageUrls
       // If they are, don't add them to imagePreviews to avoid duplication
-      const newPreviews = matchingImages
-        .map((img) => img.url)
-        .filter((url) => !imagePreviews.includes(url) && !existingImageUrls.includes(url));
+      const newPreviews = matchingImages.map((img) => img.url).filter((url) => !imagePreviews.includes(url) && !existingImageUrls.includes(url));
 
       if (newPreviews.length > 0) {
-        console.log('[PostFormModal] Adding gallery image previews:', newPreviews.length);
+        console.log("[PostFormModal] Adding gallery image previews:", newPreviews.length);
         setImagePreviews((prev) => [...prev, ...newPreviews]);
       }
     }
@@ -626,7 +603,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
       // Also remove from existingImageUrls if it's there (for edit mode)
       setExistingImageUrls((prev) => prev.filter((url) => url !== image.url));
 
-      console.log('[PostFormModal] Deselected gallery image:', imageId);
+      console.log("[PostFormModal] Deselected gallery image:", imageId);
     } else {
       // Selecting: add to all tracking arrays
       setSelectedGalleryImages((prev) => [...prev, imageId]);
@@ -637,7 +614,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
         setImagePreviews((prev) => [...prev, image.url]);
       }
 
-      console.log('[PostFormModal] Selected gallery image:', imageId);
+      console.log("[PostFormModal] Selected gallery image:", imageId);
     }
   };
 
@@ -832,7 +809,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="flex min-h-screen items-center justify-center p-2">
-        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200" onClick={isSaving ? undefined : handleCancel} />
+        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 h-vh" onClick={isSaving ? undefined : handleCancel} />
 
         <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-[80vw] h-[85vh] overflow-hidden flex flex-col">
           {customHeader}
@@ -938,12 +915,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                         platforms={formData.platforms}
                         values={formData.dynamicFields || {}}
                         onChange={(fieldName, value) => {
-                          setFormData(prev => ({
+                          setFormData((prev) => ({
                             ...prev,
                             dynamicFields: {
                               ...prev.dynamicFields,
-                              [fieldName]: value
-                            }
+                              [fieldName]: value,
+                            },
                           }));
                         }}
                         errors={fieldErrors}
@@ -1379,7 +1356,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
                       <ImageIcon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
                       <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-                        {existingImageUrls.length + imagePreviews.length} {(existingImageUrls.length + imagePreviews.length) === 1 ? "imagen" : "imágenes"}
+                        {existingImageUrls.length + imagePreviews.length} {existingImageUrls.length + imagePreviews.length === 1 ? "imagen" : "imágenes"}
                       </span>
                     </div>
                   )}
@@ -1470,19 +1447,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
             {/* Creative Gallery Panel - Solo visible en el paso de Multimedia */}
             {!galleryCollapsed && activeTab === "media" && (
               <div className="w-96 flex-shrink-0 transition-all duration-300">
-                <CreativeGalleryPanel
-                  images={galleryImages}
-                  selectedImages={selectedGalleryImages}
-                  onImageSelect={handleGalleryImageSelect}
-                  onOpenCreativeSuite={handleOpenCreativeSuite}
-                  loading={galleryLoading}
-                  totalCount={totalAssets}
-                  pendingIncludeUserAssets={pendingIncludeUserAssets}
-                  onTogglePendingUserAssets={setPendingIncludeUserAssets}
-                  onApplyFilters={applyFilters}
-                  activeFilters={activeFilters}
-                  onRemoveFilter={removeFilter}
-                />
+                <CreativeGalleryPanel images={galleryImages} selectedImages={selectedGalleryImages} onImageSelect={handleGalleryImageSelect} onOpenCreativeSuite={handleOpenCreativeSuite} loading={galleryLoading} totalCount={totalAssets} pendingIncludeUserAssets={pendingIncludeUserAssets} onTogglePendingUserAssets={setPendingIncludeUserAssets} onApplyFilters={applyFilters} activeFilters={activeFilters} onRemoveFilter={removeFilter} />
               </div>
             )}
           </div>

@@ -837,7 +837,7 @@ export const CampaignDetailPage: React.FC = () => {
       {showCampaignDetails && campaign && (
         <div className="fixed inset-0 overflow-y-auto" style={{ zIndex: 60 }}>
           <div className="flex min-h-screen items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200" onClick={closeCampaignDetails} />
+            <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 h-vh" onClick={closeCampaignDetails} />
             <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 z-10">
