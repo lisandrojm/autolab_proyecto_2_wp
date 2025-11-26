@@ -82,8 +82,13 @@ const ClientContextWrapper: React.FC = () => (
   </>
 );
 
+// --- Layout público (sin Navbar) ---
+const PublicLayout: React.FC = () => {
+  return <Outlet />;
+};
+
 // --- Layout principal que incluye el MobileNavbar ---
-// Esto se aplica a TODAS las rutas "normales", excepto /mobile/*
+// Esto se aplica a TODAS las rutas protegidas/autenticadas
 const AppLayout: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
 
@@ -158,12 +163,15 @@ function App() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <Router>
           <Routes>
-            {/* Rutas que usan el layout principal (con MobileNavbar) */}
-            <Route element={<AppLayout />}>
-              {/* Public Routes */}
+            {/* Rutas públicas (SIN Navbar) */}
+            <Route element={<PublicLayout />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/register-client" element={<RegisterClientPage />} />
+            </Route>
+
+            {/* Rutas protegidas (CON MobileNavbar) */}
+            <Route element={<AppLayout />}>
 
               {/* Dashboard */}
               <Route

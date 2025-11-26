@@ -89,9 +89,16 @@ export const MobileNavbar: React.FC = () => {
   const { theme, toggleTheme } = useThemeStore();
   const { openAssistant } = useAssistantStore();
   const { selectedClient } = useClientContextStore();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [adminAccordionOpen, setAdminAccordionOpen] = useState(true);
+
+  // No renderizar el Navbar en rutas públicas
+  const publicRoutes = ['/login', '/register', '/register-client'];
+  if (publicRoutes.includes(location.pathname)) {
+    return null;
+  }
 
   // Estado del acordeón persistente: "users" | "general" | null
   const [openAdminSection, setOpenAdminSection] = useState<string | null>(() => {
@@ -104,7 +111,6 @@ export const MobileNavbar: React.FC = () => {
     if (newVal) localStorage.setItem("adminOpenSection", newVal);
     else localStorage.removeItem("adminOpenSection");
   };
-  const location = useLocation();
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tasks: 0, tenants: 0, roles: 0, users: 0, positions: 0, levels: 0 });
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [isDeploying, setIsDeploying] = useState(false);
