@@ -166,39 +166,44 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       >
         <div className="space-y-6">
           {/* Nº Pedido y Status Badge */}
-          <div className="flex justify-between align-top">
-            <div>
+          <div className="flex flex-wrap justify-between gap-3">
+            {/* Pedido */}
+            <span>
               <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(order)}</p>
-            </div>
-            <div className="flex gap-3">
+            </span>
+            {/* Estado */}
+            <div className="flex flex-wrap">
               <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badge.style}`}>
                 <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
                 {badge.label}
               </span>
-              {(() => {
-                const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-                const badgeStyle = getDocumentBadgeStyle(futureAction);
+              {/* Documento */}
+              <span>
+                {(() => {
+                  const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+                  const badgeStyle = getDocumentBadgeStyle(futureAction);
 
-                if (!badgeStyle) return null;
+                  if (!badgeStyle) return null;
 
-                const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && order.documentoUrl;
+                  const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && order.documentoUrl;
 
-                if (isDocumentUploaded) {
+                  if (isDocumentUploaded) {
+                    return (
+                      <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
+                        <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                        {badgeStyle.label}
+                      </button>
+                    );
+                  }
+
                   return (
-                    <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
                       <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                       {badgeStyle.label}
-                    </button>
+                    </span>
                   );
-                }
-
-                return (
-                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
-                    <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                    {badgeStyle.label}
-                  </span>
-                );
-              })()}
+                })()}
+              </span>
             </div>
           </div>
 
@@ -325,7 +330,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-3">
+                  <div className="flex flex-col lg:flex-row gap-3">
                     <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
                     <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />

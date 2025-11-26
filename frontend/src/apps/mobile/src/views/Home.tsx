@@ -188,7 +188,7 @@ export default function Home({ onNavigate }: HomeProps) {
               {(action as any).badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase z-10">{(action as any).badge}</span>}
               <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">
-                <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
+                <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
                 <p className="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">{action.description}</p>
               </div>
             </button>
