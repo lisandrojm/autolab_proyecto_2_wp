@@ -126,7 +126,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
 
   const renderFaIcon = () => {
     if (!faIcon) return null;
-    return <div className="text-primary-600 dark:text-primary-400 flex items-center justify-center">{faIcon.icon ? <FontAwesomeIcon icon={faIcon.icon} className="w-4 h-4 sm:w-5 sm:h-5" /> : <span className="text-sm sm:text-base font-semibold">{faIcon.fallback || title?.charAt(0)?.toUpperCase?.() || "?"}</span>}</div>;
+    return <div className="text-primary-600 dark:text-primary-400 flex items-center justify-center">{faIcon.icon ? <FontAwesomeIcon icon={faIcon.icon} className="w-5 h-5" /> : <span className="text-sm sm:text-base font-semibold">{faIcon.fallback || title?.charAt(0)?.toUpperCase?.() || "?"}</span>}</div>;
   };
 
   const renderFaIconSecondary = () => {
@@ -191,7 +191,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                         <div className="flex gap-2 items-center justify-center min-w-0">
                           {/* ⬇️ título con ellipsis */}
                           <h2
-                            className="truncate text-xl sm:text-3xl font-bold dark:text-gray-100"
+                            className="truncate text-2xl sm:text-3xl font-bold dark:text-gray-100"
                             title={title} // opcional: tooltip con el título completo
                           >
                             {title}

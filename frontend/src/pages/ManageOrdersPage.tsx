@@ -532,7 +532,7 @@ export const ManageOrdersPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <div className="flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2">
           <button onClick={() => navigate("/hr/order-categories")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faList} />
             <span className="hidden lg:block">Tipos de Pedidos</span>
@@ -802,39 +802,44 @@ export const ManageOrdersPage: React.FC = () => {
         {selectedOrder && (
           <div className="space-y-6">
             {/* Perfil */}
-            <div className="flex justify-between align-top">
-              <div>
+            <div className="flex flex-wrap justify-between gap-3">
+              {/* Pedido */}
+              <span>
                 <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
-              </div>
-              <div className="flex gap-3">
+              </span>
+              {/* Estado */}
+              <div className="flex flex-wrap">
                 <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>
                   <FontAwesomeIcon icon={getStatusIcon(selectedOrder.status)} className="h-3 w-3" />
                   {getStatusBadge(selectedOrder.status).label}
                 </span>
-                {(() => {
-                  const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
-                  const badgeStyle = getDocumentBadgeStyle(futureAction);
+                {/* Documento */}
+                <span>
+                  {(() => {
+                    const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
+                    const badgeStyle = getDocumentBadgeStyle(futureAction);
 
-                  if (!badgeStyle) return null;
+                    if (!badgeStyle) return null;
 
-                  const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && selectedOrder.documentoUrl;
+                    const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && selectedOrder.documentoUrl;
 
-                  if (isDocumentUploaded) {
+                    if (isDocumentUploaded) {
+                      return (
+                        <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
+                          <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
+                          {badgeStyle.label}
+                        </button>
+                      );
+                    }
+
                     return (
-                      <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
                         <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
                         {badgeStyle.label}
-                      </button>
+                      </span>
                     );
-                  }
-
-                  return (
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
-                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                      {badgeStyle.label}
-                    </span>
-                  );
-                })()}
+                  })()}
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-3">
