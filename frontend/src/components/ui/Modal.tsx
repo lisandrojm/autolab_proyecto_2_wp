@@ -42,7 +42,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
       case "xl":
         return "max-w-6xl";
       case "fullscreen":
-        return "max-w-[98vw] h-[90svh]";
+        return "max-w-[98vw] h-[85vh]";
       default:
         return "max-w-2xl";
     }
