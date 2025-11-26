@@ -95,7 +95,7 @@ export const MobileNavbar: React.FC = () => {
   const [adminAccordionOpen, setAdminAccordionOpen] = useState(true);
 
   // No renderizar el Navbar en rutas públicas
-  const publicRoutes = ['/login', '/register', '/register-client'];
+  const publicRoutes = ["/login", "/register", "/register-client"];
   if (publicRoutes.includes(location.pathname)) {
     return null;
   }
@@ -360,21 +360,15 @@ export const MobileNavbar: React.FC = () => {
     return (
       <div>
         {user?.tenantSlug && (
-          <div className="flex flex-col lg:flex-row gap-2 w-full lg:justify-between items-start lg:px-2 ">
-            <div className="flex gap-2 items-center">
-              <div>
-                <span className="flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={user.tenantSlug}>
-                  <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 mr-1.5" />
-                  {user.tenantSlug}
-                </span>
-              </div>
-              <div>
-                <p className="flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={displayName}>
-                  <FontAwesomeIcon icon={faUser} className="h-3 w-3 mr-1.5" /> {displayName}
-                </p>
-              </div>
+          <div className="flex flex-col lg:flex-row gap-2 w-full lg:justify-between items-center lg:items-start lg:px-2">
+            <div className="hidden lg:flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={user.tenantSlug}>
+              <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 mr-1.5" />
+              {user.tenantSlug}
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={displayName}>
+              <FontAwesomeIcon icon={faUser} className="h-3 w-3 mr-1.5" /> {displayName}
+            </div>
+            <div className="hidden lg:block">
               <RoleChips />
             </div>
           </div>
@@ -627,8 +621,8 @@ export const MobileNavbar: React.FC = () => {
             </div>
           </div>
 
-          <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-end">
-            <div className="block lg:hidden">
+          <div className="lg:hidden sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-end items-center">
+            <div>
               <UserCard />
             </div>
             <div>
@@ -640,14 +634,13 @@ export const MobileNavbar: React.FC = () => {
 
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:dark:bg-gray-800 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
         <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto mt-12">
+          <div className="flex flex-col pt-5 pb-4 overflow-y-auto mt-12">
             <div className="px-3 mb-4">
               <div className={`bg-white dark:bg-gray-800 py-2`}>
                 <NavMenu onItemClick={() => setOpen(false)} />
               </div>
             </div>
           </div>
-
           <div className="px-3 pb-4 lg:hidden">
             <LogoutButton />
           </div>
