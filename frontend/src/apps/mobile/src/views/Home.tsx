@@ -185,7 +185,7 @@ export default function Home({ onNavigate }: HomeProps) {
               className={`relative flex flex-col flex-1 gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
     ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
-              {(action as any).badge && <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase z-10">{(action as any).badge}</span>}
+              {(action as any).badge && <span className="absolute top-4 right-4 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase z-10">{(action as any).badge}</span>}
               <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">
                 <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
