@@ -3,6 +3,7 @@ export const AUSENCIAS_CONFIG = {
     requiereAprobacionPorDefecto: true,
     noSuperponerMismoCargo: true,
     noSuperponerMismoNivel: true,
+    noSuperponerUsuario: true,
     porcentajeMaximoSolapamientoEquipo: 0,
     permitirCruceEntreDistintosClientes: true,
   },
