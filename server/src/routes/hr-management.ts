@@ -77,6 +77,7 @@ const createOrderSchema = z.object({
   subcategories: z.array(z.string()).default([]),
   amount: z.number().min(0).optional(),
   photoUrl: z.string().optional(),
+  requiresSignature: z.boolean().default(false),
 });
 
 const updateOrderSchema = z.object({
@@ -86,6 +87,7 @@ const updateOrderSchema = z.object({
   amount: z.number().min(0).optional(),
   status: z.enum(["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
+  requiresSignature: z.boolean().optional(),
 });
 
 router.get("/activitylogs", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -575,18 +577,27 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
 
+    if (order.requiresSignature) {
+      order.signatureStatus = "sent";
+      order.signatureSentAt = new Date();
+    }
+
     await order.save();
 
     const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
+    const notificationMessage = order.requiresSignature
+      ? `Tu pedido "${orderDisplayName}" ha sido aprobado y el documento ha sido enviado para firma.`
+      : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
+
     await Notification.create({
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
-      title: "Documento enviado para firma",
-      message: `Tu pedido "${orderDisplayName}" ha sido aprobado y el documento ha sido enviado para firma.`,
+      title: order.requiresSignature ? "Documento enviado para firma" : "Pedido Aprobado",
+      message: notificationMessage,
       linkUrl: `/orders/${order._id}`,
     });
 
@@ -685,6 +696,112 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
     res.json(order);
   } catch (error) {
     console.error("Deliver order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (order.status !== "approved") {
+      res.status(400).json({ error: "Only approved orders can be sent for signature" });
+      return;
+    }
+
+    if (!order.requiresSignature) {
+      res.status(400).json({ error: "This order does not require signature" });
+      return;
+    }
+
+    order.signatureStatus = "sent";
+    order.signatureSentAt = new Date();
+
+    await order.save();
+
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      type: "order",
+      title: "Documento enviado para firma",
+      message: `El documento de tu pedido "${orderDisplayName}" ha sido enviado para firma.`,
+      linkUrl: `/orders/${order._id}`,
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Send signature error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const signedById = req.user!.userId;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (!order.requiresSignature) {
+      res.status(400).json({ error: "This order does not require signature" });
+      return;
+    }
+
+    if (order.signatureStatus !== "sent") {
+      res.status(400).json({ error: "Only orders with sent signature can be marked as signed" });
+      return;
+    }
+
+    order.signatureStatus = "signed";
+    order.signedAt = new Date();
+    order.signedBy = new Types.ObjectId(signedById);
+
+    await order.save();
+
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      type: "order",
+      title: "Documento Firmado",
+      message: `El documento de tu pedido "${orderDisplayName}" ha sido firmado correctamente.`,
+      linkUrl: `/orders/${order._id}`,
+    });
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      action: "order_signed",
+      description: `Order "${orderDisplayName}" marked as signed`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Mark signed error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

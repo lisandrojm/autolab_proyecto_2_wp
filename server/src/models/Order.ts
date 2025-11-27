@@ -23,6 +23,11 @@ export interface IOrder extends Document {
   dynamicValue?: any;
   requiereAccionFutura?: boolean;
   futureActionId?: Types.ObjectId;
+  requiresSignature?: boolean;
+  signatureStatus?: "not_required" | "pending" | "sent" | "signed";
+  signatureSentAt?: Date;
+  signedAt?: Date;
+  signedBy?: Types.ObjectId;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -56,6 +61,11 @@ const orderSchema = new Schema<IOrder>(
     dynamicValue: { type: Schema.Types.Mixed },
     requiereAccionFutura: { type: Boolean, default: false },
     futureActionId: { type: Schema.Types.ObjectId, ref: "FutureAction" },
+    requiresSignature: { type: Boolean, default: false },
+    signatureStatus: { type: String, enum: ["not_required", "pending", "sent", "signed"], default: "not_required" },
+    signatureSentAt: { type: Date },
+    signedAt: { type: Date },
+    signedBy: { type: Schema.Types.ObjectId, ref: "User" },
     metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }

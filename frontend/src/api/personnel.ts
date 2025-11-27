@@ -214,6 +214,16 @@ export interface OrderData {
   approvedAt?: string;
   deliveredAt?: string;
   futureActionId?: FutureAction | string;
+  requiresSignature?: boolean;
+  signatureStatus?: 'not_required' | 'pending' | 'sent' | 'signed';
+  signatureSentAt?: string;
+  signedAt?: string;
+  signedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

@@ -124,6 +124,11 @@ export interface Order {
   dynamicValue?: any;
   requiereAccionFutura?: boolean;
   futureActionId?: FutureAction | string;
+  requiresSignature?: boolean;
+  signatureStatus?: "not_required" | "pending" | "sent" | "signed";
+  signatureSentAt?: string;
+  signedAt?: string;
+  signedBy?: any;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -291,6 +296,14 @@ export const hrManagementAPI = {
     },
     deliver: async (orderId: string) => {
       const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/deliver`);
+      return data;
+    },
+    sendSignature: async (orderId: string) => {
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/send-signature`);
+      return data;
+    },
+    markSigned: async (orderId: string) => {
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/mark-signed`);
       return data;
     },
   },

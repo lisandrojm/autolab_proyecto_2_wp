@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight, faCircleInfo, faFileSignature, faPenToSquare, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -255,6 +255,54 @@ export const ManageOrdersPage: React.FC = () => {
     }
   };
 
+  const handleSendSignature = async () => {
+    if (!selectedOrder) return;
+
+    const result = await sweetAlert.confirm(
+      "¿Enviar para Firma?",
+      "El documento será enviado al usuario para su firma.",
+      "Sí, Enviar",
+      "Cancelar"
+    );
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      const updated = await hrManagementAPI.orders.sendSignature(selectedOrder._id);
+      sweetAlert.success("Enviado", "El documento ha sido enviado para firma");
+      setSelectedOrder(updated);
+      loadOrders();
+    } catch (error: any) {
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo enviar para firma");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleMarkSigned = async () => {
+    if (!selectedOrder) return;
+
+    const result = await sweetAlert.confirm(
+      "¿Marcar como Firmado?",
+      "El documento será marcado como firmado por el usuario.",
+      "Sí, Marcar como Firmado",
+      "Cancelar"
+    );
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      const updated = await hrManagementAPI.orders.markSigned(selectedOrder._id);
+      sweetAlert.success("Firmado", "El documento ha sido marcado como firmado");
+      setSelectedOrder(updated);
+      loadOrders();
+    } catch (error: any) {
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como firmado");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (showDetailModal && selectedOrder) {
@@ -285,6 +333,40 @@ export const ManageOrdersPage: React.FC = () => {
       return user.positionId.name;
     }
     return "Sin puesto asignado";
+  };
+
+  const renderSignatureStatus = (order: Order) => {
+    if (!order.requiresSignature) {
+      return <span className="text-xs text-gray-500 dark:text-gray-400">-</span>;
+    }
+
+    const signatureStatus = order.signatureStatus || "not_required";
+
+    switch (signatureStatus) {
+      case "pending":
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
+            Pendiente
+          </span>
+        );
+      case "sent":
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+            <FontAwesomeIcon icon={faPaperPlane} className="w-3 h-3" />
+            Enviada
+          </span>
+        );
+      case "signed":
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+            Firmada
+          </span>
+        );
+      default:
+        return <span className="text-xs text-gray-500 dark:text-gray-400">No requerida</span>;
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -550,6 +632,24 @@ export const ManageOrdersPage: React.FC = () => {
           <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Rechazar
           </button>
+
+          {selectedOrder.requiresSignature && (
+            <>
+              {selectedOrder.signatureStatus === "pending" && (
+                <button onClick={handleSendSignature} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <FontAwesomeIcon icon={faPaperPlane} />
+                  Enviar para Firma
+                </button>
+              )}
+              {selectedOrder.signatureStatus === "sent" && (
+                <button onClick={handleMarkSigned} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <FontAwesomeIcon icon={faPenToSquare} />
+                  Marcar como Firmado
+                </button>
+              )}
+            </>
+          )}
+
           <button onClick={handleDeliver} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
             <FontAwesomeIcon icon={faTruck} />
             Marcar como Entregado
@@ -664,6 +764,7 @@ export const ManageOrdersPage: React.FC = () => {
                         {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Acción Futura</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
 
                         {/* Imagen movida aquí */}
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th> */}
@@ -757,6 +858,11 @@ export const ManageOrdersPage: React.FC = () => {
                                   </span>
                                 );
                               })()}
+                            </td>
+
+                            {/* --- FIRMA --- */}
+                            <td className="py-3 px-4 text-center">
+                              {renderSignatureStatus(order)}
                             </td>
 
                             {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
