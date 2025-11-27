@@ -154,12 +154,7 @@ export const ManageOrdersPage: React.FC = () => {
   const handlePreApprove = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm(
-      "¿Pre-Aprobar este pedido?",
-      "El pedido pasará a estado Pre-Aprobado. El usuario no será notificado.",
-      "Sí, Pre-Aprobar",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Pre-Aprobar este pedido?", "El pedido pasará a estado Pre-Aprobado. El usuario no será notificado.", "Sí, Pre-Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
@@ -178,12 +173,7 @@ export const ManageOrdersPage: React.FC = () => {
   const handleApprove = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm(
-      "¿Aprobar este pedido?",
-      "El pedido será aprobado y el usuario recibirá una notificación de 'Documento enviado para firma'.",
-      "Sí, Aprobar",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Aprobar este pedido?", "El pedido será aprobado y el usuario recibirá una notificación de 'Documento enviado para firma'.", "Sí, Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
@@ -202,12 +192,7 @@ export const ManageOrdersPage: React.FC = () => {
   const handleReject = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm(
-      "¿Rechazar este pedido?",
-      "El pedido será rechazado y el usuario será notificado.",
-      "Sí, Rechazar",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Rechazar este pedido?", "El pedido será rechazado y el usuario será notificado.", "Sí, Rechazar", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
@@ -226,12 +211,7 @@ export const ManageOrdersPage: React.FC = () => {
   const handleDeliver = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm(
-      "¿Marcar como Entregado?",
-      "El pedido será marcado como entregado.",
-      "Sí, Marcar como Entregado",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Marcar como Entregado?", "El pedido será marcado como entregado.", "Sí, Marcar como Entregado", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
@@ -310,7 +290,7 @@ export const ManageOrdersPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-      pre_approved: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+      pre_approved: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
       approved: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
       rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
       delivered: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -544,7 +524,7 @@ export const ManageOrdersPage: React.FC = () => {
           <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Rechazar
           </button>
-          <button onClick={handlePreApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handlePreApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Pre-Aprobar
           </button>
         </>
@@ -606,10 +586,10 @@ export const ManageOrdersPage: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-4 lg:justify-between">
+        <div className="flex flex-wrap gap-4">
           {[
             { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-            { label: "Pre-Aprobados", value: stats.pre_approved, icon: faListCheck, color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400" },
+            { label: "Pre-Aprobados", value: stats.pre_approved, icon: faListCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
             { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
             { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
             { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },

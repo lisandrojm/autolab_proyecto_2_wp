@@ -150,7 +150,7 @@ export const AnalyticsPage: React.FC = () => {
 
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
                   <div className="flex items-center space-x-2 mb-2">
-                    <MessageCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <MessageCircle className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Clicks</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(analytics.overview.totalClicks)}</p>

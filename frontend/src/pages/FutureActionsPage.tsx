@@ -139,13 +139,13 @@ export default function FutureActionsPage() {
             </div>
           </div>
 
-          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+          <div className="bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Vencidas (Hoy)</p>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{stats.overdue}</p>
+                <p className="text-sm font-medium text-cyan-600 dark:text-cyan-400">Vencidas (Hoy)</p>
+                <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">{stats.overdue}</p>
               </div>
-              <Calendar className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+              <Calendar className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
             </div>
           </div>
         </div>

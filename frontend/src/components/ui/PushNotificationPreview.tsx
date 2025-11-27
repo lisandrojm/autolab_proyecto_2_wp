@@ -148,7 +148,7 @@ export const PushNotificationPreview: React.FC<PushNotificationPreviewProps> = (
               <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex flex-wrap gap-1">
                   {config.segmentation.tags.map((tag, index) => (
-                    <span key={index} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
+                    <span key={index} className="inline-flex items-center gap-1 px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded text-xs">
                       <Tag className="h-3 w-3" />
                       {tag}
                     </span>

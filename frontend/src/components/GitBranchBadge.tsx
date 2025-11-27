@@ -60,11 +60,11 @@ export const GitBranchBadge: React.FC = () => {
   const fullTooltip = `Branch: ${branch}\nCommit: ${commitHash}\nMessage: ${commitMessage}\nAuthor: ${commitAuthor}`;
 
   return (
-    <div title={fullTooltip} className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200">
+    <div title={fullTooltip} className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200">
       <div className="flex items-center gap-2 w-full justify-between">
         <div className="flex items-center gap-1.5">
           <GitBranch className="h-3 w-3" />
-          <FontAwesomeIcon className="text-teal-400 dark:text-indigo-200" icon={faGithub} />
+          <FontAwesomeIcon className="text-cyan-400 dark:text-indigo-200" icon={faGithub} />
           <span className="font-semibold">{branch}</span>
         </div>
         <button onClick={refetch} title="Actualizar" disabled={loading} className={`${loading ? "opacity-50 cursor-not-allowed" : "opacity-100 hover:opacity-70"}`}>

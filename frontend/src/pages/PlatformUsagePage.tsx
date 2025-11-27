@@ -44,7 +44,7 @@ export const PlatformUsagePage: React.FC = () => {
   const planColors: Record<string, { bg: string; text: string; border: string }> = {
     free: { bg: "bg-gray-50 dark:bg-gray-900/20", text: "text-gray-700 dark:text-gray-300", border: "border-gray-300 dark:border-gray-700" },
     basic: { bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-blue-700 dark:text-blue-300", border: "border-blue-300 dark:border-blue-700" },
-    pro: { bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-700 dark:text-purple-300", border: "border-purple-300 dark:border-purple-700" },
+    pro: { bg: "bg-cyan-50 dark:bg-cyan-900/20", text: "text-cyan-700 dark:text-cyan-300", border: "border-cyan-300 dark:border-cyan-700" },
     enterprise: { bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-blue-700 dark:text-blue-300", border: "border-blue-300 dark:border-blue-700" },
   };
 
@@ -156,8 +156,8 @@ export const PlatformUsagePage: React.FC = () => {
               <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{metrics.resources.totalUsers}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Usuarios Totales</p>
             </div>
-            <div className="text-center p-6 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <FontAwesomeIcon icon={faUsers} className="h-8 w-8 text-purple-600 dark:text-purple-400 mb-3" />
+            <div className="text-center p-6 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg">
+              <FontAwesomeIcon icon={faUsers} className="h-8 w-8 text-cyan-600 dark:text-cyan-400 mb-3" />
               <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{metrics.resources.totalClients}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Clientes Totales</p>
             </div>

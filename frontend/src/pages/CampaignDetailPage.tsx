@@ -909,8 +909,8 @@ export const CampaignDetailPage: React.FC = () => {
                 {/* Contenido */}
                 <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon icon={faList} className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <div className="w-10 h-10 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center">
+                      <FontAwesomeIcon icon={faList} className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contenido</h3>
                   </div>

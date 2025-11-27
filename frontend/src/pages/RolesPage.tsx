@@ -801,7 +801,7 @@ export const RolesPage: React.FC = () => {
       >
         <div className="space-y-5 text-sm">
           {/* Sistema simplificado - destacado primero */}
-          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border-2 border-emerald-300 dark:border-emerald-700 rounded-xl p-4">
+          <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-950/40 dark:to-cyan-950/40 border-2 border-emerald-300 dark:border-emerald-700 rounded-xl p-4">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-10 h-10 rounded-lg bg-blue-500 dark:bg-blue-700 flex items-center justify-center flex-shrink-0">
                 <FontAwesomeIcon icon={faEye} className="h-5 w-5 text-white" />

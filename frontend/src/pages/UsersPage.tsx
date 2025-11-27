@@ -815,7 +815,7 @@ export const UsersPage: React.FC = () => {
                 ) : (
                   <div className="flex flex-wrap gap-1 items-center">
                     {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : null}
-                    {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-teal-100 dark:bg-blue-900 text-teal-800 dark:text-blue-300">{user.levelId.name}</span> : typeof user.positionId === "object" && user.positionId?.name ? <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span> : null}
+                    {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-blue-900 text-cyan-800 dark:text-blue-300">{user.levelId.name}</span> : typeof user.positionId === "object" && user.positionId?.name ? <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span> : null}
                   </div>
                 )}
               </div>

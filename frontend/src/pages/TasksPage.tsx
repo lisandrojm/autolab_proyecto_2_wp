@@ -93,7 +93,7 @@ export const TasksPage: React.FC = () => {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "design":
-        return <FontAwesomeIcon icon={faPalette} className="h-4 w-4 text-purple-500" />;
+        return <FontAwesomeIcon icon={faPalette} className="h-4 w-4 text-cyan-500" />;
       case "copy":
         return <FontAwesomeIcon icon={faPenNib} className="h-4 w-4 text-blue-500" />;
       case "approval":

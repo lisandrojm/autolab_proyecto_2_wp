@@ -146,7 +146,7 @@ export const ClientDashboardPage: React.FC = () => {
       case "campaign":
         return "text-blue-600 dark:text-blue-400";
       case "brief":
-        return "text-purple-600 dark:text-purple-400";
+        return "text-cyan-600 dark:text-cyan-400";
       default:
         return "text-gray-600 dark:text-gray-400";
     }

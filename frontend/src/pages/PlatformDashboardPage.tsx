@@ -93,8 +93,8 @@ export const PlatformDashboardPage: React.FC = () => {
       value: metrics.resources.totalClients,
       subtitle: "En toda la plataforma",
       icon: faUsers,
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-50 dark:bg-purple-900/20",
+      color: "text-cyan-600 dark:text-cyan-400",
+      bgColor: "bg-cyan-50 dark:bg-cyan-900/20",
     },
     {
       title: "Almacenamiento",
@@ -109,7 +109,7 @@ export const PlatformDashboardPage: React.FC = () => {
   const planColors: Record<string, string> = {
     free: "bg-gray-500",
     basic: "bg-blue-500",
-    pro: "bg-purple-500",
+    pro: "bg-cyan-500",
     enterprise: "bg-blue-500",
   };
 

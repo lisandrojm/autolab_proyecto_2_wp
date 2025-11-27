@@ -48,7 +48,7 @@ export default function Documents() {
       case "payslip":
         return <FontAwesomeIcon icon={faFile} className="w-6 h-6 text-green-600 dark:text-green-400" />;
       case "certificate":
-        return <FontAwesomeIcon icon={faAward} className="w-6 h-6 text-purple-600 dark:text-purple-400" />;
+        return <FontAwesomeIcon icon={faAward} className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />;
       default:
         return <FontAwesomeIcon icon={faFile} className="w-6 h-6 text-slate-600 dark:text-slate-400" />;
     }
@@ -74,7 +74,7 @@ export default function Documents() {
       case "payslip":
         return "bg-green-100 dark:bg-green-900/50";
       case "certificate":
-        return "bg-purple-100 dark:bg-purple-900/50";
+        return "bg-cyan-100 dark:bg-cyan-900/50";
       default:
         return "bg-slate-100 dark:bg-slate-800";
     }

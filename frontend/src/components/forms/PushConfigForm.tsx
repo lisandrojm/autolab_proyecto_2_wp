@@ -153,13 +153,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">URL de la Imagen</label>
           <input type="url" value={config.imageUrl || ""} onChange={(e) => onChange({ ...config, imageUrl: e.target.value })} placeholder={existingImages.length > 0 ? "Usando imagen del post" : "https://ejemplo.com/imagen.jpg"} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
-          <p className="text-xs text-gray-500 mt-1">
-            {existingImages.length > 0 && !config.imageUrl ? (
-              <span className="text-green-600 dark:text-green-400">✓ Usando imagen del multimedia: {existingImages[0]}</span>
-            ) : (
-              "Imagen grande que se muestra en la notificación"
-            )}
-          </p>
+          <p className="text-xs text-gray-500 mt-1">{existingImages.length > 0 && !config.imageUrl ? <span className="text-green-600 dark:text-green-400">✓ Usando imagen del multimedia: {existingImages[0]}</span> : "Imagen grande que se muestra en la notificación"}</p>
           {displayImageUrl && (
             <div className="mt-2">
               <img src={displayImageUrl} alt="Preview" className="h-24 w-auto rounded-lg border border-gray-300 dark:border-gray-600" />
@@ -295,9 +289,9 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
                   {config.segmentation?.tags && config.segmentation.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {config.segmentation.tags.map((tag, index) => (
-                        <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-sm">
+                        <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded text-sm">
                           {tag}
-                          <button type="button" onClick={() => handleRemoveTag(index)} className="hover:text-purple-900 dark:hover:text-purple-100">
+                          <button type="button" onClick={() => handleRemoveTag(index)} className="hover:text-cyan-900 dark:hover:text-cyan-100">
                             <X className="h-3 w-3" />
                           </button>
                         </span>

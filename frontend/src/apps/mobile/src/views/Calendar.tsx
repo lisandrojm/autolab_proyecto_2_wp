@@ -1,6 +1,6 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft, faChevronRight, faCalendar } from '@fortawesome/free-solid-svg-icons';
-import { useState } from 'react';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronLeft, faChevronRight, faCalendar } from "@fortawesome/free-solid-svg-icons";
+import { useState } from "react";
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -8,31 +8,31 @@ export default function Calendar() {
   const events = [
     {
       id: 1,
-      title: 'Reunión de equipo',
-      date: '2024-02-15',
-      time: '10:00',
-      type: 'meeting' as const,
+      title: "Reunión de equipo",
+      date: "2024-02-15",
+      time: "10:00",
+      type: "meeting" as const,
     },
     {
       id: 2,
-      title: 'Vacaciones aprobadas',
-      date: '2024-02-20',
-      time: 'Todo el día',
-      type: 'vacation' as const,
+      title: "Vacaciones aprobadas",
+      date: "2024-02-20",
+      time: "Todo el día",
+      type: "vacation" as const,
     },
     {
       id: 3,
-      title: 'Capacitación',
-      date: '2024-02-22',
-      time: '14:00',
-      type: 'training' as const,
+      title: "Capacitación",
+      date: "2024-02-22",
+      time: "14:00",
+      type: "training" as const,
     },
     {
       id: 4,
-      title: 'Revisión trimestral',
-      date: '2024-02-28',
-      time: '11:30',
-      type: 'review' as const,
+      title: "Revisión trimestral",
+      date: "2024-02-28",
+      time: "11:30",
+      type: "review" as const,
     },
   ];
 
@@ -57,50 +57,37 @@ export default function Calendar() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   };
 
-  const monthNames = [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
-  ];
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
-      case 'meeting':
-        return 'bg-blue-500';
-      case 'vacation':
-        return 'bg-green-500';
-      case 'training':
-        return 'bg-purple-500';
-      case 'review':
-        return 'bg-orange-500';
+      case "meeting":
+        return "bg-blue-500";
+      case "vacation":
+        return "bg-green-500";
+      case "training":
+        return "bg-cyan-500";
+      case "review":
+        return "bg-orange-500";
       default:
-        return 'bg-slate-500';
+        return "bg-slate-500";
     }
   };
 
   const getEventTypeBg = (type: string) => {
     switch (type) {
-      case 'meeting':
-        return 'bg-blue-100 dark:bg-blue-900/50';
-      case 'vacation':
-        return 'bg-green-100 dark:bg-green-900/50';
-      case 'training':
-        return 'bg-purple-100 dark:bg-purple-900/50';
-      case 'review':
-        return 'bg-orange-100 dark:bg-orange-900/50';
+      case "meeting":
+        return "bg-blue-100 dark:bg-blue-900/50";
+      case "vacation":
+        return "bg-green-100 dark:bg-green-900/50";
+      case "training":
+        return "bg-cyan-100 dark:bg-cyan-900/50";
+      case "review":
+        return "bg-orange-100 dark:bg-orange-900/50";
       default:
-        return 'bg-slate-100 dark:bg-slate-800';
+        return "bg-slate-100 dark:bg-slate-800";
     }
   };
 
@@ -114,19 +101,13 @@ export default function Calendar() {
 
         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={previousMonth}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
+            <button onClick={previousMonth} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
               <FontAwesomeIcon icon={faChevronLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
-            <button
-              onClick={nextMonth}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
+            <button onClick={nextMonth} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
               <FontAwesomeIcon icon={faChevronRight} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
           </div>
@@ -145,20 +126,10 @@ export default function Calendar() {
             ))}
             {Array.from({ length: daysInMonth }).map((_, index) => {
               const day = index + 1;
-              const isToday =
-                day === new Date().getDate() &&
-                currentDate.getMonth() === new Date().getMonth() &&
-                currentDate.getFullYear() === new Date().getFullYear();
+              const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
 
               return (
-                <button
-                  key={day}
-                  className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                    isToday
-                      ? 'bg-primary text-white'
-                      : 'text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
+                <button key={day} className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${isToday ? "bg-primary text-white" : "text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"}`}>
                   {day}
                 </button>
               );
@@ -170,20 +141,15 @@ export default function Calendar() {
 
         <div className="space-y-3">
           {events.map((event) => (
-            <div
-              key={event.id}
-              className={`rounded-xl p-4 shadow-sm border-l-4 ${getEventTypeColor(
-                event.type
-              )} ${getEventTypeBg(event.type)}`}
-            >
+            <div key={event.id} className={`rounded-xl p-4 shadow-sm border-l-4 ${getEventTypeColor(event.type)} ${getEventTypeBg(event.type)}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{event.title}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {new Date(event.date).toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
+                    {new Date(event.date).toLocaleDateString("es-ES", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
                     })}
                   </p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{event.time}</p>

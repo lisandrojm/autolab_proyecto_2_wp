@@ -136,7 +136,7 @@ function App() {
       border: "border-blue-200 dark:border-blue-800",
     },
     collaborator: {
-      gradient: "from-green-500 to-teal-600",
+      gradient: "from-green-500 to-cyan-600",
       bg: "bg-green-50 dark:bg-green-900/20",
       text: "text-green-600 dark:text-green-400",
       border: "border-green-200 dark:border-green-800",

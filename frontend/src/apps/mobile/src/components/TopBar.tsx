@@ -41,7 +41,7 @@ export default function TopBar({ title, hasNotifications = false, onNotification
     },
     collaborator: {
       label: "Colaborador",
-      bgColor: "bg-gradient-to-r from-green-500 to-teal-600",
+      bgColor: "bg-gradient-to-r from-green-500 to-cyan-600",
       textColor: "text-white",
       icon: "👥",
     },

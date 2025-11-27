@@ -506,7 +506,7 @@ export const CalendarPage: React.FC = () => {
                   <span className="text-xs text-gray-600 dark:text-gray-400">Programado</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
                   <span className="text-xs text-gray-600 dark:text-gray-400">Pendiente</span>
                 </div>
                 <div className="flex items-center gap-2">

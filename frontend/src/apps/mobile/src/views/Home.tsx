@@ -106,7 +106,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const getActivityColor = (action: string) => {
     if (action.includes("vacation")) return { bg: "bg-green-100 dark:bg-green-900/50", icon: "text-green-600 dark:text-green-400" };
     if (action.includes("order")) return { bg: "bg-blue-100 dark:bg-blue-900/50", icon: "text-blue-600 dark:text-blue-400" };
-    if (action.includes("document")) return { bg: "bg-purple-100 dark:bg-purple-900/50", icon: "text-purple-600 dark:text-purple-400" };
+    if (action.includes("document")) return { bg: "bg-cyan-100 dark:bg-cyan-900/50", icon: "text-cyan-600 dark:text-cyan-400" };
     return { bg: "bg-slate-100 dark:bg-slate-800", icon: "text-slate-600 dark:text-slate-400" };
   };
 
