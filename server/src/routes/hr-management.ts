@@ -13,8 +13,10 @@ import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { VacationRequest } from "../models/VacationRequest.js";
+import { Notification } from "../models/Notification.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+import { Types } from "mongoose";
 
 const router = Router();
 
@@ -82,7 +84,7 @@ const updateOrderSchema = z.object({
   description: z.string().min(1).optional(),
   category: z.string().optional(),
   amount: z.number().min(0).optional(),
-  status: z.enum(["pending", "approved", "rejected", "delivered", "cancelled"]).optional(),
+  status: z.enum(["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
 });
 
@@ -501,6 +503,188 @@ router.get("/vacationrequests/count", async (req: AuthenticatedRequest & TenantR
     res.json({ count });
   } catch (error) {
     console.error("Count vacation requests error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const preApproverId = req.user!.userId;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (order.status !== "pending") {
+      res.status(400).json({ error: "Only pending orders can be pre-approved" });
+      return;
+    }
+
+    order.status = "pre_approved";
+    order.preApprovedBy = new Types.ObjectId(preApproverId);
+    order.preApprovedAt = new Date();
+
+    await order.save();
+
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      action: "order_pre_approved",
+      description: `Order "${orderDisplayName}" pre-approved by manager`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Pre-approve order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const approverId = req.user!.userId;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (order.status !== "pre_approved") {
+      res.status(400).json({ error: "Only pre-approved orders can be approved" });
+      return;
+    }
+
+    order.status = "approved";
+    order.approvedBy = new Types.ObjectId(approverId);
+    order.approvedAt = new Date();
+
+    await order.save();
+
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      type: "order",
+      title: "Documento enviado para firma",
+      message: `Tu pedido "${orderDisplayName}" ha sido aprobado y el documento ha sido enviado para firma.`,
+      linkUrl: `/orders/${order._id}`,
+    });
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      action: "order_approved",
+      description: `Order "${orderDisplayName}" approved by manager`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Approve order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (!["pending", "pre_approved", "approved"].includes(order.status)) {
+      res.status(400).json({ error: "Only pending, pre-approved, or approved orders can be rejected" });
+      return;
+    }
+
+    order.status = "rejected";
+
+    await order.save();
+
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      type: "order",
+      title: "Pedido Rechazado",
+      message: `Tu pedido "${orderDisplayName}" ha sido rechazado.`,
+      linkUrl: `/orders/${order._id}`,
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Reject order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (order.status !== "approved") {
+      res.status(400).json({ error: "Only approved orders can be delivered" });
+      return;
+    }
+
+    order.status = "delivered";
+    order.deliveredAt = new Date();
+
+    await order.save();
+
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      type: "order",
+      title: "Pedido Entregado",
+      message: `Tu pedido "${orderDisplayName}" ha sido entregado.`,
+      linkUrl: `/orders/${order._id}`,
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Deliver order error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
