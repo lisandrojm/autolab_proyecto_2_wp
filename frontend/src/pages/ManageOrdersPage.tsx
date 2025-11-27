@@ -29,7 +29,7 @@ export const ManageOrdersPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [stats, setStats] = useState<any>({ pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
+  const [stats, setStats] = useState<any>({ pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
   const [docStats, setDocStats] = useState({ total: 0, normal: 0, urgent: 0, overdue: 0, uploaded: 0 });
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export const ManageOrdersPage: React.FC = () => {
           acc[order.status] = (acc[order.status] || 0) + 1;
           return acc;
         },
-        { pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
+        { pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
       );
       setStats(newStats);
 
@@ -151,52 +151,97 @@ export const ManageOrdersPage: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handlePreApprove = async () => {
     if (!selectedOrder) return;
 
-    const statusMessages: Record<string, { title: string; text: string; success: string }> = {
-      pending: {
-        title: "¿Marcar como pendiente?",
-        text: `¿Estás seguro de marcar "${selectedOrder.title}" como pendiente?`,
-        success: "marcado como pendiente",
-      },
-      approved: {
-        title: "¿Aprobar este pedido?",
-        text: `¿Estás seguro de aprobar el pedido "${selectedOrder.title}"?`,
-        success: "aprobado",
-      },
-      rejected: {
-        title: "¿Rechazar este pedido?",
-        text: `¿Estás seguro de rechazar el pedido "${selectedOrder.title}"?`,
-        success: "rechazado",
-      },
-      delivered: {
-        title: "¿Marcar como entregado?",
-        text: `¿Estás seguro de marcar "${selectedOrder.title}" como entregado?`,
-        success: "marcado como entregado",
-      },
-      cancelled: {
-        title: "¿Cancelar este pedido?",
-        text: `¿Estás seguro de cancelar el pedido "${selectedOrder.title}"?`,
-        success: "cancelado",
-      },
-    };
-
-    const message = statusMessages[newStatus];
-    if (!message) return;
-
-    const result = await sweetAlert.confirm(message.title, message.text, "Sí, continuar", "Cancelar");
+    const result = await sweetAlert.confirm(
+      "¿Pre-Aprobar este pedido?",
+      "El pedido pasará a estado Pre-Aprobado. El usuario no será notificado.",
+      "Sí, Pre-Aprobar",
+      "Cancelar"
+    );
     if (!result.isConfirmed) return;
 
     try {
       setUpdatingStatus(true);
-      await hrManagementAPI.orders.update(selectedOrder._id, { status: newStatus });
-      sweetAlert.success("Estado actualizado", `El pedido ha sido ${message.success}`);
-
-      setSelectedOrder({ ...selectedOrder, status: newStatus as any });
+      const updated = await hrManagementAPI.orders.preApprove(selectedOrder._id);
+      sweetAlert.success("Pre-Aprobado", "El pedido ha sido pre-aprobado correctamente");
+      setSelectedOrder(updated);
       loadOrders();
     } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo pre-aprobar el pedido");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedOrder) return;
+
+    const result = await sweetAlert.confirm(
+      "¿Aprobar este pedido?",
+      "El pedido será aprobado y el usuario recibirá una notificación de 'Documento enviado para firma'.",
+      "Sí, Aprobar",
+      "Cancelar"
+    );
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      const updated = await hrManagementAPI.orders.approve(selectedOrder._id);
+      sweetAlert.success("Aprobado", "El pedido ha sido aprobado y el usuario ha sido notificado");
+      setSelectedOrder(updated);
+      loadOrders();
+    } catch (error: any) {
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo aprobar el pedido");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedOrder) return;
+
+    const result = await sweetAlert.confirm(
+      "¿Rechazar este pedido?",
+      "El pedido será rechazado y el usuario será notificado.",
+      "Sí, Rechazar",
+      "Cancelar"
+    );
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      const updated = await hrManagementAPI.orders.reject(selectedOrder._id);
+      sweetAlert.success("Rechazado", "El pedido ha sido rechazado");
+      setSelectedOrder(updated);
+      loadOrders();
+    } catch (error: any) {
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo rechazar el pedido");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleDeliver = async () => {
+    if (!selectedOrder) return;
+
+    const result = await sweetAlert.confirm(
+      "¿Marcar como Entregado?",
+      "El pedido será marcado como entregado.",
+      "Sí, Marcar como Entregado",
+      "Cancelar"
+    );
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      const updated = await hrManagementAPI.orders.deliver(selectedOrder._id);
+      sweetAlert.success("Entregado", "El pedido ha sido marcado como entregado");
+      setSelectedOrder(updated);
+      loadOrders();
+    } catch (error: any) {
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
     } finally {
       setUpdatingStatus(false);
     }
@@ -265,6 +310,7 @@ export const ManageOrdersPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      pre_approved: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
       approved: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
       rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
       delivered: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -272,6 +318,7 @@ export const ManageOrdersPage: React.FC = () => {
     };
     const labels: Record<string, string> = {
       pending: "Pendiente",
+      pre_approved: "Pre-Aprobado",
       approved: "Aprobado",
       rejected: "Rechazado",
       delivered: "Entregado",
@@ -494,10 +541,23 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "pending") {
       return (
         <>
-          <button onClick={() => handleStatusChange("rejected")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Rechazar
           </button>
-          <button onClick={() => handleStatusChange("approved")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handlePreApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Pre-Aprobar
+          </button>
+        </>
+      );
+    }
+
+    if (selectedOrder.status === "pre_approved") {
+      return (
+        <>
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Rechazar
+          </button>
+          <button onClick={handleApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             Aprobar
           </button>
         </>
@@ -506,10 +566,15 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (selectedOrder.status === "approved") {
       return (
-        <button onClick={() => handleStatusChange("delivered")} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-          <FontAwesomeIcon icon={faTruck} />
-          Marcar como Entregado
-        </button>
+        <>
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Rechazar
+          </button>
+          <button onClick={handleDeliver} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <FontAwesomeIcon icon={faTruck} />
+            Marcar como Entregado
+          </button>
+        </>
       );
     }
 
@@ -544,6 +609,7 @@ export const ManageOrdersPage: React.FC = () => {
         <div className="flex flex-wrap gap-4 lg:justify-between">
           {[
             { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
+            { label: "Pre-Aprobados", value: stats.pre_approved, icon: faListCheck, color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400" },
             { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
             { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
             { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
@@ -576,6 +642,7 @@ export const ManageOrdersPage: React.FC = () => {
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                 <option value="all">Todos los estados</option>
                 <option value="pending">Pendientes</option>
+                <option value="pre_approved">Pre-Aprobados</option>
                 <option value="approved">Aprobados</option>
                 <option value="rejected">Rechazados</option>
                 <option value="delivered">Entregados</option>

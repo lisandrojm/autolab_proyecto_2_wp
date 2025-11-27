@@ -196,8 +196,15 @@ export interface OrderData {
   amount?: number;
   photoUrl?: string;
   documentoUrl?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'delivered' | 'cancelled';
+  status: 'pending' | 'pre_approved' | 'approved' | 'rejected' | 'delivered' | 'cancelled';
   requestedAt: string;
+  preApprovedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  preApprovedAt?: string;
   approvedBy?: {
     _id: string;
     firstName: string;

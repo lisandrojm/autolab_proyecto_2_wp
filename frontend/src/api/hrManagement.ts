@@ -111,8 +111,10 @@ export interface Order {
   category: string;
   categoryId?: OrderCategory | string;
   subcategories: string[];
-  status: "pending" | "approved" | "rejected" | "delivered" | "cancelled";
+  status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: string;
+  preApprovedBy?: any;
+  preApprovedAt?: string;
   approvedBy?: any;
   approvedAt?: string;
   deliveredAt?: string;
@@ -274,6 +276,22 @@ export const hrManagementAPI = {
     },
     delete: async (orderId: string) => {
       await axios.delete(`/hr-management/orders/${orderId}`);
+    },
+    preApprove: async (orderId: string) => {
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/pre-approve`);
+      return data;
+    },
+    approve: async (orderId: string) => {
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/approve`);
+      return data;
+    },
+    reject: async (orderId: string) => {
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/reject`);
+      return data;
+    },
+    deliver: async (orderId: string) => {
+      const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/deliver`);
+      return data;
     },
   },
 

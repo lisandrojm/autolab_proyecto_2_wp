@@ -9,8 +9,10 @@ export interface IOrder extends Document {
   category: string;
   categoryId?: Types.ObjectId;
   subcategories: string[];
-  status: "pending" | "approved" | "rejected" | "delivered" | "cancelled";
+  status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: Date;
+  preApprovedBy?: Types.ObjectId;
+  preApprovedAt?: Date;
   approvedBy?: Types.ObjectId;
   approvedAt?: Date;
   deliveredAt?: Date;
@@ -37,11 +39,13 @@ const orderSchema = new Schema<IOrder>(
     subcategories: { type: [String], default: [], index: true },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "delivered", "cancelled"],
+      enum: ["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"],
       default: "pending",
       index: true,
     },
     requestedAt: { type: Date, default: Date.now },
+    preApprovedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    preApprovedAt: { type: Date },
     approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
     approvedAt: { type: Date },
     deliveredAt: { type: Date },

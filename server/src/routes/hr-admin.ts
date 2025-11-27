@@ -356,6 +356,51 @@ router.get("/orders/pending", async (req: AuthenticatedRequest & TenantRequest, 
   }
 });
 
+router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const preApproverId = req.user!.userId;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    if (order.status !== "pending") {
+      res.status(400).json({ error: "Only pending orders can be pre-approved" });
+      return;
+    }
+
+    order.status = "pre_approved";
+    order.preApprovedBy = new Types.ObjectId(preApproverId);
+    order.preApprovedAt = new Date();
+
+    await order.save();
+
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      action: "order_pre_approved",
+      description: `Order "${orderDisplayName}" pre-approved by manager`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    res.json(order);
+  } catch (error) {
+    console.error("Pre-approve order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const approverId = req.user!.userId;
@@ -370,8 +415,8 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       return;
     }
 
-    if (order.status !== "pending") {
-      res.status(400).json({ error: "Only pending orders can be approved" });
+    if (order.status !== "pre_approved") {
+      res.status(400).json({ error: "Only pre-approved orders can be approved" });
       return;
     }
 
@@ -389,8 +434,8 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
-      title: "Order Approved",
-      message: `Your order "${orderDisplayName}" has been approved.`,
+      title: "Documento enviado para firma",
+      message: `Tu pedido "${orderDisplayName}" ha sido aprobado y el documento ha sido enviado para firma.`,
       linkUrl: `/orders/${order._id}`,
     });
 
@@ -422,8 +467,8 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
       return;
     }
 
-    if (order.status !== "pending") {
-      res.status(400).json({ error: "Only pending orders can be rejected" });
+    if (!["pending", "pre_approved", "approved"].includes(order.status)) {
+      res.status(400).json({ error: "Only pending, pre-approved, or approved orders can be rejected" });
       return;
     }
 
@@ -439,8 +484,8 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
-      title: "Order Rejected",
-      message: `Your order "${orderDisplayName}" has been rejected.`,
+      title: "Pedido Rechazado",
+      message: `Tu pedido "${orderDisplayName}" ha sido rechazado.`,
       linkUrl: `/orders/${order._id}`,
     });
 
