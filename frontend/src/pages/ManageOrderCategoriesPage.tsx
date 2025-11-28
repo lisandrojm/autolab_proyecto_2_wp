@@ -93,6 +93,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     plazoDias?: number;
     fechaLimite?: string;
     documentoRequerido?: string;
+    requiresSignature: boolean;
   }>({
     name: "",
     informacion: "",
@@ -108,6 +109,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     plazoDias: undefined,
     fechaLimite: undefined,
     documentoRequerido: undefined,
+    requiresSignature: true,
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -158,6 +160,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       plazoDias: undefined,
       fechaLimite: undefined,
       documentoRequerido: undefined,
+      requiresSignature: true,
     });
     setShowModal(true);
   };
@@ -179,6 +182,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       plazoDias: category.plazoDias,
       fechaLimite: category.fechaLimite,
       documentoRequerido: category.documentoRequerido,
+      requiresSignature: category.requiresSignature ?? true,
     });
     setShowModal(true);
   };
@@ -255,6 +259,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         actionText: formData.requiresAction ? formData.actionText : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
         deadlineMode: formData.requiresAction && formData.futureActionType !== "sinVencimiento" ? formData.deadlineMode : undefined,
+        requiresSignature: formData.requiresSignature,
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
 

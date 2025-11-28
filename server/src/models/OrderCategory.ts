@@ -50,6 +50,7 @@ export interface IOrderCategory extends Document {
   plazoDias?: number;
   fechaLimite?: Date;
   documentoRequerido?: string;
+  requiresSignature?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,6 +94,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     plazoDias: { type: Number, min: 1, max: 365 },
     fechaLimite: { type: Date },
     documentoRequerido: { type: String, trim: true },
+    requiresSignature: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

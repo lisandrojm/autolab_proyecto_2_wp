@@ -39,6 +39,7 @@ const createCategorySchema = z
     plazoDias: z.number().int().min(1).max(365).optional(),
     fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
+    requiresSignature: z.boolean().default(true),
   })
   .refine(
     (data) => {
@@ -106,6 +107,7 @@ const updateCategorySchema = z
     plazoDias: z.number().int().min(1).max(365).optional(),
     fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
+    requiresSignature: z.boolean().optional(),
   })
   .refine(
     (data) => {

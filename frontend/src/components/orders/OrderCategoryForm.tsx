@@ -353,7 +353,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <input
               type="checkbox"
               id="requiresSignature"
-              checked={formData.requiresSignature || false}
+              checked={formData.requiresSignature ?? true}
               onChange={(e) => setFormData({ ...formData, requiresSignature: e.target.checked })}
               className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
             />
@@ -361,7 +361,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               Requiere firma del usuario
             </label>
           </div>
-          {formData.requiresSignature && (
+          {(formData.requiresSignature ?? true) && (
             <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.

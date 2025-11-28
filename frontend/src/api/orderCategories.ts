@@ -43,6 +43,7 @@ export interface OrderCategory {
   plazoDias?: number;
   fechaLimite?: string;
   documentoRequerido?: string;
+  requiresSignature?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,6 +76,7 @@ export const orderCategoriesAPI = {
     plazoDias?: number;
     fechaLimite?: string;
     documentoRequerido?: string;
+    requiresSignature?: boolean;
   }): Promise<OrderCategory> => {
     const { data } = await axios.post<OrderCategory>('/order-categories', categoryData);
     return data;
@@ -98,6 +100,7 @@ export const orderCategoriesAPI = {
       plazoDias?: number;
       fechaLimite?: string;
       documentoRequerido?: string;
+      requiresSignature?: boolean;
     }
   ): Promise<OrderCategory> => {
     const { data } = await axios.put<OrderCategory>(`/order-categories/${id}`, updates);
