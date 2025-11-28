@@ -215,19 +215,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
     }
   };
 
-
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "delivered":
-        return <FontAwesomeIcon icon={faTruck} className="w-3 h-3 text-green-600 dark:text-green-400" />;
-      case "approved":
-        return <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3 text-blue-600 dark:text-blue-400" />;
       case "pending":
         return <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />;
-      case "cancelled":
-        return <FontAwesomeIcon icon={faBan} className="w-3 h-3 text-gray-400 dark:text-slate-400" />;
+      case "approved":
+        return <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3 text-blue-600 dark:text-blue-400" />;
+      case "pre_approved":
+        return <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />;
+      case "delivered":
+        return <FontAwesomeIcon icon={faTruck} className="w-3 h-3 text-green-600 dark:text-green-400" />;
       case "rejected":
         return <FontAwesomeIcon icon={faTimesCircle} className="w-3 h-3 text-red-600 dark:text-red-400" />;
+      case "cancelled":
+        return <FontAwesomeIcon icon={faBan} className="w-3 h-3 text-gray-400 dark:text-slate-400" />;
       default:
         return null;
     }
@@ -235,28 +236,32 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "cancelled":
-        return "Cancelado";
-      case "delivered":
-        return "Entregado";
-      case "approved":
-        return "Aprobado";
       case "pending":
         return "Pendiente";
+      case "pre_approved":
+        return "Pendiente";
+      case "approved":
+        return "Aprobado";
+      case "delivered":
+        return "Entregado";
       case "rejected":
         return "Rechazado";
+      case "cancelled":
+        return "Cancelado";
       default:
         return status;
     }
   };
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "delivered":
-        return "text-green-600 dark:text-green-400";
-      case "approved":
-        return "text-blue-600 dark:text-blue-400";
       case "pending":
         return "text-yellow-600 dark:text-yellow-400";
+      case "pre_approved":
+        return "text-yellow-600 dark:text-yellow-400";
+      case "approved":
+        return "text-blue-600 dark:text-blue-400";
+      case "delivered":
+        return "text-green-600 dark:text-green-400";
       case "rejected":
         return "text-red-600 dark:text-red-400";
       case "cancelled":
@@ -273,22 +278,24 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   const currentOrderIndex = selectedOrder ? orders.findIndex((o) => o._id === selectedOrder._id) : -1;
 
-  const handleNavigateOrder = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentOrderIndex > 0) {
+  const handleNavigateOrder = (direction: "prev" | "next") => {
+    if (direction === "prev" && currentOrderIndex > 0) {
       setSelectedOrder(orders[currentOrderIndex - 1]);
-    } else if (direction === 'next' && currentOrderIndex >= 0 && currentOrderIndex < orders.length - 1) {
+    } else if (direction === "next" && currentOrderIndex >= 0 && currentOrderIndex < orders.length - 1) {
       setSelectedOrder(orders[currentOrderIndex + 1]);
     }
   };
 
   const getStatusBg = (status: string) => {
     switch (status) {
-      case "delivered":
-        return "bg-green-100 dark:bg-green-900/50";
-      case "approved":
-        return "bg-blue-100 dark:bg-blue-900/50";
       case "pending":
         return "bg-yellow-100 dark:bg-yellow-900/50";
+      case "pre_approved":
+        return "bg-yellow-100 dark:bg-yellow-900/50";
+      case "approved":
+        return "bg-blue-100 dark:bg-blue-900/50";
+      case "delivered":
+        return "bg-green-100 dark:bg-green-900/50";
       case "rejected":
         return "bg-red-100 dark:bg-red-900/50";
       case "cancelled":
@@ -431,7 +438,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                             <span className={`text-xs font-medium ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
                           </div>
                           {(() => {
-                            const futureAction = typeof order.futureActionId === 'object' ? order.futureActionId : null;
+                            const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
                             const badgeStyle = getDocumentBadgeStyle(futureAction);
 
                             if (!badgeStyle) return null;
@@ -439,9 +446,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                             return (
                               <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
                                 <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                                <span className="text-xs font-medium">
-                                  {badgeStyle.label}
-                                </span>
+                                <span className="text-xs font-medium">{badgeStyle.label}</span>
                               </div>
                             );
                           })()}
@@ -494,7 +499,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
         totalOrders={orders.length}
         onNavigate={handleNavigateOrder}
       />
-
 
       {viewingImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
