@@ -285,12 +285,25 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 placeholder="Sin limite"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Define el monto maximo en multiplos de 50 (Ej: 50, 100, 150, 200...). Si no lo defines, no habra limite.
-            </p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define el monto maximo en multiplos de 50 (Ej: 50, 100, 150, 200...). Si no lo defines, no habra limite.</p>
           </div>
         )}
+        {/* Requiere Firma */}
+        <div className="border border-gray-200 dark:border-gray-600 p-4 rounded">
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="requiresSignature" checked={formData.requiresSignature ?? true} onChange={(e) => setFormData({ ...formData, requiresSignature: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+            <label htmlFor="requiresSignature" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Requiere firma del usuario
+            </label>
+          </div>
+          {(formData.requiresSignature ?? true) && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+              <p className="text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>
+            </div>
+          )}
+        </div>
 
+        {/* Requiere Acción Futura */}
         <div className="border border-gray-200 dark:border-gray-600 p-4 rounded">
           <div className="flex items-center gap-2">
             <input
@@ -344,28 +357,6 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 </div>
                 <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Me comprometo a adjuntar el documento, comprobante o certificado" />
               </div>
-            </div>
-          )}
-        </div>
-
-        <div className="border border-gray-200 dark:border-gray-600 p-4 rounded">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="requiresSignature"
-              checked={formData.requiresSignature ?? true}
-              onChange={(e) => setFormData({ ...formData, requiresSignature: e.target.checked })}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="requiresSignature" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Requiere firma del usuario
-            </label>
-          </div>
-          {(formData.requiresSignature ?? true) && (
-            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.
-              </p>
             </div>
           )}
         </div>
