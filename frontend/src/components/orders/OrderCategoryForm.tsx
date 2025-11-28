@@ -289,18 +289,14 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           </div>
         )}
         {/* Requiere Firma */}
-        <div className="border border-gray-200 dark:border-gray-600 p-4 rounded">
+        <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
           <div className="flex items-center gap-2">
             <input type="checkbox" id="requiresSignature" checked={formData.requiresSignature ?? true} onChange={(e) => setFormData({ ...formData, requiresSignature: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
             <label htmlFor="requiresSignature" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Requiere firma del usuario
+              Requiere FIRMA del usuario
             </label>
           </div>
-          {(formData.requiresSignature ?? true) && (
-            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
-              <p className="text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>
-            </div>
-          )}
+          {(formData.requiresSignature ?? true) && <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>}
         </div>
 
         {/* Requiere Acción Futura */}
@@ -325,7 +321,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
             />
             <label htmlFor="requiresAction" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Requiere acción futura del usuario
+              Requiere Acción Futura del usuario
             </label>
           </div>
 
