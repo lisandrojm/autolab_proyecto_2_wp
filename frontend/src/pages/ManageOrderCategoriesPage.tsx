@@ -11,6 +11,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { OrderCategoryForm } from "../components/orders/OrderCategoryForm";
+import { tipoAccionFuturaLabels } from "../types/futureAction";
 
 interface SortableRowProps {
   category: OrderCategory;
@@ -46,6 +47,37 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       </td>
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
+      </td>
+      <td className="py-3 px-4 text-center">
+        {category.requiresAction ? (
+          <div className="flex flex-col items-center gap-1">
+            <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200">Sí</span>
+            {category.futureActionType && (
+              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                category.futureActionType === "accion"
+                  ? "bg-orange-100 text-orange-800 dark:bg-orange-500/30 dark:text-orange-200"
+                  : category.futureActionType === "documento"
+                  ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200"
+                  : category.futureActionType === "condicion"
+                  ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/30 dark:text-cyan-200"
+                  : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"
+              }`}>
+                {tipoAccionFuturaLabels[category.futureActionType]}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">No</span>
+        )}
+      </td>
+      <td className="py-3 px-4 text-center">
+        <span className={`px-2 py-1 rounded text-xs font-medium ${
+          (category.requiresSignature ?? true)
+            ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200"
+            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+        }`}>
+          {(category.requiresSignature ?? true) ? "Sí" : "No"}
+        </span>
       </td>
       <td className="py-3 px-4">
         <div className="text-sm text-gray-600 dark:text-gray-400">{category.informacion || "-"}</div>
@@ -443,6 +475,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Información</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-48">Acciones</th>
