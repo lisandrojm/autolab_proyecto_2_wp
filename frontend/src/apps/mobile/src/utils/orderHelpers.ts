@@ -1,12 +1,5 @@
 import { OrderData } from "../../../../api/personnel";
-import {
-  faSpinner,
-  faCheckCircle,
-  faTimesCircle,
-  faTruck,
-  faBan,
-  faClock
-} from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCheckCircle, faTimesCircle, faTruck, faBan, faClock } from "@fortawesome/free-solid-svg-icons";
 
 export const getUserName = (user: any): string => {
   if (!user) return "Usuario desconocido";
@@ -49,12 +42,14 @@ export const getStatusBadge = (status: string) => {
   const styles: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
     approved: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    pre_approved: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
     rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
     delivered: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
     cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
   };
   const labels: Record<string, string> = {
     pending: "Pendiente",
+    pre_approved: "Pendiente",
     approved: "Aprobado",
     rejected: "Rechazado",
     delivered: "Entregado",
@@ -62,7 +57,7 @@ export const getStatusBadge = (status: string) => {
   };
   return {
     style: styles[status] || styles.pending,
-    label: labels[status] || status
+    label: labels[status] || status,
   };
 };
 
@@ -74,7 +69,7 @@ export const getCategoryName = (order: OrderData): string => {
 };
 
 export const getOrderNumber = (order: OrderData): string => {
-  const parts = order.orderNumber.split('-');
+  const parts = order.orderNumber.split("-");
   const numericPart = parts.length > 1 ? parts[1] : order.orderNumber;
   return `#${numericPart}`;
 };
@@ -86,10 +81,12 @@ export const getSubcategoriesArray = (order: OrderData): string[] => {
 
   if (!order.subcategories || order.subcategories.length === 0 || !category.config?.subtipos) return [];
 
-  const labels = order.subcategories.map((subId: string) => {
-    const selectedSubtype = category.config.subtipos?.find((st: any) => st.id === subId);
-    return selectedSubtype ? selectedSubtype.label : null;
-  }).filter((label: string | null): label is string => Boolean(label));
+  const labels = order.subcategories
+    .map((subId: string) => {
+      const selectedSubtype = category.config.subtipos?.find((st: any) => st.id === subId);
+      return selectedSubtype ? selectedSubtype.label : null;
+    })
+    .filter((label: string | null): label is string => Boolean(label));
 
   return labels;
 };
