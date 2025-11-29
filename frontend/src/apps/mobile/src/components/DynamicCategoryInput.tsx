@@ -208,9 +208,13 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       const fechaLimite = new Date();
       fechaLimite.setDate(fechaLimite.getDate() + category.plazoDias);
       return (
-        <div>
-          <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Completar antes del {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
-          {/*           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Plazo: {category.plazoDias} días desde la solicitud</p> */}
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <span className="text-base">📅</span>
+            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+              Completar antes del <span className="font-bold">{fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</span>
+            </p>
+          </div>
         </div>
       );
     }
@@ -218,8 +222,13 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
     if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
       const fechaLimite = new Date(category.fechaLimite);
       return (
-        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-600 rounded-lg p-3 mt-2">
-          <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">Fecha límite: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <span className="text-base">📅</span>
+            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+              Fecha límite: <span className="font-bold">{fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</span>
+            </p>
+          </div>
         </div>
       );
     }
@@ -248,13 +257,18 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       {category.requiresAction && category.futureActionType && (
         <div className="space-y-3">
           {category.futureActionType === "accion" && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Acción Requerida</p>
-              {category.actionDescription && (
-                <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
-                  {category.actionDescription}
-                </p>
-              )}
+            <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-600 rounded-lg p-4 shadow-sm">
+              <div className="flex items-start gap-2 mb-2">
+                <span className="text-orange-500 dark:text-orange-400 text-lg">⚡</span>
+                <div className="flex-1">
+                  <p className="text-base font-semibold text-orange-800 dark:text-orange-200 mb-1">Acción Requerida</p>
+                  {category.actionDescription && (
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                      {category.actionDescription}
+                    </p>
+                  )}
+                </div>
+              </div>
               {renderDeadlineInfo()}
             </div>
           )}
@@ -293,13 +307,18 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           )}
 
           {category.futureActionType === "condicion" && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Condición de Aceptación</p>
-              {category.actionDescription && (
-                <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
-                  {category.actionDescription}
-                </p>
-              )}
+            <div className="bg-cyan-50 dark:bg-cyan-900/20 border-l-4 border-cyan-400 dark:border-cyan-600 rounded-lg p-4 shadow-sm">
+              <div className="flex items-start gap-2 mb-2">
+                <span className="text-cyan-500 dark:text-cyan-400 text-lg">📋</span>
+                <div className="flex-1">
+                  <p className="text-base font-semibold text-cyan-800 dark:text-cyan-200 mb-1">Condición de Aceptación</p>
+                  {category.actionDescription && (
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                      {category.actionDescription}
+                    </p>
+                  )}
+                </div>
+              </div>
               {renderDeadlineInfo()}
             </div>
           )}
