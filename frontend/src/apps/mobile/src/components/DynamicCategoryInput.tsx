@@ -249,7 +249,12 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         <div className="space-y-3">
           {category.futureActionType === "accion" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Acción Requerida</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Acción Requerida</p>
+              {category.actionDescription && (
+                <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                  {category.actionDescription}
+                </p>
+              )}
               {renderDeadlineInfo()}
             </div>
           )}
@@ -289,7 +294,12 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
           {category.futureActionType === "condicion" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Condición de Aceptación</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Condición de Aceptación</p>
+              {category.actionDescription && (
+                <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+                  {category.actionDescription}
+                </p>
+              )}
               {renderDeadlineInfo()}
             </div>
           )}

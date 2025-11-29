@@ -38,6 +38,7 @@ export interface OrderCategory {
   montoMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
+  actionDescription?: string;
   futureActionType?: TipoAccionFutura;
   deadlineMode?: DeadlineMode;
   plazoDias?: number;
@@ -71,6 +72,7 @@ export const orderCategoriesAPI = {
     montoMaximo?: number;
     requiresAction?: boolean;
     actionText?: string;
+    actionDescription?: string;
     futureActionType?: TipoAccionFutura;
     deadlineMode?: DeadlineMode;
     plazoDias?: number;
@@ -95,6 +97,7 @@ export const orderCategoriesAPI = {
       montoMaximo?: number;
       requiresAction?: boolean;
       actionText?: string;
+      actionDescription?: string;
       futureActionType?: TipoAccionFutura;
       deadlineMode?: DeadlineMode;
       plazoDias?: number;

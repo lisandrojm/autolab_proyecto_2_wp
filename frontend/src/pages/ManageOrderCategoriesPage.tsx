@@ -101,6 +101,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     montoMaximo?: number;
     requiresAction: boolean;
     actionText: string;
+    actionDescription?: string;
     futureActionType: TipoAccionFutura | "";
     deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
@@ -117,6 +118,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     montoMaximo: undefined,
     requiresAction: false,
     actionText: "",
+    actionDescription: "",
     futureActionType: "sinVencimiento",
     deadlineMode: "none",
     subtipos: [],
@@ -168,6 +170,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       montoMaximo: undefined,
       requiresAction: false,
       actionText: "",
+      actionDescription: "",
       futureActionType: "sinVencimiento",
       deadlineMode: "none",
       subtipos: [],
@@ -190,6 +193,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       montoMaximo: category.montoMaximo,
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
+      actionDescription: category.actionDescription || "",
       futureActionType: category.futureActionType || "sinVencimiento",
       deadlineMode: category.deadlineMode || "none",
       subtipos: category.config?.subtipos ?? [],
@@ -271,6 +275,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         montoMaximo: formData.categoryType === "dinero" && formData.montoMaximo ? formData.montoMaximo : undefined,
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction ? formData.actionText : undefined,
+        actionDescription: formData.requiresAction && (formData.futureActionType === "accion" || formData.futureActionType === "condicion") ? formData.actionDescription : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
         deadlineMode: formData.requiresAction && formData.futureActionType !== "sinVencimiento" ? formData.deadlineMode : undefined,
         requiresSignature: formData.requiresSignature,

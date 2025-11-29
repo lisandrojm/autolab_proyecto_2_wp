@@ -45,6 +45,7 @@ export interface IOrderCategory extends Document {
   montoMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
+  actionDescription?: string;
   futureActionType?: TipoAccionFutura;
   deadlineMode?: DeadlineMode;
   plazoDias?: number;
@@ -79,6 +80,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     montoMaximo: { type: Number, min: 0 },
     requiresAction: { type: Boolean, default: false },
     actionText: { type: String, trim: true },
+    actionDescription: { type: String, trim: true },
     futureActionType: {
       type: String,
       enum: ["accion", "documento", "condicion", "sinVencimiento"],

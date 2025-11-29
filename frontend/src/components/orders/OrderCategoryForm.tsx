@@ -16,6 +16,7 @@ interface OrderCategoryFormProps {
     montoMaximo?: number;
     requiresAction: boolean;
     actionText: string;
+    actionDescription?: string;
     futureActionType: TipoAccionFutura | "";
     deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
@@ -44,6 +45,11 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     sinVencimiento: "Me comprometo a cumplir con esta solicitud según lo requerido.",
   };
 
+  const DEFAULT_ACTION_DESCRIPTIONS: Record<string, string> = {
+    accion: "Completar la acción requerida según las indicaciones proporcionadas.",
+    condicion: "Las condiciones establecidas deben ser aceptadas para continuar con el pedido.",
+  };
+
   const handleFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
     setFormData((prev: any) => ({
       ...prev,
@@ -56,6 +62,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
       documentoRequerido: newType === "documento" ? prev.documentoRequerido : prev.documentoRequerido,
       actionText: newType ? DEFAULT_ACTION_TEXTS[newType] : prev.actionText,
+      actionDescription: newType && (newType === "accion" || newType === "condicion")
+        ? (prev.actionDescription || DEFAULT_ACTION_DESCRIPTIONS[newType])
+        : prev.actionDescription,
     }));
   };
 
@@ -82,8 +91,17 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
       case "accion":
         return (
           <div className="space-y-3">
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm text-gray-700 dark:text-gray-200">Acción requerida del usuario</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de la Acción *</label>
+              <textarea
+                value={formData.actionDescription || ""}
+                onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })}
+                required
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: Completar el curso de capacitación obligatorio antes de la fecha límite"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto se mostrará al usuario en el formulario mobile</p>
             </div>
             {renderDeadlineFields()}
           </div>
@@ -103,8 +121,17 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
       case "condicion":
         return (
           <div className="space-y-3">
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm text-gray-700 dark:text-gray-200">Condición que debe aceptar el usuario</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de la Condición *</label>
+              <textarea
+                value={formData.actionDescription || ""}
+                onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })}
+                required
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: Aceptar los términos y condiciones del reglamento interno de la empresa"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto se mostrará al usuario para que acepte la condición</p>
             </div>
             {renderDeadlineFields()}
           </div>
