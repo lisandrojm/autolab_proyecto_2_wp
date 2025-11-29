@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faCheck, faTimes, faTruck, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faCheckCircle, faTimesCircle, faBan, faShoppingCart, faListCheck, faClock, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight, faCircleInfo, faFileSignature, faPenToSquare, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -9,7 +9,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
 import { Modal } from "../components/ui/Modal";
 import { Card } from "../components/ui/Card";
-import { getDocumentBadgeStyle } from "../utils/documentBadgeHelper";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../utils/statusHelpers";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -112,16 +113,14 @@ export const ManageOrdersPage: React.FC = () => {
 
       data.orders.forEach((order) => {
         const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-        const badgeStyle = getDocumentBadgeStyle(futureAction);
+        const docStatusType = mapDocumentStateToStatusType(futureAction);
 
-        if (badgeStyle) {
+        if (docStatusType) {
           docCounts.total++;
 
-          if (badgeStyle.label === "Doc. Vencido") {
+          if (docStatusType === "doc_vencido") {
             docCounts.overdue++;
-          } else if (badgeStyle.label === "Doc. por Vencer") {
-            docCounts.urgent++;
-          } else if (badgeStyle.label === "Doc. Subido") {
+          } else if (docStatusType === "doc_subido") {
             docCounts.uploaded++;
           } else {
             docCounts.normal++;
@@ -326,58 +325,15 @@ export const ManageOrdersPage: React.FC = () => {
   };
 
   const renderSignatureStatus = (order: Order) => {
-    if (!order.requiresSignature) {
+    const signatureStatusType = mapSignatureStateToStatusType(order);
+
+    if (!signatureStatusType) {
       return <span className="text-xs text-gray-500 dark:text-gray-400">-</span>;
     }
 
-    const signatureStatus = order.signatureStatus || "not_required";
-
-    switch (signatureStatus) {
-      case "pending":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-            <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
-            Pendiente
-          </span>
-        );
-      case "sent":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-            <FontAwesomeIcon icon={faPaperPlane} className="w-3 h-3" />
-            Enviada
-          </span>
-        );
-      case "signed":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-            <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
-            Firmada
-          </span>
-        );
-      default:
-        return <span className="text-xs text-gray-500 dark:text-gray-400">No requerida</span>;
-    }
+    return <StatusBadge type={signatureStatusType} size="sm" />;
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-      pre_approved: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
-      approved: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-      rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-      delivered: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      cancelled: "bg-orange-100 text-orange-800 dark:bg-gray-900/30 dark:text-gray-400",
-    };
-    const labels: Record<string, string> = {
-      pending: "Pendiente",
-      pre_approved: "Preaprobado",
-      approved: "Aprobado",
-      rejected: "Rechazado",
-      delivered: "Entregado",
-      cancelled: "Cancelado",
-    };
-    return { style: styles[status] || styles.pending, label: labels[status] || status };
-  };
 
   const getCategoryLabel = (category: string) => category;
 
@@ -463,16 +419,6 @@ export const ManageOrdersPage: React.FC = () => {
     });
   };
 
-  const getStatusIcon = (status: string) => {
-    const icons: Record<string, any> = {
-      pending: faClock,
-      approved: faCheckCircle,
-      rejected: faTimesCircle,
-      delivered: faTruck,
-      cancelled: faBan,
-    };
-    return icons[status] || faInfoCircle;
-  };
 
   const mapStatusToCardVariant = (status: string): "default" | "success" | "warning" | "blue" | "info" | "green" => {
     const variants: Record<string, "default" | "success" | "warning" | "blue" | "info" | "green"> = {
@@ -486,29 +432,12 @@ export const ManageOrdersPage: React.FC = () => {
   };
 
   const getCardBadges = (order: Order) => {
-    const statusBadge = getStatusBadge(order.status);
-    const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-    const docBadgeStyle = getDocumentBadgeStyle(futureAction);
-
     const badges = [
       {
         text: getOrderNumber(order),
         className: "text-xs bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400 px-2 py-1 rounded",
       },
-      {
-        text: statusBadge.label,
-        className: statusBadge.style,
-        icon: getStatusIcon(order.status),
-      },
     ];
-
-    if (docBadgeStyle) {
-      badges.push({
-        text: docBadgeStyle.label,
-        className: `${docBadgeStyle.bgClass} ${docBadgeStyle.textClass} ${docBadgeStyle.borderClass}`,
-        icon: faFileArrowUp,
-      });
-    }
 
     return badges;
   };
@@ -766,7 +695,6 @@ export const ManageOrdersPage: React.FC = () => {
 
                     <tbody>
                       {filteredOrders.map((order) => {
-                        const badge = getStatusBadge(order.status);
                         return (
                           <tr
                             key={order._id}
@@ -825,28 +753,20 @@ export const ManageOrdersPage: React.FC = () => {
 
                             {/* --- ESTADO --- */}
                             <td className="py-3 px-4">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.style}`}>
-                                <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
-                                {badge.label}
-                              </span>
+                              <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
                             </td>
 
                             {/* --- DOCUMENTO --- */}
                             <td className="py-3 px-4">
                               {(() => {
                                 const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-                                const badgeStyle = getDocumentBadgeStyle(futureAction);
+                                const docStatusType = mapDocumentStateToStatusType(futureAction);
 
-                                if (!badgeStyle) {
+                                if (!docStatusType) {
                                   return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
                                 }
 
-                                return (
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
-                                    <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                                    {badgeStyle.label}
-                                  </span>
-                                );
+                                return <StatusBadge type={docStatusType} size="sm" />;
                               })()}
                             </td>
 
@@ -949,38 +869,29 @@ export const ManageOrdersPage: React.FC = () => {
                 <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
               </span>
               {/* Estado */}
-              <div className="flex flex-wrap">
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${getStatusBadge(selectedOrder.status).style}`}>
-                  <FontAwesomeIcon icon={getStatusIcon(selectedOrder.status)} className="h-3 w-3" />
-                  {getStatusBadge(selectedOrder.status).label}
-                </span>
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge type={mapOrderStatusToStatusType(selectedOrder.status)} size="sm" />
                 {/* Documento */}
-                <span>
-                  {(() => {
-                    const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
-                    const badgeStyle = getDocumentBadgeStyle(futureAction);
+                {(() => {
+                  const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
+                  const docStatusType = mapDocumentStateToStatusType(futureAction);
 
-                    if (!badgeStyle) return null;
+                  if (!docStatusType) return null;
 
-                    const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && selectedOrder.documentoUrl;
+                  const isDocumentUploaded = docStatusType === "doc_subido" && selectedOrder.documentoUrl;
 
-                    if (isDocumentUploaded) {
-                      return (
-                        <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
-                          <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                          {badgeStyle.label}
-                        </button>
-                      );
-                    }
-
+                  if (isDocumentUploaded) {
                     return (
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
-                        <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                        {badgeStyle.label}
-                      </span>
+                      <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
+                        <StatusBadge type={docStatusType} size="sm" />
+                      </button>
                     );
-                  })()}
-                </span>
+                  }
+
+                  return <StatusBadge type={docStatusType} size="sm" className={docStatusType === "doc_vencido" ? "animate-pulse" : ""} />;
+                })()}
+                {/* Firma */}
+                <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" />
               </div>
             </div>
             <div className="flex items-center gap-3">

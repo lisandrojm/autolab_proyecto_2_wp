@@ -3,9 +3,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { OrderData, personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
-import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getStatusBadge, getCategoryName, getOrderNumber, getSubcategoriesArray, getStatusIcon } from "../utils/orderHelpers";
+import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
-import { getDocumentBadgeStyle } from "../../../../utils/documentBadgeHelper";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
 
 interface OrderDetailModalProps {
   order: OrderData | null;
@@ -119,7 +120,6 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
     return null;
   };
 
-  const badge = getStatusBadge(order.status);
 
   const getMonto = (): number | null => {
     if (order.amount) return order.amount;
@@ -172,38 +172,29 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(order)}</p>
             </span>
             {/* Estado */}
-            <div className="flex flex-wrap">
-              <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badge.style}`}>
-                <FontAwesomeIcon icon={getStatusIcon(order.status)} className="h-3 w-3" />
-                {badge.label}
-              </span>
+            <div className="flex flex-wrap gap-2">
+              <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
               {/* Documento */}
-              <span>
-                {(() => {
-                  const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-                  const badgeStyle = getDocumentBadgeStyle(futureAction);
+              {(() => {
+                const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+                const docStatusType = mapDocumentStateToStatusType(futureAction);
 
-                  if (!badgeStyle) return null;
+                if (!docStatusType) return null;
 
-                  const isDocumentUploaded = badgeStyle.label === "Doc. Subido" && order.documentoUrl;
+                const isDocumentUploaded = docStatusType === "doc_subido" && order.documentoUrl;
 
-                  if (isDocumentUploaded) {
-                    return (
-                      <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} hover:opacity-80 transition-opacity cursor-pointer`} title="Ver documento">
-                        <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                        {badgeStyle.label}
-                      </button>
-                    );
-                  }
-
+                if (isDocumentUploaded) {
                   return (
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium py-1 px-3 rounded-full ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass} ${badgeStyle.shouldAnimate ? "animate-pulse" : ""}`}>
-                      <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                      {badgeStyle.label}
-                    </span>
+                    <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
+                      <StatusBadge type={docStatusType} size="sm" />
+                    </button>
                   );
-                })()}
-              </span>
+                }
+
+                return <StatusBadge type={docStatusType} size="sm" className={docStatusType === "doc_vencido" ? "animate-pulse" : ""} />;
+              })()}
+              {/* Firma */}
+              <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
             </div>
           </div>
 

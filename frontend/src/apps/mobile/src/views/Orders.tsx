@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCheckCircle, faClock, faTimesCircle, faTruck, faCamera, faImage, faTimes, faBan, faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
@@ -215,61 +217,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />;
-      case "approved":
-        return <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3 text-blue-600 dark:text-blue-400" />;
-      case "pre_approved":
-        return <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />;
-      case "delivered":
-        return <FontAwesomeIcon icon={faTruck} className="w-3 h-3 text-green-600 dark:text-green-400" />;
-      case "rejected":
-        return <FontAwesomeIcon icon={faTimesCircle} className="w-3 h-3 text-red-600 dark:text-red-400" />;
-      case "cancelled":
-        return <FontAwesomeIcon icon={faBan} className="w-3 h-3 text-gray-400 dark:text-slate-400" />;
-      default:
-        return null;
-    }
-  };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Pendiente";
-      case "pre_approved":
-        return "Pendiente";
-      case "approved":
-        return "Aprobado";
-      case "delivered":
-        return "Entregado";
-      case "rejected":
-        return "Rechazado";
-      case "cancelled":
-        return "Cancelado";
-      default:
-        return status;
-    }
-  };
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "text-yellow-600 dark:text-yellow-400";
-      case "pre_approved":
-        return "text-yellow-600 dark:text-yellow-400";
-      case "approved":
-        return "text-blue-600 dark:text-blue-400";
-      case "delivered":
-        return "text-green-600 dark:text-green-400";
-      case "rejected":
-        return "text-red-600 dark:text-red-400";
-      case "cancelled":
-        return "text-slate-600 dark:text-slate-400";
-      default:
-        return "text-slate-600 dark:text-slate-400";
-    }
-  };
 
   const handleOrderClick = (order: OrderData) => {
     setSelectedOrder(order);
@@ -286,24 +234,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
     }
   };
 
-  const getStatusBg = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 dark:bg-yellow-900/50";
-      case "pre_approved":
-        return "bg-yellow-100 dark:bg-yellow-900/50";
-      case "approved":
-        return "bg-blue-100 dark:bg-blue-900/50";
-      case "delivered":
-        return "bg-green-100 dark:bg-green-900/50";
-      case "rejected":
-        return "bg-red-100 dark:bg-red-900/50";
-      case "cancelled":
-        return "bg-slate-100 dark:bg-slate-800";
-      default:
-        return "bg-slate-100 dark:bg-slate-800";
-    }
-  };
 
   return (
     <div className="flex-1 pb-24">
@@ -349,6 +279,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 <div className="pt-3">
                   <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} />
                 </div>
+
+                {/* Alerta de Requiere Firma */}
+                {selectedCategory?.requiresSignature && (
+                  <div className="mt-3 flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700">
+                    <FontAwesomeIcon icon={faPenToSquare} className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Este tipo de pedido requiere firma</p>
+                  </div>
+                )}
               </div>
               {/* Descripción */}
               {categories.length > 0 && (
@@ -432,24 +370,19 @@ export default function Orders({ onNavigate }: OrdersProps) {
                         <div className="flex items-center gap-2">
                           <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${getStatusBg(order.status)}`}>
-                            {getStatusIcon(order.status)}
-                            <span className={`text-xs font-medium ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
-                          </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
                           {(() => {
                             const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-                            const badgeStyle = getDocumentBadgeStyle(futureAction);
+                            const docStatusType = mapDocumentStateToStatusType(futureAction);
 
-                            if (!badgeStyle) return null;
+                            if (docStatusType) {
+                              return <StatusBadge type={docStatusType} size="sm" />;
+                            }
 
-                            return (
-                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0 ${badgeStyle.bgClass} ${badgeStyle.textClass} ${badgeStyle.borderClass}`}>
-                                <FontAwesomeIcon icon={faFileArrowUp} className="h-3 w-3" />
-                                <span className="text-xs font-medium">{badgeStyle.label}</span>
-                              </div>
-                            );
+                            return null;
                           })()}
+                          <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
                         </div>
                       </div>
                       {/* Tipos */}
