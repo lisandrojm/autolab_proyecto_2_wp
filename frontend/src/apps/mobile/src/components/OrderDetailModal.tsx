@@ -120,7 +120,6 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
     return null;
   };
 
-
   const getMonto = (): number | null => {
     if (order.amount) return order.amount;
     if (typeof order.dynamicValue === "number") return order.dynamicValue;
@@ -191,7 +190,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   );
                 }
 
-                return <StatusBadge type={docStatusType} size="sm" className={docStatusType === "doc_vencido" ? "animate-pulse" : ""} />;
+                return <StatusBadge type={docStatusType} size="sm" />;
               })()}
               {/* Firma */}
               <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
@@ -282,19 +281,19 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
             return (
-              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-500/50 p-4 rounded-lg">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-500/50 p-4 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
-                  <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                  <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                   <div className="flex-1">
-                    <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">Documento Pendiente</h4>
+                    <h4 className="font-semibold text-yellow-800 dark:text-yellow-400 mb-1">Documento Pendiente</h4>
                     {futureAction.documentoRequerido && (
-                      <p className="text-sm text-orange-600 dark:text-orange-400 mb-3">
+                      <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-3">
                         <strong>"{futureAction.documentoRequerido}"</strong>
                       </p>
                     )}
-                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que subas un documento para completar la solicitud.</p>
-                    {/*                     <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p> */}
-                    {daysRemaining !== null && <p className={`text- font-medium mb-3 ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""}` : daysRemaining === 0 ? "Vence hoy" : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">Este pedido requiere que subas un documento para completar la solicitud.</p>
+                    {/*                     <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">{futureAction.descripcionAccion}</p> */}
+                    {daysRemaining !== null && <p className={`text- font-medium mb-3 ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"}`}>{daysRemaining > 0 ? `Vence en ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""}` : daysRemaining === 0 ? "Vence hoy" : `Vencido hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
                   </div>
                 </div>
 
@@ -306,7 +305,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                         <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                       </button>
                     </div>
-                    <button onClick={handleUploadDocument} disabled={uploadingDocument} className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={handleUploadDocument} disabled={uploadingDocument} className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       {uploadingDocument ? (
                         <>
                           <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
@@ -323,13 +322,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 ) : (
                   <div className="flex flex-col lg:flex-row gap-3">
                     <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
                       <span className="text-sm font-medium">Tomar Foto</span>
                     </button>
 
                     <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-orange-600 hover:bg-orange-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                       <span className="text-sm font-medium">Subir Archivo</span>
                     </button>

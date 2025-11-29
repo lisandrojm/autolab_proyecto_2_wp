@@ -165,7 +165,7 @@ export default function Home({ onNavigate }: HomeProps) {
       {notifLoading && (
         <div className="p-4">
           <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-            <div className="animate-pulse text-sm text-slate-500 dark:text-slate-400">Cargando notificaciones...</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">Cargando notificaciones...</div>
           </div>
         </div>
       )} */}

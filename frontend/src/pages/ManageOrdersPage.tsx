@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faChevronLeft, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -334,7 +334,6 @@ export const ManageOrdersPage: React.FC = () => {
     return <StatusBadge type={signatureStatusType} size="sm" />;
   };
 
-
   const getCategoryLabel = (category: string) => category;
 
   const getCategoryTypeName = (categoryType?: CategoryType): string => {
@@ -418,7 +417,6 @@ export const ManageOrdersPage: React.FC = () => {
       year: "numeric",
     });
   };
-
 
   const mapStatusToCardVariant = (status: string): "default" | "success" | "warning" | "blue" | "info" | "green" => {
     const variants: Record<string, "default" | "success" | "warning" | "blue" | "info" | "green"> = {
@@ -613,9 +611,9 @@ export const ManageOrdersPage: React.FC = () => {
             { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
             { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
             { label: "Cancelados", value: stats.cancelled, icon: faBan, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
-            { label: "Documentos", value: docStats.total, icon: faFileAlt, color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" },
+            { label: "Documentos", value: docStats.total, icon: faFileAlt, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
           ].map((stat, index) => (
-            <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${stat.label === "Documentos" ? "cursor-pointer hover:ring-orange-300 dark:hover:ring-orange-600 transition-all" : ""} ${stat.label === "Documentos" && docStats.overdue > 0 ? "ring-red-500 dark:ring-red-400" : ""}`} onClick={() => stat.label === "Documentos" && setShowDocModal(true)} title={stat.label === "Documentos" && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}>
+            <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${stat.label === "Documentos" ? "cursor-pointer hover:ring-yellow-300 dark:hover:ring-yellow-600 transition-all" : ""} ${stat.label === "Documentos" && docStats.overdue > 0 ? "ring-red-500 dark:ring-red-400" : ""}`} onClick={() => stat.label === "Documentos" && setShowDocModal(true)} title={stat.label === "Documentos" && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}>
               <FontAwesomeIcon icon={stat.icon} className="lg:h-5 w-5 opacity-80" />
               <div className="flex gap-2 items-center">
                 <span className="text-sm font-medium opacity-80 hidden lg:block">{stat.label}</span>
@@ -743,7 +741,7 @@ export const ManageOrdersPage: React.FC = () => {
                             {/* --- ACCIÓN FUTURA --- */}
                             {/*                           <td className="py-3 px-4 text-center">
                             {hasRequiresAction(order) ? (
-                              <span className="inline-flex p-2 items-center justify-center text-blue-600 dark:text-blue-400 text-xs rounded-full bg-orange-100 dark:bg-blue-900/30" title="Requiere acción futura">
+                              <span className="inline-flex p-2 items-center justify-center text-blue-600 dark:text-blue-400 text-xs rounded-full bg-yellow-100 dark:bg-blue-900/30" title="Requiere acción futura">
                                 Requiere A.F
                               </span>
                             ) : (
@@ -888,7 +886,7 @@ export const ManageOrdersPage: React.FC = () => {
                     );
                   }
 
-                  return <StatusBadge type={docStatusType} size="sm" className={docStatusType === "doc_vencido" ? "animate-pulse" : ""} />;
+                  return <StatusBadge type={docStatusType} size="sm" />;
                 })()}
                 {/* Firma */}
                 <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" />
@@ -976,19 +974,19 @@ export const ManageOrdersPage: React.FC = () => {
               const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
               return (
-                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-500/50 p-4 rounded-lg">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-500/50 p-4 rounded-lg">
                   <div className="flex items-start gap-3">
-                    <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                    <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-1">Documento Pendiente</h4>
+                      <h4 className="font-semibold text-yellow-800 dark:text-yellow-400 mb-1">Documento Pendiente</h4>
                       {futureAction.documentoRequerido && (
-                        <p className="text-sm text-orange-600 dark:text-orange-400 mb-3">
+                        <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-3">
                           <strong>"{futureAction.documentoRequerido}"</strong>
                         </p>
                       )}
-                      <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">Este pedido requiere que el usuario presente un documento para completar la solicitud.</p>
-                      {/*<p className="text-sm text-orange-700 dark:text-orange-300 mb-2">{futureAction.descripcionAccion}</p> */}
-                      {daysRemaining !== null && <p className={`text-sm font-medium ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>{daysRemaining > 0 ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""} para presentar el documento` : daysRemaining === 0 ? "El plazo vence hoy" : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">Este pedido requiere que el usuario presente un documento para completar la solicitud.</p>
+                      {/*<p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">{futureAction.descripcionAccion}</p> */}
+                      {daysRemaining !== null && <p className={`text-sm font-medium ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"}`}>{daysRemaining > 0 ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""} para presentar el documento` : daysRemaining === 0 ? "El plazo vence hoy" : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
                     </div>
                   </div>
                 </div>
@@ -1023,18 +1021,18 @@ export const ManageOrdersPage: React.FC = () => {
                 <p className="text-xs text-gray-600 dark:text-gray-400">Fecha límite superada</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-red-600 dark:text-red-400 animate-pulse">{docStats.overdue}</span>
+            <span className="text-2xl font-bold text-red-600 dark:text-red-400">{docStats.overdue}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
             <div className="flex items-center gap-3">
-              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
               <div>
                 <p className="font-semibold text-gray-900 dark:text-gray-100">Documentos por Vencer</p>
                 <p className="text-xs text-gray-600 dark:text-gray-400">3 días o menos restantes</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">{docStats.urgent}</span>
+            <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{docStats.urgent}</span>
           </div>
 
           <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
