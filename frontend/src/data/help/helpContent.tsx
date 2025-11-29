@@ -180,7 +180,7 @@ const helpResources = {
               <strong>Vencimiento interno:</strong> vencimiento definido por procesos internos.
             </li>
             <li>
-              <strong>Sin vencimiento ni acción:</strong> solo marca la acción como realizada.
+              <strong>Sin vencimiento:</strong> solo marca la acción como realizada.
             </li>
           </ul>
 

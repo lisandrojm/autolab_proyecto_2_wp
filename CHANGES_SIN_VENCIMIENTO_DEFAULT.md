@@ -1,8 +1,8 @@
-# Cambios Implementados: "Sin vencimiento ni acción" como Valor por Defecto
+# Cambios Implementados: "Sin vencimiento" como Valor por Defecto
 
 ## Resumen
 
-Se implementó "Sin vencimiento ni acción" como el valor predeterminado para el campo "Tipo de Acción Futura" en la gestión de tipos de pedidos. Esto simplifica el flujo de trabajo y garantiza que las categorías siempre tengan un tipo de acción válido.
+Se implementó "Sin vencimiento" como el valor predeterminado para el campo "Tipo de Acción Futura" en la gestión de tipos de pedidos. Esto simplifica el flujo de trabajo y garantiza que las categorías siempre tengan un tipo de acción válido.
 
 ## Cambios Realizados
 
@@ -14,7 +14,7 @@ Se implementó "Sin vencimiento ni acción" como el valor predeterminado para el
 - ✅ La función `openCreateModal()` inicializa con "sinVencimiento"
 - ✅ La función `openEditModal()` usa "sinVencimiento" como fallback si no hay valor
 - ✅ El checkbox "Requiere acción futura" establece "sinVencimiento" si está vacío
-- ✅ El selector muestra "Sin vencimiento ni acción" como primera opción (ya no hay opción vacía)
+- ✅ El selector muestra "Sin vencimiento" como primera opción (ya no hay opción vacía)
 
 ### 2. Backend - Validación y Esquemas
 
@@ -50,9 +50,9 @@ Se implementó "Sin vencimiento ni acción" como el valor predeterminado para el
 
 ## Comportamiento Esperado
 
-1. **Al crear una nueva categoría**: El campo "Tipo de Acción Futura" estará preseleccionado con "Sin vencimiento ni acción"
-2. **Al editar categorías existentes**: Si no tienen tipo de acción, se mostrará "Sin vencimiento ni acción"
-3. **Al activar "Requiere acción futura"**: Automáticamente se establece "Sin vencimiento ni acción" si está vacío
+1. **Al crear una nueva categoría**: El campo "Tipo de Acción Futura" estará preseleccionado con "Sin vencimiento"
+2. **Al editar categorías existentes**: Si no tienen tipo de acción, se mostrará "Sin vencimiento"
+3. **Al activar "Requiere acción futura"**: Automáticamente se establece "Sin vencimiento" si está vacío
 4. **En la base de datos**: Todas las nuevas categorías tendrán "sinVencimiento" por defecto
 5. **Al crear pedidos**: Si la categoría no tiene tipo de acción definido, se usa "sinVencimiento"
 
@@ -63,19 +63,19 @@ Las validaciones específicas para otros tipos de acción se mantienen intactas:
 - "Plazo en Días" y "Vencimiento por Sistema": Requieren plazoDias (1-365)
 - "Fecha Específica": Requiere fechaLimite
 - "Presentación de Documento": Requiere documentoRequerido
-- "Sin vencimiento ni acción": No requiere campos adicionales ✅
+- "Sin vencimiento": No requiere campos adicionales ✅
 
 ## Impacto
 
 - ✅ **Experiencia de usuario mejorada**: No es necesario seleccionar un tipo de acción si solo se quiere seguimiento sin fecha límite
 - ✅ **Datos consistentes**: Todas las categorías con acciones tendrán un tipo válido
-- ✅ **Retrocompatibilidad**: Las categorías existentes sin tipo de acción se comportarán como "Sin vencimiento ni acción"
+- ✅ **Retrocompatibilidad**: Las categorías existentes sin tipo de acción se comportarán como "Sin vencimiento"
 - ✅ **Builds exitosos**: Frontend y backend compilan sin errores
 
 ## Testing Recomendado
 
 1. Crear una nueva categoría con "Requiere acción futura" activado
-2. Verificar que "Sin vencimiento ni acción" esté preseleccionado
+2. Verificar que "Sin vencimiento" esté preseleccionado
 3. Crear un pedido con esa categoría
 4. Verificar que se cree la acción futura con tipo "sinVencimiento"
 5. Editar una categoría existente y verificar el comportamiento del selector

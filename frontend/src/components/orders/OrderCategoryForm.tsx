@@ -358,7 +358,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               {formData.futureActionType !== "sinVencimiento" && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto de la acción (Checkbox)*</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto del Checkbox *</label>
                     <button type="button" onClick={() => setShowActionTextInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                     </button>
@@ -406,7 +406,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <strong>Aceptación de Condición:</strong> Debe aceptar términos.
           </p>
           <p>
-            <strong>Sin vencimiento ni acción:</strong> No requiere nada adicional.
+            <strong>Sin vencimiento:</strong> No requiere nada adicional.
           </p>
         </div>
       </InfoModal>

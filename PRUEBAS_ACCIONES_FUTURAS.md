@@ -187,7 +187,7 @@ Cuando el usuario envía el formulario:
 
 ---
 
-### Test 6: Sin vencimiento ni acción
+### Test 6: Sin vencimiento
 
 **Admin configura:**
 

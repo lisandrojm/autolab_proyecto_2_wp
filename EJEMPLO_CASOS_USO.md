@@ -251,7 +251,7 @@ FutureAction:
 Nombre: Home Office
 Tipo: otros
 Requiere Acción Futura: Sí
-Tipo de Acción: Sin vencimiento ni acción
+Tipo de Acción: Sin vencimiento
 Texto: "Acepto mantener la productividad y disponibilidad según lo acordado"
 ```
 
@@ -267,7 +267,7 @@ Texto: "Acepto mantener la productividad y disponibilidad según lo acordado"
                           adecuado para trabajar]
 
    ━━━ Acción Futura ━━━
-   Tipo: Sin vencimiento ni acción
+   Tipo: Sin vencimiento
 
    ℹ️ No tiene fecha límite, pero debe ser gestionada y
    marcada como cumplida manualmente.
@@ -378,14 +378,14 @@ FutureAction:
 
 ## Comparación Visual de Tipos de Acción
 
-| Tipo                          | Usuario Ingresa            | Sistema Calcula            | Responsable Define  |
-| ----------------------------- | -------------------------- | -------------------------- | ------------------- |
-| **Plazo en Días**             | Número de días             | Fecha límite automática    | Usuario             |
-| **Fecha Específica**          | Fecha límite directa       | Nada                       | Usuario             |
-| **Presentación Documento**    | Documento + fecha opcional | Nada                       | Usuario             |
-| **Vencimiento Sistema**       | Días predefinidos          | Fecha límite automática    | Sistema             |
-| **Vencimiento Interno**       | Nada                       | Nada (estado: en_revision) | Área interna        |
-| **Sin vencimiento ni acción** | Nada                       | Nada                       | Usuario (sin fecha) |
+| Tipo                       | Usuario Ingresa            | Sistema Calcula            | Responsable Define  |
+| -------------------------- | -------------------------- | -------------------------- | ------------------- |
+| **Plazo en Días**          | Número de días             | Fecha límite automática    | Usuario             |
+| **Fecha Específica**       | Fecha límite directa       | Nada                       | Usuario             |
+| **Presentación Documento** | Documento + fecha opcional | Nada                       | Usuario             |
+| **Vencimiento Sistema**    | Días predefinidos          | Fecha límite automática    | Sistema             |
+| **Vencimiento Interno**    | Nada                       | Nada (estado: en_revision) | Área interna        |
+| **Sin vencimiento**        | Nada                       | Nada                       | Usuario (sin fecha) |
 
 ---
 
