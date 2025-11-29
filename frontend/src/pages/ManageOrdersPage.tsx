@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -12,17 +12,8 @@ import { Card } from "../components/ui/Card";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../utils/statusHelpers";
 
-// 🔥 IMPORTAR HELP
-import { getHelp, hasHelp } from "../data/help/helpContent";
-
 export const ManageOrdersPage: React.FC = () => {
   const navigate = useNavigate();
-
-  // 🔥 DECLARAR LA CLAVE
-  const HELP_KEY = "orders" as const;
-
-  // 🔥 STATE PARA MODAL INFO
-  const [openInfo, setOpenInfo] = useState(false);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,11 +28,10 @@ export const ManageOrdersPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDocModal, setShowDocModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
-
-  const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -485,18 +475,11 @@ export const ManageOrdersPage: React.FC = () => {
                 <div className="flex flex-wrap gap-1.5">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
                   {getSubcategoriesArray(order).map((subcategory, index) => (
-                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                       {subcategory}
                     </span>
                   ))}
                 </div>
-                {/*                 <div className="space-y-3 text-sm">
-                  {order.amount && (
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-green-600 dark:text-green-400">${order.amount.toFixed(2)}</span>
-                    </div>
-                  )}
-                </div> */}
               </div>
             </Card>
           );
@@ -554,13 +537,13 @@ export const ManageOrdersPage: React.FC = () => {
             <>
               {selectedOrder.signatureStatus === "pending" && (
                 <button onClick={handleSendSignature} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                  <FontAwesomeIcon icon={faPaperPlane} />
+                  <FontAwesomeIcon icon={faFileArrowUp} />
                   Enviar para Firma
                 </button>
               )}
               {selectedOrder.signatureStatus === "sent" && (
                 <button onClick={handleMarkSigned} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                  <FontAwesomeIcon icon={faPenToSquare} />
+                  <FontAwesomeIcon icon={faCheckCircle} />
                   Marcar como Firmado
                 </button>
               )}
@@ -583,51 +566,20 @@ export const ManageOrdersPage: React.FC = () => {
       title="Pedidos"
       subtitle="Administra todos los pedidos del personal"
       faIcon={{ icon: faShoppingCart }}
-      // 🔥 INFO MODAL (IGUAL QUE UsersPage)
-      infoModal={{
-        isOpen: openInfo,
-        onOpen: () => setOpenInfo(true),
-        onClose: () => setOpenInfo(false),
-        title: helpEntry.title,
-        size: helpEntry.size,
-        content: helpEntry.content,
-      }}
-      shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="hidden lg:flex items-center gap-2">
           <button onClick={() => navigate("/hr/order-categories")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faList} />
             <span className="hidden lg:block">ABM Pedidos</span>
           </button>
+          {/* 👉 BOTÓN QUE ABRE EL MODAL DE ESTADOS */}
+          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de pedidos" title="Ver resumen de pedidos">
+            <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+          </button>
         </div>
       }
     >
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-4">
-          {[
-            { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-            { label: "Preaprobados", value: stats.pre_approved, icon: faListCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
-            { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
-            { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
-            { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
-            { label: "Cancelados", value: stats.cancelled, icon: faBan, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
-            { label: "Documentos", value: docStats.total, icon: faFileAlt, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-          ].map((stat, index) => (
-            <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${stat.label === "Documentos" ? "cursor-pointer hover:ring-yellow-300 dark:hover:ring-yellow-600 transition-all" : ""} ${stat.label === "Documentos" && docStats.overdue > 0 ? "ring-red-500 dark:ring-red-400" : ""}`} onClick={() => stat.label === "Documentos" && setShowDocModal(true)} title={stat.label === "Documentos" && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}>
-              <FontAwesomeIcon icon={stat.icon} className="lg:h-5 w-5 opacity-80" />
-              <div className="flex gap-2 items-center">
-                <span className="text-sm font-medium opacity-80 hidden lg:block">{stat.label}</span>
-                <span className="lg:text-lg font-bold">{stat.value}</span>
-              </div>
-              {stat.label === "Documentos" && docStats.overdue > 0 && (
-                <span className="text-red-500" title="Hay documentos vencidos">
-                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-
         <div>
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -671,23 +623,14 @@ export const ManageOrdersPage: React.FC = () => {
                   <table className="w-full dark:bg-slate-800/80 table-auto">
                     <thead>
                       <tr>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Pedido</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
-                        {/*                         <th className="w-[250px] text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Título</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
-                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th> */}
-                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th> */}
-                        {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Acción Futura</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-
-                        {/* Imagen movida aquí */}
-                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Imagen</th> */}
-
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
-                        {/*                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th> */}
                       </tr>
                     </thead>
 
@@ -702,11 +645,9 @@ export const ManageOrdersPage: React.FC = () => {
                               setShowDetailModal(true);
                             }}
                           >
-                            {/* --- N° PEDIDO --- */}
                             <td className="py-3 px-4">
                               <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getOrderNumber(order)}</span>
                             </td>
-                            {/* --- Tipo --- */}
                             <td className="py-3 px-4 whitespace-nowrap">
                               <div className="flex flex-nowrap items-center gap-x-1.5">
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
@@ -718,43 +659,11 @@ export const ManageOrdersPage: React.FC = () => {
                                 ))}
                               </div>
                             </td>
-
-                            {/*                             <td className="py-3 px-4">
-                              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{order.title}</div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{order.description}</div>
-                              {order.amount && <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1">Monto: ${order.amount.toFixed(2)}</div>}
-                            </td> */}
-
-                            {/* --- SOLICITANTE --- */}
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
-                            {/* --- Cargo --- */}
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(order.userId)}</td>
-
-                            {/* --- TIPO --- */}
-                            {/*                           <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{typeof order.categoryId === "object" && order.categoryId ? getCategoryTypeName(order.categoryId.categoryType) : "N/A"}</span>
-                          </td> */}
-
-                            {/* --- OPCIÓN --- */}
-                            {/*                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{getSubcategoryDisplay(order)}</td> */}
-
-                            {/* --- ACCIÓN FUTURA --- */}
-                            {/*                           <td className="py-3 px-4 text-center">
-                            {hasRequiresAction(order) ? (
-                              <span className="inline-flex p-2 items-center justify-center text-blue-600 dark:text-blue-400 text-xs rounded-full bg-yellow-100 dark:bg-blue-900/30" title="Requiere acción futura">
-                                Requiere A.F
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
-                            )}
-                          </td> */}
-
-                            {/* --- ESTADO --- */}
                             <td className="py-3 px-4">
                               <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
                             </td>
-
-                            {/* --- DOCUMENTO --- */}
                             <td className="py-3 px-4">
                               {(() => {
                                 const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
@@ -767,34 +676,8 @@ export const ManageOrdersPage: React.FC = () => {
                                 return <StatusBadge type={docStatusType} size="sm" />;
                               })()}
                             </td>
-
-                            {/* --- FIRMA --- */}
                             <td className="py-3 px-4 text-center">{renderSignatureStatus(order)}</td>
-
-                            {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
-                            {/*                           <td className="py-3 px-4 h-10 w-10">
-                            <div className="flex justify-center items-center p-3">{order.photoUrl ? <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt={order.title} className="w-auto h-auto object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} /> : <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>}</div>
-                          </td> */}
-
-                            {/* --- FECHA --- */}
                             <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
-
-                            {/* --- ACCIONES --- */}
-                            {/*                           <td className="py-3 px-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedOrder(order);
-                                  setShowDetailModal(true);
-                                }}
-                                className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors"
-                                title="Ver detalles"
-                              >
-                                <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td> */}
                           </tr>
                         );
                       })}
@@ -839,13 +722,7 @@ export const ManageOrdersPage: React.FC = () => {
         customHeader={
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
             <div className="flex items-center gap-3">
-              {/*               <button onClick={handlePreviousOrder} disabled={!hasPreviousOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior (←)">
-                <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button> */}
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
-              {/*               <button onClick={handleNextOrder} disabled={!hasNextOrder} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido (→)">
-                <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button> */}
               {currentOrderIndex >= 0 && (
                 <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                   {currentOrderIndex + 1} de {filteredOrders.length}
@@ -860,16 +737,12 @@ export const ManageOrdersPage: React.FC = () => {
       >
         {selectedOrder && (
           <div className="space-y-6">
-            {/* Perfil */}
             <div className="flex flex-wrap justify-between gap-3">
-              {/* Pedido */}
               <span>
                 <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
               </span>
-              {/* Estado */}
               <div className="flex flex-wrap gap-2">
                 <StatusBadge type={mapOrderStatusToStatusType(selectedOrder.status)} size="sm" />
-                {/* Documento */}
                 {(() => {
                   const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
                   const docStatusType = mapDocumentStateToStatusType(futureAction);
@@ -888,7 +761,6 @@ export const ManageOrdersPage: React.FC = () => {
 
                   return <StatusBadge type={docStatusType} size="sm" />;
                 })()}
-                {/* Firma */}
                 <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" />
               </div>
             </div>
@@ -912,7 +784,6 @@ export const ManageOrdersPage: React.FC = () => {
                 <p className="text-sm text-slate-500 dark:text-slate-400">{getUserPosition(selectedOrder.userId)}</p>
               </div>
             </div>
-            {/* Grid con Tipo de Pedido y Detalles */}
             <div className="flex flex-col gap-4">
               <div className="lg:col-span-8">
                 <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
@@ -956,14 +827,12 @@ export const ManageOrdersPage: React.FC = () => {
             <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
               <div className="flex justify-between items-start">
                 <div className="flex justify-between items-center w-full">
-                  {/* <p className="font-semibold text-xl text-slate-800 dark:text-slate-100">{selectedOrder.title}</p> */}
                   <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Descripción</p>
                 </div>
               </div>
               <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
             </div>
 
-            {/* Sección de Documento Pendiente */}
             {(() => {
               const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
 
@@ -985,7 +854,6 @@ export const ManageOrdersPage: React.FC = () => {
                         </p>
                       )}
                       <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">Este pedido requiere que el usuario presente un documento para completar la solicitud.</p>
-                      {/*<p className="text-sm text-yellow-700 dark:text-yellow-300 mb-2">{futureAction.descripcionAccion}</p> */}
                       {daysRemaining !== null && <p className={`text-sm font-medium ${daysRemaining <= 2 ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"}`}>{daysRemaining > 0 ? `El usuario tiene ${daysRemaining} día${daysRemaining !== 1 ? "s" : ""} para presentar el documento` : daysRemaining === 0 ? "El plazo vence hoy" : `El plazo venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? "s" : ""}`}</p>}
                     </div>
                   </div>
@@ -1063,6 +931,46 @@ export const ManageOrdersPage: React.FC = () => {
               <p className="font-medium">No hay documentos pendientes</p>
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* 🔥 MODAL NUEVO: RESUMEN DE ESTADOS (EL QUE ABRE EL BOTÓN DEL HEADER) */}
+      <Modal isOpen={showStatsModal} onClose={() => setShowStatsModal(false)} title="Resumen de pedidos" size="md">
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-4">
+            {[
+              { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
+              { label: "Preaprobados", value: stats.pre_approved, icon: faListCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
+              { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+              { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
+              { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
+              { label: "Cancelados", value: stats.cancelled, icon: faBan, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
+              { label: "Documentos", value: docStats.total, icon: faFileAlt, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color} ${stat.label === "Documentos" ? "cursor-pointer hover:ring-yellow-300 dark:hover:ring-yellow-600 transition-all" : ""} ${stat.label === "Documentos" && docStats.overdue > 0 ? "ring-red-500 dark:ring-red-400" : ""}`}
+                onClick={() => {
+                  if (stat.label === "Documentos" && docStats.total > 0) {
+                    setShowStatsModal(false);
+                    setShowDocModal(true);
+                  }
+                }}
+                title={stat.label === "Documentos" && docStats.total > 0 ? "Haz clic para ver el detalle de documentos" : undefined}
+              >
+                <FontAwesomeIcon icon={stat.icon} className="lg:h-5 w-5 opacity-80" />
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm font-medium opacity-80">{stat.label}</span>
+                  <span className="lg:text-lg font-bold">{stat.value}</span>
+                </div>
+                {stat.label === "Documentos" && docStats.overdue > 0 && (
+                  <span className="text-red-500" title="Hay documentos vencidos">
+                    <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </Modal>
     </PageLayout>

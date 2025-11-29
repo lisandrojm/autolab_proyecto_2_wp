@@ -289,7 +289,7 @@ export const OrdersPage: React.FC = () => {
               <Card
                 key={order._id}
                 header={{
-                  title: `${getCategoryLabel(order.category)}${order.subcategories && order.subcategories.length > 0 ? ' - ' + order.subcategories.join(', ') : ''}`,
+                  title: `${getCategoryLabel(order.category)}${order.subcategories && order.subcategories.length > 0 ? " - " + order.subcategories.join(", ") : ""}`,
                   subtitle: `Pedido #${order.orderNumber}`,
                   icon: faClipboardList,
                   badges: [{ text: badge.text, variant: badge.variant }],
