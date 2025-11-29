@@ -62,9 +62,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
       documentoRequerido: newType === "documento" ? prev.documentoRequerido : prev.documentoRequerido,
       actionText: newType ? DEFAULT_ACTION_TEXTS[newType] : prev.actionText,
-      actionDescription: newType && (newType === "accion" || newType === "condicion")
-        ? (prev.actionDescription || DEFAULT_ACTION_DESCRIPTIONS[newType])
-        : prev.actionDescription,
+      actionDescription: newType && (newType === "accion" || newType === "condicion") ? prev.actionDescription || DEFAULT_ACTION_DESCRIPTIONS[newType] : prev.actionDescription,
     }));
   };
 
@@ -93,14 +91,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de la Acción *</label>
-              <textarea
-                value={formData.actionDescription || ""}
-                onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })}
-                required
-                rows={3}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Completar el curso de capacitación obligatorio antes de la fecha límite"
-              />
+              <textarea value={formData.actionDescription || ""} onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })} required rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Completar el curso de capacitación obligatorio antes de la fecha límite" />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto se mostrará al usuario en el formulario mobile</p>
             </div>
             {renderDeadlineFields()}
@@ -123,14 +114,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de la Condición *</label>
-              <textarea
-                value={formData.actionDescription || ""}
-                onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })}
-                required
-                rows={3}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Aceptar los términos y condiciones del reglamento interno de la empresa"
-              />
+              <textarea value={formData.actionDescription || ""} onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })} required rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Aceptar los términos y condiciones del reglamento interno de la empresa" />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto se mostrará al usuario para que acepte la condición</p>
             </div>
             {renderDeadlineFields()}
@@ -374,7 +358,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               {formData.futureActionType !== "sinVencimiento" && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto de la acción *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto de la acción (Checkbox)*</label>
                     <button type="button" onClick={() => setShowActionTextInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                     </button>

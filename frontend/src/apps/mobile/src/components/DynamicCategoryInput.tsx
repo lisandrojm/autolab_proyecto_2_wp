@@ -210,7 +210,6 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       return (
         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
-            <span className="text-base">📅</span>
             <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
               Completar antes del <span className="font-bold">{fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</span>
             </p>
@@ -256,20 +255,18 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
       {category.requiresAction && category.futureActionType && (
         <div className="space-y-3">
+          {/* Acción Requerida */}
           {category.futureActionType === "accion" && (
-            <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-600 rounded-lg p-4 shadow-sm">
+            <div className="border border-blue-400 dark:border-blue-900 rounded-lg p-4 shadow-sm">
               <div className="flex items-start gap-2 mb-2">
-                <span className="text-orange-500 dark:text-orange-400 text-lg">⚡</span>
                 <div className="flex-1">
-                  <p className="text-base font-semibold text-orange-800 dark:text-orange-200 mb-1">Acción Requerida</p>
                   {category.actionDescription ? (
-                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                      {category.actionDescription}
-                    </p>
+                    <>
+                      <p className="text-md font-medium hleading-relaxed">Requerimiento:</p>
+                      <p>{category.actionDescription}</p>
+                    </>
                   ) : (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">
-                      Debes completar la acción requerida para este pedido.
-                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">Debes aceptar la condición para continuar con este pedido.</p>
                   )}
                 </div>
               </div>
@@ -299,7 +296,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
                     </button>
 
-                    <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
+                    <inpt ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
                     <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
                       <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Archivo</span>
@@ -311,19 +308,16 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           )}
 
           {category.futureActionType === "condicion" && (
-            <div className="bg-cyan-50 dark:bg-cyan-900/20 border-l-4 border-cyan-400 dark:border-cyan-600 rounded-lg p-4 shadow-sm">
+            <div className="border border-blue-400 dark:border-blue-900 rounded-lg p-4 shadow-sm">
               <div className="flex items-start gap-2 mb-2">
-                <span className="text-cyan-500 dark:text-cyan-400 text-lg">📋</span>
                 <div className="flex-1">
-                  <p className="text-base font-semibold text-cyan-800 dark:text-cyan-200 mb-1">Condición de Aceptación</p>
                   {category.actionDescription ? (
-                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                      {category.actionDescription}
-                    </p>
+                    <>
+                      <p className="text-md font-medium hleading-relaxed">Condición:</p>
+                      <p>{category.actionDescription}</p>
+                    </>
                   ) : (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">
-                      Debes aceptar la condición para continuar con este pedido.
-                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">Debes aceptar la condición para continuar con este pedido.</p>
                   )}
                 </div>
               </div>
@@ -332,7 +326,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           )}
 
           {category.actionText && category.futureActionType !== "sinVencimiento" && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={actionCompleted} onChange={(e) => onActionCompletedChange(e.target.checked)} required className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" />
                 <span className="text-sm text-slate-700 dark:text-slate-200 flex-1">
@@ -340,7 +334,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                 </span>
               </label>
 
-              {!actionCompleted && <p className="mt-2 text-xs text-blue-500 dark:text-blue-500">* Debes marcar este compromiso para continuar</p>}
+              {!actionCompleted && <p className="mt-2 text-xs text-slate-600">* Debes marcar este compromiso para continuar</p>}
             </div>
           )}
         </div>
