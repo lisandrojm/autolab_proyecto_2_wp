@@ -665,18 +665,18 @@ export const ManageOrdersPage: React.FC = () => {
                             <td className="py-3 px-4">
                               <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getOrderNumber(order)}</span>
                             </td>
-                            <td className="py-3 px-4 whitespace-nowrap">
-                              <div className="flex flex-nowrap items-center gap-x-1.5">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-col gap-2">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{getCategoryName(order)}</span>
 
                                 {getSubcategoriesArray(order).map((subcategory, index) => (
-                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 text-nowrap w-fit">
                                     {subcategory}
                                   </span>
                                 ))}
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserName(order.userId)}</td>
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(order.userId)}</td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(order.userId)}</td>
                             <td className="py-3 px-4">
                               <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
