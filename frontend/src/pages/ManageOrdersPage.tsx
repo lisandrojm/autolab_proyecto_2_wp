@@ -154,13 +154,13 @@ export const ManageOrdersPage: React.FC = () => {
   const handlePreApprove = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm("¿Pre-Aprobar este pedido?", "El pedido pasará a estado Pre-Aprobado. El usuario no será notificado.", "Sí, Pre-Aprobar", "Cancelar");
+    const result = await sweetAlert.confirm("¿Pre-Aprobar este pedido?", "El pedido pasará a estado Preaprobado. El usuario no será notificado.", "Sí, Pre-Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.preApprove(selectedOrder._id);
-      sweetAlert.success("Pre-Aprobado", "El pedido ha sido pre-aprobado correctamente");
+      sweetAlert.success("Preaprobado", "El pedido ha sido pre-aprobado correctamente");
       setSelectedOrder(updated);
       loadOrders();
     } catch (error: any) {
@@ -258,12 +258,7 @@ export const ManageOrdersPage: React.FC = () => {
   const handleSendSignature = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm(
-      "¿Enviar para Firma?",
-      "El documento será enviado al usuario para su firma.",
-      "Sí, Enviar",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Enviar para Firma?", "El documento será enviado al usuario para su firma.", "Sí, Enviar", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
@@ -282,12 +277,7 @@ export const ManageOrdersPage: React.FC = () => {
   const handleMarkSigned = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm(
-      "¿Marcar como Firmado?",
-      "El documento será marcado como firmado por el usuario.",
-      "Sí, Marcar como Firmado",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Marcar como Firmado?", "El documento será marcado como firmado por el usuario.", "Sí, Marcar como Firmado", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
@@ -380,7 +370,7 @@ export const ManageOrdersPage: React.FC = () => {
     };
     const labels: Record<string, string> = {
       pending: "Pendiente",
-      pre_approved: "Pre-Aprobado",
+      pre_approved: "Preaprobado",
       approved: "Aprobado",
       rejected: "Rechazado",
       delivered: "Entregado",
@@ -689,7 +679,7 @@ export const ManageOrdersPage: React.FC = () => {
         <div className="flex flex-wrap gap-4">
           {[
             { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-            { label: "Pre-Aprobados", value: stats.pre_approved, icon: faListCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
+            { label: "Preaprobados", value: stats.pre_approved, icon: faListCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
             { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
             { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
             { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
@@ -722,7 +712,7 @@ export const ManageOrdersPage: React.FC = () => {
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                 <option value="all">Todos los estados</option>
                 <option value="pending">Pendientes</option>
-                <option value="pre_approved">Pre-Aprobados</option>
+                <option value="pre_approved">Preaprobados</option>
                 <option value="approved">Aprobados</option>
                 <option value="rejected">Rechazados</option>
                 <option value="delivered">Entregados</option>
@@ -861,9 +851,7 @@ export const ManageOrdersPage: React.FC = () => {
                             </td>
 
                             {/* --- FIRMA --- */}
-                            <td className="py-3 px-4 text-center">
-                              {renderSignatureStatus(order)}
-                            </td>
+                            <td className="py-3 px-4 text-center">{renderSignatureStatus(order)}</td>
 
                             {/* 🔥 IMAGEN — movida antes de FECHA + guion cuando no hay */}
                             {/*                           <td className="py-3 px-4 h-10 w-10">
