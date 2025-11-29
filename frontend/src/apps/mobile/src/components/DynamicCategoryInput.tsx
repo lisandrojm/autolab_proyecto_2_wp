@@ -262,9 +262,13 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                 <span className="text-orange-500 dark:text-orange-400 text-lg">⚡</span>
                 <div className="flex-1">
                   <p className="text-base font-semibold text-orange-800 dark:text-orange-200 mb-1">Acción Requerida</p>
-                  {category.actionDescription && (
+                  {category.actionDescription ? (
                     <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                       {category.actionDescription}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">
+                      Debes completar la acción requerida para este pedido.
                     </p>
                   )}
                 </div>
@@ -312,9 +316,13 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                 <span className="text-cyan-500 dark:text-cyan-400 text-lg">📋</span>
                 <div className="flex-1">
                   <p className="text-base font-semibold text-cyan-800 dark:text-cyan-200 mb-1">Condición de Aceptación</p>
-                  {category.actionDescription && (
+                  {category.actionDescription ? (
                     <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                       {category.actionDescription}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">
+                      Debes aceptar la condición para continuar con este pedido.
                     </p>
                   )}
                 </div>
