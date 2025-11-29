@@ -1,8 +1,4 @@
-export type TipoAccionFutura =
-  | "accion"
-  | "documento"
-  | "condicion"
-  | "sinVencimiento";
+export type TipoAccionFutura = "accion" | "documento" | "condicion" | "sinVencimiento";
 
 export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
@@ -86,11 +82,11 @@ export const tipoAccionFuturaLabels: Record<TipoAccionFutura, string> = {
   accion: "Acción Requerida",
   documento: "Presentación de Documento",
   condicion: "Aceptación de Condición",
-  sinVencimiento: "Sin Vencimiento",
+  sinVencimiento: "Sin vencimiento ni acción",
 };
 
 export const deadlineModeLabels: Record<DeadlineMode, string> = {
-  none: "Sin vencimiento",
+  none: "Sin vencimiento ni acción",
   plazoDias: "Plazo en días",
   fechaEspecifica: "Fecha específica",
 };

@@ -339,7 +339,7 @@ Estilo: Fondo amarillo suave con borde amarillo
 
 ---
 
-### 4. Para Sin Vencimiento
+### 4. Para Sin vencimiento ni acción
 
 ```
 ℹ️ No tiene fecha límite, pero debe ser gestionada y marcada

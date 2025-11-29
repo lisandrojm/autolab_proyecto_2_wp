@@ -217,8 +217,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
     }
   };
 
-
-
   const handleOrderClick = (order: OrderData) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
@@ -233,7 +231,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setSelectedOrder(orders[currentOrderIndex + 1]);
     }
   };
-
 
   return (
     <div className="flex-1 pb-24">
@@ -279,20 +276,19 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 <div className="pt-3">
                   <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} />
                 </div>
-
-                {/* Alerta de Requiere Firma */}
-                {selectedCategory?.requiresSignature && (
-                  <div className="mt-3 flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700">
-                    <FontAwesomeIcon icon={faPenToSquare} className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Este tipo de pedido requiere firma</p>
-                  </div>
-                )}
               </div>
               {/* Descripción */}
               {categories.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Descripción</label>
-                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describí tu pedido..." />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario (Opcional)</label>
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={1} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Escribí tu comentario..." />
+                </div>
+              )}
+              {/* Alerta de Requiere Firma */}
+              {selectedCategory?.requiresSignature && (
+                <div className="flex gap-1 p-3 rounded-lg bg-blue-50 dark:bg-yellow-900/30 border border-blue-200 dark:border-yellow-700 text-blue-800 dark:text-yellow-500">
+                  <FontAwesomeIcon icon={faPenToSquare} className="w-4 h-4 text-blue-600 dark:text-yellow-500 flex-shrink-0" />
+                  <p className="text-sm font-medium">Requiere FIRMA</p>
                 </div>
               )}
 
@@ -367,10 +363,10 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     <div className="flex flex-col items-start justify-between mb-2 w-full space-y-2">
                       {/* Pedido | Status */}
                       <div className="flex justify-between gap-2 items-center w-full">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
-                        </div>
                         <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
+                          </div>
                           <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
                           {(() => {
                             const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;

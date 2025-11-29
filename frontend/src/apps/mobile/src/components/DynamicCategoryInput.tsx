@@ -208,9 +208,9 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       const fechaLimite = new Date();
       fechaLimite.setDate(fechaLimite.getDate() + category.plazoDias);
       return (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-2">
-          <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Debes completar antes de: {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Plazo: {category.plazoDias} días desde la solicitud</p>
+        <div>
+          <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Completar antes del {fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</p>
+          {/*           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Plazo: {category.plazoDias} días desde la solicitud</p> */}
         </div>
       );
     }
@@ -256,11 +256,10 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
           {category.futureActionType === "documento" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Documento Requerido</p>
-              {category.documentoRequerido && <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">{category.documentoRequerido}</p>}
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1"> Presentar "{category.documentoRequerido && <span>{category.documentoRequerido}"</span>}</p>
               {renderDeadlineInfo()}
 
-              <div className="mt-3">
+              {/*               <div className="mt-3">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subir Documento</label>
                 {documentPreview ? (
                   <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
@@ -284,7 +283,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     </button>
                   </div>
                 )}
-              </div>
+              </div> */}
             </div>
           )}
 
@@ -295,7 +294,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             </div>
           )}
 
-          {category.actionText && (
+          {category.actionText && category.futureActionType !== "sinVencimiento" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={actionCompleted} onChange={(e) => onActionCompletedChange(e.target.checked)} required className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" />
@@ -303,6 +302,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                   {category.actionText} <span className="text-blue-500">*</span>
                 </span>
               </label>
+
               {!actionCompleted && <p className="mt-2 text-xs text-blue-500 dark:text-blue-500">* Debes marcar este compromiso para continuar</p>}
             </div>
           )}

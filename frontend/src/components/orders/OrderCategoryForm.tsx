@@ -36,6 +36,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   const [showActionTypeInfo, setShowActionTypeInfo] = useState(false);
   const [showActionTextInfo, setShowActionTextInfo] = useState(false);
   const [showInformacionInfo, setShowInformacionInfo] = useState(false);
+
   const DEFAULT_ACTION_TEXTS: Record<TipoAccionFutura, string> = {
     accion: "Me comprometo a completar la acción requerida en tiempo y forma.",
     documento: "Me comprometo a presentar la documentación o comprobantes solicitados.",
@@ -44,14 +45,12 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   };
 
   const handleFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
-    setFormData((prev: { deadlineMode: any; plazoDias: any; fechaLimite: any; documentoRequerido: any; actionText: any }) => ({
+    setFormData((prev: any) => ({
       ...prev,
       futureActionType: newType,
 
-      // 🔥 NUNCA tocar deadlineMode si ya existe
+      // Mantener valores si ya existían
       deadlineMode: prev.deadlineMode ?? "none",
-
-      // 🔥 NUNCA resetear fecha o días si ya estaban cargados
       plazoDias: prev.plazoDias,
       fechaLimite: prev.fechaLimite,
 
@@ -69,8 +68,15 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     });
   };
 
+  // ------------------------------------------------------------------
+  // 🔥 CORRECCIÓN OPCIÓN C: No mostrar nada si es sinVencimiento
+  // ------------------------------------------------------------------
   const renderFutureActionConditionalFields = () => {
     if (!formData.futureActionType) return null;
+
+    if (formData.futureActionType === "sinVencimiento") {
+      return null; // <-- ESTA ES LA CORRECCIÓN
+    }
 
     switch (formData.futureActionType) {
       case "accion":
@@ -101,13 +107,6 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               <p className="text-sm text-gray-700 dark:text-gray-200">Condición que debe aceptar el usuario</p>
             </div>
             {renderDeadlineFields()}
-          </div>
-        );
-
-      case "sinVencimiento":
-        return (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-            <p className="text-sm text-gray-700 dark:text-gray-200">No requiere vencimiento ni condiciones adicionales</p>
           </div>
         );
 
@@ -150,26 +149,30 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
   return (
     <>
+      {/* --- FORMULARIO COMPLETO --- */}
       <form id="order-category-form" onSubmit={onSubmit} className="space-y-4">
+        {/* Nombre */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
           <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Nombre del tipo de pedido" />
         </div>
 
+        {/* Información de Confirmación */}
         <div>
           <div className="flex items-center gap-2 mb-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Información de Confirmación (opcional)</label>
-            <button type="button" onClick={() => setShowInformacionInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver información">
+            <button type="button" onClick={() => setShowInformacionInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
-          <textarea value={formData.informacion} onChange={(e) => setFormData({ ...formData, informacion: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Texto de confirmación que se mostrará al usuario antes de enviar el pedido..." />
+          <textarea value={formData.informacion} onChange={(e) => setFormData({ ...formData, informacion: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Texto de confirmación..." />
         </div>
 
+        {/* Tipo de dato */}
         <div>
           <div className="flex items-center gap-2 mb-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Dato *</label>
-            <button type="button" onClick={() => setShowCategoryTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
+            <button type="button" onClick={() => setShowCategoryTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
@@ -180,12 +183,13 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <option value="otros">Otros</option>
           </select>
         </div>
-        {/* Opciones del Tipo de Dato */}
+
+        {/* Subtipos */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Opciones del Tipo de Dato (opcional)</label>
-              <button type="button" onClick={() => setShowSubcategoriesInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
+              <button type="button" onClick={() => setShowSubcategoriesInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                 <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
               </button>
             </div>
@@ -193,12 +197,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               type="button"
               onClick={() => {
                 const newId = `sub_${Date.now()}`;
-                setFormData({
-                  ...formData,
-                  subtipos: [...formData.subtipos, { id: newId, label: "" }],
-                });
+                setFormData({ ...formData, subtipos: [...formData.subtipos, { id: newId, label: "" }] });
               }}
-              className="text-sm px-2 py-1 bg-blue-100 dark:bg-blue-500 text-blue-700 dark:text-white rounded hover:bg-blue-200"
+              className="text-sm px-2 py-1 bg-blue-100 dark:bg-blue-500 text-blue-700 dark:text-white rounded"
             >
               + Agregar Opciones
             </button>
@@ -210,8 +211,8 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 <div key={subtipo.id} className="flex items-center gap-2">
                   <input
                     type="text"
-                    placeholder="Nombre de subcategoria"
                     value={subtipo.label}
+                    placeholder="Nombre de subcategoria"
                     onChange={(e) => {
                       const newSubtipos = [...formData.subtipos];
                       newSubtipos[index].label = e.target.value;
@@ -221,12 +222,12 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                   />
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={() =>
                       setFormData({
                         ...formData,
                         subtipos: formData.subtipos.filter((_, i) => i !== index),
-                      });
-                    }}
+                      })
+                    }
                     className="text-red-600 hover:text-red-800 text-sm px-2"
                   >
                     ✕
@@ -237,17 +238,18 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           )}
         </div>
 
+        {/* Modo Fecha */}
         {formData.categoryType === "fecha" && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Modo de Fecha *</label>
-              <button type="button" onClick={() => setShowDateModeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
+              <button type="button" onClick={() => setShowDateModeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400">
                 <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
               </button>
             </div>
-            <select required value={formData.dateMode} onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-              <option value="single">Fecha unica</option>
-              <option value="range">Rango de fechas (Desde - Hasta)</option>
+            <select required value={formData.dateMode} onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white">
+              <option value="single">Fecha única</option>
+              <option value="range">Rango de fechas</option>
             </select>
           </div>
         )}
@@ -255,51 +257,47 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         {/* Monto Máximo */}
         {formData.categoryType === "dinero" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto Maximo (opcional)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto Máximo (opcional)</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <input
                 type="number"
                 min="0"
                 step="50"
                 value={formData.montoMaximo || ""}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  if (!value) {
-                    setFormData({ ...formData, montoMaximo: undefined });
-                    return;
-                  }
-                  setFormData({ ...formData, montoMaximo: parseFloat(value) });
+                  const v = e.target.value;
+                  if (!v) return setFormData({ ...formData, montoMaximo: undefined });
+                  setFormData({ ...formData, montoMaximo: parseFloat(v) });
                 }}
                 onBlur={(e) => {
-                  const value = e.target.value;
-                  if (!value) return;
-
-                  const numValue = parseFloat(value);
-                  if (numValue % 50 !== 0) {
-                    const rounded = Math.round(numValue / 50) * 50;
-                    setFormData({ ...formData, montoMaximo: rounded > 0 ? rounded : 50 });
+                  const v = parseFloat(e.target.value);
+                  if (!v) return;
+                  if (v % 50 !== 0) {
+                    const r = Math.round(v / 50) * 50;
+                    setFormData({ ...formData, montoMaximo: r > 0 ? r : 50 });
                   }
                 }}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="Sin limite"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white"
+                placeholder="Sin límite"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Define el monto maximo en multiplos de 50 (Ej: 50, 100, 150, 200...). Si no lo defines, no habra limite.</p>
           </div>
         )}
-        {/* Requiere Firma */}
+
+        {/* Firma */}
         <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="requiresSignature" checked={formData.requiresSignature ?? true} onChange={(e) => setFormData({ ...formData, requiresSignature: e.target.checked })} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-            <label htmlFor="requiresSignature" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input type="checkbox" id="requiresSignature" checked={formData.requiresSignature ?? true} onChange={(e) => setFormData({ ...formData, requiresSignature: e.target.checked })} className="w-4 h-4 text-blue-600" />
+            <label htmlFor="requiresSignature" className="text-sm text-gray-700 dark:text-gray-300">
               Requiere FIRMA del usuario
             </label>
           </div>
+
           {(formData.requiresSignature ?? true) && <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>}
         </div>
 
-        {/* Requiere Acción Futura */}
+        {/* Acción Futura */}
         <div className="border border-gray-200 dark:border-gray-600 p-4 rounded">
           <div className="flex items-center gap-2">
             <input
@@ -311,30 +309,30 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                   ...formData,
                   requiresAction: e.target.checked,
                   futureActionType: e.target.checked ? formData.futureActionType || "sinVencimiento" : "",
-                  actionText: e.target.checked ? formData.actionText || (formData.futureActionType ? DEFAULT_ACTION_TEXTS[formData.futureActionType] : "") : "",
+                  actionText: e.target.checked ? formData.actionText : "",
                   plazoDias: e.target.checked ? formData.plazoDias : undefined,
                   fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
-
                   documentoRequerido: e.target.checked ? formData.documentoRequerido : undefined,
                 })
               }
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600"
             />
-            <label htmlFor="requiresAction" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="requiresAction" className="text-sm text-gray-700 dark:text-gray-300">
               Requiere Acción Futura del usuario
             </label>
           </div>
 
           {formData.requiresAction && (
             <div className="space-y-4">
+              {/* Tipo de Acción */}
               <div>
                 <div className="flex items-center gap-2 my-3">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Accion Futura *</label>
-                  <button type="button" onClick={() => setShowActionTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Acción Futura *</label>
+                  <button type="button" onClick={() => setShowActionTypeInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400">
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <select required={formData.requiresAction} value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                <select required value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2">
                   <option value="accion">{tipoAccionFuturaLabels.accion}</option>
                   <option value="documento">{tipoAccionFuturaLabels.documento}</option>
                   <option value="condicion">{tipoAccionFuturaLabels.condicion}</option>
@@ -342,104 +340,87 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 </select>
               </div>
 
+              {/* Campos condicionales excepto sinVencimiento */}
               {renderFutureActionConditionalFields()}
 
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto de la accion *</label>
-                  <button type="button" onClick={() => setShowActionTextInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors" title="Ver informacion">
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
+              {/* 🔥 TEXTO DE ACCIÓN (NO SE MUESTRA EN sinVencimiento) */}
+              {formData.futureActionType !== "sinVencimiento" && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto de la acción *</label>
+                    <button type="button" onClick={() => setShowActionTextInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white" placeholder="Ej: Me comprometo a adjuntar el documento..." />
                 </div>
-                <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Me comprometo a adjuntar el documento, comprobante o certificado" />
-              </div>
+              )}
             </div>
           )}
         </div>
 
+        {/* Visibilidad */}
         <div className="pt-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Visibilidad en el formulario</label>
-          <button
-            type="button"
-            onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors inline-flex items-center flex-nowrap
-      ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}
-          >
+          <button type="button" onClick={() => setFormData({ ...formData, isActive: !formData.isActive })} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
             <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
             {formData.isActive ? "Activa" : "Inactiva"}
           </button>
         </div>
       </form>
 
+      {/* --- MODALES --- */}
       <InfoModal isOpen={showCategoryTypeInfo} onClose={() => setShowCategoryTypeInfo(false)} title="Tipo de Dato" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
-          <p>Define que tipo de input se mostrara en el formulario movil cuando el usuario seleccione este tipo de pedido.</p>
+          <p>Define qué tipo de input se mostrará en el formulario móvil.</p>
         </div>
       </InfoModal>
 
       <InfoModal isOpen={showSubcategoriesInfo} onClose={() => setShowSubcategoriesInfo(false)} title="Opciones del Pedido" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
-          <p>
-            Estas opciones apareceran luego como un <strong>select obligatorio</strong> cuando el usuario elija este tipo de pedido en el formulario movil.
-          </p>
+          <p>Estas opciones aparecerán como un select obligatorio para el usuario.</p>
         </div>
       </InfoModal>
 
       <InfoModal isOpen={showActionTypeInfo} onClose={() => setShowActionTypeInfo(false)} title="Tipos de Acción Futura" size="md">
         <div className="text-gray-700 dark:text-gray-300 space-y-3">
-          <p className="font-medium mb-3">Cada tipo de acción futura define QUÉ debe hacer el usuario:</p>
-          <div className="space-y-2">
-            <div>
-              <strong className="text-blue-600 dark:text-blue-400">Acción Requerida:</strong>
-              <p className="text-sm mt-1">Acción general que el usuario debe completar.</p>
-            </div>
-            <div>
-              <strong className="text-blue-600 dark:text-blue-400">Presentación de Documento:</strong>
-              <p className="text-sm mt-1">Requiere que el usuario presente un documento específico.</p>
-            </div>
-            <div>
-              <strong className="text-blue-600 dark:text-blue-400">Aceptación de Condición:</strong>
-              <p className="text-sm mt-1">El usuario debe aceptar términos o condiciones específicas.</p>
-            </div>
-            <div>
-              <strong className="text-blue-600 dark:text-blue-400">Sin Vencimiento:</strong>
-              <p className="text-sm mt-1">No requiere ni acción ni vencimiento específico.</p>
-            </div>
-          </div>
-          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
-            <p className="text-sm">
-              El <strong>modo de vencimiento</strong> (plazo en días, fecha específica, o sin vencimiento) se configura por separado.
-            </p>
-          </div>
+          <p className="font-medium">Cada tipo define qué debe hacer el usuario:</p>
+          <p>
+            <strong>Acción Requerida:</strong> Debe completar una acción.
+          </p>
+          <p>
+            <strong>Presentación de Documento:</strong> Debe entregar un documento.
+          </p>
+          <p>
+            <strong>Aceptación de Condición:</strong> Debe aceptar términos.
+          </p>
+          <p>
+            <strong>Sin vencimiento ni acción:</strong> No requiere nada adicional.
+          </p>
         </div>
       </InfoModal>
 
-      <InfoModal isOpen={showActionTextInfo} onClose={() => setShowActionTextInfo(false)} title="Texto de la Accion" size="sm">
+      <InfoModal isOpen={showActionTextInfo} onClose={() => setShowActionTextInfo(false)} title="Texto de la Acción" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
-          <p>Este texto aparecera junto a un checkbox que el usuario debe marcar para confirmar que completara la accion requerida.</p>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Ejemplo: &quot;Me comprometo a adjuntar los comprobantes de gastos&quot;</p>
+          <p>Texto que se muestra junto al checkbox que el usuario debe tildar.</p>
         </div>
       </InfoModal>
 
       <InfoModal isOpen={showDateModeInfo} onClose={() => setShowDateModeInfo(false)} title="Modo de Fecha" size="sm">
         <div className="text-gray-700 dark:text-gray-300 space-y-3">
-          <p>Define como el usuario ingresara la fecha en el formulario de pedidos:</p>
-          <div>
-            <strong className="text-blue-600 dark:text-blue-400">Fecha unica:</strong>
-            <p className="text-sm mt-1">El usuario selecciona una sola fecha mediante un calendario.</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ejemplo: Fecha de nacimiento, fecha de evento</p>
-          </div>
-          <div>
-            <strong className="text-blue-600 dark:text-blue-400">Rango de fechas (Desde - Hasta):</strong>
-            <p className="text-sm mt-1">El usuario selecciona dos fechas: una fecha de inicio y una de fin.</p>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ejemplo: Periodo de vacaciones, duracion de un proyecto</p>
-          </div>
+          <p>Define cómo se cargan fechas:</p>
+          <p>
+            <strong>Fecha única:</strong> Una sola fecha.
+          </p>
+          <p>
+            <strong>Rango:</strong> Fecha inicio y fin.
+          </p>
         </div>
       </InfoModal>
 
       <InfoModal isOpen={showInformacionInfo} onClose={() => setShowInformacionInfo(false)} title="Información" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
-          <p>Este texto se mostrará al usuario una vez finalizado el formulario, como mensaje de confirmación o condiciones del pedido.</p>
+          <p>Mensaje de confirmación mostrado al final del formulario.</p>
         </div>
       </InfoModal>
     </>
