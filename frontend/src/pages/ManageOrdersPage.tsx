@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -12,6 +12,7 @@ import { Card } from "../components/ui/Card";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../utils/statusHelpers";
 
+const HELP_KEY = "roles" as const;
 export const ManageOrdersPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -570,7 +571,7 @@ export const ManageOrdersPage: React.FC = () => {
         <div className="hidden lg:flex items-center gap-2">
           <button onClick={() => navigate("/hr/order-categories")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faList} />
-            <span className="hidden lg:block">ABM Pedidos</span>
+            <span className="hidden lg:block">ABM</span>
           </button>
           {/* 👉 BOTÓN QUE ABRE EL MODAL DE ESTADOS */}
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de pedidos" title="Ver resumen de pedidos">
@@ -623,7 +624,7 @@ export const ManageOrdersPage: React.FC = () => {
                   <table className="w-full dark:bg-slate-800/80 table-auto">
                     <thead>
                       <tr>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Pedido</th>
+                        <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
