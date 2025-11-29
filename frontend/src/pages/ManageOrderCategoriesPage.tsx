@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faShoppingCart, faGear } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -391,7 +391,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     <PageLayout
       title="Tipos de Pedidos"
       subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
-      faIcon={{ icon: faList }}
+      faIcon={{ icon: faGear }}
       onBack={() => navigate("/hr/orders")}
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{
@@ -415,9 +415,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
             </>
           ) : (
             <>
-              <button onClick={openCreateModal} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <button onClick={openCreateModal} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faPlus} />
-                <span className="hidden lg:block">Nuevo Tipo de Pedido</span>
               </button>
               <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                 <FontAwesomeIcon icon={faGripVertical} />
