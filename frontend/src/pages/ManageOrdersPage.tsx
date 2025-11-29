@@ -467,6 +467,19 @@ export const ManageOrdersPage: React.FC = () => {
                   alt: getUserName(order.userId),
                 },
                 badges: getCardBadges(order),
+                breadcrumbs: {
+                  content: (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
+                      {(() => {
+                        const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+                        const docStatusType = mapDocumentStateToStatusType(futureAction);
+                        return docStatusType ? <StatusBadge type={docStatusType} size="sm" /> : null;
+                      })()}
+                      <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
+                    </div>
+                  ),
+                },
               }}
               footer={{
                 leftContent: (
@@ -482,17 +495,6 @@ export const ManageOrdersPage: React.FC = () => {
               }}
             >
               <div className="space-y-3">
-                {/* Badges de Estado, Documento y Firma */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
-                  {(() => {
-                    const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-                    const docStatusType = mapDocumentStateToStatusType(futureAction);
-                    return docStatusType ? <StatusBadge type={docStatusType} size="sm" /> : null;
-                  })()}
-                  <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
-                </div>
-
                 {/* Categoría y Subcategorías */}
                 <div className="flex flex-wrap gap-1.5">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
