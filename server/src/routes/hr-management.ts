@@ -263,16 +263,22 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
     if (userId) filter.userId = userId;
 
     if (search && typeof search === "string" && search.trim() !== "") {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-        { orderNumber: { $regex: search, $options: "i" } },
-      ];
+      filter.$or = [{ title: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }, { orderNumber: { $regex: search, $options: "i" } }];
     }
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [orders, total] = await Promise.all([Order.find(filter).sort({ requestedAt: -1 }).skip(skip).limit(Number(limit)).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId").populate("futureActionId"), Order.countDocuments(filter)]);
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .sort({ requestedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+        .populate("approvedBy", "firstName lastName email")
+        .populate("categoryId")
+        .populate("futureActionId"),
+      Order.countDocuments(filter),
+    ]);
 
     res.json({
       orders,
@@ -338,7 +344,11 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
       entityId: order._id,
     });
 
-    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId").populate("futureActionId");
+    const populatedOrder = await Order.findById(order._id)
+      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate("approvedBy", "firstName lastName email")
+      .populate("categoryId")
+      .populate("futureActionId");
 
     res.status(201).json(populatedOrder);
   } catch (error) {
@@ -422,7 +432,11 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
       });
     }
 
-    const populatedOrder = await Order.findById(order._id).populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } }).populate("approvedBy", "firstName lastName email").populate("categoryId").populate("futureActionId");
+    const populatedOrder = await Order.findById(order._id)
+      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate("approvedBy", "firstName lastName email")
+      .populate("categoryId")
+      .populate("futureActionId");
 
     res.json(populatedOrder);
   } catch (error) {
@@ -542,7 +556,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_pre_approved",
-      description: `Pedido "${orderDisplayName}" preaprobado por el supervisor`,
+      description: `Pedido "${orderDisplayName}" preaprobado`,
       entityType: "Order",
       entityId: order._id,
     });
@@ -589,9 +603,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const orderDisplayName = `${categoryName}${subcategoryText}`;
     const orderNumber = order.orderNumber || "N/A";
 
-    const notificationMessage = order.requiresSignature
-      ? `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.`
-      : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
+    const notificationMessage = order.requiresSignature ? `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
 
     await Notification.create({
       tenantId: req.tenantObjectId,
@@ -606,7 +618,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_approved",
-      description: `Pedido "${orderDisplayName}" aprobado por el supervisor`,
+      description: `Pedido "${orderDisplayName}" aprobado`,
       entityType: "Order",
       entityId: order._id,
     });
