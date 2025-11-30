@@ -143,10 +143,10 @@ export const ManageOrdersPage: React.FC = () => {
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
       await hrManagementAPI.orders.update(orderId, { status: newStatus });
-      sweetAlert.success("Estado actualizado", `El pedido ha sido ${newStatus === "approved" ? "aprobado" : newStatus === "rejected" ? "rechazado" : newStatus === "delivered" ? "marcado como entregado" : "actualizado"}`);
-      loadOrders();
+      await loadOrders();
+      await sweetAlert.success("Estado actualizado", `El pedido ha sido ${newStatus === "approved" ? "aprobado" : newStatus === "rejected" ? "rechazado" : newStatus === "delivered" ? "marcado como entregado" : "actualizado"}`);
     } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
     }
   };
 
@@ -159,13 +159,13 @@ export const ManageOrdersPage: React.FC = () => {
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.preApprove(selectedOrder._id);
-      sweetAlert.success("Preaprobado", "El pedido ha sido pre-aprobado correctamente");
       setSelectedOrder(updated);
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo pre-aprobar el pedido");
-    } finally {
+      await loadOrders();
       setUpdatingStatus(false);
+      await sweetAlert.success("Preaprobado", "El pedido ha sido pre-aprobado correctamente");
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo pre-aprobar el pedido");
     }
   };
 
@@ -187,13 +187,13 @@ export const ManageOrdersPage: React.FC = () => {
         ? "Se ha notificado al usuario que debe firmar el documento por email"
         : "El pedido ha sido aprobado correctamente";
 
-      sweetAlert.success("Aprobado", successMessage);
       setSelectedOrder(updated);
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo aprobar el pedido");
-    } finally {
+      await loadOrders();
       setUpdatingStatus(false);
+      await sweetAlert.success("Aprobado", successMessage);
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo aprobar el pedido");
     }
   };
 
@@ -206,13 +206,13 @@ export const ManageOrdersPage: React.FC = () => {
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.reject(selectedOrder._id);
-      sweetAlert.success("Rechazado", "El pedido ha sido rechazado");
       setSelectedOrder(updated);
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo rechazar el pedido");
-    } finally {
+      await loadOrders();
       setUpdatingStatus(false);
+      await sweetAlert.success("Rechazado", "El pedido ha sido rechazado");
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo rechazar el pedido");
     }
   };
 
@@ -225,13 +225,13 @@ export const ManageOrdersPage: React.FC = () => {
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.deliver(selectedOrder._id);
-      sweetAlert.success("Entregado", "El pedido ha sido marcado como entregado");
       setSelectedOrder(updated);
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
-    } finally {
+      await loadOrders();
       setUpdatingStatus(false);
+      await sweetAlert.success("Entregado", "El pedido ha sido marcado como entregado");
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
     }
   };
 
@@ -272,13 +272,13 @@ export const ManageOrdersPage: React.FC = () => {
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.sendSignature(selectedOrder._id);
-      sweetAlert.success("Enviado", "El documento ha sido enviado para firma");
       setSelectedOrder(updated);
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo enviar para firma");
-    } finally {
+      await loadOrders();
       setUpdatingStatus(false);
+      await sweetAlert.success("Enviado", "El documento ha sido enviado para firma");
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo enviar para firma");
     }
   };
 
@@ -291,13 +291,13 @@ export const ManageOrdersPage: React.FC = () => {
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.markSigned(selectedOrder._id);
-      sweetAlert.success("Firma confirmada", "El documento ha sido marcado como firmado. El usuario será notificado.");
       setSelectedOrder(updated);
-      loadOrders();
-    } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo confirmar la firma");
-    } finally {
+      await loadOrders();
       setUpdatingStatus(false);
+      await sweetAlert.success("Firma confirmada", "El documento ha sido marcado como firmado. El usuario será notificado.");
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo confirmar la firma");
     }
   };
 
@@ -320,7 +320,10 @@ export const ManageOrdersPage: React.FC = () => {
 
   const getUserName = (user: any) => {
     if (!user) return "Usuario desconocido";
-    if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+    if (typeof user === "string") return "Usuario desconocido";
+    const firstName = user.firstName || "";
+    const lastName = user.lastName || "";
+    if (firstName || lastName) return `${firstName} ${lastName}`.trim();
     return user.email || "Usuario desconocido";
   };
 
