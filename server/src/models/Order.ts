@@ -38,7 +38,7 @@ const orderSchema = new Schema<IOrder>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     orderNumber: { type: String, trim: true, uppercase: true, index: true },
-    description: { type: String, required: true, trim: true },
+    description: { type: String, required: false, trim: true, default: "" },
     category: { type: String, required: true, trim: true, default: "other" },
     categoryId: { type: Schema.Types.ObjectId, ref: "OrderCategory", index: true },
     subcategories: { type: [String], default: [], index: true },
