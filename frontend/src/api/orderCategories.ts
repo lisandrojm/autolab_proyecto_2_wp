@@ -1,10 +1,6 @@
 import axios from './axiosConfig';
 
-export type TipoAccionFutura =
-  | "accion"
-  | "documento"
-  | "condicion"
-  | "sinVencimiento";
+export type TipoAccionFutura = "documento" | "otra";
 
 export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
@@ -39,6 +35,7 @@ export interface OrderCategory {
   requiresAction?: boolean;
   actionText?: string;
   actionDescription?: string;
+  tituloAccion?: string;
   futureActionType?: TipoAccionFutura;
   deadlineMode?: DeadlineMode;
   plazoDias?: number;
@@ -73,6 +70,7 @@ export const orderCategoriesAPI = {
     requiresAction?: boolean;
     actionText?: string;
     actionDescription?: string;
+    tituloAccion?: string;
     futureActionType?: TipoAccionFutura;
     deadlineMode?: DeadlineMode;
     plazoDias?: number;
@@ -98,6 +96,7 @@ export const orderCategoriesAPI = {
       requiresAction?: boolean;
       actionText?: string;
       actionDescription?: string;
+      tituloAccion?: string;
       futureActionType?: TipoAccionFutura;
       deadlineMode?: DeadlineMode;
       plazoDias?: number;

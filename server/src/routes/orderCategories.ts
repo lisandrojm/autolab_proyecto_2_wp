@@ -35,7 +35,8 @@ const createCategorySchema = z
     requiresAction: z.boolean().default(false),
     actionText: z.string().max(500).optional(),
     actionDescription: z.string().max(500).optional(),
-    futureActionType: z.enum(["accion", "documento", "condicion", "sinVencimiento"]).default("sinVencimiento").optional(),
+    tituloAccion: z.string().max(500).optional(),
+    futureActionType: z.enum(["documento", "otra"]).optional(),
     deadlineMode: z.enum(["none", "plazoDias", "fechaEspecifica"]).optional(),
     plazoDias: z.number().int().min(1).max(365).optional(),
     fechaLimite: z.coerce.date().optional(),
@@ -89,6 +90,18 @@ const createCategorySchema = z
       message: "documentoRequerido is required when futureActionType is documento",
       path: ["documentoRequerido"],
     }
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "otra") {
+        return data.tituloAccion !== undefined && data.tituloAccion.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "tituloAccion is required when futureActionType is otra",
+      path: ["tituloAccion"],
+    }
   );
 
 const updateCategorySchema = z
@@ -104,7 +117,8 @@ const updateCategorySchema = z
     requiresAction: z.boolean().optional(),
     actionText: z.string().max(500).optional(),
     actionDescription: z.string().max(500).optional(),
-    futureActionType: z.enum(["accion", "documento", "condicion", "sinVencimiento"]).optional(),
+    tituloAccion: z.string().max(500).optional(),
+    futureActionType: z.enum(["documento", "otra"]).optional(),
     deadlineMode: z.enum(["none", "plazoDias", "fechaEspecifica"]).optional(),
     plazoDias: z.number().int().min(1).max(365).optional(),
     fechaLimite: z.coerce.date().optional(),
@@ -157,6 +171,18 @@ const updateCategorySchema = z
     {
       message: "documentoRequerido is required when futureActionType is documento",
       path: ["documentoRequerido"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.futureActionType === "otra") {
+        return data.tituloAccion !== undefined && data.tituloAccion.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "tituloAccion is required when futureActionType is otra",
+      path: ["tituloAccion"],
     }
   );
 

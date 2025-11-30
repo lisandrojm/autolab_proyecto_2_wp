@@ -17,6 +17,7 @@ interface OrderCategoryFormProps {
     requiresAction: boolean;
     actionText: string;
     actionDescription?: string;
+    tituloAccion?: string;
     futureActionType: TipoAccionFutura | "";
     deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
@@ -39,30 +40,24 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   const [showInformacionInfo, setShowInformacionInfo] = useState(false);
 
   const DEFAULT_ACTION_TEXTS: Record<TipoAccionFutura, string> = {
-    accion: "Me comprometo a completar la acción requerida en tiempo y forma.",
     documento: "Me comprometo a presentar la documentación o comprobantes solicitados.",
-    condicion: "Declaro haber leído y aceptar las condiciones establecidas.",
-    sinVencimiento: "Me comprometo a cumplir con esta solicitud según lo requerido.",
+    otra: "Acepto y me comprometo a cumplir con lo requerido.",
   };
 
-  const DEFAULT_ACTION_DESCRIPTIONS: Record<string, string> = {
-    accion: "Completar la acción requerida según las indicaciones proporcionadas.",
-    condicion: "Las condiciones establecidas deben ser aceptadas para continuar con el pedido.",
+  const DEFAULT_TITULOS: Record<string, string> = {
+    otra: "Acción requerida por el usuario",
   };
 
   const handleFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
     setFormData((prev: any) => ({
       ...prev,
       futureActionType: newType,
-
-      // Mantener valores si ya existían
       deadlineMode: prev.deadlineMode ?? "none",
       plazoDias: prev.plazoDias,
       fechaLimite: prev.fechaLimite,
-
-      documentoRequerido: newType === "documento" ? prev.documentoRequerido : prev.documentoRequerido,
+      documentoRequerido: newType === "documento" ? prev.documentoRequerido : undefined,
+      tituloAccion: newType === "otra" ? prev.tituloAccion || DEFAULT_TITULOS.otra : undefined,
       actionText: newType ? DEFAULT_ACTION_TEXTS[newType] : prev.actionText,
-      actionDescription: newType && (newType === "accion" || newType === "condicion") ? prev.actionDescription || DEFAULT_ACTION_DESCRIPTIONS[newType] : prev.actionDescription,
     }));
   };
 
@@ -75,29 +70,10 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     });
   };
 
-  // ------------------------------------------------------------------
-  // 🔥 CORRECCIÓN OPCIÓN C: No mostrar nada si es sinVencimiento
-  // ------------------------------------------------------------------
   const renderFutureActionConditionalFields = () => {
     if (!formData.futureActionType) return null;
 
-    if (formData.futureActionType === "sinVencimiento") {
-      return null; // <-- ESTA ES LA CORRECCIÓN
-    }
-
     switch (formData.futureActionType) {
-      case "accion":
-        return (
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de la Acción *</label>
-              <textarea value={formData.actionDescription || ""} onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })} required rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Completar el curso de capacitación obligatorio antes de la fecha límite" />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto se mostrará al usuario en el formulario mobile</p>
-            </div>
-            {renderDeadlineFields()}
-          </div>
-        );
-
       case "documento":
         return (
           <div className="space-y-3">
@@ -109,13 +85,13 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           </div>
         );
 
-      case "condicion":
+      case "otra":
         return (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción de la Condición *</label>
-              <textarea value={formData.actionDescription || ""} onChange={(e) => setFormData({ ...formData, actionDescription: e.target.value })} required rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Aceptar los términos y condiciones del reglamento interno de la empresa" />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este texto se mostrará al usuario para que acepte la condición</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Título de la Condición *</label>
+              <input type="text" value={formData.tituloAccion || ""} onChange={(e) => setFormData({ ...formData, tituloAccion: e.target.value })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Completar capacitación de seguridad" />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este título se mostrará al usuario como alerta en el formulario mobile</p>
             </div>
             {renderDeadlineFields()}
           </div>
@@ -127,7 +103,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   };
 
   const renderDeadlineFields = () => {
-    if (formData.futureActionType === "sinVencimiento") return null;
+    if (!formData.futureActionType) return null;
 
     return (
       <div className="space-y-3">
@@ -319,8 +295,10 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 setFormData({
                   ...formData,
                   requiresAction: e.target.checked,
-                  futureActionType: e.target.checked ? formData.futureActionType || "sinVencimiento" : "",
+                  futureActionType: e.target.checked ? formData.futureActionType : "",
                   actionText: e.target.checked ? formData.actionText : "",
+                  tituloAccion: e.target.checked ? formData.tituloAccion : undefined,
+                  deadlineMode: e.target.checked ? formData.deadlineMode : undefined,
                   plazoDias: e.target.checked ? formData.plazoDias : undefined,
                   fechaLimite: e.target.checked ? formData.fechaLimite : undefined,
                   documentoRequerido: e.target.checked ? formData.documentoRequerido : undefined,
@@ -344,18 +322,17 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                   </button>
                 </div>
                 <select required value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2">
-                  <option value="accion">{tipoAccionFuturaLabels.accion}</option>
+                  <option value="">Selecciona un tipo...</option>
                   <option value="documento">{tipoAccionFuturaLabels.documento}</option>
-                  <option value="condicion">{tipoAccionFuturaLabels.condicion}</option>
-                  <option value="sinVencimiento">{tipoAccionFuturaLabels.sinVencimiento}</option>
+                  <option value="otra">{tipoAccionFuturaLabels.otra}</option>
                 </select>
               </div>
 
               {/* Campos condicionales excepto sinVencimiento */}
               {renderFutureActionConditionalFields()}
 
-              {/* 🔥 TEXTO DE ACCIÓN (NO SE MUESTRA EN sinVencimiento) */}
-              {formData.futureActionType !== "sinVencimiento" && (
+              {/* Texto del Checkbox */}
+              {formData.futureActionType && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto del Checkbox *</label>
@@ -397,23 +374,18 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         <div className="text-gray-700 dark:text-gray-300 space-y-3">
           <p className="font-medium">Cada tipo define qué debe hacer el usuario:</p>
           <p>
-            <strong>Acción Requerida:</strong> Debe completar una acción.
+            <strong>Presentación de Documento:</strong> El usuario debe presentar un documento específico. Requiere especificar el documento, puede incluir modo de vencimiento (opcional) y requiere texto de checkbox para confirmar el compromiso.
           </p>
           <p>
-            <strong>Presentación de Documento:</strong> Debe entregar un documento.
-          </p>
-          <p>
-            <strong>Aceptación de Condición:</strong> Debe aceptar términos.
-          </p>
-          <p>
-            <strong>Sin vencimiento:</strong> No requiere nada adicional.
+            <strong>Otra Acción Futura:</strong> El usuario debe completar una acción específica o aceptar condiciones. Requiere un título descriptivo que se muestra como alerta en mobile, puede incluir modo de vencimiento (opcional) y requiere texto de checkbox para confirmar.
           </p>
         </div>
       </InfoModal>
 
-      <InfoModal isOpen={showActionTextInfo} onClose={() => setShowActionTextInfo(false)} title="Texto de la Acción" size="sm">
+      <InfoModal isOpen={showActionTextInfo} onClose={() => setShowActionTextInfo(false)} title="Texto del Checkbox" size="sm">
         <div className="text-gray-700 dark:text-gray-300">
-          <p>Texto que se muestra junto al checkbox que el usuario debe tildar.</p>
+          <p>Texto que se muestra junto al checkbox que el usuario debe tildar para confirmar su compromiso.</p>
+          <p className="mt-2 text-sm">Aplica para ambos tipos de acción futura.</p>
         </div>
       </InfoModal>
 

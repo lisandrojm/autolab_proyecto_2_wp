@@ -1,10 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export type TipoAccionFutura =
-  | "accion"
-  | "documento"
-  | "condicion"
-  | "sinVencimiento";
+export type TipoAccionFutura = "documento" | "otra";
 
 export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
@@ -46,6 +42,7 @@ export interface IOrderCategory extends Document {
   requiresAction?: boolean;
   actionText?: string;
   actionDescription?: string;
+  tituloAccion?: string;
   futureActionType?: TipoAccionFutura;
   deadlineMode?: DeadlineMode;
   plazoDias?: number;
@@ -81,10 +78,10 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     requiresAction: { type: Boolean, default: false },
     actionText: { type: String, trim: true },
     actionDescription: { type: String, trim: true },
+    tituloAccion: { type: String, trim: true },
     futureActionType: {
       type: String,
-      enum: ["accion", "documento", "condicion", "sinVencimiento"],
-      default: "sinVencimiento",
+      enum: ["documento", "otra"],
       trim: true
     },
     deadlineMode: {

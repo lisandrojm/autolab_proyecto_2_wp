@@ -1,4 +1,4 @@
-export type TipoAccionFutura = "accion" | "documento" | "condicion" | "sinVencimiento";
+export type TipoAccionFutura = "documento" | "otra";
 
 export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
@@ -79,10 +79,8 @@ export interface FutureActionResponse {
 }
 
 export const tipoAccionFuturaLabels: Record<TipoAccionFutura, string> = {
-  accion: "Acción Requerida",
   documento: "Presentación de Documento",
-  condicion: "Aceptación de Condición",
-  sinVencimiento: "Sin vencimiento",
+  otra: "Otra Acción Futura",
 };
 
 export const deadlineModeLabels: Record<DeadlineMode, string> = {

@@ -255,25 +255,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
       {category.requiresAction && category.futureActionType && (
         <div className="space-y-3">
-          {/* Acción Requerida */}
-          {category.futureActionType === "accion" && (
-            <div className="border border-blue-400 dark:border-blue-900 rounded-lg p-4 shadow-sm">
-              <div className="flex items-start gap-2 mb-2">
-                <div className="flex-1">
-                  {category.actionDescription ? (
-                    <>
-                      <p className="text-md font-medium hleading-relaxed">Requerimiento:</p>
-                      <p>{category.actionDescription}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">Debes aceptar la condición para continuar con este pedido.</p>
-                  )}
-                </div>
-              </div>
-              {renderDeadlineInfo()}
-            </div>
-          )}
-
+          {/* Presentación de Documento */}
           {category.futureActionType === "documento" && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1"> Presentar "{category.documentoRequerido && <span>{category.documentoRequerido}"</span>}</p>
@@ -307,25 +289,19 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             </div>
           )}
 
-          {category.futureActionType === "condicion" && (
-            <div className="border border-blue-400 dark:border-blue-900 rounded-lg p-4 shadow-sm">
-              <div className="flex items-start gap-2 mb-2">
+          {category.futureActionType === "otra" && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <span className="text-xl">⚠️</span>
                 <div className="flex-1">
-                  {category.actionDescription ? (
-                    <>
-                      <p className="text-md font-medium hleading-relaxed">Condición:</p>
-                      <p>{category.actionDescription}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">Debes aceptar la condición para continuar con este pedido.</p>
-                  )}
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{category.tituloAccion || "Acción requerida"}</p>
+                  {renderDeadlineInfo()}
                 </div>
               </div>
-              {renderDeadlineInfo()}
             </div>
           )}
 
-          {category.actionText && category.futureActionType !== "sinVencimiento" && (
+          {category.actionText && category.futureActionType && (
             <div>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={actionCompleted} onChange={(e) => onActionCompletedChange(e.target.checked)} required className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" />

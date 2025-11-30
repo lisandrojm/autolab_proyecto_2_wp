@@ -328,16 +328,6 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
         };
 
         switch (actionType) {
-          case "accion":
-            if (data.futureActionPlazoDias) {
-              futureActionData.plazoDias = data.futureActionPlazoDias;
-              futureActionData.deadlineMode = "plazoDias";
-            } else if (data.futureActionFechaLimite) {
-              futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
-              futureActionData.deadlineMode = "fechaEspecifica";
-            }
-            break;
-
           case "documento":
             if (category.documentoRequerido) {
               futureActionData.documentoRequerido = category.documentoRequerido;
@@ -366,22 +356,25 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
             }
             break;
 
-          case "condicion":
-            if (data.futureActionPlazoDias) {
+          case "otra":
+            if (category.tituloAccion) {
+              futureActionData.descripcionAccion = category.tituloAccion;
+            }
+            if (category.deadlineMode === "plazoDias" && category.plazoDias) {
+              futureActionData.plazoDias = category.plazoDias;
+              futureActionData.deadlineMode = "plazoDias";
+            } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
+              futureActionData.fechaLimite = new Date(category.fechaLimite);
+              futureActionData.deadlineMode = "fechaEspecifica";
+            } else if (data.futureActionPlazoDias) {
               futureActionData.plazoDias = data.futureActionPlazoDias;
               futureActionData.deadlineMode = "plazoDias";
-              futureActionData.quienDefineVencimiento = "sistema";
             } else if (data.futureActionFechaLimite) {
               futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
               futureActionData.deadlineMode = "fechaEspecifica";
             } else {
-              futureActionData.quienDefineVencimiento = "area_interna";
-              futureActionData.estadoAccion = "en_revision";
+              futureActionData.deadlineMode = "none";
             }
-            break;
-
-          case "sinVencimiento":
-            futureActionData.deadlineMode = "none";
             break;
         }
 

@@ -1,10 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export type TipoAccionFutura =
-  | "accion"
-  | "documento"
-  | "condicion"
-  | "sinVencimiento";
+export type TipoAccionFutura = "documento" | "otra";
 
 export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
@@ -55,12 +51,7 @@ const futureActionSchema = new Schema<IFutureAction>(
     },
     tipoAccionFutura: {
       type: String,
-      enum: [
-        "accion",
-        "documento",
-        "condicion",
-        "sinVencimiento",
-      ],
+      enum: ["documento", "otra"],
       required: true,
       index: true,
     },
