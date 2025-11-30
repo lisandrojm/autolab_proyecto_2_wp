@@ -13,12 +13,13 @@ interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStatusUpdate?: (orderId: string, newStatus: string) => Promise<void>;
+  onRefresh?: () => Promise<void>;
   currentIndex?: number;
   totalOrders?: number;
   onNavigate?: (direction: "prev" | "next") => void;
 }
 
-export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdate, currentIndex = -1, totalOrders = 0, onNavigate }: OrderDetailModalProps) {
+export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdate, onRefresh, currentIndex = -1, totalOrders = 0, onNavigate }: OrderDetailModalProps) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
@@ -61,18 +62,18 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
     try {
       setUploadingDocument(true);
       await personnelAPI.uploadOrderDocument(order._id, documentToUpload);
+      setUploadingDocument(false);
       await sweetAlert.success("Documento subido", "El documento se ha subido correctamente");
       setDocumentToUpload(null);
       setDocumentPreview(null);
-      onClose();
-      if (onStatusUpdate) {
-        window.location.reload();
+      if (onRefresh) {
+        await onRefresh();
       }
+      onClose();
     } catch (error: any) {
       console.error("Error uploading document:", error);
-      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo subir el documento");
-    } finally {
       setUploadingDocument(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo subir el documento");
     }
   };
 
@@ -90,25 +91,31 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       const message = notifiedCount > 0
         ? `Se ha notificado a ${notifiedCount} supervisor(es). Esperá que verifiquen la firma del documento.`
         : "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.";
+
+      setNotifyingSignature(false);
       await sweetAlert.success("Notificación enviada", message);
+
+      if (onRefresh) {
+        await onRefresh();
+      }
       onClose();
-      window.location.reload();
     } catch (error: any) {
       console.error("Error notifying signature:", error);
       console.error("Error response:", error?.response);
       console.error("Error data:", error?.response?.data);
 
       const errorMessage = error?.response?.data?.error || error?.message || "No se pudo enviar la notificación";
+      setNotifyingSignature(false);
 
       if (errorMessage.includes("Ya notificaste") || errorMessage.includes("ya notificaste")) {
         await sweetAlert.info("Ya notificado", "Ya notificaste anteriormente que completaste la firma. El supervisor está revisando.");
+        if (onRefresh) {
+          await onRefresh();
+        }
         onClose();
-        window.location.reload();
       } else {
         await sweetAlert.error("Error", errorMessage);
       }
-    } finally {
-      setNotifyingSignature(false);
     }
   };
 
@@ -126,13 +133,16 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
     try {
       setUpdatingStatus(true);
       await onStatusUpdate(order._id, "cancelled");
+      setUpdatingStatus(false);
       await sweetAlert.success("Pedido cancelado", "El pedido ha sido cancelado correctamente");
+      if (onRefresh) {
+        await onRefresh();
+      }
       onClose();
     } catch (error: any) {
       console.error("Error canceling order:", error);
-      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo cancelar el pedido");
-    } finally {
       setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo cancelar el pedido");
     }
   };
 

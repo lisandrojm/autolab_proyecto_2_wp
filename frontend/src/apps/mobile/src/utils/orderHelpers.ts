@@ -3,7 +3,9 @@ import { OrderData } from "../../../../api/personnel";
 export const getUserName = (user: any): string => {
   if (!user) return "Usuario desconocido";
   if (typeof user === "string") return "Usuario desconocido";
-  if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+  const firstName = user.firstName || "";
+  const lastName = user.lastName || "";
+  if (firstName || lastName) return `${firstName} ${lastName}`.trim();
   return user.email || "Usuario desconocido";
 };
 

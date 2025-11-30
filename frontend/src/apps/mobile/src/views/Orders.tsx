@@ -18,7 +18,7 @@ interface OrdersProps {
 }
 
 export default function Orders({ onNavigate }: OrdersProps) {
-  const { orders, loading, createOrder, updateOrderStatus } = useOrders();
+  const { orders, loading, createOrder, updateOrderStatus, refetch } = useOrders();
   const [showForm, setShowForm] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [categories, setCategories] = useState<OrderCategory[]>([]);
@@ -401,6 +401,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
           setSelectedOrder(null);
         }}
         onStatusUpdate={updateOrderStatus}
+        onRefresh={refetch}
         currentIndex={currentOrderIndex}
         totalOrders={orders.length}
         onNavigate={handleNavigateOrder}
