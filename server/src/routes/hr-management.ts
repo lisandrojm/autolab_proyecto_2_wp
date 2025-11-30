@@ -14,10 +14,14 @@ import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { VacationRequest } from "../models/VacationRequest.js";
 import { Notification } from "../models/Notification.js";
+import { Tenant } from "../models/Tenant.js";
+import { PdfTemplate } from "../models/PdfTemplate.js";
+import { User } from "../models/User.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import { generatePdfFromTemplate } from "../utils/pdfGenerator.js";
 
 const router = Router();
 
@@ -547,9 +551,85 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryObj = order.categoryId ? await OrderCategory.findById(order.categoryId) : null;
+    const categoryName = categoryObj?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    let templateCode: string | null = null;
+
+    if (categoryObj) {
+      if (categoryObj.categoryType === "dinero") {
+        templateCode = "dinero";
+      } else if (categoryObj.categoryType === "fecha") {
+        if (categoryObj.dateMode === "range") {
+          templateCode = "fechaRango";
+        } else {
+          templateCode = "fechaUnica";
+        }
+      }
+    }
+
+    if (templateCode) {
+      try {
+        const template = await PdfTemplate.findOne({
+          tenantId: req.tenantObjectId,
+          code: templateCode,
+          isActive: true,
+        });
+
+        if (template) {
+          const tenant = await Tenant.findById(req.tenantObjectId);
+          const userDoc = await User.findById(order.userId);
+
+          const formatDate = (dateStr: string | Date | undefined) => {
+            if (!dateStr) return "";
+            const date = new Date(dateStr);
+            return date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+          };
+
+          const variables = {
+            categoria: categoryName,
+            subcategoria: order.subcategories?.join(", ") || "",
+            monto: order.amount ? order.amount.toLocaleString("es-AR") : "",
+            fechaDesde: order.dynamicValue?.fechaDesde ? formatDate(order.dynamicValue.fechaDesde) : "",
+            fechaHasta: order.dynamicValue?.fechaHasta ? formatDate(order.dynamicValue.fechaHasta) : "",
+            fechaUnica: order.dynamicValue?.fechaUnica ? formatDate(order.dynamicValue.fechaUnica) : "",
+            dias: order.dynamicValue?.dias || "",
+            nombreUsuario: userDoc ? `${userDoc.firstName} ${userDoc.lastName}` : "",
+            numeroOrden: getPlainOrderNumber(order.orderNumber),
+          };
+
+          const storagePath = path.join(__dirname, "../../storage");
+          const pdfFileName = `preaprobacion_${order._id}.pdf`;
+          const tenantIdStr = String(req.tenantObjectId);
+          const pdfRelativePath = `/${tenantIdStr}/${order.userId}/orders/${order._id}/${pdfFileName}`;
+          const pdfFullPath = path.join(storagePath, pdfRelativePath);
+
+          const tenantInfo = {
+            razonSocial: tenant?.company?.legalName || tenant?.name || "Empresa",
+            cuit: tenant?.company?.taxId,
+            ciudad: tenant?.company?.address?.city || "Ciudad Autónoma de Buenos Aires",
+            logoPath: tenant?.company?.logoUrl ? path.join(storagePath, tenant.company.logoUrl) : undefined,
+            firmaRRHHPath: tenant?.company?.firmaRRHHUrl ? path.join(storagePath, tenant.company.firmaRRHHUrl) : undefined,
+          };
+
+          await generatePdfFromTemplate({
+            templateContent: template.content,
+            variables,
+            outputPath: pdfFullPath,
+            tenantInfo,
+          });
+
+          order.pdfPreAprobacionUrl = `/storage${pdfRelativePath}`;
+          await order.save();
+
+          console.log(`PDF generated successfully for order ${order._id}: ${order.pdfPreAprobacionUrl}`);
+        }
+      } catch (pdfError) {
+        console.error("Error generating PDF for order:", pdfError);
+      }
+    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,

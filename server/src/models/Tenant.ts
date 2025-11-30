@@ -19,6 +19,8 @@ export interface ITenant extends Document {
     };
     website?: string;
     description?: string;
+    logoUrl?: string;
+    firmaRRHHUrl?: string;
   };
   contact: {
     firstName: string;
@@ -86,6 +88,8 @@ const tenantSchema = new Schema<ITenant>(
       },
       website: { type: String, trim: true },
       description: { type: String, trim: true },
+      logoUrl: { type: String, trim: true },
+      firmaRRHHUrl: { type: String, trim: true },
     },
     
     contact: {

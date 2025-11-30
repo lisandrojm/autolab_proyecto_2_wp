@@ -35,6 +35,7 @@
     "@supabase/storage-js": "^2.12.2",
     "@supabase/supabase-js": "^2.58.0",
     "@types/multer": "^2.0.0",
+    "@types/pdfkit": "^0.17.4",
     "bcryptjs": "^2.4.3",
     "bull": "^4.16.5",
     "bullmq": "^5.60.0",
@@ -49,6 +50,7 @@
     "mongoose": "^8.18.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "pdfkit": "^0.17.2",
     "pm2": "^5.4.2",
     "zod": "^3.23.8"
   },

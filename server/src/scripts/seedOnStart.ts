@@ -19,6 +19,7 @@ import { Level } from "../models/Level.js";
 import { Types } from "mongoose";
 import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
 import { migrateOrderCategoryImprovements } from "./migrateOrderCategoryImprovements.js";
+import { seedPdfTemplates } from "./seedPdfTemplates.js";
 
 /* ----------------------------- helpers ----------------------------- */
 
@@ -1497,6 +1498,13 @@ export async function seedOnStart() {
       }
     } else {
       console.log("✔️ ActivityLog already present");
+    }
+
+    console.log("📄 Seeding PDF Templates...");
+    try {
+      await seedPdfTemplates(tenantId);
+    } catch (err) {
+      console.error("❌ Error seeding PDF templates:", err);
     }
 
     console.log("🎉 Seed completed successfully!");

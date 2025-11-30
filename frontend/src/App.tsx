@@ -62,6 +62,7 @@ import { ManageVacationRequestsPage } from "./pages/ManageVacationRequestsPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
 import { RequestTypesManagementPage } from "./pages/RequestTypesManagementPage";
+import { PdfTemplatesPage } from "./pages/PdfTemplates/PdfTemplatesPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -579,6 +580,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ManageVacationRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/pdf-templates"
+                element={
+                  <ProtectedRoute>
+                    <PdfTemplatesPage />
                   </ProtectedRoute>
                 }
               />

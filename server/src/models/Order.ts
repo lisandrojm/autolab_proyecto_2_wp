@@ -28,6 +28,7 @@ export interface IOrder extends Document {
   signatureNotifiedAt?: Date;
   signedAt?: Date;
   signedBy?: Types.ObjectId;
+  pdfPreAprobacionUrl?: string;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -66,6 +67,7 @@ const orderSchema = new Schema<IOrder>(
     signatureNotifiedAt: { type: Date },
     signedAt: { type: Date },
     signedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    pdfPreAprobacionUrl: { type: String, trim: true },
     metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }

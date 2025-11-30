@@ -52,6 +52,7 @@ import { requestTypeRoutes } from "./routes/requestTypes.js";
 import { futureActionsRoutes } from "./routes/futureActions.js";
 import { positionRoutes } from "./routes/positions.js";
 import { levelRoutes } from "./routes/levels.js";
+import { pdfTemplateRoutes } from "./routes/pdfTemplates.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -159,6 +160,7 @@ app.use("/api/v1/request-types", requestTypeRoutes);
 app.use("/api/v1/future-actions", futureActionsRoutes);
 app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/levels", levelRoutes);
+app.use("/api/v1/pdf-templates", pdfTemplateRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);
