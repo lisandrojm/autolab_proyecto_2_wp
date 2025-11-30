@@ -298,14 +298,24 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
-    const order = new Order({
+    let orderData: any = {
       tenantId: req.tenantObjectId,
       userId,
       ...data,
       subcategories: data.subcategories || [],
       status: "pending",
       requestedAt: new Date(),
-    });
+    };
+
+    if (data.categoryId) {
+      const category = await OrderCategory.findById(data.categoryId);
+      if (category?.requiresSignature) {
+        orderData.requiresSignature = true;
+        orderData.signatureStatus = "pending";
+      }
+    }
+
+    const order = new Order(orderData);
 
     await order.save();
 
