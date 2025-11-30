@@ -427,20 +427,26 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
 
-    if (order.requiresSignature) {
+    const category = order.categoryId ? await OrderCategory.findById(order.categoryId) : null;
+    const shouldSendSignature = order.requiresSignature || category?.requiresSignature;
+
+    if (shouldSendSignature) {
       order.signatureStatus = "sent";
       order.signatureSentAt = new Date();
+      if (!order.requiresSignature && category?.requiresSignature) {
+        order.requiresSignature = true;
+      }
     }
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
     const orderNumber = order.orderNumber || "N/A";
 
-    if (order.requiresSignature) {
+    if (shouldSendSignature) {
       await Notification.create({
         tenantId: req.tenantObjectId,
         userId: order.userId,
