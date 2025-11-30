@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCamera, faImage, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faCamera, faImage, faTimes, faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { OrderCategory } from "../../../../api/orderCategories";
 import { tipoAccionFuturaLabels } from "../../../../types/futureAction";
 
@@ -210,6 +210,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       return (
         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
+            <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />
             <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
               Completar antes del <span className="font-bold">{fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</span>
             </p>
@@ -223,7 +224,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       return (
         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
-            <span className="text-base">📅</span>
+            <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />
             <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
               Fecha límite: <span className="font-bold">{fechaLimite.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}</span>
             </p>
