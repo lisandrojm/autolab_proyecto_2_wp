@@ -12,6 +12,7 @@ import { FutureAction } from "../models/FutureAction.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { Notification } from "../models/Notification.js";
 import { User } from "../models/User.js";
+import { Role } from "../models/Role.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -638,9 +639,16 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
       entityId: order._id,
     });
 
+    const supervisorRoles = await Role.find({
+      tenantId: req.tenantObjectId,
+      name: { $in: ["admin", "manager", "superadmin"] },
+    });
+
+    const supervisorRoleIds = supervisorRoles.map((r) => r._id);
+
     const supervisors = await User.find({
       tenantId: req.tenantObjectId,
-      roles: { $in: ["admin", "manager", "superadmin"] },
+      roles: { $in: supervisorRoleIds },
     });
 
     for (const supervisor of supervisors) {
