@@ -28,6 +28,19 @@ export function mapOrderStatusToStatusType(status: string): StatusType {
   return statusMap[status] || "pendiente";
 }
 
+export function mapOrderStatusToStatusTypeForMobile(status: string): StatusType {
+  const statusMap: Record<string, StatusType> = {
+    pending: "pendiente",
+    pre_approved: "pendiente",
+    approved: "aprobado",
+    rejected: "rechazado",
+    delivered: "entregado",
+    cancelled: "cancelado",
+  };
+
+  return statusMap[status] || "pendiente";
+}
+
 export function mapDocumentStateToStatusType(
   futureAction: FutureAction | null | undefined
 ): StatusType | null {

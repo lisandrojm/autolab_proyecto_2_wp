@@ -11,7 +11,7 @@ export interface Order {
   id: string;
   product: string;
   quantity: number;
-  status: 'pending' | 'approved' | 'delivered' | 'rejected';
+  status: 'pending' | 'approved' | 'delivered' | 'rejected' | 'cancelled';
   date: string;
   description: string;
 }

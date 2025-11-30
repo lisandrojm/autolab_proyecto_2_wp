@@ -6,7 +6,7 @@ import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
-import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
+import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
 
 interface OrderDetailModalProps {
   order: OrderData | null;
@@ -172,7 +172,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             </span>
             {/* Estado */}
             <div className="flex flex-wrap gap-2">
-              <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
+              <StatusBadge type={mapOrderStatusToStatusTypeForMobile(order.status)} size="sm" />
               {/* Documento */}
               {(() => {
                 const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;

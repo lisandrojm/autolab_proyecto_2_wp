@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
-import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
+import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
@@ -328,7 +328,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
 
-                          <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
+                          <StatusBadge type={mapOrderStatusToStatusTypeForMobile(order.status)} size="sm" />
 
                           {(() => {
                             const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;

@@ -264,8 +264,8 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       tenantId: req.tenantObjectId,
       userId: vacation.userId,
       type: "vacation",
-      title: "Vacation Request Approved",
-      message: `Your vacation request for ${vacation.daysRequested} days has been approved.`,
+      title: "Solicitud de vacaciones aprobada",
+      message: `Tu solicitud de vacaciones por ${vacation.daysRequested} día${vacation.daysRequested > 1 ? 's' : ''} ha sido aprobada.`,
       linkUrl: `/vacations/${vacation._id}`,
     });
 
@@ -273,7 +273,7 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       tenantId: req.tenantObjectId,
       userId: vacation.userId,
       action: "vacation_request_approved",
-      description: `Vacation request approved by manager`,
+      description: `Solicitud de vacaciones aprobada por el supervisor`,
       entityType: "VacationRequest",
       entityId: vacation._id,
     });
@@ -317,8 +317,8 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       tenantId: req.tenantObjectId,
       userId: vacation.userId,
       type: "vacation",
-      title: "Vacation Request Rejected",
-      message: `Your vacation request has been rejected. Reason: ${managerComment}`,
+      title: "Solicitud de vacaciones rechazada",
+      message: `Tu solicitud de vacaciones ha sido rechazada. Motivo: ${managerComment}`,
       linkUrl: `/vacations/${vacation._id}`,
     });
 
@@ -326,7 +326,7 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       tenantId: req.tenantObjectId,
       userId: vacation.userId,
       action: "vacation_request_rejected",
-      description: `Vacation request rejected by manager`,
+      description: `Solicitud de vacaciones rechazada por el supervisor`,
       entityType: "VacationRequest",
       entityId: vacation._id,
     });
@@ -392,7 +392,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_pre_approved",
-      description: `Order "${orderDisplayName}" pre-approved by manager`,
+      description: `Pedido "${orderDisplayName}" preaprobado por el supervisor`,
       entityType: "Order",
       entityId: order._id,
     });
@@ -459,7 +459,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_approved",
-      description: `Order "${orderDisplayName}" approved by manager`,
+      description: `Pedido "${orderDisplayName}" aprobado por el supervisor`,
       entityType: "Order",
       entityId: order._id,
     });
