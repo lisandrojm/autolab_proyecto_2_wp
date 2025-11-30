@@ -48,7 +48,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
-      <td className="py-3 px-4 text-center">{category.requiresAction ? <div className="flex justify-start items-center gap-1">{category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "accion" ? "bg-orange-100 text-orange-800 dark:bg-orange-500/30 dark:text-orange-200" : category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : category.futureActionType === "condicion" ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/30 dark:text-cyan-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
+      <td className="py-3 px-4 text-center">{category.requiresAction ? <div className="flex justify-start items-center gap-1">{category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${(category.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(category.requiresSignature ?? true) ? "Sí" : "No"}</span>
       </td>
@@ -93,6 +93,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     requiresAction: boolean;
     actionText: string;
     actionDescription?: string;
+    tituloAccion?: string;
     futureActionType: TipoAccionFutura | "";
     deadlineMode?: DeadlineMode;
     subtipos: Subtype[];
@@ -110,7 +111,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     requiresAction: false,
     actionText: "",
     actionDescription: "",
-    futureActionType: "sinVencimiento",
+    tituloAccion: undefined,
+    futureActionType: "",
     deadlineMode: "none",
     subtipos: [],
     plazoDias: undefined,
@@ -162,7 +164,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       requiresAction: false,
       actionText: "",
       actionDescription: "",
-      futureActionType: "sinVencimiento",
+      tituloAccion: undefined,
+      futureActionType: "",
       deadlineMode: "none",
       subtipos: [],
       plazoDias: undefined,
@@ -185,7 +188,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       requiresAction: category.requiresAction || false,
       actionText: category.actionText || "",
       actionDescription: category.actionDescription || "",
-      futureActionType: category.futureActionType || "sinVencimiento",
+      tituloAccion: category.tituloAccion || undefined,
+      futureActionType: category.futureActionType || "",
       deadlineMode: category.deadlineMode || "none",
       subtipos: category.config?.subtipos ?? [],
       plazoDias: category.plazoDias,
@@ -253,6 +257,14 @@ export const ManageOrderCategoriesPage: React.FC = () => {
             return;
           }
         }
+
+        if (formData.futureActionType === "otra") {
+          if (!formData.tituloAccion || !formData.tituloAccion.trim()) {
+            sweetAlert.error("Error", "Debes especificar el título de la acción");
+            setSubmitting(false);
+            return;
+          }
+        }
       }
 
       const validSubtipos = formData.subtipos.filter((subtipo) => subtipo.label.trim() !== "");
@@ -266,15 +278,16 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         montoMaximo: formData.categoryType === "dinero" && formData.montoMaximo ? formData.montoMaximo : undefined,
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction ? formData.actionText : undefined,
-        actionDescription: formData.requiresAction && (formData.futureActionType === "accion" || formData.futureActionType === "condicion") ? formData.actionDescription : undefined,
+        tituloAccion: formData.requiresAction && formData.futureActionType === "otra" ? formData.tituloAccion : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
-        deadlineMode: formData.requiresAction && formData.futureActionType !== "sinVencimiento" ? formData.deadlineMode : undefined,
+        deadlineMode: formData.requiresAction && formData.futureActionType ? formData.deadlineMode : undefined,
         requiresSignature: formData.requiresSignature,
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
 
       if (!formData.requiresAction) {
         payload.futureActionType = undefined;
+        payload.tituloAccion = undefined;
         payload.deadlineMode = undefined;
         payload.plazoDias = undefined;
         payload.fechaLimite = undefined;
@@ -301,8 +314,13 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
         if (formData.futureActionType === "documento") {
           payload.documentoRequerido = formData.documentoRequerido;
+          payload.tituloAccion = undefined;
+        } else if (formData.futureActionType === "otra") {
+          payload.tituloAccion = formData.tituloAccion;
+          payload.documentoRequerido = undefined;
         } else {
           payload.documentoRequerido = undefined;
+          payload.tituloAccion = undefined;
         }
       }
 
