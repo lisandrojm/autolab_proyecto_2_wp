@@ -12,7 +12,6 @@ export interface OrderWithCategory {
   status: string;
   categoryId?: string | { requiresSignature?: boolean; [key: string]: any };
   signatureStatus?: string;
-  requiresSignature?: boolean;
   [key: string]: any;
 }
 
@@ -78,8 +77,7 @@ export function mapSignatureStateToStatusType(
 
   const categoryData =
     typeof order.categoryId === "object" ? order.categoryId : null;
-
-  const requiresSignature = order.requiresSignature ?? categoryData?.requiresSignature ?? false;
+  const requiresSignature = categoryData?.requiresSignature ?? false;
 
   if (!requiresSignature) {
     return null;

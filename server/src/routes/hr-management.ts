@@ -591,31 +591,25 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
 
-    const category = order.categoryId ? await OrderCategory.findById(order.categoryId) : null;
-    const shouldSendSignature = order.requiresSignature || category?.requiresSignature;
-
-    if (shouldSendSignature) {
+    if (order.requiresSignature) {
       order.signatureStatus = "sent";
       order.signatureSentAt = new Date();
-      if (!order.requiresSignature && category?.requiresSignature) {
-        order.requiresSignature = true;
-      }
     }
 
     await order.save();
 
-    const categoryName = category?.name || order.category;
+    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
     const orderNumber = order.orderNumber || "N/A";
 
-    const notificationMessage = shouldSendSignature ? `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
+    const notificationMessage = order.requiresSignature ? `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
 
     await Notification.create({
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
-      title: shouldSendSignature ? "Documento enviado para firma" : "Pedido Aprobado",
+      title: order.requiresSignature ? "Documento enviado para firma" : "Pedido Aprobado",
       message: notificationMessage,
       linkUrl: `/orders/${order._id}`,
     });
