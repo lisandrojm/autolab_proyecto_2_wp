@@ -155,7 +155,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         subcategories: subcategories ? [subcategories] : undefined,
         dynamicValue: validDynamicValue,
         amount: selectedCategory?.categoryType === "dinero" ? amount : undefined,
-        actionCompleted: selectedCategory?.requiresAction ? actionCompleted : undefined,
+        actionCompleted: selectedCategory?.requiresAction ? (selectedCategory?.requiresUserConfirmation ? actionCompleted : true) : undefined,
         futureActionPlazoDias: futureActionPlazoDias || undefined,
         futureActionFechaLimite: futureActionFechaLimite || undefined,
         futureActionDocumento: futureActionDocumento || undefined,

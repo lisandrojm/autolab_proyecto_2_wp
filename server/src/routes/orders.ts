@@ -312,7 +312,10 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     if (data.categoryId) {
       const category = await OrderCategory.findById(data.categoryId);
 
-      if (category?.requiresAction && data.actionCompleted) {
+      const shouldCreateFutureAction = category?.requiresAction &&
+        (!category.requiresUserConfirmation || data.actionCompleted);
+
+      if (shouldCreateFutureAction) {
         // Default to "sinVencimiento" if futureActionType is not set
         const actionType = category.futureActionType || "sinVencimiento";
 
