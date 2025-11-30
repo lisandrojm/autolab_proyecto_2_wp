@@ -209,7 +209,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      if (formData.requiresAction && !formData.actionText.trim()) {
+      if (formData.requiresUserConfirmation && !formData.actionText.trim()) {
         sweetAlert.error("Error", "Debes especificar el texto de la acción requerida");
         setSubmitting(false);
         return;
