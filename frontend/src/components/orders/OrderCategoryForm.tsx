@@ -105,30 +105,54 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   const renderDeadlineFields = () => {
     if (!formData.futureActionType) return null;
 
+    const hasDeadline = formData.deadlineMode && formData.deadlineMode !== "none";
+
     return (
       <div className="space-y-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modo de Vencimiento *</label>
-          <select required value={formData.deadlineMode || "none"} onChange={(e) => handleDeadlineModeChange(e.target.value as DeadlineMode)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-            <option value="none">{deadlineModeLabels.none}</option>
-            <option value="plazoDias">{deadlineModeLabels.plazoDias}</option>
-            <option value="fechaEspecifica">{deadlineModeLabels.fechaEspecifica}</option>
-          </select>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="hasDeadline"
+            checked={hasDeadline}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setFormData({ ...formData, deadlineMode: "plazoDias", plazoDias: undefined, fechaLimite: undefined });
+              } else {
+                setFormData({ ...formData, deadlineMode: "none", plazoDias: undefined, fechaLimite: undefined });
+              }
+            }}
+            className="w-4 h-4 text-blue-600"
+          />
+          <label htmlFor="hasDeadline" className="text-sm text-gray-700 dark:text-gray-300">
+            Tiene vencimiento
+          </label>
         </div>
 
-        {formData.deadlineMode === "plazoDias" && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo en Días *</label>
-            <input type="number" min="1" max="365" value={formData.plazoDias || ""} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: 10" />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema calculará automáticamente la fecha límite</p>
-          </div>
-        )}
+        {hasDeadline && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modo de Vencimiento *</label>
+              <select required value={formData.deadlineMode} onChange={(e) => handleDeadlineModeChange(e.target.value as DeadlineMode)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                <option value="plazoDias">{deadlineModeLabels.plazoDias}</option>
+                <option value="fechaEspecifica">{deadlineModeLabels.fechaEspecifica}</option>
+              </select>
+            </div>
 
-        {formData.deadlineMode === "fechaEspecifica" && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite *</label>
-            <input type="date" value={formData.fechaLimite ? new Date(formData.fechaLimite).toISOString().split("T")[0] : ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
-          </div>
+            {formData.deadlineMode === "plazoDias" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo en Días *</label>
+                <input type="number" min="1" max="365" value={formData.plazoDias || ""} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: 10" />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema calculará automáticamente la fecha límite</p>
+              </div>
+            )}
+
+            {formData.deadlineMode === "fechaEspecifica" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite *</label>
+                <input type="date" value={formData.fechaLimite ? new Date(formData.fechaLimite).toISOString().split("T")[0] : ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+              </div>
+            )}
+          </>
         )}
       </div>
     );
