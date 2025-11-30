@@ -1876,8 +1876,8 @@ export async function seedOnStart() {
           tenantId,
           userId: regularUser._id,
           type: "system",
-          title: "Welcome to HR Portal",
-          message: "You now have access to the employee self-service portal.",
+          title: "Bienvenido",
+          message: "Ya tenés acceso al portal de gestión.",
           isRead: false,
         });
 
