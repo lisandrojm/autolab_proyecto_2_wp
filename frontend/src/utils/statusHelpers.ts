@@ -93,3 +93,7 @@ export function mapSignatureStateToStatusType(
 
   return "firma_pendiente";
 }
+
+export function isOrderInFinalState(status: string): boolean {
+  return status === "rejected" || status === "cancelled" || status === "delivered";
+}

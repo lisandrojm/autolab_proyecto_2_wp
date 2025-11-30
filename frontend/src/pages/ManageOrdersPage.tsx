@@ -10,7 +10,7 @@ import { ImageModal } from "../components/ui/ImageModal";
 import { Modal } from "../components/ui/Modal";
 import { Card } from "../components/ui/Card";
 import { StatusBadge } from "../components/ui/StatusBadge";
-import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../utils/statusHelpers";
+import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -502,9 +502,10 @@ export const ManageOrdersPage: React.FC = () => {
                       {(() => {
                         const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
                         const docStatusType = mapDocumentStateToStatusType(futureAction);
-                        return docStatusType ? <StatusBadge type={docStatusType} size="sm" /> : null;
+                        const isInFinalState = isOrderInFinalState(order.status);
+                        return docStatusType ? <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} /> : null;
                       })()}
-                      <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
+                      <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
                     </div>
                   ),
                 },
@@ -805,6 +806,7 @@ export const ManageOrdersPage: React.FC = () => {
                 {(() => {
                   const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
                   const docStatusType = mapDocumentStateToStatusType(futureAction);
+                  const isInFinalState = isOrderInFinalState(selectedOrder.status);
 
                   if (!docStatusType) return null;
 
@@ -813,14 +815,14 @@ export const ManageOrdersPage: React.FC = () => {
                   if (isDocumentUploaded) {
                     return (
                       <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
-                        <StatusBadge type={docStatusType} size="sm" />
+                        <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />
                       </button>
                     );
                   }
 
-                  return <StatusBadge type={docStatusType} size="sm" />;
+                  return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
                 })()}
-                <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" />
+                <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" overrideStyle={isOrderInFinalState(selectedOrder.status)} />
               </div>
             </div>
             <div className="flex items-center gap-3">

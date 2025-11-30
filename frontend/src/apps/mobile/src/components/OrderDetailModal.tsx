@@ -6,7 +6,7 @@ import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
-import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
+import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 
 interface OrderDetailModalProps {
   order: OrderData | null;
@@ -224,6 +224,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               {(() => {
                 const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
                 const docStatusType = mapDocumentStateToStatusType(futureAction);
+                const isInFinalState = isOrderInFinalState(order.status);
 
                 if (!docStatusType) return null;
 
@@ -232,15 +233,15 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 if (isDocumentUploaded) {
                   return (
                     <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
-                      <StatusBadge type={docStatusType} size="sm" />
+                      <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />
                     </button>
                   );
                 }
 
-                return <StatusBadge type={docStatusType} size="sm" />;
+                return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
               })()}
               {/* Firma */}
-              <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
+              <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
             </div>
           </div>
 

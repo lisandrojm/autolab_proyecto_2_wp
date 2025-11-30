@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
-import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType } from "../../../../utils/statusHelpers";
+import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
@@ -333,11 +333,12 @@ export default function Orders({ onNavigate }: OrdersProps) {
                           {(() => {
                             const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
                             const docStatusType = mapDocumentStateToStatusType(futureAction);
-                            if (docStatusType) return <StatusBadge type={docStatusType} size="sm" />;
+                            const isInFinalState = isOrderInFinalState(order.status);
+                            if (docStatusType) return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
                             return null;
                           })()}
 
-                          <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" />
+                          <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
                         </div>
                       </div>
 

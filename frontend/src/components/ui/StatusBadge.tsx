@@ -8,6 +8,7 @@ interface StatusBadgeProps {
   hidePrefix?: boolean;
   className?: string;
   size?: "sm" | "md" | "lg";
+  overrideStyle?: boolean;
 }
 
 export function StatusBadge({
@@ -16,10 +17,14 @@ export function StatusBadge({
   hidePrefix = false,
   className = "",
   size = "md",
+  overrideStyle = false,
 }: StatusBadgeProps) {
   if (!type || !STATUS_CONFIG[type]) return null;
 
   const cfg = STATUS_CONFIG[type];
+
+  const finalBgClass = overrideStyle ? "bg-gray-50 dark:bg-gray-600/20" : cfg.bgClass;
+  const finalTextClass = overrideStyle ? "text-gray-600 dark:text-gray-400" : cfg.textClass;
 
   const sizeClasses = {
     sm: "px-2 py-0.5 text-xs gap-1",
@@ -35,7 +40,7 @@ export function StatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-medium ${sizeClasses[size]} ${cfg.bgClass} ${cfg.textClass} ${cfg.borderClass || ""} ${className}`}
+      className={`inline-flex items-center rounded-full font-medium ${sizeClasses[size]} ${finalBgClass} ${finalTextClass} ${cfg.borderClass || ""} ${className}`}
     >
       {!hideIcon && cfg.icon && (
         <FontAwesomeIcon icon={cfg.icon} className={iconSizes[size]} />
