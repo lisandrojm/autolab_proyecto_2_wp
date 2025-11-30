@@ -52,7 +52,7 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     icon: faBan,
     prefix: null,
     label: "Cancelado",
-    bgClass: "bg-bg-orange-600/20 dark:bg-orange-600/20",
+    bgClass: "bg-gray-50 dark:bg-orange-600/20",
     textClass: "text-orange-600 dark:text-orange-400",
   },
   doc_pendiente: {

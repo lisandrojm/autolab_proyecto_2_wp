@@ -982,7 +982,7 @@ export async function seedOnStart() {
         dynamicValue: {
           fechaDesde: new Date(2024, 2, 10),
           fechaHasta: new Date(2024, 2, 20),
-          observaciones: "Cirugía programada con 3 controles postoperatorios posteriores",
+          observaciones: "Cirugía programada con 3 controles postoperatorios posteriores"
         },
         status: "approved",
         approvedBy: adminId,
@@ -1006,7 +1006,7 @@ export async function seedOnStart() {
         dynamicValue: {
           montoAdelanto: 100000,
           montoReembolso: 35000,
-          motivo: "Viaje urgente de trabajo a sucursal exterior",
+          motivo: "Viaje urgente de trabajo a sucursal exterior"
         },
         amount: 135000,
         status: "approved",
@@ -1408,8 +1408,8 @@ export async function seedOnStart() {
           tenantId,
           userId: collab._id,
           type: "system",
-          title: "Bienvenido",
-          message: "Ya tenés acceso al portal de gestión.",
+          title: "Welcome to HR Portal",
+          message: "You now have access to the employee self-service portal.",
           isRead: false,
         },
       ]);

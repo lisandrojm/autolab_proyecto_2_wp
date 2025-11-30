@@ -265,7 +265,7 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       userId: vacation.userId,
       type: "vacation",
       title: "Solicitud de vacaciones aprobada",
-      message: `Tu solicitud de vacaciones por ${vacation.daysRequested} día${vacation.daysRequested > 1 ? "s" : ""} ha sido aprobada.`,
+      message: `Tu solicitud de vacaciones por ${vacation.daysRequested} día${vacation.daysRequested > 1 ? 's' : ''} ha sido aprobada.`,
       linkUrl: `/vacations/${vacation._id}`,
     });
 
@@ -273,7 +273,7 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       tenantId: req.tenantObjectId,
       userId: vacation.userId,
       action: "vacation_request_approved",
-      description: `Solicitud de vacaciones aprobada`,
+      description: `Solicitud de vacaciones aprobada por el supervisor`,
       entityType: "VacationRequest",
       entityId: vacation._id,
     });
@@ -326,7 +326,7 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       tenantId: req.tenantObjectId,
       userId: vacation.userId,
       action: "vacation_request_rejected",
-      description: `Solicitud de vacaciones rechazada`,
+      description: `Solicitud de vacaciones rechazada por el supervisor`,
       entityType: "VacationRequest",
       entityId: vacation._id,
     });
@@ -392,7 +392,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_pre_approved",
-      description: `Pedido "${orderDisplayName}" preaprobado`,
+      description: `Pedido "${orderDisplayName}" preaprobado por el supervisor`,
       entityType: "Order",
       entityId: order._id,
     });
@@ -464,7 +464,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_approved",
-      description: `Pedido "${orderDisplayName}" aprobado`,
+      description: `Pedido "${orderDisplayName}" aprobado por el supervisor`,
       entityType: "Order",
       entityId: order._id,
     });
