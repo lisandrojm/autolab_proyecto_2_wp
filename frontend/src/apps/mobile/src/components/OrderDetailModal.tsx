@@ -85,8 +85,12 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
     try {
       setNotifyingSignature(true);
-      await personnelAPI.notifySignatureCompleted(order._id);
-      await sweetAlert.success("Notificación enviada", "Se ha notificado al supervisor. Esperá que verifique la firma del documento.");
+      const response = await personnelAPI.notifySignatureCompleted(order._id);
+      const notifiedCount = response?.data?.notifiedCount || 0;
+      const message = notifiedCount > 0
+        ? `Se ha notificado a ${notifiedCount} supervisor(es). Esperá que verifiquen la firma del documento.`
+        : "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.";
+      await sweetAlert.success("Notificación enviada", message);
       onClose();
       window.location.reload();
     } catch (error: any) {

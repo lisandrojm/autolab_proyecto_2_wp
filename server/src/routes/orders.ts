@@ -644,25 +644,52 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
       name: { $in: ["admin", "manager", "superadmin"] },
     });
 
+    console.log(`Found ${supervisorRoles.length} supervisor roles:`, supervisorRoles.map(r => r.name));
+
+    if (supervisorRoles.length === 0) {
+      console.warn("No supervisor roles found in database for signature notification");
+      return res.json({ success: true, message: "Notificación registrada (sin supervisores configurados)" });
+    }
+
     const supervisorRoleIds = supervisorRoles.map((r) => r._id);
+    console.log(`Supervisor role IDs:`, supervisorRoleIds);
 
     const supervisors = await User.find({
       tenantId: req.tenantObjectId,
       roles: { $in: supervisorRoleIds },
+      isActive: true,
     });
 
-    for (const supervisor of supervisors) {
-      await Notification.create({
+    console.log(`Found ${supervisors.length} active supervisors to notify`);
+
+    if (supervisors.length === 0) {
+      console.warn("No active supervisors found to notify about signature completion");
+      return res.json({ success: true, message: "Notificación registrada (sin supervisores activos)" });
+    }
+
+    const notificationPromises = supervisors.map(supervisor =>
+      Notification.create({
         tenantId: req.tenantObjectId,
         userId: supervisor._id,
         type: "order_signature_notification",
         title: "Usuario indica firma completada",
         message: `El usuario ${userName} indica que completó la firma del documento del pedido ${orderDisplayName} N°: ${order.orderNumber}. Por favor verificá antes de confirmar.`,
         linkUrl: `/hr-management/orders`,
-      });
-    }
+      }).catch(err => {
+        console.error(`Error creating notification for user ${supervisor._id}:`, err);
+        return null;
+      })
+    );
 
-    res.json({ success: true, message: "Notificación enviada al supervisor correctamente" });
+    const results = await Promise.all(notificationPromises);
+    const successCount = results.filter(r => r !== null).length;
+    console.log(`Created ${successCount}/${supervisors.length} notifications successfully`);
+
+    res.json({
+      success: true,
+      message: `Notificación enviada a ${successCount} supervisor(es) correctamente`,
+      notifiedCount: successCount
+    });
   } catch (error) {
     console.error("Notify signature error:", error);
     res.status(500).json({ error: "Error al enviar la notificación" });
