@@ -77,7 +77,6 @@ const createOrderSchema = z.object({
   subcategories: z.array(z.string()).default([]),
   amount: z.number().min(0).optional(),
   photoUrl: z.string().optional(),
-  requiresSignature: z.boolean().default(false),
 });
 
 const updateOrderSchema = z.object({
@@ -87,7 +86,6 @@ const updateOrderSchema = z.object({
   amount: z.number().min(0).optional(),
   status: z.enum(["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
-  requiresSignature: z.boolean().optional(),
 });
 
 router.get("/activitylogs", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -575,7 +573,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    });
+    }).populate('categoryId');
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -591,25 +589,28 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
 
-    if (order.requiresSignature) {
+    const category = order.categoryId as any;
+    const requiresSignature = category?.requiresSignature || false;
+
+    if (requiresSignature) {
       order.signatureStatus = "sent";
       order.signatureSentAt = new Date();
     }
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
     const orderNumber = order.orderNumber || "N/A";
 
-    const notificationMessage = order.requiresSignature ? `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
+    const notificationMessage = requiresSignature ? `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
 
     await Notification.create({
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
-      title: order.requiresSignature ? "Documento enviado para firma" : "Pedido Aprobado",
+      title: requiresSignature ? "Documento enviado para firma" : "Pedido Aprobado",
       message: notificationMessage,
       linkUrl: `/orders/${order._id}`,
     });
@@ -718,7 +719,7 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    });
+    }).populate('categoryId');
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -730,7 +731,8 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
       return;
     }
 
-    if (!order.requiresSignature) {
+    const category = order.categoryId as any;
+    if (!category?.requiresSignature) {
       res.status(400).json({ error: "This order does not require signature" });
       return;
     }
@@ -740,7 +742,7 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -767,14 +769,15 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    });
+    }).populate('categoryId');
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
       return;
     }
 
-    if (!order.requiresSignature) {
+    const category = order.categoryId as any;
+    if (!category?.requiresSignature) {
       res.status(400).json({ error: "This order does not require signature" });
       return;
     }

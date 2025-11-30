@@ -411,7 +411,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    });
+    }).populate('categoryId');
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -427,20 +427,23 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
 
-    if (order.requiresSignature) {
+    const category = order.categoryId as any;
+    const requiresSignature = category?.requiresSignature || false;
+
+    if (requiresSignature) {
       order.signatureStatus = "sent";
       order.signatureSentAt = new Date();
     }
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
     const orderNumber = order.orderNumber || "N/A";
 
-    if (order.requiresSignature) {
+    if (requiresSignature) {
       await Notification.create({
         tenantId: req.tenantObjectId,
         userId: order.userId,

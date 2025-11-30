@@ -313,7 +313,6 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     if (data.categoryId) {
       const category = await OrderCategory.findById(data.categoryId);
       if (category?.requiresSignature) {
-        orderData.requiresSignature = true;
         orderData.signatureStatus = "pending";
       }
     }
@@ -602,7 +601,8 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
       return;
     }
 
-    if (!order.requiresSignature) {
+    const categoryInfo = order.categoryId as any;
+    if (!categoryInfo?.requiresSignature) {
       res.status(400).json({ error: "Este pedido no requiere firma" });
       return;
     }
@@ -624,7 +624,6 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
     console.log(`Saved order with signatureNotifiedAt:`, order.signatureNotifiedAt);
 
     const userInfo = order.userId as any;
-    const categoryInfo = order.categoryId as any;
     const userName = userInfo ? `${userInfo.firstName} ${userInfo.lastName}` : "Usuario";
     const categoryName = categoryInfo?.name || order.category || "pedido";
     const subcategoriesText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";

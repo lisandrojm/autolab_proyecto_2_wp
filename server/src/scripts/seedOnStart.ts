@@ -773,7 +773,6 @@ export async function seedOnStart() {
         isActive: true,
         sortOrder: 3,
         requiresAction: true,
-        requiresSignature: false,
         actionText: "Me comprometo a presentar todos los comprobantes",
         tituloAccion: "Completar presentación de comprobantes y facturas",
         futureActionType: "otra",
@@ -789,7 +788,6 @@ export async function seedOnStart() {
         isActive: true,
         sortOrder: 4,
         requiresAction: true,
-        requiresSignature: false,
         actionText: "Me comprometo a confirmar la recepción en buen estado",
         tituloAccion: "Confirmar recepción de equipamiento",
         futureActionType: "otra",
@@ -811,7 +809,6 @@ export async function seedOnStart() {
         isActive: true,
         sortOrder: 5,
         requiresAction: true,
-        requiresSignature: false,
         actionText: "Entiendo que mi solicitud será evaluada por el área correspondiente",
         tituloAccion: "Solicitud en evaluación",
         futureActionType: "otra",
@@ -837,7 +834,6 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 1, 3),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: true,
         signatureStatus: "sent",
         signatureSentAt: new Date(2024, 1, 4),
       });
@@ -855,7 +851,6 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: true,
         signatureStatus: "pending",
       });
 
@@ -873,7 +868,6 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: true,
         signatureStatus: "pending",
       });
 
@@ -893,7 +887,6 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 1, 15),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -909,8 +902,7 @@ export async function seedOnStart() {
         amount: 80000,
         status: "rejected",
         requestedAt: new Date(2024, 0, 10),
-        requiresSignature: true,
-        signatureStatus: "pending",
+        signatureStatus: "not_required",
       });
 
       const order6 = await Order.create({
@@ -929,7 +921,6 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 0, 5),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -946,7 +937,6 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -980,7 +970,6 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -1003,7 +992,6 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 2, 1),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: true,
         signatureStatus: "sent",
         signatureSentAt: new Date(2024, 2, 5),
       });
@@ -1028,7 +1016,6 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 1, 20),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: true,
         signatureStatus: "sent",
         signatureSentAt: new Date(),
       });
@@ -1040,7 +1027,6 @@ export async function seedOnStart() {
         isActive: true,
         sortOrder: 6,
         requiresAction: true,
-        requiresSignature: false,
         actionText: "Me comprometo a presentar el documento requerido en el plazo establecido",
         futureActionType: "documento",
         deadlineMode: "plazoDias",
@@ -1069,7 +1055,6 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -1088,7 +1073,6 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -1105,7 +1089,6 @@ export async function seedOnStart() {
         requestedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -1122,7 +1105,6 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
@@ -1141,7 +1123,6 @@ export async function seedOnStart() {
         requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
         actionCompleted: true,
         requiereAccionFutura: true,
-        requiresSignature: false,
         signatureStatus: "not_required",
       });
 
