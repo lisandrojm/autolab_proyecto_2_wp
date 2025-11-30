@@ -285,17 +285,17 @@ export const ManageOrdersPage: React.FC = () => {
   const handleMarkSigned = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm("¿Marcar como Firmado?", "El documento será marcado como firmado por el usuario.", "Sí, Marcar como Firmado", "Cancelar");
+    const result = await sweetAlert.confirm("¿Confirmar firma del documento?", "Esto marcará el documento como firmado. Asegurate de haber verificado que la firma fue completada correctamente.", "Sí, confirmar firma", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.markSigned(selectedOrder._id);
-      sweetAlert.success("Firmado", "El documento ha sido marcado como firmado");
+      sweetAlert.success("Firma confirmada", "El documento ha sido marcado como firmado. El usuario será notificado.");
       setSelectedOrder(updated);
       loadOrders();
     } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como firmado");
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo confirmar la firma");
     } finally {
       setUpdatingStatus(false);
     }
@@ -900,6 +900,22 @@ export const ManageOrdersPage: React.FC = () => {
                 </div>
               );
             })()}
+
+            {/* Signature Notification Indicator */}
+            {selectedOrder.requiresSignature && selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">El usuario {getUserName(selectedOrder.userId)} indica que completó la firma del documento. Por favor verificá antes de confirmar.</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Notificado el: {new Date(selectedOrder.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
               <div>

@@ -26,6 +26,7 @@ export interface IOrder extends Document {
   requiresSignature?: boolean;
   signatureStatus?: "not_required" | "pending" | "sent" | "signed";
   signatureSentAt?: Date;
+  signatureNotifiedAt?: Date;
   signedAt?: Date;
   signedBy?: Types.ObjectId;
   metadata?: Record<string, any>;
@@ -64,6 +65,7 @@ const orderSchema = new Schema<IOrder>(
     requiresSignature: { type: Boolean, default: false },
     signatureStatus: { type: String, enum: ["not_required", "pending", "sent", "signed"], default: "not_required" },
     signatureSentAt: { type: Date },
+    signatureNotifiedAt: { type: Date },
     signedAt: { type: Date },
     signedBy: { type: Schema.Types.ObjectId, ref: "User" },
     metadata: { type: Schema.Types.Mixed },

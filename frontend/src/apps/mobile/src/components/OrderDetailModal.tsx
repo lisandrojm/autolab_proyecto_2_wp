@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faChevronLeft, faChevronRight, faBell, faClock, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { OrderData, personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
@@ -24,6 +24,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [documentToUpload, setDocumentToUpload] = useState<File | null>(null);
   const [documentPreview, setDocumentPreview] = useState<string | null>(null);
+  const [notifyingSignature, setNotifyingSignature] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,6 +73,29 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo subir el documento");
     } finally {
       setUploadingDocument(false);
+    }
+  };
+
+  const handleNotifySignature = async () => {
+    if (!order) return;
+
+    const result = await sweetAlert.confirm("¿Avisar al supervisor?", "¿Ya completaste la firma del documento? Esto enviará una notificación al supervisor para que verifique.", "Sí, avisar", "Todavía no");
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setNotifyingSignature(true);
+      await personnelAPI.notifySignatureCompleted(order._id);
+      await sweetAlert.success("Notificación enviada", "Se ha notificado al supervisor. Esperá que verifique la firma del documento.");
+      onClose();
+      if (onStatusUpdate) {
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error("Error notifying signature:", error);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo enviar la notificación");
+    } finally {
+      setNotifyingSignature(false);
     }
   };
 
@@ -334,6 +358,64 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                     </button>
                   </div>
                 )}
+              </div>
+            );
+          })()}
+
+          {/* Signature Notification Section */}
+          {(() => {
+            if (!order.requiresSignature || order.signatureStatus !== "sent") {
+              return null;
+            }
+
+            const alreadyNotified = !!order.signatureNotifiedAt;
+
+            if (alreadyNotified) {
+              return (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Esperando Verificación</h4>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">Ya notificaste al supervisor que completaste la firma. Estamos esperando que verifique el documento.</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Notificado el: {new Date(order.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <button disabled className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-amber-600/50 text-white text-sm font-medium leading-normal cursor-not-allowed opacity-60">
+                      <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
+                      <span>Ya Notificado</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
+                <div className="flex items-start gap-3 mb-3">
+                  <FontAwesomeIcon icon={faBell} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Enviado para Firma</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">Se te ha enviado un email con el documento para firmar.</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">Una vez que hayas completado la firma, avisá al supervisor presionando el botón de abajo.</p>
+                  </div>
+                </div>
+                <button onClick={handleNotifySignature} disabled={notifyingSignature} className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {notifyingSignature ? (
+                    <>
+                      <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
+                      <span>Enviando notificación...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
+                      <span>Avisar que Firmé</span>
+                    </>
+                  )}
+                </button>
               </div>
             );
           })()}

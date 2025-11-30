@@ -786,8 +786,8 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
       tenantId: req.tenantObjectId,
       userId: order.userId,
       type: "order",
-      title: "Documento Firmado",
-      message: `El documento de tu pedido "${orderDisplayName}" ha sido firmado correctamente.`,
+      title: "Firma confirmada",
+      message: `Tu firma del pedido ${orderDisplayName} N°: ${order.orderNumber} ha sido verificada y confirmada.`,
       linkUrl: `/orders/${order._id}`,
     });
 

@@ -217,6 +217,7 @@ export interface OrderData {
   requiresSignature?: boolean;
   signatureStatus?: 'not_required' | 'pending' | 'sent' | 'signed';
   signatureSentAt?: string;
+  signatureNotifiedAt?: string;
   signedAt?: string;
   signedBy?: {
     _id: string;
@@ -371,6 +372,11 @@ export const personnelAPI = {
 
   deleteOrder: async (id: string): Promise<void> => {
     await axios.delete(`/orders/${id}`);
+  },
+
+  notifySignatureCompleted: async (orderId: string): Promise<{ success: boolean; message: string }> => {
+    const { data } = await axios.post(`/orders/${orderId}/notify-signature-completed`);
+    return data;
   },
 
   getOrderStats: async (): Promise<{ pending: number; approved: number; rejected: number; delivered: number; cancelled: number }> => {

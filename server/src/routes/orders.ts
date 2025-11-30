@@ -10,6 +10,8 @@ import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { FutureAction } from "../models/FutureAction.js";
 import { ActivityLog } from "../models/ActivityLog.js";
+import { Notification } from "../models/Notification.js";
+import { User } from "../models/User.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -579,6 +581,80 @@ router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRe
   } catch (error) {
     console.error("Upload document error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+      userId,
+    })
+      .populate({ path: "userId", select: "firstName lastName email" })
+      .populate("categoryId");
+
+    if (!order) {
+      res.status(404).json({ error: "Pedido no encontrado" });
+      return;
+    }
+
+    if (!order.requiresSignature) {
+      res.status(400).json({ error: "Este pedido no requiere firma" });
+      return;
+    }
+
+    if (order.signatureStatus !== "sent") {
+      res.status(400).json({ error: "Solo se puede notificar cuando el estado es 'Firma Enviada'" });
+      return;
+    }
+
+    if (order.signatureNotifiedAt) {
+      res.status(400).json({ error: "Ya notificaste que completaste la firma" });
+      return;
+    }
+
+    order.signatureNotifiedAt = new Date();
+    await order.save();
+
+    const userInfo = order.userId as any;
+    const categoryInfo = order.categoryId as any;
+    const userName = userInfo ? `${userInfo.firstName} ${userInfo.lastName}` : "Usuario";
+    const categoryName = categoryInfo?.name || order.category || "pedido";
+    const subcategoriesText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoriesText}`;
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId: order.userId,
+      action: "user_notified_signature",
+      description: `Usuario notificó que completó la firma del pedido "${orderDisplayName}"`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    const supervisors = await User.find({
+      tenantId: req.tenantObjectId,
+      roles: { $in: ["admin", "manager", "superadmin"] },
+    });
+
+    for (const supervisor of supervisors) {
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: supervisor._id,
+        type: "order_signature_notification",
+        title: "Usuario indica firma completada",
+        message: `El usuario ${userName} indica que completó la firma del documento del pedido ${orderDisplayName} N°: ${order.orderNumber}. Por favor verificá antes de confirmar.`,
+        linkUrl: `/hr-management/orders`,
+      });
+    }
+
+    res.json({ success: true, message: "Notificación enviada al supervisor correctamente" });
+  } catch (error) {
+    console.error("Notify signature error:", error);
+    res.status(500).json({ error: "Error al enviar la notificación" });
   }
 });
 
