@@ -48,16 +48,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
-      <td className="py-3 px-4 text-center">
-        {category.requiresAction ? (
-          <div className="flex justify-start items-center gap-1">
-            <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200">Sí</span>
-            {category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "accion" ? "bg-orange-100 text-orange-800 dark:bg-orange-500/30 dark:text-orange-200" : category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : category.futureActionType === "condicion" ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/30 dark:text-cyan-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}
-          </div>
-        ) : (
-          <span className="px-2 py-1 rounded text-xs font-medium text-gray-800 dark:text-gray-400 flex">No requiere</span>
-        )}
-      </td>
+      <td className="py-3 px-4 text-center">{category.requiresAction ? <div className="flex justify-start items-center gap-1">{category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "accion" ? "bg-orange-100 text-orange-800 dark:bg-orange-500/30 dark:text-orange-200" : category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : category.futureActionType === "condicion" ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/30 dark:text-cyan-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
       <td className="py-3 px-4 text-center">
         <span className={`px-2 py-1 rounded text-xs font-medium ${(category.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(category.requiresSignature ?? true) ? "Sí" : "No"}</span>
       </td>
