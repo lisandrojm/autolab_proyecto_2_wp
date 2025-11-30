@@ -172,13 +172,22 @@ export const ManageOrdersPage: React.FC = () => {
   const handleApprove = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm("¿Aprobar este pedido?", "El pedido será aprobado y el usuario recibirá una notificación de 'Documento enviado para firma'.", "Sí, Aprobar", "Cancelar");
+    const confirmMessage = selectedOrder.requiresSignature
+      ? "El pedido será aprobado y el usuario recibirá una notificación para firmar el documento por email."
+      : "El pedido será aprobado y el usuario será notificado.";
+
+    const result = await sweetAlert.confirm("¿Aprobar este pedido?", confirmMessage, "Sí, Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
       setUpdatingStatus(true);
       const updated = await hrManagementAPI.orders.approve(selectedOrder._id);
-      sweetAlert.success("Aprobado", "El pedido ha sido aprobado y el usuario ha sido notificado");
+
+      const successMessage = selectedOrder.requiresSignature
+        ? "Se ha notificado al usuario que debe firmar el documento por email"
+        : "El pedido ha sido aprobado correctamente";
+
+      sweetAlert.success("Aprobado", successMessage);
       setSelectedOrder(updated);
       loadOrders();
     } catch (error: any) {

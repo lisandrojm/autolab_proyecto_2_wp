@@ -430,14 +430,27 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    await Notification.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      type: "order",
-      title: "Documento enviado para firma",
-      message: `Tu pedido "${orderDisplayName}" ha sido aprobado y el documento ha sido enviado para firma.`,
-      linkUrl: `/orders/${order._id}`,
-    });
+    const orderNumber = order.orderNumber || "N/A";
+
+    if (order.requiresSignature) {
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: order.userId,
+        type: "order",
+        title: "Pedido pendiente de firma",
+        message: `Tenés un pedido pendiente de firma. Revisá tu casilla de email para completar el proceso. Pedido N°: ${orderNumber}`,
+        linkUrl: `/orders/${order._id}`,
+      });
+    } else {
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: order.userId,
+        type: "order",
+        title: "Pedido aprobado",
+        message: `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado correctamente`,
+        linkUrl: `/orders/${order._id}`,
+      });
+    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,
