@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie, faShoppingCart, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie, faShoppingCart, faFilePdf, faUsersGear } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -289,7 +289,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
-      if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faList, label: "Categorías de Pedidos", scope: "global", dividerTop: true });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faList, label: "ABM Pedidos", scope: "global", dividerTop: true });
       if (hasPermission("orders:view")) base.push({ path: "/hr/pdf-templates", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
 
       if (hasPermission("creative:view")) {
@@ -478,6 +478,7 @@ export const MobileNavbar: React.FC = () => {
           <div className="px-2 mb-2">
             <button onClick={() => toggleAdminSection("users")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
+                <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
                 Admin <span className="uppercase">Usuarios</span>
               </span>
               <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "users" ? "rotate-180" : ""}`} />
@@ -492,6 +493,7 @@ export const MobileNavbar: React.FC = () => {
           <div className="px-2 mb-2">
             <button onClick={() => toggleAdminSection("general")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
+                <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
                 Admin <span className="uppercase">General</span>
               </span>
               <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "general" ? "rotate-180" : ""}`} />
@@ -506,7 +508,7 @@ export const MobileNavbar: React.FC = () => {
           <div className="px-2 mb-2">
             <button onClick={() => toggleAdminSection("config")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
-                <FontAwesomeIcon icon={faCog} className="mr-2 h-3 w-3" />
+                <FontAwesomeIcon icon={faCog} className="mr-2 h-4 w-4" />
                 Configuración
               </span>
               <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "config" ? "rotate-180" : ""}`} />
