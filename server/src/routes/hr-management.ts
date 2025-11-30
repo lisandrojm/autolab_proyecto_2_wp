@@ -542,7 +542,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_pre_approved",
-      description: `Order "${orderDisplayName}" pre-approved by manager`,
+      description: `Pedido "${orderDisplayName}" preaprobado por el supervisor`,
       entityType: "Order",
       entityId: order._id,
     });
@@ -605,7 +605,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       tenantId: req.tenantObjectId,
       userId: order.userId,
       action: "order_approved",
-      description: `Order "${orderDisplayName}" approved by manager`,
+      description: `Pedido "${orderDisplayName}" aprobado por el supervisor`,
       entityType: "Order",
       entityId: order._id,
     });
