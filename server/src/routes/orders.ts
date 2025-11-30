@@ -15,6 +15,7 @@ import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+import { getPlainOrderNumber } from "../utils/orderHelpers.js";
 
 const router = Router();
 
@@ -672,7 +673,7 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
         userId: supervisor._id,
         type: "order_signature_notification",
         title: "Usuario indica firma completada",
-        message: `El usuario ${userName} indica que completó la firma del documento del pedido ${orderDisplayName} N°: ${order.orderNumber}. Por favor verificá antes de confirmar.`,
+        message: `El usuario ${userName} indica que completó la firma del documento del pedido ${orderDisplayName} N°: ${getPlainOrderNumber(order.orderNumber)}. Por favor verificá antes de confirmar.`,
         linkUrl: `/hr-management/orders`,
       }).catch(err => {
         console.error(`Error creating notification for user ${supervisor._id}:`, err);

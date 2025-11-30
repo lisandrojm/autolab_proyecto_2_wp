@@ -47,10 +47,16 @@ export const getCategoryName = (order: OrderData): string => {
   return category.name || order.category || "Sin categoría";
 };
 
-export const getOrderNumber = (order: OrderData): string => {
-  const parts = order.orderNumber.split("-");
-  const numericPart = parts.length > 1 ? parts[1] : order.orderNumber;
-  return `#${numericPart}`;
+export const getPlainOrderNumber = (orderNumber: string | undefined | null): string => {
+  if (!orderNumber) return "";
+  return orderNumber.includes("-")
+    ? orderNumber.split("-")[1]
+    : orderNumber;
+};
+
+export const getOrderNumber = (orderNumber: string | undefined | null): string => {
+  const plain = getPlainOrderNumber(orderNumber);
+  return plain ? `#${plain}` : "";
 };
 
 export const getSubcategoriesArray = (order: OrderData): string[] => {

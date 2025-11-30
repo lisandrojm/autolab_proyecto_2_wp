@@ -12,6 +12,7 @@ import { ActivityLog } from "../models/ActivityLog.js";
 import { authenticateToken, AuthenticatedRequest, requireRole } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
+import { getPlainOrderNumber } from "../utils/orderHelpers.js";
 
 const router = Router();
 
@@ -449,7 +450,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
         userId: order.userId,
         type: "order",
         title: "Documento enviado para firma",
-        message: `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.`,
+        message: `Tu pedido "${orderDisplayName}" N°: ${getPlainOrderNumber(orderNumber)} ha sido aprobado. Revisá tu casilla de email para firmar el documento.`,
         linkUrl: `/orders/${order._id}`,
       });
     } else {
@@ -458,7 +459,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
         userId: order.userId,
         type: "order",
         title: "Pedido aprobado",
-        message: `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado correctamente`,
+        message: `Tu pedido "${orderDisplayName}" N°: ${getPlainOrderNumber(orderNumber)} ha sido aprobado correctamente`,
         linkUrl: `/orders/${order._id}`,
       });
     }

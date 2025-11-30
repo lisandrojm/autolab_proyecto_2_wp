@@ -215,7 +215,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           <div className="flex flex-wrap justify-between gap-3">
             {/* Pedido */}
             <span>
-              <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(order)}</p>
+              <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(order.orderNumber)}</p>
             </span>
             {/* Estado */}
             <div className="flex flex-wrap gap-2">

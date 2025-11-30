@@ -7,6 +7,7 @@ import { orderCategoriesAPI, OrderCategory } from "../api/orderCategories";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart, faPlus, faEdit, faTrash, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { getFormattedOrderNumber } from "../utils/orderHelpers";
 
 export const OrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -290,7 +291,7 @@ export const OrdersPage: React.FC = () => {
                 key={order._id}
                 header={{
                   title: `${getCategoryLabel(order.category)}${order.subcategories && order.subcategories.length > 0 ? " - " + order.subcategories.join(", ") : ""}`,
-                  subtitle: `Pedido #${order.orderNumber}`,
+                  subtitle: `Pedido ${getFormattedOrderNumber(order.orderNumber)}`,
                   icon: faClipboardList,
                   badges: [{ text: badge.text, variant: badge.variant }],
                 }}

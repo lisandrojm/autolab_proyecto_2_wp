@@ -11,6 +11,7 @@ import { Modal } from "../components/ui/Modal";
 import { Card } from "../components/ui/Card";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
+import { getFormattedOrderNumber } from "../utils/orderHelpers";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -391,11 +392,6 @@ export const ManageOrdersPage: React.FC = () => {
     return category.name || order.category || "Sin categoría";
   };
 
-  const getOrderNumber = (order: Order): string => {
-    const parts = order.orderNumber.split("-");
-    const numericPart = parts.length > 1 ? parts[1] : order.orderNumber;
-    return `#${numericPart}`;
-  };
 
   const getUserRole = (user: any): string => {
     if (!user) return "Usuario";
@@ -432,7 +428,7 @@ export const ManageOrdersPage: React.FC = () => {
   const getCardBadges = (order: Order) => {
     const badges = [
       {
-        text: getOrderNumber(order),
+        text: getFormattedOrderNumber(order.orderNumber),
         className: "text-xs bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400 px-2 py-1 rounded",
       },
     ];
@@ -704,7 +700,7 @@ export const ManageOrdersPage: React.FC = () => {
                           >
                             {/* --- N° PEDIDO --- */}
                             <td className="py-3 px-4">
-                              <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getOrderNumber(order)}</span>
+                              <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedOrderNumber(order.orderNumber)}</span>
                             </td>
                             {/* --- Tipo --- */}
                             <td className="py-3 px-4 whitespace-nowrap">
@@ -864,7 +860,7 @@ export const ManageOrdersPage: React.FC = () => {
             <div className="flex flex-wrap justify-between gap-3">
               {/* Pedido */}
               <span>
-                <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getOrderNumber(selectedOrder)}</p>
+                <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Pedido: {getFormattedOrderNumber(selectedOrder.orderNumber)}</p>
               </span>
               {/* Estado */}
               <div className="flex flex-wrap gap-2">

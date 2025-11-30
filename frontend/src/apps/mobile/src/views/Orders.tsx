@@ -326,7 +326,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     <div className="flex flex-col items-start justify-between mb-2 w-full space-y-2">
                       <div className="flex justify-between gap-2 items-center w-full">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order)}</span>
+                          <span className="inline-block px-2 py-0.5 text-[12px] text-gray-400 dark:text-gray-400 bg-blue-50 dark:bg-gray-600/20 rounded">{getOrderNumber(order.orderNumber)}</span>
 
                           <StatusBadge type={mapOrderStatusToStatusTypeForMobile(order.status)} size="sm" />
 

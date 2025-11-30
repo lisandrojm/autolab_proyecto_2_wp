@@ -17,6 +17,7 @@ import { Notification } from "../models/Notification.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
+import { getPlainOrderNumber } from "../utils/orderHelpers.js";
 
 const router = Router();
 
@@ -604,7 +605,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const orderDisplayName = `${categoryName}${subcategoryText}`;
     const orderNumber = order.orderNumber || "N/A";
 
-    const notificationMessage = requiresSignature ? `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
+    const notificationMessage = requiresSignature ? `Tu pedido "${orderDisplayName}" N°: ${getPlainOrderNumber(orderNumber)} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
 
     await Notification.create({
       tenantId: req.tenantObjectId,
@@ -802,7 +803,7 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
       userId: order.userId,
       type: "order",
       title: "Firma confirmada",
-      message: `Tu firma del pedido ${orderDisplayName} N°: ${order.orderNumber} ha sido verificada y confirmada.`,
+      message: `Tu firma del pedido ${orderDisplayName} N°: ${getPlainOrderNumber(order.orderNumber)} ha sido verificada y confirmada.`,
       linkUrl: `/orders/${order._id}`,
     });
 
