@@ -27,7 +27,8 @@ export default function Home({ onNavigate }: HomeProps) {
       try {
         setActivityLoading(true);
         const data = await personnelAPI.getRecentActivity();
-        setRecentActivity(data.slice(0, 3));
+        const filteredData = data.filter((activity) => activity.action !== "order_pre_approved");
+        setRecentActivity(filteredData.slice(0, 3));
       } catch (error) {
         console.error("Error fetching activity:", error);
       } finally {

@@ -16,6 +16,7 @@ router.get("/recent", async (req: AuthenticatedRequest & TenantRequest, res) => 
     const activities = await ActivityLog.find({
       tenantId: req.tenantObjectId,
       userId,
+      action: { $ne: "order_pre_approved" },
     })
       .sort({ createdAt: -1 })
       .limit(10);
@@ -71,6 +72,7 @@ router.get("/all", async (req: AuthenticatedRequest & TenantRequest, res) => {
       ActivityLog.find({
         tenantId: req.tenantObjectId,
         userId,
+        action: { $ne: "order_pre_approved" },
       })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -78,6 +80,7 @@ router.get("/all", async (req: AuthenticatedRequest & TenantRequest, res) => {
       ActivityLog.countDocuments({
         tenantId: req.tenantObjectId,
         userId,
+        action: { $ne: "order_pre_approved" },
       }),
     ]);
 
