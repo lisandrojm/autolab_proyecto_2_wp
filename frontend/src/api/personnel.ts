@@ -317,8 +317,7 @@ export const personnelAPI = {
   },
 
   createOrder: async (orderData: {
-    title: string;
-    description: string;
+    description?: string;
     category?: string;
     categoryId?: string;
     subcategories?: string[];
@@ -332,8 +331,7 @@ export const personnelAPI = {
     futureActionDocumento?: string;
   }): Promise<OrderData> => {
     const formData = new FormData();
-    formData.append('title', orderData.title);
-    formData.append('description', orderData.description);
+    if (orderData.description) formData.append('description', orderData.description);
     if (orderData.category) formData.append('category', orderData.category);
     if (orderData.categoryId) formData.append('categoryId', orderData.categoryId);
     if (orderData.subcategories && orderData.subcategories.length > 0) formData.append('subcategories', JSON.stringify(orderData.subcategories));

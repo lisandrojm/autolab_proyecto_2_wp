@@ -100,7 +100,7 @@ const uploadDocument = multer({
 }).single("document");
 
 const createOrderSchema = z.object({
-  description: z.string().min(1),
+  description: z.string().default(""),
   category: z.string().default("other"),
   categoryId: z.string().optional(),
   subcategories: z.array(z.string()).default([]),
