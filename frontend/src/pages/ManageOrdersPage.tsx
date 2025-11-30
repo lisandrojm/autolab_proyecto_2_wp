@@ -129,8 +129,10 @@ export const ManageOrdersPage: React.FC = () => {
       });
 
       setDocStats(docCounts);
+      return data.orders;
     } catch (error) {
       console.error("Error loading orders:", error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -158,9 +160,12 @@ export const ManageOrdersPage: React.FC = () => {
 
     try {
       setUpdatingStatus(true);
-      const updated = await hrManagementAPI.orders.preApprove(selectedOrder._id);
-      setSelectedOrder(updated);
-      await loadOrders();
+      await hrManagementAPI.orders.preApprove(selectedOrder._id);
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
       setUpdatingStatus(false);
       await sweetAlert.success("Preaprobado", "El pedido ha sido pre-aprobado correctamente");
     } catch (error: any) {
@@ -181,14 +186,17 @@ export const ManageOrdersPage: React.FC = () => {
 
     try {
       setUpdatingStatus(true);
-      const updated = await hrManagementAPI.orders.approve(selectedOrder._id);
+      await hrManagementAPI.orders.approve(selectedOrder._id);
 
       const successMessage = selectedOrder.requiresSignature
         ? "Se ha notificado al usuario que debe firmar el documento por email"
         : "El pedido ha sido aprobado correctamente";
 
-      setSelectedOrder(updated);
-      await loadOrders();
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
       setUpdatingStatus(false);
       await sweetAlert.success("Aprobado", successMessage);
     } catch (error: any) {
@@ -205,9 +213,12 @@ export const ManageOrdersPage: React.FC = () => {
 
     try {
       setUpdatingStatus(true);
-      const updated = await hrManagementAPI.orders.reject(selectedOrder._id);
-      setSelectedOrder(updated);
-      await loadOrders();
+      await hrManagementAPI.orders.reject(selectedOrder._id);
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
       setUpdatingStatus(false);
       await sweetAlert.success("Rechazado", "El pedido ha sido rechazado");
     } catch (error: any) {
@@ -224,9 +235,12 @@ export const ManageOrdersPage: React.FC = () => {
 
     try {
       setUpdatingStatus(true);
-      const updated = await hrManagementAPI.orders.deliver(selectedOrder._id);
-      setSelectedOrder(updated);
-      await loadOrders();
+      await hrManagementAPI.orders.deliver(selectedOrder._id);
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
       setUpdatingStatus(false);
       await sweetAlert.success("Entregado", "El pedido ha sido marcado como entregado");
     } catch (error: any) {
@@ -271,9 +285,12 @@ export const ManageOrdersPage: React.FC = () => {
 
     try {
       setUpdatingStatus(true);
-      const updated = await hrManagementAPI.orders.sendSignature(selectedOrder._id);
-      setSelectedOrder(updated);
-      await loadOrders();
+      await hrManagementAPI.orders.sendSignature(selectedOrder._id);
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
       setUpdatingStatus(false);
       await sweetAlert.success("Enviado", "El documento ha sido enviado para firma");
     } catch (error: any) {
@@ -290,9 +307,12 @@ export const ManageOrdersPage: React.FC = () => {
 
     try {
       setUpdatingStatus(true);
-      const updated = await hrManagementAPI.orders.markSigned(selectedOrder._id);
-      setSelectedOrder(updated);
-      await loadOrders();
+      await hrManagementAPI.orders.markSigned(selectedOrder._id);
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
       setUpdatingStatus(false);
       await sweetAlert.success("Firma confirmada", "El documento ha sido marcado como firmado. El usuario será notificado.");
     } catch (error: any) {
