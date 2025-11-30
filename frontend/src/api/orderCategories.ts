@@ -43,6 +43,7 @@ export interface OrderCategory {
   documentoRequerido?: string;
   requiresSignature?: boolean;
   requiresUserConfirmation?: boolean;
+  pdfTemplateId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +79,7 @@ export const orderCategoriesAPI = {
     fechaLimite?: string;
     documentoRequerido?: string;
     requiresSignature?: boolean;
+    pdfTemplateId?: string;
   }): Promise<OrderCategory> => {
     const { data } = await axios.post<OrderCategory>('/order-categories', categoryData);
     return data;
@@ -104,6 +106,7 @@ export const orderCategoriesAPI = {
       fechaLimite?: string;
       documentoRequerido?: string;
       requiresSignature?: boolean;
+      pdfTemplateId?: string;
     }
   ): Promise<OrderCategory> => {
     const { data } = await axios.put<OrderCategory>(`/order-categories/${id}`, updates);

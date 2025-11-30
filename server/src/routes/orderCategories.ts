@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import { OrderCategory } from "../models/OrderCategory.js";
+import { PdfTemplate } from "../models/PdfTemplate.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
+import mongoose from "mongoose";
 
 const router = Router();
 
@@ -43,6 +45,7 @@ const createCategorySchema = z
     documentoRequerido: z.string().max(200).optional(),
     requiresSignature: z.boolean().default(true),
     requiresUserConfirmation: z.boolean().default(false),
+    pdfTemplateId: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -126,6 +129,7 @@ const updateCategorySchema = z
     documentoRequerido: z.string().max(200).optional(),
     requiresSignature: z.boolean().optional(),
     requiresUserConfirmation: z.boolean().optional(),
+    pdfTemplateId: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -290,6 +294,24 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       return;
     }
 
+    if (data.pdfTemplateId) {
+      if (!mongoose.Types.ObjectId.isValid(data.pdfTemplateId)) {
+        res.status(400).json({ error: "Invalid pdfTemplateId format" });
+        return;
+      }
+
+      const template = await PdfTemplate.findOne({
+        _id: data.pdfTemplateId,
+        tenantId: req.tenantObjectId,
+        isActive: true,
+      });
+
+      if (!template) {
+        res.status(400).json({ error: "Plantilla PDF no encontrada o inactiva" });
+        return;
+      }
+    }
+
     const maxOrderCategory = await OrderCategory.findOne({
       tenantId: req.tenantObjectId,
     })
@@ -304,6 +326,10 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       ...data,
       sortOrder: nextSortOrder,
     };
+
+    if (categoryData.pdfTemplateId) {
+      categoryData.pdfTemplateId = new mongoose.Types.ObjectId(categoryData.pdfTemplateId);
+    }
 
     if (categoryData.requiresAction && !categoryData.futureActionType) {
       categoryData.futureActionType = "sinVencimiento";
@@ -361,7 +387,30 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       }
     }
 
-    Object.assign(category, data);
+    if (data.pdfTemplateId) {
+      if (!mongoose.Types.ObjectId.isValid(data.pdfTemplateId)) {
+        res.status(400).json({ error: "Invalid pdfTemplateId format" });
+        return;
+      }
+
+      const template = await PdfTemplate.findOne({
+        _id: data.pdfTemplateId,
+        tenantId: req.tenantObjectId,
+        isActive: true,
+      });
+
+      if (!template) {
+        res.status(400).json({ error: "Plantilla PDF no encontrada o inactiva" });
+        return;
+      }
+    }
+
+    const updateData: any = { ...data };
+    if (updateData.pdfTemplateId) {
+      updateData.pdfTemplateId = new mongoose.Types.ObjectId(updateData.pdfTemplateId);
+    }
+
+    Object.assign(category, updateData);
     await category.save();
 
     await ActivityLog.create({

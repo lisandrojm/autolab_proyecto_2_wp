@@ -50,6 +50,7 @@ export interface IOrderCategory extends Document {
   documentoRequerido?: string;
   requiresSignature?: boolean;
   requiresUserConfirmation?: boolean;
+  pdfTemplateId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -96,6 +97,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     documentoRequerido: { type: String, trim: true },
     requiresSignature: { type: Boolean, default: true },
     requiresUserConfirmation: { type: Boolean, default: false },
+    pdfTemplateId: { type: Schema.Types.ObjectId, ref: "PdfTemplate" },
   },
   { timestamps: true }
 );

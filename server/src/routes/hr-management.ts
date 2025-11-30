@@ -21,7 +21,6 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
-import { generatePdfFromTemplate } from "../utils/pdfGenerator.js";
 
 const router = Router();
 
@@ -600,31 +599,8 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
             numeroOrden: getPlainOrderNumber(order.orderNumber),
           };
 
-          const storagePath = path.join(__dirname, "../../storage");
-          const pdfFileName = `preaprobacion_${order._id}.pdf`;
-          const tenantIdStr = String(req.tenantObjectId);
-          const pdfRelativePath = `/${tenantIdStr}/${order.userId}/orders/${order._id}/${pdfFileName}`;
-          const pdfFullPath = path.join(storagePath, pdfRelativePath);
-
-          const tenantInfo = {
-            razonSocial: tenant?.company?.legalName || tenant?.name || "Empresa",
-            cuit: tenant?.company?.taxId,
-            ciudad: tenant?.company?.address?.city || "Ciudad Autónoma de Buenos Aires",
-            logoPath: tenant?.company?.logoUrl ? path.join(storagePath, tenant.company.logoUrl) : undefined,
-            firmaRRHHPath: tenant?.company?.firmaRRHHUrl ? path.join(storagePath, tenant.company.firmaRRHHUrl) : undefined,
-          };
-
-          await generatePdfFromTemplate({
-            templateContent: template.content,
-            variables,
-            outputPath: pdfFullPath,
-            tenantInfo,
-          });
-
-          order.pdfPreAprobacionUrl = `/storage${pdfRelativePath}`;
-          await order.save();
-
-          console.log(`PDF generated successfully for order ${order._id}: ${order.pdfPreAprobacionUrl}`);
+          // PDF generation is now handled in hr-admin.ts using generateOrderPDF
+          console.log(`PDF generation skipped - handled by new system in hr-admin.ts`);
         }
       } catch (pdfError) {
         console.error("Error generating PDF for order:", pdfError);

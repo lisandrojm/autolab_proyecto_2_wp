@@ -5,6 +5,8 @@ import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
 import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
+import { PdfTemplate } from "../models/PdfTemplate.js";
+import { Tenant } from "../models/Tenant.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { HRDocument } from "../models/Document.js";
 import { Notification } from "../models/Notification.js";
@@ -13,6 +15,7 @@ import { authenticateToken, AuthenticatedRequest, requireRole } from "../middlew
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import { generateOrderPDF } from "../utils/pdfGenerator.js";
 
 const router = Router();
 
@@ -367,7 +370,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    });
+    }).populate("userId").populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -385,7 +388,8 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const category = order.categoryId as any;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -397,6 +401,57 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       entityType: "Order",
       entityId: order._id,
     });
+
+    if (category && category.pdfTemplateId) {
+      try {
+        const template = await PdfTemplate.findOne({
+          _id: category.pdfTemplateId,
+          tenantId: req.tenantObjectId,
+          isActive: true,
+        });
+
+        if (template) {
+          const user = order.userId as any;
+          const tenant = await Tenant.findById(req.tenantObjectId);
+          const tenantName = tenant?.name || tenant?.slug || "Organización";
+
+          const pdfResult = await generateOrderPDF(
+            order,
+            category,
+            template,
+            user,
+            req.tenantObjectId.toString(),
+            tenantName
+          );
+
+          if (pdfResult.success) {
+            order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+            await order.save();
+
+            await ActivityLog.create({
+              tenantId: req.tenantObjectId,
+              userId: order.userId,
+              action: "pdf_generated",
+              description: `PDF generado automáticamente para pedido "${orderDisplayName}"`,
+              entityType: "Order",
+              entityId: order._id,
+            });
+          } else {
+            console.error("PDF generation failed:", pdfResult.error);
+            await ActivityLog.create({
+              tenantId: req.tenantObjectId,
+              userId: preApproverId,
+              action: "pdf_generation_failed",
+              description: `Error al generar PDF para pedido "${orderDisplayName}": ${pdfResult.error}`,
+              entityType: "Order",
+              entityId: order._id,
+            });
+          }
+        }
+      } catch (pdfError) {
+        console.error("Error in PDF generation process:", pdfError);
+      }
+    }
 
     res.json(order);
   } catch (error) {
@@ -517,6 +572,88 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
     res.json(order);
   } catch (error) {
     console.error("Reject order error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const adminId = req.user!.userId;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    }).populate("userId").populate("categoryId");
+
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    const category = order.categoryId as any;
+
+    if (!category || !category.pdfTemplateId) {
+      res.status(400).json({ error: "Este tipo de pedido no tiene plantilla PDF asignada" });
+      return;
+    }
+
+    const template = await PdfTemplate.findOne({
+      _id: category.pdfTemplateId,
+      tenantId: req.tenantObjectId,
+      isActive: true,
+    });
+
+    if (!template) {
+      res.status(404).json({ error: "Plantilla PDF no encontrada o inactiva" });
+      return;
+    }
+
+    const user = order.userId as any;
+    const tenant = await Tenant.findById(req.tenantObjectId);
+    const tenantName = tenant?.name || tenant?.slug || "Organización";
+
+    const pdfResult = await generateOrderPDF(
+      order,
+      category,
+      template,
+      user,
+      req.tenantObjectId.toString(),
+      tenantName
+    );
+
+    if (!pdfResult.success) {
+      res.status(500).json({ error: `Error al generar PDF: ${pdfResult.error}` });
+      return;
+    }
+
+    if (order.pdfPreAprobacionUrl) {
+      const { deletePdfFromStorage } = await import("../utils/pdfStorage.js");
+      await deletePdfFromStorage(order.pdfPreAprobacionUrl);
+    }
+
+    order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+    await order.save();
+
+    const categoryName = category?.name || order.category;
+    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const orderDisplayName = `${categoryName}${subcategoryText}`;
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId: adminId,
+      action: "pdf_regenerated",
+      description: `PDF regenerado manualmente para pedido "${orderDisplayName}"`,
+      entityType: "Order",
+      entityId: order._id,
+    });
+
+    res.json({
+      success: true,
+      message: "PDF regenerado exitosamente",
+      pdfUrl: pdfResult.pdfUrl
+    });
+  } catch (error) {
+    console.error("Regenerate PDF error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
