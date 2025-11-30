@@ -534,9 +534,27 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const category = await OrderCategory.findById(order.categoryId);
+    const requiresSignature = order.requiresSignature || category?.requiresSignature || false;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
+    const orderNumber = order.orderNumber || "N/A";
+
+    if (requiresSignature) {
+      order.signatureStatus = "sent";
+      order.signatureSentAt = new Date();
+      await order.save();
+
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: order.userId,
+        type: "order",
+        title: "Documento enviado para firma",
+        message: `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.`,
+        linkUrl: `/orders/${order._id}`,
+      });
+    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,
@@ -577,7 +595,9 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
 
-    if (order.requiresSignature) {
+    const alreadyNotifiedForSignature = order.requiresSignature && order.signatureStatus === "sent";
+
+    if (order.requiresSignature && order.signatureStatus !== "sent") {
       order.signatureStatus = "sent";
       order.signatureSentAt = new Date();
     }
@@ -588,18 +608,20 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    const notificationMessage = order.requiresSignature
-      ? `Tu pedido "${orderDisplayName}" ha sido aprobado y el documento ha sido enviado para firma.`
-      : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
+    if (!alreadyNotifiedForSignature) {
+      const notificationMessage = order.requiresSignature
+        ? `Tu pedido "${orderDisplayName}" ha sido aprobado y el documento ha sido enviado para firma.`
+        : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
 
-    await Notification.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      type: "order",
-      title: order.requiresSignature ? "Documento enviado para firma" : "Pedido Aprobado",
-      message: notificationMessage,
-      linkUrl: `/orders/${order._id}`,
-    });
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: order.userId,
+        type: "order",
+        title: order.requiresSignature ? "Documento enviado para firma" : "Pedido Aprobado",
+        message: notificationMessage,
+        linkUrl: `/orders/${order._id}`,
+      });
+    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,

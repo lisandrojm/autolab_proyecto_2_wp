@@ -384,9 +384,27 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const category = await OrderCategory.findById(order.categoryId);
+    const requiresSignature = order.requiresSignature || category?.requiresSignature || false;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
+    const orderNumber = order.orderNumber || "N/A";
+
+    if (requiresSignature) {
+      order.signatureStatus = "sent";
+      order.signatureSentAt = new Date();
+      await order.save();
+
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: order.userId,
+        type: "order",
+        title: "Documento enviado para firma",
+        message: `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado. Revisá tu casilla de email para firmar el documento.`,
+        linkUrl: `/orders/${order._id}`,
+      });
+    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,
@@ -427,6 +445,13 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     order.approvedBy = new Types.ObjectId(approverId);
     order.approvedAt = new Date();
 
+    const alreadyNotifiedForSignature = order.requiresSignature && order.signatureStatus === "sent";
+
+    if (order.requiresSignature && order.signatureStatus !== "sent") {
+      order.signatureStatus = "sent";
+      order.signatureSentAt = new Date();
+    }
+
     await order.save();
 
     const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
@@ -435,24 +460,26 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
 
     const orderNumber = order.orderNumber || "N/A";
 
-    if (order.requiresSignature) {
-      await Notification.create({
-        tenantId: req.tenantObjectId,
-        userId: order.userId,
-        type: "order",
-        title: "Pedido pendiente de firma",
-        message: `Tenés un pedido pendiente de firma. Revisá tu casilla de email para completar el proceso. Pedido N°: ${orderNumber}`,
-        linkUrl: `/orders/${order._id}`,
-      });
-    } else {
-      await Notification.create({
-        tenantId: req.tenantObjectId,
-        userId: order.userId,
-        type: "order",
-        title: "Pedido aprobado",
-        message: `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado correctamente`,
-        linkUrl: `/orders/${order._id}`,
-      });
+    if (!alreadyNotifiedForSignature) {
+      if (order.requiresSignature) {
+        await Notification.create({
+          tenantId: req.tenantObjectId,
+          userId: order.userId,
+          type: "order",
+          title: "Pedido pendiente de firma",
+          message: `Tenés un pedido pendiente de firma. Revisá tu casilla de email para completar el proceso. Pedido N°: ${orderNumber}`,
+          linkUrl: `/orders/${order._id}`,
+        });
+      } else {
+        await Notification.create({
+          tenantId: req.tenantObjectId,
+          userId: order.userId,
+          type: "order",
+          title: "Pedido aprobado",
+          message: `Tu pedido "${orderDisplayName}" N°: ${orderNumber} ha sido aprobado correctamente`,
+          linkUrl: `/orders/${order._id}`,
+        });
+      }
     }
 
     await ActivityLog.create({

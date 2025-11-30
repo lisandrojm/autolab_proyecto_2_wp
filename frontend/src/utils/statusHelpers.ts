@@ -87,5 +87,9 @@ export function mapSignatureStateToStatusType(
     return "firma_firmado";
   }
 
+  if (order.signatureStatus === "sent") {
+    return "firma_enviado_a_firmar";
+  }
+
   return "firma_pendiente";
 }
