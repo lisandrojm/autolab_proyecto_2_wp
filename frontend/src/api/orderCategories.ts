@@ -42,6 +42,7 @@ export interface OrderCategory {
   fechaLimite?: string;
   documentoRequerido?: string;
   requiresSignature?: boolean;
+  requiresUserConfirmation?: boolean;
   createdAt: string;
   updatedAt: string;
 }

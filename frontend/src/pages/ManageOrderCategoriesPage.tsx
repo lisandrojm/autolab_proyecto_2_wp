@@ -101,6 +101,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     fechaLimite?: string;
     documentoRequerido?: string;
     requiresSignature: boolean;
+    requiresUserConfirmation?: boolean;
   }>({
     name: "",
     informacion: "",
@@ -119,6 +120,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     fechaLimite: undefined,
     documentoRequerido: undefined,
     requiresSignature: true,
+    requiresUserConfirmation: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -172,6 +174,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       fechaLimite: undefined,
       documentoRequerido: undefined,
       requiresSignature: true,
+      requiresUserConfirmation: false,
     });
     setShowModal(true);
   };
@@ -196,6 +199,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       fechaLimite: category.fechaLimite,
       documentoRequerido: category.documentoRequerido,
       requiresSignature: category.requiresSignature ?? true,
+      requiresUserConfirmation: category.requiresUserConfirmation ?? false,
     });
     setShowModal(true);
   };
@@ -277,11 +281,12 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         dateMode: formData.categoryType === "fecha" ? formData.dateMode : undefined,
         montoMaximo: formData.categoryType === "dinero" && formData.montoMaximo ? formData.montoMaximo : undefined,
         requiresAction: formData.requiresAction,
-        actionText: formData.requiresAction ? formData.actionText : undefined,
+        actionText: formData.requiresAction && formData.requiresUserConfirmation ? formData.actionText : undefined,
         tituloAccion: formData.requiresAction && formData.futureActionType === "otra" ? formData.tituloAccion : undefined,
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
         deadlineMode: formData.requiresAction && formData.futureActionType ? formData.deadlineMode : undefined,
         requiresSignature: formData.requiresSignature,
+        requiresUserConfirmation: formData.requiresAction ? formData.requiresUserConfirmation : false,
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
 
@@ -292,6 +297,8 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         payload.plazoDias = undefined;
         payload.fechaLimite = undefined;
         payload.documentoRequerido = undefined;
+        payload.requiresUserConfirmation = false;
+        payload.actionText = undefined;
       } else {
         // mantiene fecha o días si corresponden, SIN borrarlos por error
         // --- copiar EXACTAMENTE la lógica de plazoDias pero aplicada a fechaLimite ---

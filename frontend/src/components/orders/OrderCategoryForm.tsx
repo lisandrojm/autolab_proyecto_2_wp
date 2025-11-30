@@ -25,6 +25,7 @@ interface OrderCategoryFormProps {
     fechaLimite?: string;
     documentoRequerido?: string;
     requiresSignature?: boolean;
+    requiresUserConfirmation?: boolean;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -355,16 +356,46 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               {/* Campos condicionales excepto sinVencimiento */}
               {renderFutureActionConditionalFields()}
 
-              {/* Texto del Checkbox */}
+              {/* Confirmación del Usuario */}
               {formData.futureActionType && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto del Checkbox *</label>
-                    <button type="button" onClick={() => setShowActionTextInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400">
-                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                    </button>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="requiresUserConfirmation"
+                      checked={formData.requiresUserConfirmation ?? false}
+                      onChange={(e) => {
+                        setFormData({
+                          ...formData,
+                          requiresUserConfirmation: e.target.checked,
+                          actionText: e.target.checked ? formData.actionText : ""
+                        });
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <label htmlFor="requiresUserConfirmation" className="text-sm text-gray-700 dark:text-gray-300">
+                      Requiere confirmación del usuario
+                    </label>
                   </div>
-                  <input type="text" required={formData.requiresAction} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white" placeholder="Ej: Me comprometo a adjuntar el documento..." />
+
+                  {formData.requiresUserConfirmation && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Texto del Checkbox *</label>
+                        <button type="button" onClick={() => setShowActionTextInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        required={formData.requiresUserConfirmation}
+                        value={formData.actionText}
+                        onChange={(e) => setFormData({ ...formData, actionText: e.target.value })}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white"
+                        placeholder="Ej: Me comprometo a adjuntar el documento..."
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
