@@ -301,7 +301,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             </div>
           )}
 
-          {category.actionText && category.futureActionType && (
+          {category.requiresUserConfirmation && category.actionText && category.futureActionType && (
             <div>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={actionCompleted} onChange={(e) => onActionCompletedChange(e.target.checked)} required className="mt-0.5 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" />
