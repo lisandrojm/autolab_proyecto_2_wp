@@ -91,9 +91,12 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       window.location.reload();
     } catch (error: any) {
       console.error("Error notifying signature:", error);
-      const errorMessage = error?.response?.data?.error || "No se pudo enviar la notificación";
+      console.error("Error response:", error?.response);
+      console.error("Error data:", error?.response?.data);
 
-      if (errorMessage.includes("Ya notificaste")) {
+      const errorMessage = error?.response?.data?.error || error?.message || "No se pudo enviar la notificación";
+
+      if (errorMessage.includes("Ya notificaste") || errorMessage.includes("ya notificaste")) {
         await sweetAlert.info("Ya notificado", "Ya notificaste anteriormente que completaste la firma. El supervisor está revisando.");
         onClose();
         window.location.reload();

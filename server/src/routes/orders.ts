@@ -612,12 +612,15 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
     }
 
     if (order.signatureNotifiedAt) {
+      console.log(`Order ${order.orderNumber} already notified at:`, order.signatureNotifiedAt);
       res.status(400).json({ error: "Ya notificaste que completaste la firma" });
       return;
     }
 
+    console.log(`Setting signatureNotifiedAt for order ${order.orderNumber}`);
     order.signatureNotifiedAt = new Date();
     await order.save();
+    console.log(`Saved order with signatureNotifiedAt:`, order.signatureNotifiedAt);
 
     const userInfo = order.userId as any;
     const categoryInfo = order.categoryId as any;
