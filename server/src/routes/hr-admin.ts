@@ -22,11 +22,16 @@ const updateEmployeeSchema = z.object({
   lastName: z.string().optional(),
   position: z.string().optional(),
   department: z.string().optional(),
-  hireDate: z.string().transform((str) => new Date(str)).optional(),
-  vacationPolicy: z.object({
-    annualDays: z.number().min(0).optional(),
-    carryOverDays: z.number().min(0).optional(),
-  }).optional(),
+  hireDate: z
+    .string()
+    .transform((str) => new Date(str))
+    .optional(),
+  vacationPolicy: z
+    .object({
+      annualDays: z.number().min(0).optional(),
+      carryOverDays: z.number().min(0).optional(),
+    })
+    .optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -55,8 +60,14 @@ const createEventSchema = z.object({
 const updateEventSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
-  start: z.string().transform((str) => new Date(str)).optional(),
-  end: z.string().transform((str) => new Date(str)).optional(),
+  start: z
+    .string()
+    .transform((str) => new Date(str))
+    .optional(),
+  end: z
+    .string()
+    .transform((str) => new Date(str))
+    .optional(),
   isAllDay: z.boolean().optional(),
   visibility: z.enum(["private", "team", "company"]).optional(),
 });
@@ -79,15 +90,7 @@ router.get("/users", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [users, total] = await Promise.all([
-      User.find(filter)
-        .select("-password")
-        .populate("roles", "name")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      User.countDocuments(filter),
-    ]);
+    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
 
     const userIds = users.map((u) => u._id);
     const profiles = await EmployeeProfile.find({

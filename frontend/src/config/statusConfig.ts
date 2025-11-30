@@ -1,7 +1,7 @@
-import { faCheck, faClock, faTimes, faUpload, faFile, faExclamationTriangle, faCheckCircle, faTruck, faBan, faTimesCircle, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faClock, faTimes, faUpload, faFile, faExclamationTriangle, faCheckCircle, faTruck, faBan, faTimesCircle, faPenToSquare, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
-export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_firmado";
+export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_enviado_a_firmar" | "firma_firmado";
 
 export interface StatusConfig {
   icon: IconDefinition;
@@ -39,7 +39,7 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     prefix: null,
     label: "Rechazado",
     bgClass: "bg-red-50 dark:bg-red-900/20",
-    textClass: "text-red-600 dark:text-red-40",
+    textClass: "text-red-600 dark:text-red-400",
   },
   entregado: {
     icon: faTruck,
@@ -75,7 +75,7 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     prefix: "Doc.",
     label: "Vencido",
     bgClass: "bg-red-50 dark:bg-red-900/20",
-    textClass: "text-red-600 dark:text-red-40",
+    textClass: "text-red-600 dark:text-red-400",
   },
   firma_pendiente: {
     icon: faPenToSquare,
@@ -83,6 +83,13 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     label: "Pendiente",
     bgClass: "bg-yellow-50 dark:bg-yellow-900/20",
     textClass: "text-yellow-600 dark:text-yellow-400",
+  },
+  firma_enviado_a_firmar: {
+    icon: faPaperPlane,
+    prefix: "Firma",
+    label: "Enviado a firmar",
+    bgClass: "bg-emerald-50 dark:bg-emerald-900/20",
+    textClass: "text-emerald-600 dark:text-emerald-400",
   },
   firma_firmado: {
     icon: faCheck,
