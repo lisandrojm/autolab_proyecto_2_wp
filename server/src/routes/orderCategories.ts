@@ -42,16 +42,17 @@ const createCategorySchema = z
     fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
     requiresSignature: z.boolean().default(true),
+    requiresUserConfirmation: z.boolean().default(false),
   })
   .refine(
     (data) => {
-      if (data.requiresAction && !data.actionText) {
+      if (data.requiresUserConfirmation && !data.actionText) {
         return false;
       }
       return true;
     },
     {
-      message: "actionText is required when requiresAction is true",
+      message: "actionText is required when requiresUserConfirmation is true",
       path: ["actionText"],
     }
   )
@@ -124,16 +125,17 @@ const updateCategorySchema = z
     fechaLimite: z.coerce.date().optional(),
     documentoRequerido: z.string().max(200).optional(),
     requiresSignature: z.boolean().optional(),
+    requiresUserConfirmation: z.boolean().optional(),
   })
   .refine(
     (data) => {
-      if (data.requiresAction && !data.actionText) {
+      if (data.requiresUserConfirmation && !data.actionText) {
         return false;
       }
       return true;
     },
     {
-      message: "actionText is required when requiresAction is true",
+      message: "actionText is required when requiresUserConfirmation is true",
       path: ["actionText"],
     }
   )
