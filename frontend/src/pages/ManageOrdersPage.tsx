@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faGear } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -162,7 +162,7 @@ export const ManageOrdersPage: React.FC = () => {
       setUpdatingStatus(true);
       await hrManagementAPI.orders.preApprove(selectedOrder._id);
       const updatedOrders = await loadOrders();
-      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
       if (refreshedOrder) {
         setSelectedOrder(refreshedOrder);
       }
@@ -177,9 +177,7 @@ export const ManageOrdersPage: React.FC = () => {
   const handleApprove = async () => {
     if (!selectedOrder) return;
 
-    const confirmMessage = selectedOrder.requiresSignature
-      ? "El pedido será aprobado y el usuario recibirá una notificación para firmar el documento por email."
-      : "El pedido será aprobado y el usuario será notificado.";
+    const confirmMessage = selectedOrder.requiresSignature ? "El pedido será aprobado y el usuario recibirá una notificación para firmar el documento por email." : "El pedido será aprobado y el usuario será notificado.";
 
     const result = await sweetAlert.confirm("¿Aprobar este pedido?", confirmMessage, "Sí, Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
@@ -188,12 +186,10 @@ export const ManageOrdersPage: React.FC = () => {
       setUpdatingStatus(true);
       await hrManagementAPI.orders.approve(selectedOrder._id);
 
-      const successMessage = selectedOrder.requiresSignature
-        ? "Se ha notificado al usuario que debe firmar el documento por email"
-        : "El pedido ha sido aprobado correctamente";
+      const successMessage = selectedOrder.requiresSignature ? "Se ha notificado al usuario que debe firmar el documento por email" : "El pedido ha sido aprobado correctamente";
 
       const updatedOrders = await loadOrders();
-      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
       if (refreshedOrder) {
         setSelectedOrder(refreshedOrder);
       }
@@ -215,7 +211,7 @@ export const ManageOrdersPage: React.FC = () => {
       setUpdatingStatus(true);
       await hrManagementAPI.orders.reject(selectedOrder._id);
       const updatedOrders = await loadOrders();
-      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
       if (refreshedOrder) {
         setSelectedOrder(refreshedOrder);
       }
@@ -237,7 +233,7 @@ export const ManageOrdersPage: React.FC = () => {
       setUpdatingStatus(true);
       await hrManagementAPI.orders.deliver(selectedOrder._id);
       const updatedOrders = await loadOrders();
-      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
       if (refreshedOrder) {
         setSelectedOrder(refreshedOrder);
       }
@@ -287,7 +283,7 @@ export const ManageOrdersPage: React.FC = () => {
       setUpdatingStatus(true);
       await hrManagementAPI.orders.sendSignature(selectedOrder._id);
       const updatedOrders = await loadOrders();
-      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
       if (refreshedOrder) {
         setSelectedOrder(refreshedOrder);
       }
@@ -309,7 +305,7 @@ export const ManageOrdersPage: React.FC = () => {
       setUpdatingStatus(true);
       await hrManagementAPI.orders.markSigned(selectedOrder._id);
       const updatedOrders = await loadOrders();
-      const refreshedOrder = updatedOrders.find(o => o._id === selectedOrder._id);
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
       if (refreshedOrder) {
         setSelectedOrder(refreshedOrder);
       }
@@ -632,8 +628,8 @@ export const ManageOrdersPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <div className="hidden lg:flex items-center gap-2">
-          <button onClick={() => navigate("/hr/order-categories")} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm h-full">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/hr/order-categories")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full">
             <FontAwesomeIcon icon={faGear} />
           </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de pedidos" title="Ver resumen de pedidos">
@@ -932,9 +928,7 @@ export const ManageOrdersPage: React.FC = () => {
                   <div className="flex-1">
                     <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
                     <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">El usuario {getUserName(selectedOrder.userId)} indica que completó la firma del documento. Por favor verificá antes de confirmar.</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Notificado el: {new Date(selectedOrder.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(selectedOrder.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                   </div>
                 </div>
               </div>
@@ -1023,7 +1017,7 @@ export const ManageOrdersPage: React.FC = () => {
               { label: "Aprobados", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
               { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
               { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
-              { label: "Cancelados", value: stats.cancelled, icon: faBan, color: "bg-gray-50 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400" },
+              { label: "Cancelados", value: stats.cancelled, icon: faBan, color: "bg-orange-50 dark:bg-orange-600/20 text-orange-600 dark:text-orange-400" },
               { label: "Documentos", value: docStats.total, icon: faFileAlt, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
             ].map((stat, index) => (
               <div

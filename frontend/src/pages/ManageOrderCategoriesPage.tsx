@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faShoppingCart, faGear } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -33,7 +33,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
 
   return (
     <tr ref={setNodeRef} style={style} {...(isReorderMode ? { ...attributes, ...listeners } : {})} className={`border-b border-gray-100 dark:border-gray-700 ${isReorderMode ? "bg-blue-50 dark:bg-blue-900/20 cursor-grab active:cursor-grabbing" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}>
-      <td className="py-3 px-4 text-center">
+      <td className="bg- py-3 px-4 text-center">
         <div className={`flex items-center justify-center ${isReorderMode ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-600"}`}>
           <FontAwesomeIcon icon={faGripVertical} className="h-5 w-5" />
         </div>
@@ -410,7 +410,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Tipos de Pedidos"
+      title="ABM | Pedidos"
       subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
       faIcon={{ icon: faGear }}
       onBack={() => navigate("/hr/orders")}

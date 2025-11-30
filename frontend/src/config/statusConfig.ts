@@ -52,8 +52,8 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     icon: faBan,
     prefix: null,
     label: "Cancelado",
-    bgClass: "bg-gray-50 dark:bg-gray-600/20",
-    textClass: "text-gray-600 dark:text-gray-400",
+    bgClass: "bg-gray-50 dark:bg-orange-600/20",
+    textClass: "text-orange-600 dark:text-orange-400",
   },
   doc_pendiente: {
     icon: faFile,
@@ -87,7 +87,7 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
   firma_enviado_a_firmar: {
     icon: faPaperPlane,
     prefix: "Firma",
-    label: "Enviado a firmar",
+    label: "Enviada",
     bgClass: "bg-emerald-50 dark:bg-emerald-900/20",
     textClass: "text-emerald-600 dark:text-emerald-400",
   },
