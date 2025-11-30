@@ -354,12 +354,13 @@ export const ManageOrdersPage: React.FC = () => {
 
   const renderSignatureStatus = (order: Order) => {
     const signatureStatusType = mapSignatureStateToStatusType(order);
+    const isInFinalState = isOrderInFinalState(order.status);
 
     if (!signatureStatusType) {
       return <span className="text-xs text-gray-500 dark:text-gray-400">-</span>;
     }
 
-    return <StatusBadge type={signatureStatusType} size="sm" />;
+    return <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />;
   };
 
   const getCategoryLabel = (category: string) => category;
@@ -728,12 +729,13 @@ export const ManageOrdersPage: React.FC = () => {
                               {(() => {
                                 const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
                                 const docStatusType = mapDocumentStateToStatusType(futureAction);
+                                const isInFinalState = isOrderInFinalState(order.status);
 
                                 if (!docStatusType) {
                                   return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
                                 }
 
-                                return <StatusBadge type={docStatusType} size="sm" />;
+                                return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
                               })()}
                             </td>
                             <td className="py-3 px-4 text-center">{renderSignatureStatus(order)}</td>
