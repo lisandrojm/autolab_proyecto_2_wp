@@ -730,6 +730,7 @@ export async function seedOnStart() {
         isActive: true,
         sortOrder: 1,
         requiresAction: true,
+        requiresSignature: true,
         actionText: "Me comprometo a presentar el certificado correspondiente",
         futureActionType: "documento",
         deadlineMode: "plazoDias",
@@ -752,6 +753,7 @@ export async function seedOnStart() {
         isActive: true,
         sortOrder: 2,
         requiresAction: true,
+        requiresSignature: true,
         actionText: "Acepto el descuento en cuotas según el plazo acordado",
         tituloAccion: "Aceptar descuento en cuotas mensuales",
         futureActionType: "otra",
@@ -832,6 +834,9 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 1, 3),
         actionCompleted: true,
         requiereAccionFutura: true,
+        requiresSignature: true,
+        signatureStatus: "sent",
+        signatureSentAt: new Date(2024, 1, 4),
       });
 
       const order2 = await Order.create({
@@ -847,6 +852,8 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
+        requiresSignature: true,
+        signatureStatus: "pending",
       });
 
       const order3 = await Order.create({
@@ -863,6 +870,8 @@ export async function seedOnStart() {
         requestedAt: new Date(),
         actionCompleted: true,
         requiereAccionFutura: true,
+        requiresSignature: true,
+        signatureStatus: "pending",
       });
 
       const order4 = await Order.create({
@@ -895,6 +904,8 @@ export async function seedOnStart() {
         amount: 80000,
         status: "rejected",
         requestedAt: new Date(2024, 0, 10),
+        requiresSignature: true,
+        signatureStatus: "not_required",
       });
 
       const order6 = await Order.create({
@@ -979,6 +990,9 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 2, 1),
         actionCompleted: true,
         requiereAccionFutura: true,
+        requiresSignature: true,
+        signatureStatus: "sent",
+        signatureSentAt: new Date(2024, 2, 5),
       });
 
       const order11 = await Order.create({
@@ -1001,6 +1015,9 @@ export async function seedOnStart() {
         requestedAt: new Date(2024, 1, 20),
         actionCompleted: true,
         requiereAccionFutura: true,
+        requiresSignature: true,
+        signatureStatus: "sent",
+        signatureSentAt: new Date(),
       });
 
       const catDocumentos = await OrderCategory.create({
