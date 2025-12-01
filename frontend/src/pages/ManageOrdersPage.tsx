@@ -368,13 +368,17 @@ export const ManageOrdersPage: React.FC = () => {
     }
 
     return (
-      <div className="flex items-center justify-center gap-2">
-        <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
-        {order.pdfPreAprobacionUrl && (
-          <a href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors" title="Descargar documento PDF" onClick={(e) => e.stopPropagation()}>
-            <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
-          </a>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
+        </div>
+        <div>
+          {order.pdfPreAprobacionUrl && (
+            <a href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-800 dark:text-violet-600 dark:hover:text-violet-300 transition-colors" title="Descargar documento PDF" onClick={(e) => e.stopPropagation()}>
+              <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
+            </a>
+          )}
+        </div>
       </div>
     );
   };
@@ -700,7 +704,7 @@ export const ManageOrdersPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
                       </tr>
                     </thead>
@@ -748,7 +752,7 @@ export const ManageOrdersPage: React.FC = () => {
                                 return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
                               })()}
                             </td>
-                            <td className="py-3 px-4 text-center">{renderSignatureStatus(order)}</td>
+                            <td className="py-3 px-4">{renderSignatureStatus(order)}</td>
                             <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
                           </tr>
                         );
