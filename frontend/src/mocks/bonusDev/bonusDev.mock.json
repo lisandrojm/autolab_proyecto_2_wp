@@ -1,0 +1,156 @@
+{
+  "settings": {
+    "enabled": true,
+    "visibleTo": "both",
+    "requireApproval": true,
+    "bonusType": "performance",
+    "extraConfig": {
+      "maxBonusAmount": 10000,
+      "minPerformanceScore": 80
+    }
+  },
+
+  "catalog": {
+    "positions": [
+      { "id": "pos-1", "name": "Vendedor", "description": "Personal de ventas" },
+      { "id": "pos-2", "name": "Supervisor", "description": "Supervisor de área" },
+      { "id": "pos-3", "name": "Gerente Regional", "description": "Gerente de región" }
+    ],
+    "levels": [
+      { "id": "lvl-1", "name": "Junior", "positionId": "pos-1", "description": "Vendedor junior" },
+      { "id": "lvl-2", "name": "Senior", "positionId": "pos-1", "description": "Vendedor senior" },
+      { "id": "lvl-3", "name": "Jefe de Área", "positionId": "pos-2", "description": "Supervisor jefe" },
+      { "id": "lvl-4", "name": "Zona Norte", "positionId": "pos-3", "description": "Gerente zona norte" }
+    ]
+  },
+
+  "rules": [
+    {
+      "id": "rule-1",
+      "positionId": "pos-1",
+      "levelId": "lvl-1",
+      "amount": 2000,
+      "percentage": 5,
+      "active": true
+    },
+    {
+      "id": "rule-2",
+      "positionId": "pos-1",
+      "levelId": "lvl-2",
+      "amount": 3500,
+      "percentage": 8,
+      "active": true
+    },
+    {
+      "id": "rule-3",
+      "positionId": "pos-2",
+      "levelId": "lvl-3",
+      "amount": 5000,
+      "percentage": 10,
+      "active": true
+    },
+    {
+      "id": "rule-4",
+      "positionId": "pos-3",
+      "levelId": "lvl-4",
+      "amount": 8000,
+      "percentage": 15,
+      "active": true
+    },
+    {
+      "id": "rule-5",
+      "positionId": "pos-2",
+      "levelId": "lvl-2",
+      "amount": 4000,
+      "percentage": 9,
+      "active": false
+    }
+  ],
+
+  "records": [
+    {
+      "id": "rec-1",
+      "userId": "usr-301",
+      "userName": "Pedro Gómez",
+      "reason": "Cumplimiento de metas trimestrales",
+      "amount": 3500,
+      "performanceScore": 95,
+      "period": "Q4 2024",
+      "status": "approved",
+      "createdAt": "2025-01-05T10:30:00",
+      "approvedBy": "Carlos Martínez",
+      "approvedAt": "2025-01-06T15:00:00"
+    },
+    {
+      "id": "rec-2",
+      "userId": "usr-302",
+      "userName": "Laura Fernández",
+      "reason": "Superación de objetivos mensuales",
+      "amount": 2000,
+      "performanceScore": 88,
+      "period": "Enero 2025",
+      "status": "pending",
+      "createdAt": "2025-01-28T11:45:00"
+    },
+    {
+      "id": "rec-3",
+      "userId": "usr-303",
+      "userName": "Roberto Silva",
+      "reason": "Bono anual por desempeño excepcional",
+      "amount": 8000,
+      "performanceScore": 98,
+      "period": "Año 2024",
+      "status": "pending",
+      "createdAt": "2025-02-01T09:00:00"
+    },
+    {
+      "id": "rec-4",
+      "userId": "usr-304",
+      "userName": "Carmen Ruiz",
+      "reason": "Reconocimiento por proyecto especial",
+      "amount": 4500,
+      "performanceScore": 75,
+      "period": "Q3 2024",
+      "status": "rejected",
+      "createdAt": "2024-12-15T14:20:00",
+      "approvedBy": "Carlos Martínez",
+      "approvedAt": "2024-12-16T10:30:00",
+      "rejectionReason": "No cumple score mínimo requerido"
+    }
+  ],
+
+  "balances": [
+    {
+      "userId": "usr-301",
+      "userName": "Pedro Gómez",
+      "totalReceived": 12500,
+      "currentYear": 3500,
+      "lastBonus": 3500,
+      "lastBonusDate": "2025-01-05"
+    },
+    {
+      "userId": "usr-302",
+      "userName": "Laura Fernández",
+      "totalReceived": 6000,
+      "currentYear": 2000,
+      "lastBonus": 2000,
+      "lastBonusDate": "2024-10-15"
+    },
+    {
+      "userId": "usr-303",
+      "userName": "Roberto Silva",
+      "totalReceived": 24000,
+      "currentYear": 8000,
+      "lastBonus": 8000,
+      "lastBonusDate": "2024-12-20"
+    },
+    {
+      "userId": "usr-304",
+      "userName": "Carmen Ruiz",
+      "totalReceived": 8000,
+      "currentYear": 0,
+      "lastBonus": 4000,
+      "lastBonusDate": "2024-08-10"
+    }
+  ]
+}
