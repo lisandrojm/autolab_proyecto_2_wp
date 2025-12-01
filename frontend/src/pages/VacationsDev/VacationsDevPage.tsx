@@ -580,123 +580,135 @@ export const VacationsDevPage: React.FC = () => {
       )}
 
       {activeTab === "management" && (
-        <div className="space-y-8">
-          {/* Sección Solicitudes */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold dark:text-white">Solicitudes de Vacaciones</h3>
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold dark:text-white">Gestión y Balance de Vacaciones</h3>
 
-            {records.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm text-gray-500 dark:text-gray-400">No hay solicitudes registradas</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {records.map((record) => {
-                  const userBalance = getUserBalance(record.userId);
-                  return (
-                    <div key={record.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border dark:border-gray-700">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <p className="font-semibold text-gray-900 dark:text-white">{record.userName}</p>
-                            <StatusBadge type={mapStatusToStatusType(record.status)} size="sm" />
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{record.reason}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                            {new Date(record.startDate).toLocaleDateString("es-ES")} -{" "}
-                            {new Date(record.endDate).toLocaleDateString("es-ES")} ({record.daysRequested} días)
-                          </p>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
-                        Solicitado el{" "}
-                        {new Date(record.createdAt).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-                      </p>
-
-                      {record.status === "pending" && (
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            onClick={() => openApprovalModal(record, "approve")}
-                            className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white rounded-lg px-4 py-2 hover:bg-green-700 transition-colors text-sm font-medium"
-                          >
-                            <FontAwesomeIcon icon={faCheck} />
-                            Aprobar
-                          </button>
-                          <button
-                            onClick={() => openApprovalModal(record, "reject")}
-                            className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white rounded-lg px-4 py-2 hover:bg-red-700 transition-colors text-sm font-medium"
-                          >
-                            <FontAwesomeIcon icon={faTimes} />
-                            Rechazar
-                          </button>
-                        </div>
-                      )}
-
-                      {record.approvedBy && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-xs text-gray-400 dark:text-gray-500">
-                            {record.status === "approved" ? "Aprobado" : "Rechazado"} por {record.approvedBy} el{" "}
-                            {record.approvedAt &&
-                              new Date(record.approvedAt).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-                          </p>
-                          {record.comments && (
-                            <p className="text-xs text-gray-600 dark:text-gray-400 italic">"{record.comments}"</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Separador */}
-          <div className="border-t border-gray-200 dark:border-gray-700"></div>
-
-          {/* Sección Balance */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold dark:text-white">Balance de Usuarios</h3>
-
+          {records.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <p className="text-sm text-gray-500 dark:text-gray-400">No hay solicitudes registradas</p>
+            </div>
+          ) : (
             <div className="overflow-x-auto rounded border dark:border-gray-700">
               <table className="w-full bg-white dark:bg-gray-800">
                 <thead>
                   <tr className="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Usuario</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Días Asignados</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Días Usados</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Días Disponibles</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">% Utilizado</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Solicitud</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Fechas</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Días</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Estado</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Balance</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {balances.map((balance) => {
-                    const percentUsed = (balance.used / balance.assignedDays) * 100;
+                  {records.map((record) => {
+                    const userBalance = getUserBalance(record.userId);
+                    const percentUsed = userBalance ? (userBalance.used / userBalance.assignedDays) * 100 : 0;
+
                     return (
-                      <tr key={balance.userId} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">{balance.userName}</td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">{balance.assignedDays}</td>
-                        <td className="py-3 px-4 text-sm text-red-600 dark:text-red-400 font-medium">{balance.used}</td>
-                        <td className="py-3 px-4 text-sm text-green-600 dark:text-green-400 font-medium">{balance.remaining}</td>
+                      <tr key={record.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        {/* Usuario */}
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {record.userName}
+                        </td>
+
+                        {/* Solicitud */}
+                        <td className="py-3 px-4 text-sm">
+                          <p className="text-gray-900 dark:text-gray-100 font-medium">{record.reason}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Solicitado el {new Date(record.createdAt).toLocaleDateString("es-ES")}
+                          </p>
+                          {record.approvedBy && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                              {record.status === "approved" ? "Aprobado" : "Rechazado"} por {record.approvedBy}
+                            </p>
+                          )}
+                          {record.comments && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400 italic mt-0.5">"{record.comments}"</p>
+                          )}
+                        </td>
+
+                        {/* Fechas */}
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
+                          <p className="whitespace-nowrap">{new Date(record.startDate).toLocaleDateString("es-ES")}</p>
+                          <p className="whitespace-nowrap text-xs text-gray-500">al</p>
+                          <p className="whitespace-nowrap">{new Date(record.endDate).toLocaleDateString("es-ES")}</p>
+                        </td>
+
+                        {/* Días Solicitados */}
+                        <td className="py-3 px-4 text-center">
+                          <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold">
+                            {record.daysRequested}
+                          </span>
+                        </td>
+
+                        {/* Estado */}
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 min-w-[80px]">
-                              <div
-                                className={`h-2 rounded-full transition-all ${
-                                  percentUsed > 75
-                                    ? "bg-red-500"
-                                    : percentUsed > 50
-                                    ? "bg-yellow-500"
-                                    : "bg-blue-500"
-                                }`}
-                                style={{ width: `${Math.min(percentUsed, 100)}%` }}
-                              ></div>
+                          <StatusBadge type={mapStatusToStatusType(record.status)} size="sm" />
+                        </td>
+
+                        {/* Balance */}
+                        <td className="py-3 px-4">
+                          {userBalance ? (
+                            <div className="space-y-1 min-w-[140px]">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-600 dark:text-gray-400">Asignados:</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-semibold">{userBalance.assignedDays}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-600 dark:text-gray-400">Usados:</span>
+                                <span className="text-red-600 dark:text-red-400 font-semibold">{userBalance.used}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-600 dark:text-gray-400">Disponibles:</span>
+                                <span className="text-green-600 dark:text-green-400 font-semibold">{userBalance.remaining}</span>
+                              </div>
+                              <div className="mt-2">
+                                <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                  <div
+                                    className={`h-1.5 rounded-full transition-all ${
+                                      percentUsed > 75
+                                        ? "bg-red-500"
+                                        : percentUsed > 50
+                                        ? "bg-yellow-500"
+                                        : "bg-blue-500"
+                                    }`}
+                                    style={{ width: `${Math.min(percentUsed, 100)}%` }}
+                                  ></div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-0.5">
+                                  {percentUsed.toFixed(0)}% utilizado
+                                </p>
+                              </div>
                             </div>
-                            <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[40px]">
-                              {percentUsed.toFixed(0)}%
-                            </span>
-                          </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </td>
+
+                        {/* Acciones */}
+                        <td className="py-3 px-4">
+                          {record.status === "pending" ? (
+                            <div className="flex flex-col gap-2 min-w-[120px]">
+                              <button
+                                onClick={() => openApprovalModal(record, "approve")}
+                                className="flex items-center justify-center gap-1 bg-green-600 text-white rounded px-3 py-1.5 hover:bg-green-700 transition-colors text-xs font-medium"
+                              >
+                                <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+                                Aprobar
+                              </button>
+                              <button
+                                onClick={() => openApprovalModal(record, "reject")}
+                                className="flex items-center justify-center gap-1 bg-red-600 text-white rounded px-3 py-1.5 hover:bg-red-700 transition-colors text-xs font-medium"
+                              >
+                                <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                                Rechazar
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -704,7 +716,7 @@ export const VacationsDevPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          )}
         </div>
       )}
 
