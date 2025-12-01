@@ -308,9 +308,14 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
         deadlineMode: formData.requiresAction && formData.futureActionType ? formData.deadlineMode : undefined,
         requiresSignature: formData.requiresSignature,
+        pdfTemplateId: formData.requiresSignature && formData.pdfTemplateId ? formData.pdfTemplateId : undefined,
         requiresUserConfirmation: formData.requiresAction ? formData.requiresUserConfirmation : false,
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
+
+      if (!formData.requiresSignature) {
+        payload.pdfTemplateId = undefined;
+      }
 
       if (!formData.requiresAction) {
         payload.futureActionType = undefined;

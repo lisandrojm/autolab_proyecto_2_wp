@@ -204,37 +204,6 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           </select>
         </div>
 
-        {/* Plantilla PDF */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Plantilla PDF (opcional)
-            </label>
-            <button
-              type="button"
-              title="Selecciona una plantilla PDF que se generará automáticamente cuando se preapruebe un pedido de este tipo"
-              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-            >
-              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-            </button>
-          </div>
-          <select
-            value={formData.pdfTemplateId || ""}
-            onChange={(e) => setFormData({ ...formData, pdfTemplateId: e.target.value || undefined })}
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Sin plantilla PDF</option>
-            {pdfTemplates.map((template) => (
-              <option key={template._id} value={template._id}>
-                {template.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Si seleccionas una plantilla, se generará automáticamente un PDF cuando se preapruebe un pedido de este tipo
-          </p>
-        </div>
-
         {/* Subtipos */}
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -339,13 +308,58 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         {/* Firma */}
         <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="requiresSignature" checked={formData.requiresSignature ?? true} onChange={(e) => setFormData({ ...formData, requiresSignature: e.target.checked })} className="w-4 h-4 text-blue-600" />
+            <input
+              type="checkbox"
+              id="requiresSignature"
+              checked={formData.requiresSignature ?? true}
+              onChange={(e) => setFormData({
+                ...formData,
+                requiresSignature: e.target.checked,
+                pdfTemplateId: e.target.checked ? formData.pdfTemplateId : undefined
+              })}
+              className="w-4 h-4 text-blue-600"
+            />
             <label htmlFor="requiresSignature" className="text-sm text-gray-700 dark:text-gray-300">
               Requiere FIRMA del usuario
             </label>
           </div>
 
-          {(formData.requiresSignature ?? true) && <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>}
+          {(formData.requiresSignature ?? true) && (
+            <>
+              <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe este pedido, se enviará automáticamente para firma del usuario.</p>
+
+              {/* Plantilla PDF */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Plantilla PDF (opcional)
+                  </label>
+                  <button
+                    type="button"
+                    title="Selecciona una plantilla PDF que se generará automáticamente cuando se preapruebe un pedido de este tipo"
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+                  >
+                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                  </button>
+                </div>
+                <select
+                  value={formData.pdfTemplateId || ""}
+                  onChange={(e) => setFormData({ ...formData, pdfTemplateId: e.target.value || undefined })}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sin plantilla PDF</option>
+                  {pdfTemplates.map((template) => (
+                    <option key={template._id} value={template._id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  El PDF se generará automáticamente al preaprobarse el pedido
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Acción Futura */}
