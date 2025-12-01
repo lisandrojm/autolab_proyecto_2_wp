@@ -375,14 +375,8 @@ export const ManageOrdersPage: React.FC = () => {
           <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
           {isWaitingVerification && (
             <div className="relative group">
-              <FontAwesomeIcon
-                icon={faClock}
-                className="text-amber-500 dark:text-amber-400 text-sm animate-pulse cursor-help"
-                title="Usuario notificó que completó la firma - Esperando verificación"
-              />
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                Esperando verificación
-              </div>
+              <FontAwesomeIcon icon={faClock} className="text-amber-500 dark:text-amber-400 text-sm cursor-help" title="Usuario notificó que completó la firma - Esperando verificación" />
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">Esperando verificación</div>
             </div>
           )}
         </div>
@@ -536,13 +530,7 @@ export const ManageOrdersPage: React.FC = () => {
                       })()}
                       <div className="flex items-center gap-1.5">
                         <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
-                        {order.signatureStatus === "sent" && order.signatureNotifiedAt && (
-                          <FontAwesomeIcon
-                            icon={faClock}
-                            className="text-amber-500 dark:text-amber-400 text-sm animate-pulse"
-                            title="Esperando verificación de firma"
-                          />
-                        )}
+                        {order.signatureStatus === "sent" && order.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className="text-amber-500 dark:text-amber-400 text-sm" title="Esperando verificación de firma" />}
                       </div>
                     </div>
                   ),
@@ -863,13 +851,7 @@ export const ManageOrdersPage: React.FC = () => {
                 })()}
                 <div className="flex items-center gap-1.5">
                   <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" overrideStyle={isOrderInFinalState(selectedOrder.status)} />
-                  {selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && (
-                    <FontAwesomeIcon
-                      icon={faClock}
-                      className="text-amber-500 dark:text-amber-400 text-sm animate-pulse"
-                      title="Esperando verificación de firma"
-                    />
-                  )}
+                  {selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className="text-amber-500 dark:text-amber-400 text-sm" title="Esperando verificación de firma" />}
                 </div>
               </div>
             </div>
@@ -982,19 +964,23 @@ export const ManageOrdersPage: React.FC = () => {
 
             {/* Signature Notification Indicator */}
             {(() => {
-              const categoryInfo = typeof selectedOrder.categoryId === 'object' ? selectedOrder.categoryId : null;
-              return categoryInfo?.requiresSignature && selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && (
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
-                    <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">El usuario {getUserName(selectedOrder.userId)} indica que completó la firma del documento. Por favor verificá antes de confirmar.</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(selectedOrder.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+              const categoryInfo = typeof selectedOrder.categoryId === "object" ? selectedOrder.categoryId : null;
+              return (
+                categoryInfo?.requiresSignature &&
+                selectedOrder.signatureStatus === "sent" &&
+                selectedOrder.signatureNotifiedAt && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">El usuario {getUserName(selectedOrder.userId)} indica que completó la firma del documento. Por favor verificá antes de confirmar.</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(selectedOrder.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
+                )
+              );
             })()}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">

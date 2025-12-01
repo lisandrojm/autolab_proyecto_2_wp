@@ -184,7 +184,7 @@ export function PdfTemplatesPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-6 animate-pulse">
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-6">
               <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/4 mb-4"></div>
               <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
             </div>

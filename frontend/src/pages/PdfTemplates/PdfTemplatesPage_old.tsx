@@ -161,7 +161,7 @@ export function PdfTemplatesPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-6 animate-pulse">
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-6">
               <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/4 mb-4"></div>
               <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
             </div>
@@ -218,7 +218,13 @@ export function PdfTemplatesPage() {
           <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{editingTemplate ? "Editar Plantilla" : "Nueva Plantilla"}</h2>
-              <button onClick={() => { setShowForm(false); setEditingTemplate(null); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+              <button
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingTemplate(null);
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              >
                 <FontAwesomeIcon icon={faTimes} className="text-slate-500" />
               </button>
             </div>
@@ -274,11 +280,21 @@ export function PdfTemplatesPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                <button type="button" onClick={() => { setShowForm(false); setEditingTemplate(null); }} className="px-6 py-2 border border-slate-300 rounded-lg" disabled={saving}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingTemplate(null);
+                  }}
+                  className="px-6 py-2 border border-slate-300 rounded-lg"
+                  disabled={saving}
+                >
                   Cancelar
                 </button>
                 <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2" disabled={saving}>
-                  {saving ? "Guardando..." : (
+                  {saving ? (
+                    "Guardando..."
+                  ) : (
                     <>
                       <FontAwesomeIcon icon={faSave} />
                       {editingTemplate ? "Actualizar" : "Crear"}
