@@ -189,7 +189,12 @@ export interface OrderData {
   orderNumber: string;
   description: string;
   category: string;
-  categoryId?: string;
+  categoryId?: string | {
+    _id: string;
+    name: string;
+    requiresSignature?: boolean;
+    requiresDocument?: boolean;
+  };
   subcategories: string[];
   dynamicValue?: any;
   actionCompleted?: boolean;
@@ -214,7 +219,6 @@ export interface OrderData {
   approvedAt?: string;
   deliveredAt?: string;
   futureActionId?: FutureAction | string;
-  requiresSignature?: boolean;
   signatureStatus?: 'not_required' | 'pending' | 'sent' | 'signed';
   signatureSentAt?: string;
   signatureNotifiedAt?: string;

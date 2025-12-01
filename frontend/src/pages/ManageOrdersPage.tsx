@@ -945,7 +945,9 @@ export const ManageOrdersPage: React.FC = () => {
             })()}
 
             {/* Signature Notification Indicator */}
-            {selectedOrder.requiresSignature && selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && (
+            {(() => {
+              const categoryInfo = typeof selectedOrder.categoryId === 'object' ? selectedOrder.categoryId : null;
+              return categoryInfo?.requiresSignature && selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && (
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
                 <div className="flex items-start gap-3">
                   <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
@@ -956,7 +958,8 @@ export const ManageOrdersPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            )}
+            );
+            })()}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
               <div>
