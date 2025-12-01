@@ -128,6 +128,7 @@ export interface Order {
   signatureSentAt?: string;
   signedAt?: string;
   signedBy?: any;
+  pdfPreAprobacionUrl?: string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -303,6 +304,10 @@ export const hrManagementAPI = {
     },
     markSigned: async (orderId: string) => {
       const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}/mark-signed`);
+      return data;
+    },
+    regeneratePdf: async (orderId: string) => {
+      const { data } = await axios.post<{ success: boolean; message: string; pdfUrl: string }>(`/hr-admin/orders/${orderId}/regenerate-pdf`);
       return data;
     },
   },

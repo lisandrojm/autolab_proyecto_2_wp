@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
+import { pdfTemplatesAPI } from "../api/pdfTemplates";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -77,9 +78,17 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
 
 const HELP_KEY = "orderCategories";
 
+interface PdfTemplate {
+  _id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
 export const ManageOrderCategoriesPage: React.FC = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<OrderCategory[]>([]);
+  const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<OrderCategory | null>(null);
@@ -102,6 +111,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     documentoRequerido?: string;
     requiresSignature: boolean;
     requiresUserConfirmation?: boolean;
+    pdfTemplateId?: string;
   }>({
     name: "",
     informacion: "",
@@ -121,6 +131,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     documentoRequerido: undefined,
     requiresSignature: true,
     requiresUserConfirmation: false,
+    pdfTemplateId: undefined,
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -150,8 +161,18 @@ export const ManageOrderCategoriesPage: React.FC = () => {
     }
   };
 
+  const loadPdfTemplates = async () => {
+    try {
+      const data = await pdfTemplatesAPI.getAll();
+      setPdfTemplates(data.filter((t: PdfTemplate) => t.isActive));
+    } catch (error) {
+      console.error("Error loading PDF templates:", error);
+    }
+  };
+
   useEffect(() => {
     loadCategories();
+    loadPdfTemplates();
   }, []);
 
   const openCreateModal = () => {
@@ -200,6 +221,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
       documentoRequerido: category.documentoRequerido,
       requiresSignature: category.requiresSignature ?? true,
       requiresUserConfirmation: category.requiresUserConfirmation ?? false,
+      pdfTemplateId: category.pdfTemplateId,
     });
     setShowModal(true);
   };
@@ -526,7 +548,7 @@ export const ManageOrderCategoriesPage: React.FC = () => {
         }
       >
         <div className="p-6">
-          <OrderCategoryForm formData={formData} setFormData={setFormData} onSubmit={handleSubmit} submitting={submitting} />
+          <OrderCategoryForm formData={formData} setFormData={setFormData} onSubmit={handleSubmit} submitting={submitting} pdfTemplates={pdfTemplates} />
         </div>
       </Modal>
     </PageLayout>

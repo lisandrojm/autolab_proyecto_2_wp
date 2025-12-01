@@ -6,6 +6,12 @@ import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from 
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/futureAction";
 
+interface PdfTemplate {
+  _id: string;
+  name: string;
+  code: string;
+}
+
 interface OrderCategoryFormProps {
   formData: {
     name: string;
@@ -26,13 +32,15 @@ interface OrderCategoryFormProps {
     documentoRequerido?: string;
     requiresSignature?: boolean;
     requiresUserConfirmation?: boolean;
+    pdfTemplateId?: string;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onSubmit: (e: React.FormEvent) => void;
   submitting: boolean;
+  pdfTemplates?: PdfTemplate[];
 }
 
-export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, setFormData, onSubmit, submitting }) => {
+export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, setFormData, onSubmit, submitting, pdfTemplates = [] }) => {
   const [showCategoryTypeInfo, setShowCategoryTypeInfo] = useState(false);
   const [showDateModeInfo, setShowDateModeInfo] = useState(false);
   const [showSubcategoriesInfo, setShowSubcategoriesInfo] = useState(false);
@@ -194,6 +202,37 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             <option value="objeto">Objeto</option>
             <option value="otros">Otros</option>
           </select>
+        </div>
+
+        {/* Plantilla PDF */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Plantilla PDF (opcional)
+            </label>
+            <button
+              type="button"
+              title="Selecciona una plantilla PDF que se generará automáticamente cuando se preapruebe un pedido de este tipo"
+              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+            >
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
+          </div>
+          <select
+            value={formData.pdfTemplateId || ""}
+            onChange={(e) => setFormData({ ...formData, pdfTemplateId: e.target.value || undefined })}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Sin plantilla PDF</option>
+            {pdfTemplates.map((template) => (
+              <option key={template._id} value={template._id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Si seleccionas una plantilla, se generará automáticamente un PDF cuando se preapruebe un pedido de este tipo
+          </p>
         </div>
 
         {/* Subtipos */}
