@@ -367,10 +367,24 @@ export const ManageOrdersPage: React.FC = () => {
       return <span className="text-xs text-gray-500 dark:text-gray-400">-</span>;
     }
 
+    const isWaitingVerification = order.signatureStatus === "sent" && order.signatureNotifiedAt;
+
     return (
       <div className="flex items-center justify-between gap-2">
-        <div>
+        <div className="flex items-center gap-1.5">
           <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
+          {isWaitingVerification && (
+            <div className="relative group">
+              <FontAwesomeIcon
+                icon={faClock}
+                className="text-amber-500 dark:text-amber-400 text-sm animate-pulse cursor-help"
+                title="Usuario notificó que completó la firma - Esperando verificación"
+              />
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                Esperando verificación
+              </div>
+            </div>
+          )}
         </div>
         <div>
           {order.pdfPreAprobacionUrl && (
@@ -520,7 +534,16 @@ export const ManageOrdersPage: React.FC = () => {
                         const isInFinalState = isOrderInFinalState(order.status);
                         return docStatusType ? <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} /> : null;
                       })()}
-                      <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
+                        {order.signatureStatus === "sent" && order.signatureNotifiedAt && (
+                          <FontAwesomeIcon
+                            icon={faClock}
+                            className="text-amber-500 dark:text-amber-400 text-sm animate-pulse"
+                            title="Esperando verificación de firma"
+                          />
+                        )}
+                      </div>
                     </div>
                   ),
                 },
@@ -838,7 +861,16 @@ export const ManageOrdersPage: React.FC = () => {
 
                   return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
                 })()}
-                <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" overrideStyle={isOrderInFinalState(selectedOrder.status)} />
+                <div className="flex items-center gap-1.5">
+                  <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" overrideStyle={isOrderInFinalState(selectedOrder.status)} />
+                  {selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && (
+                    <FontAwesomeIcon
+                      icon={faClock}
+                      className="text-amber-500 dark:text-amber-400 text-sm animate-pulse"
+                      title="Esperando verificación de firma"
+                    />
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">
