@@ -624,7 +624,16 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       console.log("[PDF DEBUG] Category does not have pdfTemplateId or category is null");
     }
 
-    const finalOrder = await Order.findById(order._id).populate("userId").populate("categoryId");
+    const finalOrder = await Order.findById(order._id)
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId",
+        populate: { path: "positionId", select: "name" }
+      })
+      .populate("categoryId")
+      .populate("futureActionId")
+      .populate("approvedBy", "firstName lastName email");
+
     console.log("[PDF DEBUG] Sending response with pdfPreAprobacionUrl:", finalOrder?.pdfPreAprobacionUrl || "undefined");
     res.json(finalOrder);
   } catch (error) {
@@ -691,7 +700,17 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       entityId: order._id,
     });
 
-    res.json(order);
+    const finalOrder = await Order.findById(order._id)
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId",
+        populate: { path: "positionId", select: "name" }
+      })
+      .populate("categoryId")
+      .populate("futureActionId")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(finalOrder);
   } catch (error) {
     console.error("Approve order error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -732,7 +751,17 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
       linkUrl: `/orders/${order._id}`,
     });
 
-    res.json(order);
+    const finalOrder = await Order.findById(order._id)
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId",
+        populate: { path: "positionId", select: "name" }
+      })
+      .populate("categoryId")
+      .populate("futureActionId")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(finalOrder);
   } catch (error) {
     console.error("Reject order error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -774,7 +803,17 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
       linkUrl: `/orders/${order._id}`,
     });
 
-    res.json(order);
+    const finalOrder = await Order.findById(order._id)
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId",
+        populate: { path: "positionId", select: "name" }
+      })
+      .populate("categoryId")
+      .populate("futureActionId")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(finalOrder);
   } catch (error) {
     console.error("Deliver order error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -822,7 +861,17 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
       linkUrl: `/orders/${order._id}`,
     });
 
-    res.json(order);
+    const finalOrder = await Order.findById(order._id)
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId",
+        populate: { path: "positionId", select: "name" }
+      })
+      .populate("categoryId")
+      .populate("futureActionId")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(finalOrder);
   } catch (error) {
     console.error("Send signature error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -882,7 +931,18 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
       entityId: order._id,
     });
 
-    res.json(order);
+    const finalOrder = await Order.findById(order._id)
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId",
+        populate: { path: "positionId", select: "name" }
+      })
+      .populate("categoryId")
+      .populate("futureActionId")
+      .populate("approvedBy", "firstName lastName email")
+      .populate("signedBy", "firstName lastName email");
+
+    res.json(finalOrder);
   } catch (error) {
     console.error("Mark signed error:", error);
     res.status(500).json({ error: "Internal server error" });
