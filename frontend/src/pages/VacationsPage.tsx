@@ -6,6 +6,9 @@ import { personnelAPI, VacationRequest } from "../api/personnel";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
+const HELP_KEY = "vacations" as const;
 
 export const VacationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -19,6 +22,9 @@ export const VacationsPage: React.FC = () => {
     endDate: "",
     reason: "",
   });
+  const [openInfo, setOpenInfo] = useState(false);
+
+  const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
     fetchData();
@@ -117,6 +123,15 @@ export const VacationsPage: React.FC = () => {
       title="Vacaciones"
       subtitle="Gestión de solicitudes de vacaciones"
       faIcon={{ icon: faCalendar }}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <button onClick={openCreate} className="btn-primary">
           <FontAwesomeIcon icon={faPlus} className="mr-2" />

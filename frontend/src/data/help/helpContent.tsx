@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations";
 
 export type HelpEntry = {
   title: string;
@@ -161,6 +161,15 @@ const helpResources = {
       "pdfTemplates.title": "Plantillas PDF de Pedidos",
       "pdfTemplates.description": "Configura los documentos PDF generados automáticamente cuando un pedido es preaprobado.",
       "pdfTemplates.items": ["**Plantillas**: Cada plantilla define el texto base que se usa para generar el PDF del pedido.", "**Códigos disponibles**: Dinero, Fecha Rango y Fecha Única.", "**Variables dinámicas**: El sistema reemplaza automáticamente valores como {{categoria}}, {{subcategoria}}, {{monto}}, {{fechaDesde}}, {{fechaHasta}}, {{fechaUnica}} y {{dias}}.", "**Plantilla activa**: Si está activa y coincide el código, se usa esa plantilla para generar el PDF.", "**Objetivo**: Personalizar el documento que recibe el colaborador al aprobar un pedido."],
+
+      //
+      // ---------------------------------------------------------
+      // NUEVO: Gestión de Vacaciones
+      // ---------------------------------------------------------
+      //
+      "vacations.title": "Gestión de Vacaciones",
+      "vacations.description": "Sistema integral para solicitar, gestionar y aprobar solicitudes de vacaciones del personal.",
+      "vacations.items": ["**Solicitudes**: Los colaboradores pueden crear solicitudes especificando fecha de inicio, fecha de fin y motivo opcional.", "**Estados**: Las solicitudes pasan por tres estados: *Pendiente* (esperando aprobación), *Aprobada* (autorizada por el superior) y *Rechazada* (no autorizada con comentarios opcionales).", "**Balance de días**: El sistema muestra los días disponibles, utilizados y el saldo actual para cada colaborador.", "**Edición limitada**: Solo las solicitudes en estado *Pendiente* pueden ser editadas o eliminadas por el solicitante.", "**Estadísticas**: Vista resumida con total de solicitudes, aprobadas, rechazadas y días totales solicitados.", "**Restricciones**: El sistema valida que no se soliciten más días de los disponibles y que las fechas sean coherentes.", "**Historial**: Registro completo de todas las solicitudes con fechas, estados y resultados."],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -326,6 +335,11 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     title: "Plantillas PDF de Pedidos",
     size: "sm",
     content: buildHelpContent("pdfTemplates"),
+  },
+  vacations: {
+    title: "Gestión de Vacaciones",
+    size: "sm",
+    content: buildHelpContent("vacations"),
   },
 };
 
