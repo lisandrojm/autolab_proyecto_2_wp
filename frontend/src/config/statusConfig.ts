@@ -1,7 +1,7 @@
 import { faCheck, faClock, faTimes, faUpload, faFile, faExclamationTriangle, faCheckCircle, faTruck, faBan, faTimesCircle, faPenToSquare, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
-export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_enviado_a_firmar" | "firma_firmado";
+export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_enviado_a_firmar" | "firma_firmado" | "vacaciones_pendiente" | "vacaciones_aprobada" | "vacaciones_rechazada" | "vacaciones_cancelada";
 
 export interface StatusConfig {
   icon: IconDefinition;
@@ -97,5 +97,33 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     label: "Firmado",
     bgClass: "bg-blue-50 dark:bg-blue-900/20",
     textClass: "text-blue-600 dark:text-blue-400",
+  },
+  vacaciones_pendiente: {
+    icon: faClock,
+    prefix: null,
+    label: "Pendiente",
+    bgClass: "bg-yellow-50 dark:bg-yellow-900/20",
+    textClass: "text-yellow-600 dark:text-yellow-400",
+  },
+  vacaciones_aprobada: {
+    icon: faCheckCircle,
+    prefix: null,
+    label: "Aprobada",
+    bgClass: "bg-green-50 dark:bg-green-900/20",
+    textClass: "text-green-600 dark:text-green-400",
+  },
+  vacaciones_rechazada: {
+    icon: faTimesCircle,
+    prefix: null,
+    label: "Rechazada",
+    bgClass: "bg-red-50 dark:bg-red-900/20",
+    textClass: "text-red-600 dark:text-red-400",
+  },
+  vacaciones_cancelada: {
+    icon: faBan,
+    prefix: null,
+    label: "Cancelada",
+    bgClass: "bg-orange-50 dark:bg-orange-900/20",
+    textClass: "text-orange-600 dark:text-orange-400",
   },
 };

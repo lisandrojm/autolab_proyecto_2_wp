@@ -5,6 +5,8 @@ import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, 
 import { hrManagementAPI, VacationRequest } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { StatusType } from "../config/statusConfig";
 
 const HELP_KEY = "vacations" as const;
 // 🔥 STATE PARA MODAL INFO
@@ -58,6 +60,21 @@ export const ManageVacationRequestsPage: React.FC = () => {
     return user.email || "Usuario desconocido";
   };
 
+  const mapVacationStatusToStatusType = (status: string): StatusType | null => {
+    switch (status) {
+      case "pending":
+        return "vacaciones_pendiente";
+      case "approved":
+        return "vacaciones_aprobada";
+      case "rejected":
+        return "vacaciones_rechazada";
+      case "cancelled":
+        return "vacaciones_cancelada";
+      default:
+        return null;
+    }
+  };
+
   return (
     <PageLayout
       title="Solicitudes de Vacaciones"
@@ -104,7 +121,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{formatDate(vac.endDate)}</td>
                       <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">{vac.daysRequested}</td>
                       <td className="py-3 px-4">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{vac.status}</span>
+                        <StatusBadge type={mapVacationStatusToStatusType(vac.status)} size="sm" />
                       </td>
                     </tr>
                   ))}
