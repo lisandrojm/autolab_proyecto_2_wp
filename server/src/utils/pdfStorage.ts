@@ -12,6 +12,10 @@ async function ensureDir(dir: string): Promise<void> {
   }
 }
 
+function isValidObjectId(id: string): boolean {
+  return /^[a-f0-9]{24}$/i.test(id);
+}
+
 export async function savePdfToStorage(
   tenantId: string,
   userId: string,
@@ -24,6 +28,21 @@ export async function savePdfToStorage(
     console.log("[PDF STORAGE] User ID:", userId);
     console.log("[PDF STORAGE] Order Number:", orderNumber);
     console.log("[PDF STORAGE] Buffer size:", pdfBuffer.length, "bytes");
+
+    console.log("[PDF STORAGE] Validating IDs...");
+    if (!isValidObjectId(tenantId)) {
+      const error = `Invalid tenantId format: ${tenantId}`;
+      console.error("[PDF STORAGE ERROR]", error);
+      throw new Error(error);
+    }
+
+    if (!isValidObjectId(userId)) {
+      const error = `Invalid userId format. Length: ${userId.length}, Value: ${userId.substring(0, 50)}...`;
+      console.error("[PDF STORAGE ERROR]", error);
+      throw new Error(error);
+    }
+
+    console.log("[PDF STORAGE] IDs validated successfully");
 
     const serverRoot = process.cwd();
     console.log("[PDF STORAGE] Server root (process.cwd()):", serverRoot);

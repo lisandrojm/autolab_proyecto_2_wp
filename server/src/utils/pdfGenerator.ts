@@ -52,7 +52,22 @@ export async function generateOrderPDF(
     const pdfBuffer = await htmlPdf.generatePdf(file, options);
     console.log("[PDF GENERATOR] PDF buffer generated, size:", pdfBuffer.length, "bytes");
 
-    const userId = order.userId.toString();
+    console.log("[PDF GENERATOR] Extracting user ID...");
+    console.log("[PDF GENERATOR] order.userId type:", typeof order.userId);
+    console.log("[PDF GENERATOR] order.userId value:", order.userId);
+
+    let userId: string;
+    if (typeof order.userId === 'object' && order.userId !== null && '_id' in order.userId) {
+      userId = (order.userId as any)._id.toString();
+      console.log("[PDF GENERATOR] Extracted userId from populated object:", userId);
+    } else {
+      userId = order.userId.toString();
+      console.log("[PDF GENERATOR] Extracted userId from ObjectId:", userId);
+    }
+
+    console.log("[PDF GENERATOR] Final userId:", userId);
+    console.log("[PDF GENERATOR] userId length:", userId.length);
+
     console.log("[PDF GENERATOR] Saving PDF to storage...");
     console.log("[PDF GENERATOR] Tenant ID:", tenantId);
     console.log("[PDF GENERATOR] User ID:", userId);
