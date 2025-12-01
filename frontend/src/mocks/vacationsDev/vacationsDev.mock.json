@@ -78,7 +78,8 @@
       "status": "approved",
       "createdAt": "2025-01-02T10:22:11",
       "approvedBy": "Laura Gómez",
-      "approvedAt": "2025-01-03T14:00:00"
+      "approvedAt": "2025-01-03T14:00:00",
+      "comments": "Aprobado sin observaciones"
     },
     {
       "id": "rec-2",
@@ -113,7 +114,8 @@
       "status": "rejected",
       "createdAt": "2024-12-10T08:45:00",
       "approvedBy": "Laura Gómez",
-      "approvedAt": "2024-12-11T16:20:00"
+      "approvedAt": "2024-12-11T16:20:00",
+      "comments": "No se aprobó porque ya no quedan días disponibles para este año"
     }
   ],
 

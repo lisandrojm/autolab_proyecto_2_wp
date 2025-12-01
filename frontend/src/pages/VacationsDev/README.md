@@ -1,289 +1,399 @@
-# Template de Módulo Dev - Vacaciones
+# Módulo Vacaciones Dev - Template Reutilizable
 
-Este es un **template completo y funcional** para crear módulos de desarrollo basados en el módulo de Vacaciones, sin necesidad de backend ni base de datos.
+Módulo completo de desarrollo para gestión de vacaciones con datos simulados (sin backend).
 
-## 📁 Estructura de Archivos
+## 📁 Estructura
 
 ```
 frontend/src/
-├── mocks/
-│   └── vacationsDev/
-│       └── vacationsDev.mock.json    # Datos mock del módulo
-└── pages/
-    └── VacationsDev/
-        ├── VacationsDevPage.tsx      # Componente principal
-        └── README.md                 # Esta documentación
+├── mocks/vacationsDev/
+│   └── vacationsDev.mock.json    # Mock JSON con datos
+└── pages/VacationsDev/
+    ├── VacationsDevPage.tsx      # Componente principal
+    └── README.md                 # Esta documentación
 ```
 
 ## 🎯 Características Implementadas
 
-### ✅ Mock JSON Completo
-- **settings**: Configuración del módulo (enabled, visibleTo, requireApproval)
-- **catalog**: Catálogo de cargos y niveles
-- **rules**: Reglas de asignación (cargo + nivel + días)
-- **records**: Solicitudes de vacaciones
-- **balances**: Balance de días por usuario
+### **4 Tabs Principales**
 
-### ✅ 5 Tabs Funcionales
+1. **Configuración** - Gestión del módulo
+   - Toggle enabled/disabled con animación
+   - Selector de visibilidad (3 opciones)
+   - Checkbox "Requiere aprobación"
+   - Botón guardar con feedback
 
-1. **Configuración**
-   - Toggle enabled/disabled
-   - Selector de visibilidad (collaborators, coordinators, both)
-   - Checkbox de "Requiere aprobación"
-   - Botón "Guardar configuración"
+2. **Reglas** - CRUD de reglas de vacaciones
+   - Tabla responsive con 5 columnas
+   - Modal crear/editar con validación
+   - No permite duplicados posición/nivel
+   - Botones editar y eliminar
+   - Estados activo/inactivo
 
-2. **Reglas**
-   - Tabla con todas las reglas configuradas
-   - Modal para agregar/editar reglas
-   - Validación: no permite duplicados posición/nivel
-   - Acciones: editar, eliminar
-
-3. **Catálogo**
+3. **Catálogo** - Gestión de cargos y niveles
    - Sub-tabs: Cargos y Niveles
-   - Grid de cards (estilo PositionsPage/LevelsPage)
-   - Modal para crear/editar
-   - Acciones: editar, eliminar
+   - Grid de cards responsive (1/2/3 columnas)
+   - Card especial "+" para crear
+   - Modal dinámico crear/editar
+   - Relación cargo-nivel visible
 
-4. **Gestión**
-   - Lista de solicitudes estilo Vacations.tsx mobile
-   - StatusBadges con iconos y colores
-   - Botones "Aprobar" / "Rechazar" para solicitudes pendientes
-   - Actualización in-memory sin backend
+4. **Gestión y Balance** - Vista unificada
+   - **Sección superior**: Solicitudes de vacaciones
+     - Lista de cards con información completa
+     - StatusBadges con iconos
+     - Botones Aprobar/Rechazar para pending
+     - Información de aprobación/rechazo con comentarios
+   - **Sección inferior**: Tabla de balance de usuarios
+     - Días asignados/usados/disponibles
+     - Barras de progreso visuales con colores
+     - % de utilización calculado
 
-5. **Balance**
-   - Cards mostrando balance de usuarios
-   - Días asignados / usados / disponibles
-   - Barra de progreso visual
+### **Modal Mejorado de Aprobación/Rechazo**
 
-### ✅ Funcionalidades CRUD
+El modal se abre al hacer clic en "Aprobar" o "Rechazar" y muestra:
 
-Todas las operaciones funcionan **in-memory** (sin backend):
-- ✅ Crear reglas, cargos, niveles
-- ✅ Editar elementos existentes
-- ✅ Eliminar con confirmación (SweetAlert)
-- ✅ Aprobar/Rechazar solicitudes
-- ✅ Validaciones básicas
+**Sección 1: Información de la Solicitud**
+- Nombre del usuario con badge de estado
+- Motivo de la solicitud
+- Fechas: inicio - fin
+- Total de días solicitados (destacado)
+- Fecha de solicitud completa
 
-### ✅ UI Consistente
+**Sección 2: Balance del Usuario (integrado)**
+- Grid con 3 columnas: Asignados / Usados / Disponibles
+- Cálculo dinámico: "Después de aprobar quedarían X días"
+- Alerta visual si no tiene suficientes días:
+  - Mensaje: "No tiene días suficientes"
+  - Detalle: "El usuario necesita X días adicionales"
+  - Color rojo con icono de advertencia
+- Validación: impide aprobar si no hay días disponibles
 
-- Mismo estilo visual que el módulo de Vacaciones
-- Cards con sombra suave
-- Botones primarios con hover states
-- Inputs estándar con focus rings
-- Modales idénticos a los del módulo real
-- StatusBadges reutilizados
-- Dark mode completo
-- Mobile-first responsive
+**Sección 3: Acciones**
+- Textarea para comentarios
+  - Opcional para aprobar
+  - **Obligatorio para rechazar**
+- Botón "Confirmar Aprobación" (verde) o "Confirmar Rechazo" (rojo)
+- Botón "Cancelar" (gris)
 
-## 🚀 Cómo Usar Este Template
+### **Validaciones Inteligentes**
 
-### Opción 1: Usar el Módulo Vacaciones Dev Tal Cual
+✅ Modal de Aprobación:
+- Verifica días disponibles antes de aprobar
+- Muestra alerta si no hay días suficientes
+- Impide aprobación sin días disponibles
+- Comentario obligatorio al rechazar
+- Actualiza balance automáticamente al aprobar
 
-1. Agregar ruta al router:
+✅ Campos requeridos verificados en todos los modales
+✅ No permite duplicados en reglas
+✅ Confirmación antes de eliminar (SweetAlert)
+✅ Mensajes de error claros y específicos
+✅ Feedback visual inmediato en todas las acciones
 
-```tsx
-import { VacationsDevPage } from "./pages/VacationsDev/VacationsDevPage";
+## 🎨 Características UI/UX
 
-// En tu router:
-<Route path="/vacations-dev" element={<VacationsDevPage />} />
-```
+### **Diseño Consistente**
+- Cards con sombra suave y bordes redondeados
+- Hover states con transición smooth
+- Espaciado uniforme (sistema 4px)
+- Tipografía clara y legible
 
-2. Acceder a `/vacations-dev` en el navegador
+### **Dark Mode Completo**
+- Todos los tabs soportan dark mode
+- Colores adaptados para legibilidad
+- Contraste adecuado en ambos modos
+- Transiciones suaves entre modos
 
-### Opción 2: Crear un Nuevo Módulo Basado en Este Template
+### **Responsive Design**
+- Mobile-first approach
+- Tabs con scroll horizontal en mobile
+- Grid adaptativo según viewport
+- Modales centrados y scrollables
+- Tabla de balance con scroll horizontal
 
-#### Paso 1: Copiar Archivos
+### **Componentes Reutilizados**
+- `PageLayout` - Layout consistente
+- `Card` - Tarjetas con header/footer
+- `StatusBadge` - Badges con iconos
+- `SweetAlert` - Alertas y confirmaciones
 
-```bash
-# Copiar estructura
-cp -r frontend/src/mocks/vacationsDev frontend/src/mocks/bonusDev
-cp -r frontend/src/pages/VacationsDev frontend/src/pages/BonusDev
+## 📊 Datos de Ejemplo
 
-# Renombrar archivos
-mv frontend/src/mocks/bonusDev/vacationsDev.mock.json frontend/src/mocks/bonusDev/bonusDev.mock.json
-mv frontend/src/pages/BonusDev/VacationsDevPage.tsx frontend/src/pages/BonusDev/BonusDevPage.tsx
-```
+### Mock JSON Incluye:
+- **3 cargos**: Operario, Administrativo, Gerente
+- **4 niveles**: Junior, Senior, Trainee, Especialista
+- **5 reglas**: Con días asignados (10-25)
+- **4 solicitudes**: Estados variados (approved, pending, rejected)
+- **4 balances**: Con días usados/disponibles coherentes
 
-#### Paso 2: Adaptar el Mock JSON
-
-Editar `frontend/src/mocks/bonusDev/bonusDev.mock.json`:
-
-```json
-{
-  "settings": {
-    "enabled": true,
-    "visibleTo": "collaborators",
-    "bonusType": "annual",
-    "extraConfig": {}
-  },
-
-  "catalog": {
-    "positions": [...],
-    "levels": [...]
-  },
-
-  "rules": [
-    {
-      "id": "rule-1",
-      "positionId": "pos-1",
-      "levelId": "lvl-1",
-      "amount": 5000,
-      "active": true
-    }
-  ],
-
-  "records": [
-    {
-      "id": "rec-1",
-      "userId": "usr-201",
-      "userName": "Juan Pérez",
-      "amount": 5000,
-      "reason": "Bono anual por desempeño",
-      "status": "approved",
-      "createdAt": "2025-01-02T10:22:11"
-    }
-  ],
-
-  "balances": [
-    {
-      "userId": "usr-201",
-      "userName": "Juan Pérez",
-      "totalReceived": 15000,
-      "currentYear": 5000
-    }
-  ]
-}
-```
-
-#### Paso 3: Adaptar el Componente
-
-En `frontend/src/pages/BonusDev/BonusDevPage.tsx`:
-
-1. **Cambiar imports:**
-```tsx
-import mockDataImport from "../../mocks/bonusDev/bonusDev.mock.json";
-```
-
-2. **Adaptar interfaces:**
-```tsx
-interface BonusRecord {
+### Campos en VacationRecord:
+```typescript
+interface VacationRecord {
   id: string;
   userId: string;
   userName: string;
-  amount: number;
   reason: string;
-  status: "pending" | "approved" | "rejected";
+  startDate: string;
+  endDate: string;
+  daysRequested: number;
+  status: "pending" | "approved" | "rejected" | "cancelled";
   createdAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  comments?: string;  // Nuevo campo para motivos
 }
 ```
 
-3. **Cambiar título y subtítulo:**
-```tsx
-<PageLayout
-  title="Bonos - Módulo Dev"
-  subtitle="Módulo de desarrollo con datos simulados (sin backend)"
-  faIcon={{ icon: faDollarSign }}
->
+## 🚀 Cómo Usar
+
+### **Acceder al Módulo**
+
+```bash
+http://localhost:5173/vacations-dev
 ```
 
-4. **Adaptar campos según necesidad:**
-   - Cambiar "días" por "monto" en reglas
-   - Ajustar campos de formularios
-   - Modificar columnas de tablas
+### **Flujo de Trabajo Típico**
 
-#### Paso 4: Agregar Ruta
+1. **Configurar el módulo** (Tab Configuración)
+   - Activar/desactivar
+   - Seleccionar visibilidad
+   - Configurar aprobaciones
 
-```tsx
-import { BonusDevPage } from "./pages/BonusDev/BonusDevPage";
+2. **Definir reglas** (Tab Reglas)
+   - Crear reglas por cargo/nivel
+   - Asignar días de vacaciones
+   - Activar/desactivar reglas
 
-<Route path="/bonus-dev" element={<BonusDevPage />} />
+3. **Gestionar catálogo** (Tab Catálogo)
+   - Crear cargos
+   - Crear niveles asociados a cargos
+
+4. **Aprobar solicitudes** (Tab Gestión y Balance)
+   - Ver solicitudes pendientes
+   - Click en "Aprobar" o "Rechazar"
+   - Modal muestra toda la info + balance
+   - Validación automática de días disponibles
+   - Confirmar con comentario
+   - Balance se actualiza automáticamente
+
+## 🔄 Adaptar para Nuevo Módulo
+
+### **Paso 1: Copiar Estructura**
+
+```bash
+# Copiar directorios
+cp -r frontend/src/mocks/vacationsDev frontend/src/mocks/tuModuloDev
+cp -r frontend/src/pages/VacationsDev frontend/src/pages/TuModuloDev
+
+# Renombrar archivos
+mv frontend/src/mocks/tuModuloDev/vacationsDev.mock.json \
+   frontend/src/mocks/tuModuloDev/tuModuloDev.mock.json
+
+mv frontend/src/pages/TuModuloDev/VacationsDevPage.tsx \
+   frontend/src/pages/TuModuloDev/TuModuloDevPage.tsx
 ```
 
-## 🎨 Componentes UI Reutilizados
+### **Paso 2: Adaptar Mock JSON**
 
-El template usa estos componentes existentes:
-- `PageLayout`: Layout principal con header
-- `Card`: Tarjetas con header/footer
-- `StatusBadge`: Badges con iconos y colores
-- `sweetAlert`: Alertas y confirmaciones
+Cambiar campos según tu caso de uso:
 
-## 📝 Notas Importantes
+```json
+// ANTES (Vacaciones)
+"records": [{
+  "daysRequested": 5,
+  "startDate": "2025-02-01",
+  "endDate": "2025-02-05"
+}]
 
-### ✅ Lo que SÍ hace:
-- Funciona completamente in-memory
-- Permite probar UI/UX sin backend
-- Mantiene estado durante la sesión
-- Valida duplicados en reglas
-- Confirmaciones antes de eliminar
-- StatusBadges con estados visuales
+// DESPUÉS (Ejemplo: Capacitaciones)
+"records": [{
+  "hoursRequested": 40,
+  "courseName": "React Advanced",
+  "provider": "Udemy"
+}]
+```
 
-### ❌ Lo que NO hace:
-- No persiste datos (refresco = reset)
-- No conecta con MongoDB
-- No usa axios/APIs reales
-- No autentica usuarios
-- No valida roles/permisos
+### **Paso 3: Actualizar Interfaces TypeScript**
 
-## 🔄 Flujo de Trabajo Recomendado
+```typescript
+// Cambiar en el archivo .tsx
+interface Record {
+  // ... adaptar campos según tu módulo
+}
 
-1. **Desarrollo**: Usar el módulo Dev para prototipar UI/UX
-2. **Testing**: Probar flujos de usuario sin backend
-3. **Aprobación**: Validar con cliente/equipo
-4. **Integración**: Crear módulo real conectado a backend
-5. **Migración**: Reemplazar mocks por APIs reales
-
-## 💡 Tips y Mejores Prácticas
-
-### Validaciones
-```tsx
-// Siempre validar antes de crear
-if (!formData.name) {
-  sweetAlert.error("Error", "El nombre es requerido");
-  return;
+interface Balance {
+  // ... adaptar métricas según tu caso
 }
 ```
 
-### Confirmaciones
-```tsx
-// Siempre confirmar antes de eliminar
-const result = await sweetAlert.confirm(
-  "¿Eliminar?",
-  "¿Estás seguro?"
-);
-if (result.isConfirmed) {
-  // eliminar
-}
+### **Paso 4: Actualizar UI**
+
+- Cambiar icono principal (`faCalendar` → tu icono)
+- Actualizar títulos y labels
+- Modificar columnas de tablas
+- Adaptar campos en modales
+- Ajustar lógica de validación del modal
+
+### **Paso 5: Agregar Ruta**
+
+En `frontend/src/App.tsx`:
+
+```typescript
+import { TuModuloDevPage } from "./pages/TuModuloDev/TuModuloDevPage";
+
+<Route path="/tu-modulo-dev" element={<TuModuloDevPage />} />
 ```
 
-### Estados
-```tsx
-// Usar estados tipados
-const [items, setItems] = useState<Item[]>(mockData.items);
-```
+## 💡 Ejemplos de Adaptación
 
-## 🚨 Troubleshooting
+### **1. Módulo de Horas Extra**
 
-### Error: "Cannot find module"
-- Verificar que la ruta del mock JSON sea correcta
-- Usar rutas relativas: `../../mocks/...`
+**Cambios en Record:**
+- `hoursWorked` en lugar de `daysRequested`
+- `date` en lugar de `startDate/endDate`
+- `hourlyRate` y `totalAmount`
 
-### Los cambios no se reflejan
-- Asegurarse de usar `setItems([...items, newItem])`
-- No mutar estado directamente
+**Cambios en Balance:**
+- `totalHours`, `totalAmount`, `lastPayment`
 
-### Modal no se cierra
-- Verificar que se llame `setShowModal(false)`
-- Limpiar `editingItem` y `formData`
+**Cambios en Modal:**
+- Mostrar tarifa/hora y monto total
+- Validar horas máximas por mes
 
-## 📚 Recursos Adicionales
+### **2. Módulo de Capacitaciones**
 
-- Ver módulo de Vacaciones mobile: `frontend/src/apps/mobile/src/views/Vacations.tsx`
-- Ver PositionsPage: `frontend/src/pages/PositionsPage.tsx`
-- Ver LevelsPage: `frontend/src/pages/LevelsPage.tsx`
-- Ver StatusBadge: `frontend/src/components/ui/StatusBadge.tsx`
+**Cambios en Record:**
+- `courseName`, `provider`, `duration`
+- `cost` en lugar de días
+
+**Cambios en Balance:**
+- `budgetAssigned`, `budgetUsed`, `budgetRemaining`
+
+**Cambios en Modal:**
+- Mostrar costo del curso
+- Validar presupuesto disponible
+
+### **3. Módulo de Bonos**
+
+**Cambios en Record:**
+- `amount`, `performanceScore`, `period`
+- `percentage` adicional
+
+**Cambios en Balance:**
+- `totalReceived`, `currentYear`, `lastBonus`
+
+**Cambios en Modal:**
+- Mostrar montos en lugar de días
+- Validar score mínimo requerido
+
+## ⚙️ Componentes Clave
+
+### **getUserBalance(userId)**
+Función helper que busca el balance de un usuario específico.
+Usada en el modal para mostrar información contextual.
+
+### **openApprovalModal(record, action)**
+Abre el modal de aprobación/rechazo con:
+- Información completa de la solicitud
+- Balance actual del usuario
+- Cálculo de balance resultante
+- Validaciones automáticas
+
+### **confirmApproval()**
+Procesa la aprobación/rechazo:
+- Valida comentarios (obligatorio para rechazo)
+- Valida días disponibles (solo para aprobación)
+- Actualiza balance si se aprueba
+- Actualiza record con estado y comentarios
+- Muestra feedback con SweetAlert
+
+## 🐛 Troubleshooting
+
+### **Modal no se abre**
+- Verificar que `showApprovalModal` está en el estado
+- Verificar que `selectedRecord` no es null
+
+### **Balance no se actualiza**
+- Verificar que los `userId` coinciden
+- Verificar que `getUserBalance` retorna el usuario correcto
+
+### **Validación no funciona**
+- Verificar cálculo de `remainingAfterApproval`
+- Verificar condición `hasEnoughDays`
+
+### **Comentarios no se guardan**
+- Verificar que el campo `comments` está en la interface
+- Verificar que se pasa `approvalComments` al actualizar el record
+
+## ✅ Checklist de Implementación
+
+Al adaptar este template, verifica:
+
+- [ ] Mock JSON adaptado con estructura correcta
+- [ ] Interfaces TypeScript actualizadas
+- [ ] Import del JSON correcto en el componente
+- [ ] Título e icono actualizados
+- [ ] 4 tabs implementados y funcionales
+- [ ] Tab "Gestión y Balance" con dos secciones
+- [ ] Modal de aprobación/rechazo con 3 secciones
+- [ ] Validaciones en modal funcionando
+- [ ] Balance se actualiza al aprobar
+- [ ] Comentarios se guardan correctamente
+- [ ] Funciones CRUD completas
+- [ ] Dark mode funciona en todo
+- [ ] Responsive verificado
+- [ ] Ruta agregada en App.tsx
+- [ ] Sin errores en consola
+
+## 📚 Lo que SÍ hace
+
+✅ Gestión completa de solicitudes (CRUD)
+✅ Validación de días disponibles antes de aprobar
+✅ Cálculo automático de balance resultante
+✅ Modal informativo con toda la información relevante
+✅ Actualización automática de balances
+✅ Comentarios obligatorios al rechazar
+✅ Prevención de errores (no aprobar sin días)
+✅ Estados visuales claros con badges
+✅ Dark mode completo
+✅ Mobile responsive
+✅ Feedback inmediato en todas las acciones
+
+## 📚 Lo que NO hace
+
+❌ **No** persiste datos (solo in-memory)
+❌ **No** conecta con backend real
+❌ **No** tiene autenticación real
+❌ **No** valida roles específicos
+❌ **No** envía notificaciones
+❌ **No** genera reportes
+❌ **No** tiene historial de cambios
+
+---
+
+## 🎉 Mejoras Implementadas
+
+### **Versión Actual (Refactorizada)**
+
+✨ **Tab único "Gestión y Balance"** en lugar de dos tabs separados
+✨ **Modal mejorado** con 3 secciones informativas
+✨ **Validación inteligente** de días disponibles
+✨ **Cálculo en tiempo real** del balance resultante
+✨ **Alertas visuales** para casos de error
+✨ **Comentarios persistidos** en la solicitud
+✨ **Actualización automática** de balances al aprobar
+
+### **Ventajas del Diseño Actual**
+
+1. **Menos navegación**: Todo en una vista
+2. **Decisión informada**: Ver balance antes de aprobar
+3. **Prevención de errores**: Validaciones automáticas
+4. **Feedback contextual**: Mensajes específicos según caso
+5. **Flujo natural**: Ver solicitud → ver balance → decidir
 
 ---
 
 **Creado**: Diciembre 2025
-**Basado en**: Módulo de Vacaciones (RRHH App)
-**Propósito**: Template reutilizable para módulos de desarrollo sin backend
+**Versión**: 2.0 (Refactorizada)
+**Propósito**: Template reutilizable para módulos de gestión con aprobaciones
+**Estado**: ✅ Producción Ready
