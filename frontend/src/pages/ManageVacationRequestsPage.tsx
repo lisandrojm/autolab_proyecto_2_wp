@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, VacationRequest } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
+const HELP_KEY = "vacations" as const;
+// 🔥 STATE PARA MODAL INFO
 
 export const ManageVacationRequestsPage: React.FC = () => {
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -10,6 +15,10 @@ export const ManageVacationRequestsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const helpEntry = getHelp(HELP_KEY);
+  const [openInfo, setOpenInfo] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const navigate = useNavigate();
 
   const loadVacations = async () => {
     try {
@@ -50,7 +59,20 @@ export const ManageVacationRequestsPage: React.FC = () => {
   };
 
   return (
-    <PageLayout title="Solicitudes de Vacaciones" subtitle="Gestión de solicitudes de vacaciones">
+    <PageLayout
+      title="Solicitudes de Vacaciones"
+      subtitle="Gestión de solicitudes de vacaciones"
+      faIcon={{ icon: faShoppingCart }}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+    >
       <div>
         <div className="mb-6 relative">
           <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
