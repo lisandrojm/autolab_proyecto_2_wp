@@ -77,7 +77,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Solicitudes de Vacaciones"
+      title="Vacaciones"
       subtitle="Gestión de solicitudes de vacaciones"
       faIcon={{ icon: faShoppingCart }}
       infoModal={{
