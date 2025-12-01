@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -858,7 +858,7 @@ export const ManageOrdersPage: React.FC = () => {
               </div>
             </div>
             <div className="flex flex-col gap-4">
-              <div className="lg:col-span-8">
+              <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(selectedOrder)}</span>
@@ -869,6 +869,14 @@ export const ManageOrdersPage: React.FC = () => {
                   ))}
                 </div>
               </div>
+              {selectedOrder.pdfPreAprobacionUrl && (
+                <div className="border-slate-200 dark:border-slate-700">
+                  <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm">
+                    <FontAwesomeIcon icon={faDownload} />
+                    Descargar PDF
+                  </a>
+                </div>
+              )}
               <div className="flex gap-10">
                 {selectedOrder.amount && (
                   <div>
@@ -964,16 +972,6 @@ export const ManageOrdersPage: React.FC = () => {
                 <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.deliveredAt)}</p>
               </div>
             </div>
-
-            {selectedOrder.pdfPreAprobacionUrl && (
-              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">Documento Generado</p>
-                <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors font-medium shadow-sm">
-                  <FontAwesomeIcon icon={faFilePdf} />
-                  Descargar PDF
-                </a>
-              </div>
-            )}
           </div>
         )}
       </Modal>
