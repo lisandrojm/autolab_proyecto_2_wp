@@ -1,0 +1,67 @@
+{
+
+  "rules": [
+    {
+      "id": "rule-1",
+      "acumulados": 30,
+      "active": true
+    },
+    {
+      "id": "rule-2",
+      "limite_de_dias": 15,
+      "active": true
+    },
+    {
+      "id": "rule-3",
+      "rematar_vacaciones-legal": 45,
+      "active": true
+    },
+  ],
+
+  {
+    "records": [
+      {
+        "id": "rec-1",
+        "userId": "usr-201",
+        "userName": "Juan Pérez",
+        "positon (cargo)": "Programador",
+        "level (nivel)": "Junior",
+        "startDate": "2025-01-12",
+        "endDate": "2025-01-15",
+        "vacacionesRequested":"boolean",
+        "licenciasRequested":"boolean",
+        "dias_de_vacaciones_anuales":"15",
+        "balance":"30"
+
+        "vacaciones": [
+          {
+            "id": "vac-1",
+            "status": "approved",
+            "createdAt": "2025-01-02T10:22:11",
+            "approvedBy": "Laura Gómez",
+            "approvedAt": "2025-01-03T14:00:00",
+            "daysRequested": 3
+          }
+        ],
+        "comments": "Aprobado sin observaciones"
+      }
+    ]
+  }
+    {
+      "id": "rec-2",
+      "userId": "usr-202",
+      "userName": "María López",
+      "reason": "Asuntos personales",
+      "startDate": "2025-02-01",
+      "endDate": "2025-02-05",
+      "daysRequested": 5,
+      "status": "pending",
+      "createdAt": "2025-01-25T09:15:00",
+      "dias_al_anio": "24",
+      "balance_a_la_fecha": "24"
+    }
+/*     ////////////////// */
+  ],
+
+}
+/que balances y días este dentro del usuario.
