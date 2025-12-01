@@ -41,7 +41,6 @@ export default function Home({ onNavigate }: HomeProps) {
 
   const latestNotification = notifications.find((n) => !n.isRead);
 
-  // ⬇️ QUICK ACTIONS — badgeBg y badgeText
   const baseActions = [
     {
       icon: faShoppingCart,
@@ -50,8 +49,6 @@ export default function Home({ onNavigate }: HomeProps) {
       view: "orders" as ViewType,
       roles: ["coordinator", "collaborator"],
       badge: "Finish",
-      badgeBg: "bg-blue-500",
-      badgeText: "text-white",
     },
     {
       icon: faUmbrella,
@@ -61,8 +58,6 @@ export default function Home({ onNavigate }: HomeProps) {
       roles: ["coordinator", "collaborator"],
       disabled: false,
       badge: "New",
-      badgeBg: "bg-red-500",
-      badgeText: "text-white",
     },
     {
       icon: faFileAlt,
@@ -138,22 +133,20 @@ export default function Home({ onNavigate }: HomeProps) {
 
   return (
     <div className="flex-1 pb-24">
-      {/* HEADER */}
+      {/* Header: avatar + nombre + rol + botones de tema y salir */}
       <div className="flex items-center justify-between px-4 pt-4">
         <UserHeader user={user} />
 
         <div className="flex items-center gap-1">
-          <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
             <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
           </button>
-
-          <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
             <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* NOTIFICACIÓN DESTACADA */}
       {!notifLoading && latestNotification && (
         <div className="p-4">
           <div className="flex items-start gap-3 rounded-xl border border-green-500 bg-green-50 p-4 shadow-sm dark:border-green-400 dark:bg-green-900/40">
@@ -170,42 +163,47 @@ export default function Home({ onNavigate }: HomeProps) {
           </div>
         </div>
       )}
+      {notifLoading && (
+        <div className="p-4">
+          <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+            <div className="text-sm text-slate-500 dark:text-slate-400">Cargando notificaciones...</div>
+          </div>
+        </div>
+      )}
 
-      {/* GRID */}
-      <div className={`grid grid-cols-2 gap-4 p-4`}>
+      <div className={`grid ${isMobileCoordinator ? "grid-cols-2" : "grid-cols-2"} gap-4 p-4`}>
         {quickActions.map((action, index) => {
+          const icon = action.icon;
           const isCoordinatorOnly = action.roles?.includes("coordinator") && !action.roles?.includes("collaborator");
 
           return (
             <button
               key={index}
-              onClick={() => !action.disabled && onNavigate(action.view)}
+              onClick={() => {
+                if (!action.disabled) onNavigate(action.view);
+              }}
               disabled={action.disabled}
-              className={`relative flex flex-col gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
-                ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
+              className={`relative flex flex-col flex-1 gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
+    ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
-              {/* BADGE */}
-              {(action as any).badge && <span className={`absolute top-4 right-4 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}
-
-              <FontAwesomeIcon icon={action.icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
-
+              {(action as any).badge && <span className="absolute top-4 right-4 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-500 text-white uppercase z-10">{(action as any).badge}</span>}
+              <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{action.title}</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{action.description}</p>
+                <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
+                <p className="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">{action.description}</p>
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* ACTIVIDAD */}
-      <h3 className="px-4 pb-2 pt-4 text-lg font-bold text-slate-900 dark:text-slate-100">Actividad Reciente</h3>
+      <h3 className="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-slate-900 dark:text-slate-100">Actividad Reciente</h3>
 
       {activityLoading ? (
         <div className="flex flex-col gap-3 px-4">
           {[1, 2].map((i) => (
             <div key={i} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-              <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700" />
               <div className="flex-1">
                 <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
                 <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
@@ -218,10 +216,9 @@ export default function Home({ onNavigate }: HomeProps) {
           {recentActivity.map((activity) => {
             const icon = getActivityIcon(activity.action);
             const colors = getActivityColor(activity.action);
-
             return (
               <div key={activity._id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${colors.bg}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${colors.bg}`}>
                   <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${colors.icon}`} />
                 </div>
                 <div className="flex-1">

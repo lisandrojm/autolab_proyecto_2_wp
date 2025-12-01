@@ -1,22 +1,37 @@
 import { useState, useEffect } from "react";
 import { PageLayout } from "../../components/ui/PageLayout";
+import { Card } from "../../components/ui/Card";
+import { SearchAndFilters } from "../../components/ui/SearchAndFilters";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faFilePdf, faCheckCircle, faTimesCircle, faTimes, faSave, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+
 import { pdfTemplatesAPI, PdfTemplate, PdfTemplateInput, codeOptions, variablesByCode, systemVariables } from "../../api/pdfTemplates";
+
 import Swal from "sweetalert2";
 import { getHelp, hasHelp } from "../../data/help/helpContent";
+import { Modal } from "../../components/ui/Modal";
 
 const HELP_KEY = "pdfTemplates" as const;
 
 export function PdfTemplatesPage() {
+  // data
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+
+  // filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
+  const [isFetching, setIsFetching] = useState(false);
+
+  // modal
+  const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<PdfTemplate | null>(null);
-  const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  // form
   const [formData, setFormData] = useState<PdfTemplateInput>({
     code: "dinero",
     name: "",
@@ -24,8 +39,9 @@ export function PdfTemplatesPage() {
     variablesHint: "",
     isActive: true,
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // info modal (ⓘ)
+  // help modal
   const [openInfo, setOpenInfo] = useState(false);
   const showHelp = hasHelp(HELP_KEY);
   const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: "Ayuda", size: "md" as const, content: <div /> };
@@ -33,26 +49,6 @@ export function PdfTemplatesPage() {
   useEffect(() => {
     loadTemplates();
   }, []);
-
-  useEffect(() => {
-    if (editingTemplate) {
-      setFormData({
-        code: editingTemplate.code,
-        name: editingTemplate.name,
-        content: editingTemplate.content,
-        variablesHint: editingTemplate.variablesHint || "",
-        isActive: editingTemplate.isActive,
-      });
-    } else {
-      setFormData({
-        code: "dinero",
-        name: "",
-        content: "",
-        variablesHint: "",
-        isActive: true,
-      });
-    }
-  }, [editingTemplate]);
 
   const loadTemplates = async () => {
     try {
@@ -66,9 +62,44 @@ export function PdfTemplatesPage() {
     }
   };
 
-  const handleEdit = (template: PdfTemplate) => {
+  // filtering
+  const filteredTemplates = templates.filter((t) => {
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const match = t.name.toLowerCase().includes(term) || t.content.toLowerCase().includes(term);
+      if (!match) return false;
+    }
+
+    if (filterActive === "active" && !t.isActive) return false;
+    if (filterActive === "inactive" && t.isActive) return false;
+
+    return true;
+  });
+
+  const openCreate = () => {
+    setEditingTemplate(null);
+    setFormData({
+      code: "dinero",
+      name: "",
+      content: "",
+      variablesHint: "",
+      isActive: true,
+    });
+    setErrors({});
+    setShowModal(true);
+  };
+
+  const openEdit = (template: PdfTemplate) => {
     setEditingTemplate(template);
-    setShowForm(true);
+    setFormData({
+      code: template.code,
+      name: template.name,
+      content: template.content,
+      variablesHint: template.variablesHint || "",
+      isActive: template.isActive,
+    });
+    setErrors({});
+    setShowModal(true);
   };
 
   const handleDelete = async (template: PdfTemplate) => {
@@ -80,15 +111,14 @@ export function PdfTemplatesPage() {
       confirmButtonColor: "#ef4444",
       cancelButtonColor: "#6b7280",
       confirmButtonText: "Eliminar",
-      cancelButtonText: "Cancelar",
     });
 
     if (!result.isConfirmed) return;
 
     try {
       await pdfTemplatesAPI.delete(template._id);
-      await loadTemplates();
       Swal.fire("Eliminada", "La plantilla ha sido eliminada", "success");
+      loadTemplates();
     } catch {
       Swal.fire("Error", "No se pudo eliminar la plantilla", "error");
     }
@@ -102,7 +132,7 @@ export function PdfTemplatesPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
@@ -115,9 +145,9 @@ export function PdfTemplatesPage() {
         await pdfTemplatesAPI.create(formData);
         Swal.fire("Creada", "La plantilla ha sido creada", "success");
       }
-      await loadTemplates();
-      setShowForm(false);
+      setShowModal(false);
       setEditingTemplate(null);
+      loadTemplates();
     } catch (error: any) {
       Swal.fire("Error", error.response?.data?.error || "No se pudo guardar", "error");
     } finally {
@@ -125,30 +155,29 @@ export function PdfTemplatesPage() {
     }
   };
 
-  const getCodeBadgeColor = (code: string) => {
-    switch (code) {
-      case "dinero":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
-      case "fechaRango":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
-      case "fechaUnica":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
-      default:
-        return "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300";
+  const getBadge = (template: PdfTemplate) => {
+    if (template.isActive) {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 px-2 py-1 rounded-md">
+          <FontAwesomeIcon icon={faCheckCircle} className="h-3 w-3" />
+          Activa
+        </span>
+      );
     }
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 px-2 py-1 rounded-md">
+        <FontAwesomeIcon icon={faTimesCircle} className="h-3 w-3" />
+        Inactiva
+      </span>
+    );
   };
 
-  const filteredTemplates = templates.filter((t) => {
-    if (filter === "active") return t.isActive;
-    if (filter === "inactive") return !t.isActive;
-    return true;
-  });
-
-  const selectedVariables = variablesByCode[formData.code] || [];
+  if (loading) return <LoadingSpinner message="Cargando plantillas..." />;
 
   return (
     <PageLayout
       title="Plantillas PDF"
+      subtitle="Crea y gestiona plantillas PDF para pedidos"
       faIcon={{ icon: faFileContract }}
       infoModal={{
         isOpen: openInfo,
@@ -158,197 +187,205 @@ export function PdfTemplatesPage() {
         size: helpEntry.size,
         content: helpEntry.content,
       }}
-      shouldShowInfo={true}
+      shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2 p-2 text-sm">
-          <FontAwesomeIcon icon={faPlus} />
+        <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+          <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
         </button>
       }
+      searchAndFilters={
+        <SearchAndFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Buscar por nombre o contenido..."
+          filters={[
+            {
+              value: filterActive,
+              onChange: (v) => setFilterActive(v as any),
+              options: [
+                { value: "all", label: "Todas" },
+                { value: "active", label: "Activas" },
+                { value: "inactive", label: "Inactivas" },
+              ],
+            },
+          ]}
+        />
+      }
     >
-      {/* FILTROS */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex gap-2">
-          <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "all" ? "bg-primary-600 text-white" : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100"}`}>
-            Todas ({templates.length})
-          </button>
+      {/* GRID */}
+      <div className="relative">
+        {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Filtrando…</div>}
 
-          <button onClick={() => setFilter("active")} className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "active" ? "bg-primary-600 text-white" : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100"}`}>
-            Activas ({templates.filter((t) => t.isActive).length})
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+          {filteredTemplates.map((template) => (
+            <Card
+              key={template._id}
+              onClick={() => openEdit(template)}
+              className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
+              header={{
+                icon: faFileContract,
+                title: template.name,
+                subtitle: codeOptions.find((c) => c.value === template.code)?.label || template.code,
+                badges: [getBadge(template)],
+              }}
+              footer={{
+                leftContent: null,
+                actions: [
+                  {
+                    icon: faEdit,
+                    title: "Editar",
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      openEdit(template);
+                    },
+                  },
+                  {
+                    icon: faTrash,
+                    title: "Eliminar",
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      handleDelete(template);
+                    },
+                  },
+                ],
+              }}
+            >
+              {/* YA NO HAY preview ni variables */}
+            </Card>
+          ))}
 
-          <button onClick={() => setFilter("inactive")} className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "inactive" ? "bg-primary-600 text-white" : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100"}`}>
-            Inactivas ({templates.filter((t) => !t.isActive).length})
-          </button>
+          {/* CREATE CARD */}
+          <Card
+            variant="create"
+            onClick={openCreate}
+            header={{
+              icon: faFileContract,
+              title: "Nueva Plantilla",
+              subtitle: "Crear nueva plantilla PDF",
+            }}
+          />
         </div>
       </div>
 
-      {/* LISTA */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-6 animate-pulse">
-              <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/4 mb-4"></div>
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
-            </div>
-          ))}
-        </div>
-      ) : filteredTemplates.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg p-12 text-center">
-          <FontAwesomeIcon icon={faFilePdf} className="text-6xl text-slate-300 dark:text-slate-600 mb-4" />
-          <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">No hay plantillas</h3>
-
-          <button onClick={() => setShowForm(true)} className="mt-4 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium inline-flex items-center gap-2">
-            <FontAwesomeIcon icon={faPlus} />
-            Crear Primera Plantilla
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredTemplates.map((template) => (
-            <div key={template._id} className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700 hover:shadow transition">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{template.name}</h3>
-
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCodeBadgeColor(template.code)}`}>{codeOptions.find((o) => o.value === template.code)?.label}</span>
-
-                    {template.isActive ? (
-                      <span className="flex items-center gap-1 text-green-600 dark:text-green-400 text-sm">
-                        <FontAwesomeIcon icon={faCheckCircle} />
-                        Activa
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-slate-400 text-sm">
-                        <FontAwesomeIcon icon={faTimesCircle} />
-                        Inactiva
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2">{template.content.substring(0, 150)}...</p>
-                </div>
-
-                <div className="flex items-center gap-2 ml-4">
-                  <button onClick={() => handleEdit(template)} className="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg">
-                    <FontAwesomeIcon icon={faEdit} />
-                  </button>
-
-                  <button onClick={() => handleDelete(template)} className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg">
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      {filteredTemplates.length === 0 && !isFetching && (
+        <EmptyState
+          icon={faFileContract}
+          title="No hay plantillas"
+          description="Crea una plantilla PDF para comenzar."
+          action={{
+            label: "Nueva Plantilla",
+            onClick: openCreate,
+            icon: faPlus,
+          }}
+        />
       )}
 
       {/* MODAL */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{editingTemplate ? "Editar Plantilla" : "Nueva Plantilla"}</h2>
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingTemplate(null);
+        }}
+        title={editingTemplate ? "Editar Plantilla" : "Nueva Plantilla"}
+        size="xl"
+        actions={[
+          {
+            label: editingTemplate ? "Actualizar" : "Crear",
+            variant: "primary",
+            onClick: () => {
+              const form = document.querySelector<HTMLFormElement>("#template-form");
+              form?.requestSubmit();
+            },
+          },
+          {
+            label: "Cancelar",
+            variant: "ghost",
+            onClick: () => {
+              setShowModal(false);
+              setEditingTemplate(null);
+            },
+          },
+        ]}
+      >
+        <form id="template-form" onSubmit={handleSubmitForm}>
+          <div className="space-y-6">
+            {/* form fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
+                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-field" />
+                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+              </div>
 
-              <button
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingTemplate(null);
-                }}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
-              >
-                <FontAwesomeIcon icon={faTimes} className="text-slate-500" />
-              </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Código *</label>
+                <select
+                  value={formData.code}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      code: e.target.value as any,
+                    })
+                  }
+                  className="input-field"
+                >
+                  {codeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {/* FORM */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Nombre *</label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={`w-full px-4 py-2 border rounded-lg dark:bg-slate-900 ${errors.name ? "border-red-500" : "border-slate-300"}`} placeholder="Ej: Solicitud de Dinero" disabled={saving} />
-                  {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    isActive: e.target.checked,
+                  })
+                }
+              />
+              Plantilla activa
+            </label>
+
+            {/* variables del sistema */}
+            <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Variables del sistema</h4>
+
+              {systemVariables.map((v) => (
+                <div key={v.variable} className="text-sm text-slate-600 dark:text-slate-300">
+                  <code className="bg-white dark:bg-slate-900 px-2 py-0.5 rounded">{v.variable}</code> - {v.description}
                 </div>
+              ))}
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Código *</label>
-                  <select value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value as any })} className="w-full px-4 py-2 border border-slate-300 rounded-lg dark:bg-slate-900" disabled={saving}>
-                    {codeOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+            {/* variables del pedido */}
+            <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Variables del pedido</h4>
 
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} disabled={saving} />
-                Plantilla Activa
-              </label>
-
-              {/* VARIABLES DEL SISTEMA */}
-              <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-                <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Variables del Sistema (Automáticas)</h4>
-
-                {systemVariables.map((v) => (
-                  <div key={v.variable} className="text-sm text-slate-700 dark:text-slate-300">
-                    <code className="bg-white dark:bg-slate-800 px-2 py-0.5 rounded">{v.variable}</code> - {v.description}
-                  </div>
+              <div className="flex flex-wrap gap-1">
+                {(variablesByCode[formData.code] || []).map((v) => (
+                  <code key={v} className="bg-white dark:bg-slate-800 px-2 py-1 rounded text-xs">
+                    {v}
+                  </code>
                 ))}
               </div>
+            </div>
 
-              {/* VARIABLES DEL PEDIDO */}
-              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-                <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Variables del Pedido</h4>
-
-                <div className="flex flex-wrap gap-2">
-                  {selectedVariables.map((v) => (
-                    <code key={v} className="bg-white dark:bg-slate-800 px-2 py-1 rounded text-xs">
-                      {v}
-                    </code>
-                  ))}
-                </div>
-              </div>
-
-              {/* CONTENIDO */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Contenido *</label>
-
-                <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={12} className={`w-full px-4 py-3 border rounded-lg font-mono text-sm dark:bg-slate-900 ${errors.content ? "border-red-500" : "border-slate-300"}`} disabled={saving} />
-                {errors.content && <p className="mt-1 text-sm text-red-500">{errors.content}</p>}
-              </div>
-
-              {/* FOOTER */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingTemplate(null);
-                  }}
-                  className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
-                  disabled={saving}
-                >
-                  Cancelar
-                </button>
-
-                <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center gap-2" disabled={saving}>
-                  {saving ? (
-                    "Guardando..."
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faSave} />
-                      {editingTemplate ? "Actualizar" : "Crear"}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+            {/* contenido */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenido *</label>
+              <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={12} className="w-full px-4 py-3 border rounded-lg font-mono text-sm dark:bg-slate-900" />
+              {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </PageLayout>
   );
 }

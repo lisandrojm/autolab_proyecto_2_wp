@@ -27,13 +27,13 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         endDate,
         reason,
       });
-      await sweetAlert.success("¡Solicitud creada!", "Tu solicitud de vacaciones ha sido enviada");
+      await sweetAlert.success('¡Solicitud creada!', 'Tu solicitud de vacaciones ha sido enviada');
       setShowForm(false);
       setStartDate("");
       setEndDate("");
       setReason("");
     } catch (err: any) {
-      await sweetAlert.error("Error", err.response?.data?.error || "Error al crear solicitud");
+      await sweetAlert.error('Error', err.response?.data?.error || "Error al crear solicitud");
     } finally {
       setSubmitting(false);
     }
