@@ -1,0 +1,150 @@
+{
+  "settings": {
+    "enabled": true,
+    "visibleTo": "collaborators",
+    "requireApproval": true,
+    "extraConfig": {
+      "maxDaysPerRequest": 30,
+      "minDaysNotice": 7
+    }
+  },
+
+  "catalog": {
+    "positions": [
+      { "id": "pos-1", "name": "Operario", "description": "Personal de planta" },
+      { "id": "pos-2", "name": "Administrativo", "description": "Personal administrativo" },
+      { "id": "pos-3", "name": "Gerente", "description": "Personal de gerencia" }
+    ],
+    "levels": [
+      { "id": "lvl-1", "name": "Junior", "positionId": "pos-1", "description": "Nivel inicial" },
+      { "id": "lvl-2", "name": "Senior", "positionId": "pos-1", "description": "Nivel avanzado" },
+      { "id": "lvl-3", "name": "Trainee", "positionId": "pos-2", "description": "En entrenamiento" },
+      { "id": "lvl-4", "name": "Especialista", "positionId": "pos-2", "description": "Nivel especializado" }
+    ]
+  },
+
+  "rules": [
+    {
+      "id": "rule-1",
+      "positionId": "pos-1",
+      "levelId": "lvl-1",
+      "days": 14,
+      "amount": null,
+      "active": true
+    },
+    {
+      "id": "rule-2",
+      "positionId": "pos-1",
+      "levelId": "lvl-2",
+      "days": 21,
+      "amount": null,
+      "active": true
+    },
+    {
+      "id": "rule-3",
+      "positionId": "pos-2",
+      "levelId": "lvl-3",
+      "days": 10,
+      "amount": null,
+      "active": true
+    },
+    {
+      "id": "rule-4",
+      "positionId": "pos-2",
+      "levelId": "lvl-4",
+      "days": 18,
+      "amount": null,
+      "active": true
+    },
+    {
+      "id": "rule-5",
+      "positionId": "pos-3",
+      "levelId": "lvl-1",
+      "days": 25,
+      "amount": null,
+      "active": false
+    }
+  ],
+
+  "records": [
+    {
+      "id": "rec-1",
+      "userId": "usr-201",
+      "userName": "Juan Pérez",
+      "reason": "Vacaciones anuales",
+      "startDate": "2025-01-12",
+      "endDate": "2025-01-15",
+      "daysRequested": 3,
+      "status": "approved",
+      "createdAt": "2025-01-02T10:22:11",
+      "approvedBy": "Laura Gómez",
+      "approvedAt": "2025-01-03T14:00:00"
+    },
+    {
+      "id": "rec-2",
+      "userId": "usr-202",
+      "userName": "María López",
+      "reason": "Asuntos personales",
+      "startDate": "2025-02-01",
+      "endDate": "2025-02-05",
+      "daysRequested": 5,
+      "status": "pending",
+      "createdAt": "2025-01-25T09:15:00"
+    },
+    {
+      "id": "rec-3",
+      "userId": "usr-203",
+      "userName": "Carlos Rodríguez",
+      "reason": "Viaje familiar",
+      "startDate": "2025-03-10",
+      "endDate": "2025-03-17",
+      "daysRequested": 7,
+      "status": "pending",
+      "createdAt": "2025-02-28T11:30:00"
+    },
+    {
+      "id": "rec-4",
+      "userId": "usr-204",
+      "userName": "Ana Martínez",
+      "reason": "Descanso médico",
+      "startDate": "2024-12-20",
+      "endDate": "2024-12-23",
+      "daysRequested": 3,
+      "status": "rejected",
+      "createdAt": "2024-12-10T08:45:00",
+      "approvedBy": "Laura Gómez",
+      "approvedAt": "2024-12-11T16:20:00"
+    }
+  ],
+
+  "balances": [
+    {
+      "userId": "usr-201",
+      "userName": "Juan Pérez",
+      "assignedDays": 21,
+      "used": 3,
+      "remaining": 18
+    },
+    {
+      "userId": "usr-202",
+      "userName": "María López",
+      "assignedDays": 14,
+      "used": 0,
+      "remaining": 14
+    },
+    {
+      "userId": "usr-203",
+      "userName": "Carlos Rodríguez",
+      "assignedDays": 18,
+      "used": 5,
+      "remaining": 13
+    },
+    {
+      "userId": "usr-204",
+      "userName": "Ana Martínez",
+      "assignedDays": 21,
+      "used": 8,
+      "remaining": 13
+    }
+  ]
+}
