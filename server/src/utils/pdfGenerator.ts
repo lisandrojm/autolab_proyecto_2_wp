@@ -21,9 +21,17 @@ export async function generateOrderPDF(
   tenantName: string
 ): Promise<GeneratePdfResult> {
   try {
+    console.log("[PDF GENERATOR] Starting PDF generation...");
+    console.log("[PDF GENERATOR] Order ID:", order._id);
+    console.log("[PDF GENERATOR] Order Number:", order.orderNumber);
+    console.log("[PDF GENERATOR] Template ID:", template._id);
+    console.log("[PDF GENERATOR] Template Name:", template.name);
+
     const variables = prepareVariables(order, category, user, tenantName);
+    console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     const htmlContent = replacePdfVariables(template.content, variables);
+    console.log("[PDF GENERATOR] HTML content generated, length:", htmlContent.length, "characters");
 
     const options = {
       format: "A4",
@@ -40,17 +48,29 @@ export async function generateOrderPDF(
       content: htmlContent,
     };
 
+    console.log("[PDF GENERATOR] Generating PDF buffer...");
     const pdfBuffer = await htmlPdf.generatePdf(file, options);
+    console.log("[PDF GENERATOR] PDF buffer generated, size:", pdfBuffer.length, "bytes");
 
     const userId = order.userId.toString();
+    console.log("[PDF GENERATOR] Saving PDF to storage...");
+    console.log("[PDF GENERATOR] Tenant ID:", tenantId);
+    console.log("[PDF GENERATOR] User ID:", userId);
+
     const pdfUrl = await savePdfToStorage(tenantId, userId, order.orderNumber, pdfBuffer);
+    console.log("[PDF GENERATOR] PDF saved successfully!");
+    console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
 
     return {
       pdfUrl,
       success: true,
     };
   } catch (error) {
-    console.error("Error generating PDF:", error);
+    console.error("[PDF GENERATOR ERROR] Error generating PDF:", error);
+    if (error instanceof Error) {
+      console.error("[PDF GENERATOR ERROR] Error message:", error.message);
+      console.error("[PDF GENERATOR ERROR] Error stack:", error.stack);
+    }
 
     return {
       pdfUrl: "",

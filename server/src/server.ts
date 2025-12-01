@@ -122,7 +122,8 @@ app.use(
 app.options("*", cors());
 
 // ───────────────── Archivos estáticos ─────────────────
-const storagePath = path.join(__dirname, "../storage");
+const storagePath = path.join(process.cwd(), "storage");
+console.log("[SERVER] Storage path configured:", storagePath);
 app.use("/storage", express.static(storagePath));
 app.use("/api/v1/storage", express.static(storagePath));
 // ───────────────── Rutas API (/api/v1/...) ─────────────────
