@@ -124,10 +124,13 @@ export interface Order {
   dynamicValue?: any;
   requiereAccionFutura?: boolean;
   futureActionId?: FutureAction | string;
+  requiresSignature?: boolean;
   signatureStatus?: "not_required" | "pending" | "sent" | "signed";
   signatureSentAt?: string;
+  signatureNotifiedAt?: string;
   signedAt?: string;
   signedBy?: any;
+  documentoUrl?: string;
   pdfPreAprobacionUrl?: string;
   metadata?: Record<string, any>;
   createdAt: string;

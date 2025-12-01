@@ -948,6 +948,21 @@ export const ManageOrdersPage: React.FC = () => {
                 <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedOrder.deliveredAt)}</p>
               </div>
             </div>
+
+            {selectedOrder.pdfPreAprobacionUrl && (
+              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">Documento Generado</p>
+                <a
+                  href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                >
+                  <FontAwesomeIcon icon={faFileLines} />
+                  Descargar PDF
+                </a>
+              </div>
+            )}
           </div>
         )}
       </Modal>

@@ -21,6 +21,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import { generateOrderPDF } from "../utils/pdfGenerator.js";
 
 const router = Router();
 
@@ -532,7 +533,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    });
+    }).populate("userId").populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -550,62 +551,10 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const categoryObj = order.categoryId ? await OrderCategory.findById(order.categoryId) : null;
-    const categoryName = categoryObj?.name || order.category;
+    const category = order.categoryId as any;
+    const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
-
-    let templateCode: string | null = null;
-
-    if (categoryObj) {
-      if (categoryObj.categoryType === "dinero") {
-        templateCode = "dinero";
-      } else if (categoryObj.categoryType === "fecha") {
-        if (categoryObj.dateMode === "range") {
-          templateCode = "fechaRango";
-        } else {
-          templateCode = "fechaUnica";
-        }
-      }
-    }
-
-    if (templateCode) {
-      try {
-        const template = await PdfTemplate.findOne({
-          tenantId: req.tenantObjectId,
-          code: templateCode,
-          isActive: true,
-        });
-
-        if (template) {
-          const tenant = await Tenant.findById(req.tenantObjectId);
-          const userDoc = await User.findById(order.userId);
-
-          const formatDate = (dateStr: string | Date | undefined) => {
-            if (!dateStr) return "";
-            const date = new Date(dateStr);
-            return date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
-          };
-
-          const variables = {
-            categoria: categoryName,
-            subcategoria: order.subcategories?.join(", ") || "",
-            monto: order.amount ? order.amount.toLocaleString("es-AR") : "",
-            fechaDesde: order.dynamicValue?.fechaDesde ? formatDate(order.dynamicValue.fechaDesde) : "",
-            fechaHasta: order.dynamicValue?.fechaHasta ? formatDate(order.dynamicValue.fechaHasta) : "",
-            fechaUnica: order.dynamicValue?.fechaUnica ? formatDate(order.dynamicValue.fechaUnica) : "",
-            dias: order.dynamicValue?.dias || "",
-            nombreUsuario: userDoc ? `${userDoc.firstName} ${userDoc.lastName}` : "",
-            numeroOrden: getPlainOrderNumber(order.orderNumber),
-          };
-
-          // PDF generation is now handled in hr-admin.ts using generateOrderPDF
-          console.log(`PDF generation skipped - handled by new system in hr-admin.ts`);
-        }
-      } catch (pdfError) {
-        console.error("Error generating PDF for order:", pdfError);
-      }
-    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,
@@ -615,6 +564,49 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       entityType: "Order",
       entityId: order._id,
     });
+
+    if (category && category.pdfTemplateId) {
+      try {
+        const template = await PdfTemplate.findOne({
+          _id: category.pdfTemplateId,
+          tenantId: req.tenantObjectId,
+          isActive: true,
+        });
+
+        if (template) {
+          const user = order.userId as any;
+          const tenant = await Tenant.findById(req.tenantObjectId);
+          const tenantName = tenant?.name || tenant?.slug || "Organización";
+
+          const pdfResult = await generateOrderPDF(
+            order,
+            category,
+            template,
+            user,
+            req.tenantObjectId.toString(),
+            tenantName
+          );
+
+          if (pdfResult.success) {
+            order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+            await order.save();
+
+            await ActivityLog.create({
+              tenantId: req.tenantObjectId,
+              userId: order.userId,
+              action: "pdf_generated",
+              description: `PDF generado automáticamente para pedido "${orderDisplayName}"`,
+              entityType: "Order",
+              entityId: order._id,
+            });
+          } else {
+            console.error("Error generating PDF:", pdfResult.error);
+          }
+        }
+      } catch (pdfError) {
+        console.error("Error in PDF generation process:", pdfError);
+      }
+    }
 
     res.json(order);
   } catch (error) {
