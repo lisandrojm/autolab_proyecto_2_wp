@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -161,14 +161,20 @@ export const ManageOrdersPage: React.FC = () => {
 
     try {
       setUpdatingStatus(true);
-      await hrManagementAPI.orders.preApprove(selectedOrder._id);
-      const updatedOrders = await loadOrders();
-      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
-      if (refreshedOrder) {
-        setSelectedOrder(refreshedOrder);
-      }
+      const updatedOrder = await hrManagementAPI.orders.preApprove(selectedOrder._id);
+      console.log("[PDF DEBUG FRONTEND] Updated order received:", updatedOrder);
+      console.log("[PDF DEBUG FRONTEND] pdfPreAprobacionUrl:", updatedOrder.pdfPreAprobacionUrl);
+
+      setSelectedOrder(updatedOrder);
+
+      await loadOrders();
       setUpdatingStatus(false);
-      await sweetAlert.success("Preaprobado", "El pedido ha sido pre-aprobado correctamente");
+
+      if (updatedOrder.pdfPreAprobacionUrl) {
+        await sweetAlert.success("Preaprobado", "El pedido ha sido pre-aprobado correctamente y se ha generado el PDF");
+      } else {
+        await sweetAlert.success("Preaprobado", "El pedido ha sido pre-aprobado correctamente");
+      }
     } catch (error: any) {
       setUpdatingStatus(false);
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo pre-aprobar el pedido");
@@ -361,7 +367,23 @@ export const ManageOrdersPage: React.FC = () => {
       return <span className="text-xs text-gray-500 dark:text-gray-400">-</span>;
     }
 
-    return <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />;
+    return (
+      <div className="flex items-center justify-center gap-2">
+        <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
+        {order.pdfPreAprobacionUrl && (
+          <a
+            href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+            title="Descargar documento PDF"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
+          </a>
+        )}
+      </div>
+    );
   };
 
   const getCategoryLabel = (category: string) => category;
@@ -956,9 +978,9 @@ export const ManageOrdersPage: React.FC = () => {
                   href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors font-medium shadow-sm"
                 >
-                  <FontAwesomeIcon icon={faFileLines} />
+                  <FontAwesomeIcon icon={faFilePdf} />
                   Descargar PDF
                 </a>
               </div>

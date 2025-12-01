@@ -565,7 +565,12 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       entityId: order._id,
     });
 
+    console.log("[PDF DEBUG] Starting PDF generation check...");
+    console.log("[PDF DEBUG] Category:", category ? `ID: ${category._id}, Name: ${category.name}` : "null");
+    console.log("[PDF DEBUG] pdfTemplateId:", category?.pdfTemplateId || "undefined");
+
     if (category && category.pdfTemplateId) {
+      console.log("[PDF DEBUG] Category has pdfTemplateId, searching for template...");
       try {
         const template = await PdfTemplate.findOne({
           _id: category.pdfTemplateId,
@@ -573,11 +578,14 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
           isActive: true,
         });
 
+        console.log("[PDF DEBUG] Template found:", template ? `ID: ${template._id}, Name: ${template.name}` : "null");
+
         if (template) {
           const user = order.userId as any;
           const tenant = await Tenant.findById(req.tenantObjectId);
           const tenantName = tenant?.name || tenant?.slug || "Organización";
 
+          console.log("[PDF DEBUG] Calling generateOrderPDF...");
           const pdfResult = await generateOrderPDF(
             order,
             category,
@@ -587,9 +595,13 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
             tenantName
           );
 
+          console.log("[PDF DEBUG] PDF generation result:", pdfResult.success ? "SUCCESS" : "FAILED");
+          console.log("[PDF DEBUG] PDF URL:", pdfResult.pdfUrl || pdfResult.error);
+
           if (pdfResult.success) {
             order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
             await order.save();
+            console.log("[PDF DEBUG] PDF URL saved to order:", order.pdfPreAprobacionUrl);
 
             await ActivityLog.create({
               tenantId: req.tenantObjectId,
@@ -600,15 +612,21 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
               entityId: order._id,
             });
           } else {
-            console.error("Error generating PDF:", pdfResult.error);
+            console.error("[PDF ERROR] Error generating PDF:", pdfResult.error);
           }
+        } else {
+          console.log("[PDF DEBUG] No active template found for ID:", category.pdfTemplateId);
         }
       } catch (pdfError) {
-        console.error("Error in PDF generation process:", pdfError);
+        console.error("[PDF ERROR] Exception in PDF generation process:", pdfError);
       }
+    } else {
+      console.log("[PDF DEBUG] Category does not have pdfTemplateId or category is null");
     }
 
-    res.json(order);
+    const finalOrder = await Order.findById(order._id).populate("userId").populate("categoryId");
+    console.log("[PDF DEBUG] Sending response with pdfPreAprobacionUrl:", finalOrder?.pdfPreAprobacionUrl || "undefined");
+    res.json(finalOrder);
   } catch (error) {
     console.error("Pre-approve order error:", error);
     res.status(500).json({ error: "Internal server error" });
