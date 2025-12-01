@@ -371,14 +371,7 @@ export const ManageOrdersPage: React.FC = () => {
       <div className="flex items-center justify-center gap-2">
         <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
         {order.pdfPreAprobacionUrl && (
-          <a
-            href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-            title="Descargar documento PDF"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <a href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors" title="Descargar documento PDF" onClick={(e) => e.stopPropagation()}>
             <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
           </a>
         )}
@@ -442,7 +435,6 @@ export const ManageOrdersPage: React.FC = () => {
     const category = order.categoryId as OrderCategory;
     return category.name || order.category || "Sin categoría";
   };
-
 
   const getUserRole = (user: any): string => {
     if (!user) return "Usuario";
@@ -905,14 +897,16 @@ export const ManageOrdersPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
-              <div className="flex justify-between items-start">
-                <div className="flex justify-between items-center w-full">
-                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Descripción</p>
+            {selectedOrder.description && selectedOrder.description.trim() !== "" && (
+              <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-center w-full">
+                    <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Comentario</p>
+                  </div>
                 </div>
+                <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
               </div>
-              <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
-            </div>
+            )}
 
             {(() => {
               const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
@@ -974,12 +968,7 @@ export const ManageOrdersPage: React.FC = () => {
             {selectedOrder.pdfPreAprobacionUrl && (
               <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">Documento Generado</p>
-                <a
-                  href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors font-medium shadow-sm"
-                >
+                <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors font-medium shadow-sm">
                   <FontAwesomeIcon icon={faFilePdf} />
                   Descargar PDF
                 </a>

@@ -88,9 +88,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       setNotifyingSignature(true);
       const response = await personnelAPI.notifySignatureCompleted(order._id);
       const notifiedCount = response?.data?.notifiedCount || 0;
-      const message = notifiedCount > 0
-        ? `Se ha notificado a ${notifiedCount} supervisor(es). Esperá que verifiquen la firma del documento.`
-        : "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.";
+      const message = notifiedCount > 0 ? `Se ha notificado a ${notifiedCount} supervisor(es). Esperá que verifiquen la firma del documento.` : "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.";
 
       setNotifyingSignature(false);
       await sweetAlert.success("Notificación enviada", message);
@@ -309,15 +307,16 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           </div>
 
           {/* Descripción */}
-          <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
-            <div className="flex justify-between items-start">
-              <div className="flex justify-between items-center w-full">
-                <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
+          {order.description && order.description.trim() !== "" && (
+            <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
+              <div className="flex justify-between items-start">
+                <div className="flex justify-between items-center w-full">
+                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
+                </div>
               </div>
+              <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>
             </div>
-            <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>
-          </div>
-
+          )}
           {/* Document Upload Section with Future Action */}
           {(() => {
             const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
@@ -402,9 +401,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                     <div className="flex-1">
                       <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Esperando Verificación</h4>
                       <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">Ya notificaste al supervisor que completaste la firma. Estamos esperando que verifique el documento.</p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
-                        Notificado el: {new Date(order.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(order.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                     </div>
                   </div>
                   <div className="mt-3">
