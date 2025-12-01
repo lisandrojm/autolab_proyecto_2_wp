@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates";
 
 export type HelpEntry = {
   title: string;
@@ -153,6 +153,14 @@ const helpResources = {
       "orderCategories.title": "Guía de Tipos de Pedidos",
       "orderCategories.description": "Este documento describe los tipos de pedidos universales que pueden configurarse en el sistema, utilizando la estructura flexible del módulo Tipos de Pedido. El objetivo es brindar una referencia clara para que administradores y supervisores puedan crear nuevos pedidos sin conocimientos técnicos.",
       "orderCategories.items": ["**Tipos de Pedido Disponibles**: Cada pedido se configura a partir de un *Tipo de Dato*, que define la estructura del formulario que verán los colaboradores en la aplicación móvil.", "**Tipo Fecha**: Se utiliza para solicitudes relacionadas con días específicos, rangos de fechas o eventos temporales. Casos de uso: Solicitud de día por enfermedad, licencias justificadas, permiso por estudio, ausencias programadas, turnos o guardias especiales. Configuraciones: Fecha única o rango de fechas (Desde/Hasta).", "**Tipo Dinero**: Diseñado para cualquier pedido que implique un monto económico. Casos de uso: Adelantos de sueldo, reembolso de gastos, viáticos, gastos varios, compensaciones. Campos: Monto, descripción breve y adjuntos opcionales.", "**Tipo Objeto**: Indicado para pedidos de bienes físicos, equipamiento o materiales. Casos de uso: Herramientas, uniformes, elementos de protección personal, insumos de trabajo, tecnología (mouse, teclado, monitor, notebook), kits de bienvenida, reposición de materiales.", "**Tipo Otros**: Un tipo flexible para cualquier pedido no contemplado en las categorías anteriores. Casos de uso: Justificaciones libres, acciones futuras, comunicaciones internas, solicitudes especiales, notas informativas.", "**Opciones del Pedido**: Cada Tipo de Pedido puede incluir *Opciones* (subcategorías) que sirven para agregar un segundo selector dependiente del tipo principal. Ejemplos para Licencias: Médica, Por estudio, Examen, Cuidado familiar, Matrimonio, Nacimiento. Para Objeto: Tecnología, Seguridad e higiene, Oficina, Accesorios. Para Dinero: Adelanto de sueldo, Gastos con factura, Viáticos.", "**Requiere Acción Futura**: Los Tipos de Pedido pueden configurarse para requerir una acción posterior por parte del colaborador. Útil para: Adjuntar comprobantes luego de un reembolso, presentar certificado médico luego de una licencia, confirmar la recepción de un material, subir una factura luego de un viático, cargar documentación complementaria.", "**Estado del Tipo de Pedido**: Cada Tipo puede ser *Activo* (visible para los colaboradores) o *Inactivo* (oculto temporalmente sin perder historial). Ideal para mantener un catálogo ordenado sin eliminar información importante.", "**Recomendaciones**: Elegir el Tipo de Dato según el campo principal que deberá completar el usuario. Agregar Opciones solo si realmente existen variantes internas del pedido. Activar *Requiere acción futura* únicamente cuando sea necesario solicitar documentación o confirmación adicional. Mantener los nombres claros y precisos para facilitar su entendimiento en la aplicación móvil."],
+      //
+      // ---------------------------------------------------------
+      // NUEVO: PDF Templates
+      // ---------------------------------------------------------
+      //
+      "pdfTemplates.title": "Plantillas PDF de Pedidos",
+      "pdfTemplates.description": "Configura los documentos PDF generados automáticamente cuando un pedido es preaprobado.",
+      "pdfTemplates.items": ["**Plantillas**: Cada plantilla define el texto base que se usa para generar el PDF del pedido.", "**Códigos disponibles**: Dinero, Fecha Rango y Fecha Única.", "**Variables dinámicas**: El sistema reemplaza automáticamente valores como {{categoria}}, {{subcategoria}}, {{monto}}, {{fechaDesde}}, {{fechaHasta}}, {{fechaUnica}} y {{dias}}.", "**Plantilla activa**: Si está activa y coincide el código, se usa esa plantilla para generar el PDF.", "**Objetivo**: Personalizar el documento que recibe el colaborador al aprobar un pedido."],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -313,6 +321,11 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     title: "Información de Niveles",
     size: "sm",
     content: buildHelpContent("levels"),
+  },
+  pdfTemplates: {
+    title: "Plantillas PDF de Pedidos",
+    size: "sm",
+    content: buildHelpContent("pdfTemplates"),
   },
 };
 
