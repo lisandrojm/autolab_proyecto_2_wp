@@ -387,7 +387,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
           {/* Signature Notification Section */}
           {(() => {
-            if (!order.requiresSignature || order.signatureStatus !== "sent") {
+            const categoryInfo = typeof order.categoryId === 'object' ? order.categoryId : null;
+            if (!categoryInfo?.requiresSignature || order.signatureStatus !== "sent") {
               return null;
             }
 
