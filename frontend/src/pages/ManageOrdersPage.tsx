@@ -257,12 +257,7 @@ export const ManageOrdersPage: React.FC = () => {
       e.stopPropagation();
     }
 
-    const result = await sweetAlert.confirm(
-      "¿Eliminar este pedido?",
-      `El pedido ${getFormattedOrderNumber(orderNumber)} será eliminado permanentemente. Esta acción no se puede deshacer.`,
-      "Sí, Eliminar",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Eliminar este pedido?", `El pedido ${getFormattedOrderNumber(orderNumber)} será eliminado permanentemente. Esta acción no se puede deshacer.`, "Sí, Eliminar", "Cancelar");
 
     if (!result.isConfirmed) return;
 
@@ -403,14 +398,14 @@ export const ManageOrdersPage: React.FC = () => {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
+        </div>
+        <div className="flex gap-3">
           {isWaitingVerification && (
             <div className="relative group">
               <FontAwesomeIcon icon={faClock} className={`${isFinalStatus ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm cursor-help`} title="Usuario notificó que completó la firma - Esperando verificación" />
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">Esperando verificación</div>
             </div>
           )}
-        </div>
-        <div>
           {order.pdfPreAprobacionUrl && (
             <a href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className={`${isFinalStatus ? "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300" : "text-violet-600 hover:text-violet-800 dark:text-violet-600 dark:hover:text-violet-300"} transition-colors`} title="Descargar documento PDF" onClick={(e) => e.stopPropagation()}>
               <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
@@ -582,7 +577,7 @@ export const ManageOrdersPage: React.FC = () => {
                       handleDelete(order._id, order.orderNumber, e);
                     },
                     title: "Eliminar pedido",
-                    variant: "danger",
+                    variant: "default",
                   },
                 ],
               }}
@@ -809,12 +804,7 @@ export const ManageOrdersPage: React.FC = () => {
                             <td className="py-3 px-4">{renderSignatureStatus(order)}</td>
                             <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
                             <td className="py-3 px-4 text-center">
-                              <button
-                                onClick={(e) => handleDelete(order._id, order.orderNumber, e)}
-                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
-                                title="Eliminar pedido"
-                                aria-label="Eliminar pedido"
-                              >
+                              <button onClick={(e) => handleDelete(order._id, order.orderNumber, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-400/20 dark:hover:text-gray-400 transition-colors" title="Eliminar pedido" aria-label="Eliminar pedido">
                                 <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                               </button>
                             </td>
