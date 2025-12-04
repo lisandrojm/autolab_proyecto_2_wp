@@ -8,7 +8,7 @@ interface CardAction {
   icon: IconDefinition;
   onClick: (e: React.MouseEvent) => void;
   title: string;
-  variant?: "default" | "blue" | "success" | "warning";
+  variant?: "default" | "blue" | "success" | "warning" | "danger";
   disabled?: boolean;
 }
 
@@ -100,11 +100,13 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
   const getActionClasses = (actionVariant: string = "default") => {
     switch (actionVariant) {
       case "blue":
-        return "hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400";
+        return "hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400";
       case "success":
-        return "hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400";
+        return "hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400";
       case "warning":
-        return "hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400";
+        return "hover:bg-yellow-50 dark:hover:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400";
+      case "danger":
+        return "hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400";
       default:
         return "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400";
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -249,6 +249,35 @@ export const ManageOrdersPage: React.FC = () => {
     } catch (error: any) {
       setUpdatingStatus(false);
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
+    }
+  };
+
+  const handleDelete = async (orderId: string, orderNumber: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    const result = await sweetAlert.confirm(
+      "¿Eliminar este pedido?",
+      `El pedido ${getFormattedOrderNumber(orderNumber)} será eliminado permanentemente. Esta acción no se puede deshacer.`,
+      "Sí, Eliminar",
+      "Cancelar"
+    );
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await hrManagementAPI.orders.delete(orderId);
+      await loadOrders();
+
+      if (selectedOrder && selectedOrder._id === orderId) {
+        setSelectedOrder(null);
+        setShowDetailModal(false);
+      }
+
+      await sweetAlert.success("Eliminado", "El pedido ha sido eliminado correctamente");
+    } catch (error: any) {
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo eliminar el pedido");
     }
   };
 
@@ -545,6 +574,17 @@ export const ManageOrdersPage: React.FC = () => {
                     <span>{formatDateShort(order.requestedAt)}</span>
                   </div>
                 ),
+                actions: [
+                  {
+                    icon: faTrash,
+                    onClick: (e) => {
+                      e?.stopPropagation();
+                      handleDelete(order._id, order.orderNumber, e);
+                    },
+                    title: "Eliminar pedido",
+                    variant: "danger",
+                  },
+                ],
               }}
               onClick={() => {
                 setSelectedOrder(order);
@@ -719,6 +759,7 @@ export const ManageOrdersPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
                       </tr>
                     </thead>
 
@@ -767,6 +808,16 @@ export const ManageOrdersPage: React.FC = () => {
                             </td>
                             <td className="py-3 px-4">{renderSignatureStatus(order)}</td>
                             <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                onClick={(e) => handleDelete(order._id, order.orderNumber, e)}
+                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                                title="Eliminar pedido"
+                                aria-label="Eliminar pedido"
+                              >
+                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
