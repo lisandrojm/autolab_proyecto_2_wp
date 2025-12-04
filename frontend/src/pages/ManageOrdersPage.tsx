@@ -362,6 +362,7 @@ export const ManageOrdersPage: React.FC = () => {
   const renderSignatureStatus = (order: Order) => {
     const signatureStatusType = mapSignatureStateToStatusType(order);
     const isInFinalState = isOrderInFinalState(order.status);
+    const isFinalStatus = ["delivered", "cancelled", "rejected"].includes(order.status);
 
     if (!signatureStatusType) {
       return <span className="text-xs text-gray-500 dark:text-gray-400">-</span>;
@@ -375,14 +376,14 @@ export const ManageOrdersPage: React.FC = () => {
           <StatusBadge type={signatureStatusType} size="sm" overrideStyle={isInFinalState} />
           {isWaitingVerification && (
             <div className="relative group">
-              <FontAwesomeIcon icon={faClock} className="text-amber-500 dark:text-amber-400 text-sm cursor-help" title="Usuario notificó que completó la firma - Esperando verificación" />
+              <FontAwesomeIcon icon={faClock} className={`${isFinalStatus ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm cursor-help`} title="Usuario notificó que completó la firma - Esperando verificación" />
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">Esperando verificación</div>
             </div>
           )}
         </div>
         <div>
           {order.pdfPreAprobacionUrl && (
-            <a href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-800 dark:text-violet-600 dark:hover:text-violet-300 transition-colors" title="Descargar documento PDF" onClick={(e) => e.stopPropagation()}>
+            <a href={`${import.meta.env.VITE_API_URL}${order.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className={`${isFinalStatus ? "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300" : "text-violet-600 hover:text-violet-800 dark:text-violet-600 dark:hover:text-violet-300"} transition-colors`} title="Descargar documento PDF" onClick={(e) => e.stopPropagation()}>
               <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
             </a>
           )}
@@ -530,7 +531,8 @@ export const ManageOrdersPage: React.FC = () => {
                       })()}
                       <div className="flex items-center gap-1.5">
                         <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
-                        {order.signatureStatus === "sent" && order.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className="text-amber-500 dark:text-amber-400 text-sm" title="Esperando verificación de firma" />}
+                        {order.signatureStatus === "sent" && order.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" />}
+                        {order.pdfPreAprobacionUrl && <FontAwesomeIcon icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" />}
                       </div>
                     </div>
                   ),
@@ -851,7 +853,8 @@ export const ManageOrdersPage: React.FC = () => {
                 })()}
                 <div className="flex items-center gap-1.5">
                   <StatusBadge type={mapSignatureStateToStatusType(selectedOrder)} size="sm" overrideStyle={isOrderInFinalState(selectedOrder.status)} />
-                  {selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className="text-amber-500 dark:text-amber-400 text-sm" title="Esperando verificación de firma" />}
+                  {selectedOrder.signatureStatus === "sent" && selectedOrder.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(selectedOrder.status) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" />}
+                  {selectedOrder.pdfPreAprobacionUrl && <FontAwesomeIcon icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(selectedOrder.status) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" />}
                 </div>
               </div>
             </div>
@@ -962,9 +965,48 @@ export const ManageOrdersPage: React.FC = () => {
               );
             })()}
 
+            {/* Document Uploaded Section */}
+            {(() => {
+              const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
+
+              if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "documento_presentado" || !selectedOrder.documentoUrl) {
+                return null;
+              }
+
+              return (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Subido</h4>
+                      {futureAction.documentoRequerido && (
+                        <p className="text-sm text-blue-600 dark:text-blue-400 mb-3">
+                          <strong>"{futureAction.documentoRequerido}"</strong>
+                        </p>
+                      )}
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">El usuario ha subido el documento solicitado. Podés revisarlo haciendo clic en el botón de abajo.</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                          <FontAwesomeIcon icon={faFileArrowUp} />
+                          Ver Documento
+                        </button>
+                        <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                          <FontAwesomeIcon icon={faDownload} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Signature Notification Indicator */}
             {(() => {
               const categoryInfo = typeof selectedOrder.categoryId === "object" ? selectedOrder.categoryId : null;
+
+              // Ocultar si está entregado
+              if (selectedOrder.status === "delivered") return null;
+
               return (
                 categoryInfo?.requiresSignature &&
                 selectedOrder.signatureStatus === "sent" &&

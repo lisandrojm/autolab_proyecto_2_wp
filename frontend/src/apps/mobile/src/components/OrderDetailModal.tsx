@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faChevronLeft, faChevronRight, faBell, faClock, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faChevronLeft, faChevronRight, faBell, faClock, faCheckCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { OrderData, personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
@@ -385,14 +385,55 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             );
           })()}
 
+          {/* Document Uploaded Section */}
+          {(() => {
+            const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+
+            if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "documento_presentado" || !order.documentoUrl) {
+              return null;
+            }
+
+            return (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
+                <div className="flex items-start gap-3 mb-3">
+                  <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Subido</h4>
+                    {futureAction.documentoRequerido && (
+                      <p className="text-sm text-blue-600 dark:text-blue-400 mb-3">
+                        <strong>"{futureAction.documentoRequerido}"</strong>
+                      </p>
+                    )}
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">El usuario ha subido el documento solicitado. Podés revisarlo haciendo clic en el botón de abajo.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className="flex-1 flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors">
+                    <FontAwesomeIcon icon={faFileArrowUp} className="w-4 h-4" />
+                    <span>Ver Documento</span>
+                  </button>
+                  <a href={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
+                    <FontAwesomeIcon icon={faDownload} className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Signature Notification Section */}
           {(() => {
-            const categoryInfo = typeof order.categoryId === 'object' ? order.categoryId : null;
+            const categoryInfo = typeof order.categoryId === "object" ? order.categoryId : null;
             if (!categoryInfo?.requiresSignature || order.signatureStatus !== "sent") {
               return null;
             }
 
             const alreadyNotified = !!order.signatureNotifiedAt;
+
+            // Ocultar si el pedido está en estado final
+            const isFinalState = ["delivered", "rejected", "cancelled"].includes(order.status);
+            if (alreadyNotified && isFinalState) {
+              return null;
+            }
 
             if (alreadyNotified) {
               return (

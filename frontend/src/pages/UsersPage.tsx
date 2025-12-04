@@ -799,12 +799,12 @@ export const UsersPage: React.FC = () => {
               <div className="mb-3">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">
                   <div className="flex gap-2">
-                    <span className="flex gap-1 w-ful">
+                    <span className="flex gap-1 items-center">
                       <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
                       Cargo
                     </span>
                     <span>|</span>
-                    <span className="flex gap-1 w-ful">
+                    <span className="flex gap-1 items-center">
                       <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-graykj-400" />
                       Nivel
                     </span>
