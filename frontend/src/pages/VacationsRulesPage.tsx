@@ -285,7 +285,7 @@ export default function VacationsRulesPage() {
       title="ABM Vacaciones | Reglas"
       subtitle="Administra las reglas de vacaciones del personal"
       faIcon={{ icon: faGear }}
-      onBack={() => navigate("/hr/manage-vacations")}
+      onBack={() => navigate("/hr/vacation-requests")}
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{
         isOpen: showMainInfo,
