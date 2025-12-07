@@ -348,7 +348,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
         </div>
       </div>
 
-      <Modal isOpen={showDetailModal && !!selectedVacation} onClose={() => setShowDetailModal(false)} title="Detalles de la Solicitud" size="md">
+      <Modal isOpen={showDetailModal && !!selectedVacation} onClose={() => setShowDetailModal(false)} title="Detalles de vacaciones" size="md">
         {selectedVacation && (
           <div className="space-y-4">
             <p className="text-gray-600 dark:text-gray-400">Contenido placeholder para los detalles de la solicitud de vacaciones.</p>

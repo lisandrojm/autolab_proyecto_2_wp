@@ -422,12 +422,6 @@ export default function VacationsRulesPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción (opcional)</label>
                   <textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Descripción de la regla" rows={3} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="activo" checked={formData.activo} onChange={(e) => setFormData({ ...formData, activo: e.target.checked })} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                  <label htmlFor="activo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Regla activa
-                  </label>
-                </div>
               </div>
             </div>
 
@@ -499,7 +493,9 @@ export default function VacationsRulesPage() {
                 <div className="col-span-2">
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="permiteArrastre" checked={formData.permiteArrastre} onChange={(e) => setFormData({ ...formData, permiteArrastre: e.target.checked })} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                    <label htmlFor="permiteArrastre" className="text-sm font-medium text-gray-700 dark:text-gray-300">Permite arrastre de días no usados</label>
+                    <label htmlFor="permiteArrastre" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Permite arrastre de días no usados
+                    </label>
                     <button type="button" onClick={() => setShowArrastreInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                     </button>
@@ -572,7 +568,9 @@ export default function VacationsRulesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="permiteFraccionadas" checked={formData.permiteFraccionadas} onChange={(e) => setFormData({ ...formData, permiteFraccionadas: e.target.checked })} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                  <label htmlFor="permiteFraccionadas" className="text-sm font-medium text-gray-700 dark:text-gray-300">Permite vacaciones fraccionadas</label>
+                  <label htmlFor="permiteFraccionadas" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Permite vacaciones fraccionadas
+                  </label>
                   <button type="button" onClick={() => setShowFraccionadasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
@@ -587,11 +585,13 @@ export default function VacationsRulesPage() {
                   type="checkbox"
                   id="requiereFirma"
                   checked={formData.requiereFirma ?? true}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    requiereFirma: e.target.checked,
-                    pdfTemplateId: e.target.checked ? formData.pdfTemplateId : undefined
-                  })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      requiereFirma: e.target.checked,
+                      pdfTemplateId: e.target.checked ? formData.pdfTemplateId : undefined,
+                    })
+                  }
                   className="w-4 h-4 text-blue-600"
                 />
                 <label htmlFor="requiereFirma" className="text-sm text-gray-700 dark:text-gray-300">
@@ -601,29 +601,17 @@ export default function VacationsRulesPage() {
 
               {(formData.requiereFirma ?? true) && (
                 <>
-                  <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">
-                    Cuando se apruebe esta solicitud de vacaciones, se enviará automáticamente para firma del usuario.
-                  </p>
+                  <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe esta solicitud de vacaciones, se enviará automáticamente para firma del usuario.</p>
 
                   {/* Plantilla PDF */}
                   <div className="mt-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Plantilla PDF (opcional)
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowPdfTemplateInfo(true)}
-                        className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                      >
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Plantilla PDF (opcional)</label>
+                      <button type="button" onClick={() => setShowPdfTemplateInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors">
                         <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                       </button>
                     </div>
-                    <select
-                      value={formData.pdfTemplateId || ""}
-                      onChange={(e) => setFormData({ ...formData, pdfTemplateId: e.target.value || undefined })}
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                    >
+                    <select value={formData.pdfTemplateId || ""} onChange={(e) => setFormData({ ...formData, pdfTemplateId: e.target.value || undefined })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                       <option value="">Sin plantilla PDF</option>
                       {pdfTemplates.map((template) => (
                         <option key={template._id} value={template._id}>
@@ -631,9 +619,7 @@ export default function VacationsRulesPage() {
                         </option>
                       ))}
                     </select>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      El PDF se generará automáticamente al preaprobarse la solicitud
-                    </p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El PDF se generará automáticamente al preaprobarse la solicitud</p>
                   </div>
                 </>
               )}
@@ -641,18 +627,8 @@ export default function VacationsRulesPage() {
 
             {/* Visibilidad */}
             <div className="pt-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Visibilidad en el formulario
-              </label>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${
-                  formData.isActive
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                    : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-                }`}
-              >
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Visibilidad en el formulario</label>
+              <button type="button" onClick={() => setFormData({ ...formData, isActive: !formData.isActive })} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
                 <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
                 {formData.isActive ? "Activa" : "Inactiva"}
               </button>
@@ -715,12 +691,8 @@ export default function VacationsRulesPage() {
       </InfoModal>
 
       <InfoModal isOpen={showPdfTemplateInfo} onClose={() => setShowPdfTemplateInfo(false)} title="Plantilla PDF (opcional)">
-        <p className="text-sm text-gray-700 dark:text-gray-300">
-          Selecciona una plantilla PDF que se generará automáticamente cuando se preapruebe una solicitud de vacaciones de este tipo.
-        </p>
-        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
-          Si no seleccionas ninguna plantilla, no se generará ningún PDF automáticamente.
-        </p>
+        <p className="text-sm text-gray-700 dark:text-gray-300">Selecciona una plantilla PDF que se generará automáticamente cuando se preapruebe una solicitud de vacaciones de este tipo.</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">Si no seleccionas ninguna plantilla, no se generará ningún PDF automáticamente.</p>
       </InfoModal>
     </PageLayout>
   );
