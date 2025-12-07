@@ -59,7 +59,7 @@ import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageOrderCategoriesPage } from "./pages/ManageOrderCategoriesPage";
 import { ManageVacationsPage } from "./pages/ManageVacationsPage";
-import VacationsRulesPage from "./pages/VacationsRulesPage";
+import { VacationsRulesPage } from "./pages/VacationsRulesPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
 import { RequestTypesManagementPage } from "./pages/RequestTypesManagementPage";
