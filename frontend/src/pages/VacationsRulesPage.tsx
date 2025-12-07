@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faSpinner, faPlus, faEdit, faTrash, faToggleOn, faToggleOff, faPlus as faPlusCircle, faTimes, faGear, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
@@ -7,6 +7,7 @@ import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { InfoModal } from "../components/ui/InfoModal";
+import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
 
 const HELP_KEY = "vacations" as const;
 
@@ -38,7 +39,8 @@ interface VacationRule {
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
   requiereFirma: boolean;
-  firmadoPor: string[];
+  pdfTemplateId?: string;
+  isActive: boolean;
 }
 
 const mockRules: VacationRule[] = [
@@ -66,7 +68,8 @@ const mockRules: VacationRule[] = [
     anticipacionMinimaDias: 15,
     permiteFraccionadas: true,
     requiereFirma: false,
-    firmadoPor: [],
+    pdfTemplateId: undefined,
+    isActive: true,
   },
   {
     id: "rule-2",
@@ -88,7 +91,8 @@ const mockRules: VacationRule[] = [
     anticipacionMinimaDias: 7,
     permiteFraccionadas: true,
     requiereFirma: true,
-    firmadoPor: ["Manager", "Dirección"],
+    pdfTemplateId: undefined,
+    isActive: true,
   },
   {
     id: "rule-3",
@@ -113,13 +117,13 @@ const mockRules: VacationRule[] = [
     anticipacionMinimaDias: 30,
     permiteFraccionadas: false,
     requiereFirma: true,
-    firmadoPor: ["RRHH"],
+    pdfTemplateId: undefined,
+    isActive: true,
   },
 ];
 
 const CARGOS_OPTIONS = ["Operario", "Analista", "Coordinador", "Manager", "Director"];
 const NIVELES_OPTIONS = ["Junior", "Semi-Senior", "Senior", "Lead"];
-const FIRMANTES_OPTIONS = ["Manager", "RRHH", "Dirección"];
 
 const initialFormState: Omit<VacationRule, "id"> = {
   name: "",
@@ -140,7 +144,8 @@ const initialFormState: Omit<VacationRule, "id"> = {
   anticipacionMinimaDias: undefined,
   permiteFraccionadas: false,
   requiereFirma: true,
-  firmadoPor: [],
+  pdfTemplateId: undefined,
+  isActive: true,
 };
 
 export default function VacationsRulesPage() {
@@ -154,6 +159,8 @@ export default function VacationsRulesPage() {
   const [formData, setFormData] = useState<Omit<VacationRule, "id">>(initialFormState);
   const [submitting, setSubmitting] = useState(false);
   const [showMainInfo, setShowMainInfo] = useState(false);
+  const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
+  const [showPdfTemplateInfo, setShowPdfTemplateInfo] = useState(false);
 
   const [showAntiguedadInfo, setShowAntiguedadInfo] = useState(false);
   const [showMaxDiasGozadosInfo, setShowMaxDiasGozadosInfo] = useState(false);
@@ -166,6 +173,19 @@ export default function VacationsRulesPage() {
   const [showMaxDiasHabilesInfo, setShowMaxDiasHabilesInfo] = useState(false);
   const [showAnticipacionInfo, setShowAnticipacionInfo] = useState(false);
   const [showFraccionadasInfo, setShowFraccionadasInfo] = useState(false);
+
+  useEffect(() => {
+    loadPdfTemplates();
+  }, []);
+
+  const loadPdfTemplates = async () => {
+    try {
+      const data = await pdfTemplatesAPI.getAll();
+      setPdfTemplates(data.filter((t: PdfTemplate) => t.isActive));
+    } catch (error) {
+      console.error("Error loading PDF templates:", error);
+    }
+  };
 
   const openCreateModal = () => {
     setEditingRule(null);
@@ -194,7 +214,8 @@ export default function VacationsRulesPage() {
       anticipacionMinimaDias: rule.anticipacionMinimaDias,
       permiteFraccionadas: rule.permiteFraccionadas,
       requiereFirma: rule.requiereFirma,
-      firmadoPor: rule.firmadoPor,
+      pdfTemplateId: rule.pdfTemplateId,
+      isActive: rule.isActive,
     });
     setShowModal(true);
   };
@@ -268,13 +289,6 @@ export default function VacationsRulesPage() {
     setFormData((prev) => ({
       ...prev,
       antiguedadTramos: prev.antiguedadTramos.map((tramo, i) => (i === index ? { ...tramo, [field]: value } : tramo)),
-    }));
-  };
-
-  const toggleFirmante = (firmante: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      firmadoPor: prev.firmadoPor.includes(firmante) ? prev.firmadoPor.filter((f) => f !== firmante) : [...prev.firmadoPor, firmante],
     }));
   };
 
@@ -566,33 +580,82 @@ export default function VacationsRulesPage() {
               </div>
             </div>
 
-            {/* Firma Digital - IGUAL AL ESTILO DE OrderCategoryForm */}
-            <div className="pb-4">
-              <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="requiereFirma" checked={formData.requiereFirma ?? true} onChange={(e) => setFormData({ ...formData, requiereFirma: e.target.checked })} className="w-4 h-4 text-blue-600" />
-                  <label htmlFor="requiereFirma" className="text-sm text-gray-700 dark:text-gray-300">Requiere FIRMA del usuario</label>
-                </div>
-
-                {(formData.requiereFirma ?? true) && (
-                  <>
-                    <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe esta solicitud de vacaciones, se enviará automáticamente para firma del usuario.</p>
-
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Firmantes autorizados</label>
-                      <div className="space-y-2">
-                        {FIRMANTES_OPTIONS.map((firmante) => (
-                          <div key={firmante} className="flex items-center gap-2">
-                            <input type="checkbox" id={`firmante-${firmante}`} checked={formData.firmadoPor.includes(firmante)} onChange={() => toggleFirmante(firmante)} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                            <label htmlFor={`firmante-${firmante}`} className="text-sm text-gray-700 dark:text-gray-300">{firmante}</label>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Selecciona quiénes pueden firmar las solicitudes de vacaciones</p>
-                    </div>
-                  </>
-                )}
+            {/* Firma Digital */}
+            <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="requiereFirma"
+                  checked={formData.requiereFirma ?? true}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    requiereFirma: e.target.checked,
+                    pdfTemplateId: e.target.checked ? formData.pdfTemplateId : undefined
+                  })}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <label htmlFor="requiereFirma" className="text-sm text-gray-700 dark:text-gray-300">
+                  Requiere FIRMA del usuario
+                </label>
               </div>
+
+              {(formData.requiereFirma ?? true) && (
+                <>
+                  <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">
+                    Cuando se apruebe esta solicitud de vacaciones, se enviará automáticamente para firma del usuario.
+                  </p>
+
+                  {/* Plantilla PDF */}
+                  <div className="mt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Plantilla PDF (opcional)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPdfTemplateInfo(true)}
+                        className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <select
+                      value={formData.pdfTemplateId || ""}
+                      onChange={(e) => setFormData({ ...formData, pdfTemplateId: e.target.value || undefined })}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Sin plantilla PDF</option>
+                      {pdfTemplates.map((template) => (
+                        <option key={template._id} value={template._id}>
+                          {template.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      El PDF se generará automáticamente al preaprobarse la solicitud
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Visibilidad */}
+            <div className="pt-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Visibilidad en el formulario
+              </label>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${
+                  formData.isActive
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+                }`}
+              >
+                <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
+                {formData.isActive ? "Activa" : "Inactiva"}
+              </button>
             </div>
           </form>
         </div>
@@ -649,6 +712,15 @@ export default function VacationsRulesPage() {
 
       <InfoModal isOpen={showFraccionadasInfo} onClose={() => setShowFraccionadasInfo(false)} title="Vacaciones fraccionadas">
         <p className="text-sm text-gray-700 dark:text-gray-300">Permite que el empleado pueda dividir sus días de vacaciones en múltiples períodos a lo largo del año, en lugar de tomarlos todos juntos.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showPdfTemplateInfo} onClose={() => setShowPdfTemplateInfo(false)} title="Plantilla PDF (opcional)">
+        <p className="text-sm text-gray-700 dark:text-gray-300">
+          Selecciona una plantilla PDF que se generará automáticamente cuando se preapruebe una solicitud de vacaciones de este tipo.
+        </p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
+          Si no seleccionas ninguna plantilla, no se generará ningún PDF automáticamente.
+        </p>
       </InfoModal>
     </PageLayout>
   );
