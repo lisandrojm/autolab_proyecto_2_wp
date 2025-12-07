@@ -582,18 +582,6 @@ export const ManageVacationRequestsPage: React.FC = () => {
                             <FontAwesomeIcon icon={faBan} className="text-lg" />
                             Rechazar
                           </button>
-                          {selectedVacation.firmaEstado === "pending" && (
-                            <button onClick={handleSendSignature} disabled={updating} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                              <FontAwesomeIcon icon={faFileArrowUp} />
-                              Enviar para Firma
-                            </button>
-                          )}
-                          {selectedVacation.firmaEstado === "sent" && (
-                            <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                              <FontAwesomeIcon icon={faCheckCircle} />
-                              Marcar como Firmado
-                            </button>
-                          )}
                           <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                             <FontAwesomeIcon icon={faTruck} />
                             Marcar como Entregado
