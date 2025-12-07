@@ -252,8 +252,8 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       return;
     }
 
-    if (vacation.status !== "pending") {
-      res.status(400).json({ error: "Only pending requests can be approved" });
+    if (vacation.status !== "pre_approved") {
+      res.status(400).json({ error: "Only pre-approved requests can be approved" });
       return;
     }
 
@@ -262,16 +262,32 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
     vacation.approvedAt = new Date();
     if (managerComment) vacation.managerComment = managerComment;
 
+    if (vacation.requiresSignature) {
+      vacation.signatureStatus = "sent";
+      vacation.signatureSentAt = new Date();
+    }
+
     await vacation.save();
 
-    await Notification.create({
-      tenantId: req.tenantObjectId,
-      userId: vacation.userId,
-      type: "vacation",
-      title: "Solicitud de vacaciones aprobada",
-      message: `Tu solicitud de vacaciones por ${vacation.daysRequested} día${vacation.daysRequested > 1 ? "s" : ""} ha sido aprobada.`,
-      linkUrl: `/vacations/${vacation._id}`,
-    });
+    if (vacation.requiresSignature) {
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: vacation.userId,
+        type: "vacation",
+        title: "Documento enviado para firma",
+        message: `Tu solicitud de vacaciones por ${vacation.daysRequested} día${vacation.daysRequested > 1 ? "s" : ""} ha sido aprobada. Revisá tu casilla de email para firmar el documento.`,
+        linkUrl: `/vacations/${vacation._id}`,
+      });
+    } else {
+      await Notification.create({
+        tenantId: req.tenantObjectId,
+        userId: vacation.userId,
+        type: "vacation",
+        title: "Solicitud de vacaciones aprobada",
+        message: `Tu solicitud de vacaciones por ${vacation.daysRequested} día${vacation.daysRequested > 1 ? "s" : ""} ha sido aprobada.`,
+        linkUrl: `/vacations/${vacation._id}`,
+      });
+    }
 
     await ActivityLog.create({
       tenantId: req.tenantObjectId,
@@ -307,12 +323,13 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       return;
     }
 
-    if (vacation.status !== "pending") {
-      res.status(400).json({ error: "Only pending requests can be rejected" });
+    if (!["pending", "pre_approved", "approved"].includes(vacation.status)) {
+      res.status(400).json({ error: "Only pending, pre-approved, or approved requests can be rejected" });
       return;
     }
 
     vacation.status = "rejected";
+    vacation.rejectedAt = new Date();
     vacation.managerComment = managerComment;
 
     await vacation.save();
@@ -342,6 +359,183 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       return;
     }
     console.error("Reject vacation error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const preApproverId = req.user!.userId;
+
+    const vacation = await VacationRequest.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    }).populate("userId");
+
+    if (!vacation) {
+      res.status(404).json({ error: "Vacation request not found" });
+      return;
+    }
+
+    if (vacation.status !== "pending") {
+      res.status(400).json({ error: "Only pending requests can be pre-approved" });
+      return;
+    }
+
+    vacation.status = "pre_approved";
+    vacation.preApprovedBy = new Types.ObjectId(preApproverId);
+    vacation.preApprovedAt = new Date();
+
+    await vacation.save();
+
+    await ActivityLog.create({
+      tenantId: req.tenantObjectId,
+      userId: vacation.userId,
+      action: "vacation_request_pre_approved",
+      description: `Solicitud de vacaciones preaprobada`,
+      entityType: "VacationRequest",
+      entityId: vacation._id,
+    });
+
+    res.json(vacation);
+  } catch (error) {
+    console.error("Pre-approve vacation error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/vacations/:id/deliver", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const vacation = await VacationRequest.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!vacation) {
+      res.status(404).json({ error: "Vacation request not found" });
+      return;
+    }
+
+    if (vacation.status !== "approved") {
+      res.status(400).json({ error: "Only approved requests can be marked as delivered" });
+      return;
+    }
+
+    vacation.status = "delivered";
+    vacation.deliveredAt = new Date();
+
+    await vacation.save();
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: vacation.userId,
+      type: "vacation",
+      title: "Solicitud de vacaciones entregada",
+      message: `Tu solicitud de vacaciones por ${vacation.daysRequested} día${vacation.daysRequested > 1 ? "s" : ""} ha sido marcada como entregada.`,
+      linkUrl: `/vacations/${vacation._id}`,
+    });
+
+    res.json(vacation);
+  } catch (error) {
+    console.error("Deliver vacation error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/vacations/:id/send-signature", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const vacation = await VacationRequest.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!vacation) {
+      res.status(404).json({ error: "Vacation request not found" });
+      return;
+    }
+
+    if (vacation.status !== "approved") {
+      res.status(400).json({ error: "Only approved requests can be sent for signature" });
+      return;
+    }
+
+    if (!vacation.requiresSignature) {
+      res.status(400).json({ error: "This vacation request does not require signature" });
+      return;
+    }
+
+    vacation.signatureStatus = "sent";
+    vacation.signatureSentAt = new Date();
+
+    await vacation.save();
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: vacation.userId,
+      type: "vacation",
+      title: "Documento enviado para firma",
+      message: `El documento de tu solicitud de vacaciones ha sido enviado para firma.`,
+      linkUrl: `/vacations/${vacation._id}`,
+    });
+
+    const finalVacation = await VacationRequest.findById(vacation._id)
+      .populate("userId", "firstName lastName email")
+      .populate("approvedBy", "firstName lastName email");
+
+    res.json(finalVacation);
+  } catch (error) {
+    console.error("Send signature error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/vacations/:id/mark-signed", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const signedById = req.user!.userId;
+
+    const vacation = await VacationRequest.findOne({
+      _id: req.params.id,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!vacation) {
+      res.status(404).json({ error: "Vacation request not found" });
+      return;
+    }
+
+    if (!vacation.requiresSignature) {
+      res.status(400).json({ error: "This vacation request does not require signature" });
+      return;
+    }
+
+    if (vacation.signatureStatus !== "sent") {
+      res.status(400).json({ error: "Only requests with sent signature can be marked as signed" });
+      return;
+    }
+
+    vacation.signatureStatus = "signed";
+    vacation.signedAt = new Date();
+    vacation.signedBy = new Types.ObjectId(signedById);
+
+    await vacation.save();
+
+    await Notification.create({
+      tenantId: req.tenantObjectId,
+      userId: vacation.userId,
+      type: "vacation",
+      title: "Firma confirmada",
+      message: `Tu firma de la solicitud de vacaciones ha sido verificada y confirmada.`,
+      linkUrl: `/vacations/${vacation._id}`,
+    });
+
+    const finalVacation = await VacationRequest.findById(vacation._id)
+      .populate("userId", "firstName lastName email")
+      .populate("approvedBy", "firstName lastName email")
+      .populate("signedBy", "firstName lastName email");
+
+    res.json(finalVacation);
+  } catch (error) {
+    console.error("Mark signed error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

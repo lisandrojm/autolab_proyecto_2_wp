@@ -144,11 +144,23 @@ export interface VacationRequest {
   startDate: string;
   endDate: string;
   daysRequested: number;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   reason: string;
   managerComment?: string;
   approvedBy?: any;
   approvedAt?: string;
+  deliveredAt?: string;
+  rejectedAt?: string;
+  preApprovedBy?: any;
+  preApprovedAt?: string;
+  requiresSignature?: boolean;
+  signatureStatus?: "not_required" | "pending" | "sent" | "signed";
+  signatureSentAt?: string;
+  signatureNotifiedAt?: string;
+  signedAt?: string;
+  signedBy?: any;
+  pdfPreAprobacionUrl?: string;
+  ruleIds?: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -332,6 +344,30 @@ export const hrManagementAPI = {
     count: async () => {
       const { data } = await axios.get<{ count: number }>("/hr-management/vacationrequests/count");
       return data.count;
+    },
+    preApprove: async (vacationId: string) => {
+      const { data } = await axios.put<VacationRequest>(`/hr-admin/vacations/${vacationId}/pre-approve`);
+      return data;
+    },
+    approve: async (vacationId: string) => {
+      const { data } = await axios.put<VacationRequest>(`/hr-admin/vacations/${vacationId}/approve`);
+      return data;
+    },
+    reject: async (vacationId: string) => {
+      const { data } = await axios.put<VacationRequest>(`/hr-admin/vacations/${vacationId}/reject`);
+      return data;
+    },
+    deliver: async (vacationId: string) => {
+      const { data } = await axios.put<VacationRequest>(`/hr-admin/vacations/${vacationId}/deliver`);
+      return data;
+    },
+    sendSignature: async (vacationId: string) => {
+      const { data } = await axios.put<VacationRequest>(`/hr-admin/vacations/${vacationId}/send-signature`);
+      return data;
+    },
+    markSigned: async (vacationId: string) => {
+      const { data } = await axios.put<VacationRequest>(`/hr-admin/vacations/${vacationId}/mark-signed`);
+      return data;
     },
   },
 };

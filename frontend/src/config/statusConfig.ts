@@ -1,7 +1,7 @@
 import { faCheck, faClock, faTimes, faUpload, faFile, faExclamationTriangle, faCheckCircle, faTruck, faBan, faTimesCircle, faPenToSquare, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
-export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_enviado_a_firmar" | "firma_firmado" | "vacaciones_pendiente" | "vacaciones_aprobada" | "vacaciones_rechazada" | "vacaciones_cancelada";
+export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_enviado_a_firmar" | "firma_firmado" | "vacaciones_pendiente" | "vacaciones_preaprobada" | "vacaciones_aprobada" | "vacaciones_rechazada" | "vacaciones_entregada" | "vacaciones_cancelada";
 
 export interface StatusConfig {
   icon: IconDefinition;
@@ -105,12 +105,19 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     bgClass: "bg-yellow-50 dark:bg-yellow-900/20",
     textClass: "text-yellow-600 dark:text-yellow-400",
   },
+  vacaciones_preaprobada: {
+    icon: faCheck,
+    prefix: null,
+    label: "Preaprobada",
+    bgClass: "bg-cyan-50 dark:bg-cyan-900/20",
+    textClass: "text-cyan-600 dark:text-cyan-400",
+  },
   vacaciones_aprobada: {
     icon: faCheckCircle,
     prefix: null,
     label: "Aprobada",
-    bgClass: "bg-green-50 dark:bg-green-900/20",
-    textClass: "text-green-600 dark:text-green-400",
+    bgClass: "bg-blue-50 dark:bg-blue-900/20",
+    textClass: "text-blue-600 dark:text-blue-400",
   },
   vacaciones_rechazada: {
     icon: faTimesCircle,
@@ -118,6 +125,13 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     label: "Rechazada",
     bgClass: "bg-red-50 dark:bg-red-900/20",
     textClass: "text-red-600 dark:text-red-400",
+  },
+  vacaciones_entregada: {
+    icon: faTruck,
+    prefix: null,
+    label: "Entregada",
+    bgClass: "bg-green-50 dark:bg-green-900/20",
+    textClass: "text-green-600 dark:text-green-400",
   },
   vacaciones_cancelada: {
     icon: faBan,

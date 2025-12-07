@@ -97,3 +97,45 @@ export function mapSignatureStateToStatusType(
 export function isOrderInFinalState(status: string): boolean {
   return status === "rejected" || status === "cancelled" || status === "delivered";
 }
+
+export interface VacationRequest {
+  status: string;
+  requiresSignature?: boolean;
+  signatureStatus?: string;
+  [key: string]: any;
+}
+
+export function mapVacationStatusToStatusType(status: string): StatusType {
+  const statusMap: Record<string, StatusType> = {
+    pending: "vacaciones_pendiente",
+    pre_approved: "vacaciones_preaprobada",
+    approved: "vacaciones_aprobada",
+    rejected: "vacaciones_rechazada",
+    delivered: "vacaciones_entregada",
+    cancelled: "vacaciones_cancelada",
+  };
+
+  return statusMap[status] || "vacaciones_pendiente";
+}
+
+export function mapVacationSignatureStateToStatusType(
+  vacation: VacationRequest | null | undefined
+): StatusType | null {
+  if (!vacation || !vacation.requiresSignature) {
+    return null;
+  }
+
+  if (vacation.signatureStatus === "signed") {
+    return "firma_firmado";
+  }
+
+  if (vacation.signatureStatus === "sent") {
+    return "firma_enviado_a_firmar";
+  }
+
+  return "firma_pendiente";
+}
+
+export function isVacationInFinalState(status: string): boolean {
+  return status === "rejected" || status === "cancelled" || status === "delivered";
+}

@@ -6,11 +6,23 @@ export interface IVacationRequest extends Document {
   startDate: Date;
   endDate: Date;
   daysRequested: number;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   reason: string;
   managerComment?: string;
   approvedBy?: Types.ObjectId;
   approvedAt?: Date;
+  deliveredAt?: Date;
+  rejectedAt?: Date;
+  preApprovedBy?: Types.ObjectId;
+  preApprovedAt?: Date;
+  requiresSignature?: boolean;
+  signatureStatus?: "not_required" | "pending" | "sent" | "signed";
+  signatureSentAt?: Date;
+  signatureNotifiedAt?: Date;
+  signedAt?: Date;
+  signedBy?: Types.ObjectId;
+  pdfPreAprobacionUrl?: string;
+  ruleIds?: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,7 +36,7 @@ const vacationRequestSchema = new Schema<IVacationRequest>(
     daysRequested: { type: Number, required: true, min: 0.5 },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "cancelled"],
+      enum: ["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"],
       default: "pending",
       index: true,
     },
@@ -32,6 +44,22 @@ const vacationRequestSchema = new Schema<IVacationRequest>(
     managerComment: { type: String, trim: true },
     approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
     approvedAt: { type: Date },
+    deliveredAt: { type: Date },
+    rejectedAt: { type: Date },
+    preApprovedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    preApprovedAt: { type: Date },
+    requiresSignature: { type: Boolean, default: false },
+    signatureStatus: {
+      type: String,
+      enum: ["not_required", "pending", "sent", "signed"],
+      default: "not_required",
+    },
+    signatureSentAt: { type: Date },
+    signatureNotifiedAt: { type: Date },
+    signedAt: { type: Date },
+    signedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    pdfPreAprobacionUrl: { type: String },
+    ruleIds: [{ type: Schema.Types.ObjectId, ref: "VacationRule" }],
   },
   { timestamps: true }
 );

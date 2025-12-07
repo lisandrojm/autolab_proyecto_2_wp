@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faFileArrowUp, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faFileArrowUp, faUser, faChevronLeft, faChevronRight, faTimes, faFilePdf, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, VacationRequest } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -9,6 +9,7 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { StatusType } from "../config/statusConfig";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, isVacationInFinalState } from "../utils/statusHelpers";
 
 const HELP_KEY = "vacations" as const;
 
@@ -109,11 +110,13 @@ export const ManageVacationRequestsPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, cancelled: 0 });
+  const [stats, setStats] = useState({ pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
+  const [currentVacationIndex, setCurrentVacationIndex] = useState<number>(0);
 
   const getFormattedVacationNumber = (orderNumber: string): string => {
     if (orderNumber.startsWith("#")) return orderNumber;
@@ -132,38 +135,8 @@ export const ManageVacationRequestsPage: React.FC = () => {
     return solicitante.cargo || "-";
   };
 
-  const mapVacationStatusToStatusType = (status: string): StatusType | null => {
-    switch (status) {
-      case "pending":
-        return "vacaciones_pendiente";
-      case "approved":
-        return "vacaciones_aprobada";
-      case "rejected":
-        return "vacaciones_rechazada";
-      case "cancelled":
-        return "vacaciones_cancelada";
-      default:
-        return null;
-    }
-  };
-
-  const mapSignatureStateToStatusType = (firmaEstado: string): StatusType | null => {
-    switch (firmaEstado) {
-      case "not_required":
-        return null;
-      case "pending":
-        return "firma_pendiente";
-      case "sent":
-        return "firma_enviado_a_firmar";
-      case "signed":
-        return "firma_firmado";
-      default:
-        return null;
-    }
-  };
-
   const renderSignatureStatus = (vacation: VacationRequestMock): JSX.Element => {
-    const statusType = mapSignatureStateToStatusType(vacation.firmaEstado);
+    const statusType = mapVacationSignatureStateToStatusType({ status: vacation.estado, requiresSignature: vacation.firmaEstado !== "not_required", signatureStatus: vacation.firmaEstado });
     if (!statusType) {
       return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
     }
@@ -176,7 +149,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
         acc[vacation.estado] = (acc[vacation.estado] || 0) + 1;
         return acc;
       },
-      { pending: 0, approved: 0, rejected: 0, cancelled: 0 }
+      { pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
     );
     setStats(newStats);
   };
@@ -202,6 +175,148 @@ export const ManageVacationRequestsPage: React.FC = () => {
     } catch (error: any) {
       await sweetAlert.error("Error", "No se pudo eliminar la solicitud");
     }
+  };
+
+  const handlePreApprove = async () => {
+    if (!selectedVacation || updating) return;
+
+    const result = await sweetAlert.confirm("¿Pre-aprobar esta solicitud?", `La solicitud ${getFormattedVacationNumber(selectedVacation.numeroPedido)} será preaprobada.`, "Sí, Pre-Aprobar", "Cancelar");
+    if (!result.isConfirmed) return;
+
+    setUpdating(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sweetAlert.success("Preaprobada", "La solicitud ha sido preaprobada correctamente");
+      setShowDetailModal(false);
+    } catch (error: any) {
+      await sweetAlert.error("Error", "No se pudo pre-aprobar la solicitud");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedVacation || updating) return;
+
+    const requiresSignature = selectedVacation.firmaEstado !== "not_required";
+    const message = requiresSignature ? "El usuario recibirá una notificación para firmar el documento por email" : "El usuario será notificado";
+
+    const result = await sweetAlert.confirm("¿Aprobar esta solicitud?", message, "Sí, Aprobar", "Cancelar");
+    if (!result.isConfirmed) return;
+
+    setUpdating(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sweetAlert.success("Aprobada", "La solicitud ha sido aprobada correctamente");
+      setShowDetailModal(false);
+    } catch (error: any) {
+      await sweetAlert.error("Error", "No se pudo aprobar la solicitud");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedVacation || updating) return;
+
+    const result = await sweetAlert.confirm("¿Rechazar esta solicitud?", "El usuario será notificado del rechazo", "Sí, Rechazar", "Cancelar");
+    if (!result.isConfirmed) return;
+
+    setUpdating(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sweetAlert.success("Rechazada", "La solicitud ha sido rechazada");
+      setShowDetailModal(false);
+    } catch (error: any) {
+      await sweetAlert.error("Error", "No se pudo rechazar la solicitud");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeliver = async () => {
+    if (!selectedVacation || updating) return;
+
+    const result = await sweetAlert.confirm("¿Marcar como Entregado?", "La solicitud será marcada como entregada", "Sí, Marcar Entregado", "Cancelar");
+    if (!result.isConfirmed) return;
+
+    setUpdating(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sweetAlert.success("Entregado", "La solicitud ha sido marcada como entregada");
+      setShowDetailModal(false);
+    } catch (error: any) {
+      await sweetAlert.error("Error", "No se pudo marcar como entregado");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSendSignature = async () => {
+    if (!selectedVacation || updating) return;
+
+    const result = await sweetAlert.confirm("¿Enviar para Firma?", "Se enviará una notificación al usuario para firmar el documento", "Sí, Enviar", "Cancelar");
+    if (!result.isConfirmed) return;
+
+    setUpdating(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sweetAlert.success("Enviado", "El documento ha sido enviado para firma");
+      setShowDetailModal(false);
+    } catch (error: any) {
+      await sweetAlert.error("Error", "No se pudo enviar para firma");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleMarkSigned = async () => {
+    if (!selectedVacation || updating) return;
+
+    const result = await sweetAlert.confirm("¿Marcar como Firmado?", "Asegúrate de que la firma ha sido completada antes de confirmar", "Sí, Marcar Firmado", "Cancelar");
+    if (!result.isConfirmed) return;
+
+    setUpdating(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sweetAlert.success("Firmado", "El documento ha sido marcado como firmado");
+      setShowDetailModal(false);
+    } catch (error: any) {
+      await sweetAlert.error("Error", "No se pudo marcar como firmado");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleNavigatePrevVacation = () => {
+    if (currentVacationIndex > 0) {
+      const newIndex = currentVacationIndex - 1;
+      setCurrentVacationIndex(newIndex);
+      setSelectedVacation(filteredVacations[newIndex]);
+    }
+  };
+
+  const handleNavigateNextVacation = () => {
+    if (currentVacationIndex < filteredVacations.length - 1) {
+      const newIndex = currentVacationIndex + 1;
+      setCurrentVacationIndex(newIndex);
+      setSelectedVacation(filteredVacations[newIndex]);
+    }
+  };
+
+  const handleOpenModal = (vacation: VacationRequestMock, index: number) => {
+    setSelectedVacation(vacation);
+    setCurrentVacationIndex(index);
+    setShowDetailModal(true);
+  };
+
+  const getUserInitials = (name: string): string => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const filteredVacations = mockVacations.filter((vacation) => {
@@ -348,38 +463,140 @@ export const ManageVacationRequestsPage: React.FC = () => {
         </div>
       </div>
 
-      <Modal isOpen={showDetailModal && !!selectedVacation} onClose={() => setShowDetailModal(false)} title="Detalles de vacaciones" size="md">
+      <Modal isOpen={showDetailModal && !!selectedVacation} onClose={() => setShowDetailModal(false)} title={
+        <div className="flex items-center justify-between w-full px-4">
+          <div className="flex items-center gap-4">
+            <button onClick={handleNavigatePrevVacation} disabled={currentVacationIndex === 0} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Solicitud anterior">
+              <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+            </button>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Detalles de Vacaciones</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{currentVacationIndex + 1} de {filteredVacations.length}</p>
+            </div>
+            <button onClick={handleNavigateNextVacation} disabled={currentVacationIndex === filteredVacations.length - 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Siguiente solicitud">
+              <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      } size="2xl" hideDefaultCloseButton>
         {selectedVacation && (
-          <div className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-400">Contenido placeholder para los detalles de la solicitud de vacaciones.</p>
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Solicitante</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{getUserName(selectedVacation.solicitante)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Cargo</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{getUserPosition(selectedVacation.solicitante)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Estado</p>
-                <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} size="sm" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Días solicitados</p>
-                <p className="font-medium text-gray-800 dark:text-gray-100">{selectedVacation.diasSolicitados} días</p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Reglas aplicadas</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedVacation.reglas.map((regla, index) => (
-                    <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                      {regla}
-                    </span>
-                  ))}
+          <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">N° Solicitud: {getFormattedVacationNumber(selectedVacation.numeroPedido)}</span>
+                    <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} />
+                    {selectedVacation.firmaEstado !== "not_required" && renderSignatureStatus(selectedVacation)}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                  <div className="flex-shrink-0">
+                    <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
+                      {getUserInitials(getUserName(selectedVacation.solicitante))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">{getUserName(selectedVacation.solicitante)}</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{getUserPosition(selectedVacation.solicitante)}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Días Solicitados</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}</span>
+                  </div>
+
+                  {selectedVacation.reglas && selectedVacation.reglas.length > 0 && (
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Reglas aplicadas</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedVacation.reglas.map((regla, index) => (
+                          <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                            {regla}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300 block mb-1">Fecha de Solicitud</span>
+                      <span className="text-sm text-gray-900 dark:text-white">{new Date(selectedVacation.fechaSolicitud).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {!isVacationInFinalState(selectedVacation.estado) && (
+              <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center justify-end gap-3 flex-wrap">
+                  {updating ? (
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
+                      <span className="text-sm">Actualizando...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {selectedVacation.estado === "pending" && (
+                        <>
+                          <button onClick={handleReject} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm">
+                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                            Rechazar
+                          </button>
+                          <button onClick={handlePreApprove} className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2 text-sm">
+                            <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
+                            Pre-Aprobar
+                          </button>
+                        </>
+                      )}
+
+                      {selectedVacation.estado === "pre_approved" && (
+                        <>
+                          <button onClick={handleReject} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm">
+                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                            Rechazar
+                          </button>
+                          <button onClick={handleApprove} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+                            <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
+                            Aprobar
+                          </button>
+                        </>
+                      )}
+
+                      {selectedVacation.estado === "approved" && (
+                        <>
+                          <button onClick={handleReject} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm">
+                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                            Rechazar
+                          </button>
+                          {selectedVacation.firmaEstado === "pending" && (
+                            <button onClick={handleSendSignature} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm">
+                              <FontAwesomeIcon icon={faFileArrowUp} className="h-4 w-4" />
+                              Enviar para Firma
+                            </button>
+                          )}
+                          {selectedVacation.firmaEstado === "sent" && (
+                            <button onClick={handleMarkSigned} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm">
+                              <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
+                              Marcar como Firmado
+                            </button>
+                          )}
+                          <button onClick={handleDeliver} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+                            <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
+                            Marcar como Entregado
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -389,7 +606,9 @@ export const ManageVacationRequestsPage: React.FC = () => {
           <div className="flex flex-wrap gap-4">
             {[
               { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-              { label: "Aprobadas", value: stats.approved, icon: faCheckCircle, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
+              { label: "Preaprobadas", value: stats.pre_approved, icon: faCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
+              { label: "Aprobadas", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+              { label: "Entregadas", value: stats.delivered, icon: faCheckCircle, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
               { label: "Rechazadas", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
               { label: "Canceladas", value: stats.cancelled, icon: faBan, color: "bg-orange-50 dark:bg-orange-600/20 text-orange-600 dark:text-orange-400" },
             ].map((stat, index) => (
