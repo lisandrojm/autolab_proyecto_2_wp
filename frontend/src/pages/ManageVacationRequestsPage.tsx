@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faFileArrowUp, faUser, faChevronLeft, faChevronRight, faTimes, faFilePdf, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faFileArrowUp, faUser, faChevronLeft, faChevronRight, faTimes, faFilePdf, faCheck, faTruck } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, VacationRequest } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -544,12 +544,12 @@ export const ManageVacationRequestsPage: React.FC = () => {
                     <>
                       {selectedVacation.estado === "pending" && (
                         <>
-                          <button onClick={handleReject} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+                            <FontAwesomeIcon icon={faBan} className="text-lg" />
                             Rechazar
                           </button>
-                          <button onClick={handlePreApprove} className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
+                          <button onClick={handlePreApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+                            <FontAwesomeIcon icon={faCheck} className="text-lg" />
                             Pre-Aprobar
                           </button>
                         </>
@@ -557,12 +557,12 @@ export const ManageVacationRequestsPage: React.FC = () => {
 
                       {selectedVacation.estado === "pre_approved" && (
                         <>
-                          <button onClick={handleReject} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+                            <FontAwesomeIcon icon={faBan} className="text-lg" />
                             Rechazar
                           </button>
-                          <button onClick={handleApprove} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
+                          <button onClick={handleApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+                            <FontAwesomeIcon icon={faCheck} className="text-lg" />
                             Aprobar
                           </button>
                         </>
@@ -570,24 +570,24 @@ export const ManageVacationRequestsPage: React.FC = () => {
 
                       {selectedVacation.estado === "approved" && (
                         <>
-                          <button onClick={handleReject} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+                            <FontAwesomeIcon icon={faBan} className="text-lg" />
                             Rechazar
                           </button>
                           {selectedVacation.firmaEstado === "pending" && (
-                            <button onClick={handleSendSignature} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm">
-                              <FontAwesomeIcon icon={faFileArrowUp} className="h-4 w-4" />
+                            <button onClick={handleSendSignature} disabled={updating} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                              <FontAwesomeIcon icon={faFileArrowUp} />
                               Enviar para Firma
                             </button>
                           )}
                           {selectedVacation.firmaEstado === "sent" && (
-                            <button onClick={handleMarkSigned} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm">
-                              <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
+                            <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                              <FontAwesomeIcon icon={faCheckCircle} />
                               Marcar como Firmado
                             </button>
                           )}
-                          <button onClick={handleDeliver} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-                            <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4" />
+                          <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            <FontAwesomeIcon icon={faTruck} />
                             Marcar como Entregado
                           </button>
                         </>
