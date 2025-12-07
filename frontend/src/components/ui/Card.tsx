@@ -154,7 +154,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl transition-all duration-200 overflow-hidden min-h-[25svh] ${getVariantClasses()} ${onClick ? "cursor-pointer hover:scale-[1.01] hover:shadow-lg" : ""} ${className} h-full flex flex-col`} onClick={onClick}>
+    <div className={`dark:bg-gray-800 rounded-xl transition-all duration-200 overflow-hidden min-h-[25svh] ${getVariantClasses()} ${onClick ? "cursor-pointer hover:scale-[1.01] hover:shadow-lg" : ""} ${className} h-full flex flex-col`} onClick={onClick}>
       <div className="p-4 flex-1 flex flex-col gap-3">
         <div className="flex flex-col gap-2 h-full">
           {header && (
@@ -187,7 +187,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
               {/* Breadcrumbs */}
               {renderBreadcrumbs()}
               {/* Avatar / Icon + Title */}
-              <div className="flex items-center space-x-3 flex-1 min-w-0 mt-4">
+              <div className="flex space-x-3 flex-1 min-w-0 mt-4">
                 {header.avatar && (
                   <div className="w-10 h-10 flex-shrink-0">
                     {header.avatar.src ? (
