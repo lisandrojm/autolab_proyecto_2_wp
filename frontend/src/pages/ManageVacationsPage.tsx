@@ -100,7 +100,7 @@ const MOCK_VACATION_DATA: VacationRequestMock[] = [
   },
 ];
 
-export const ManageVacationRequestsPage: React.FC = () => {
+export const ManageVacationsPage: React.FC = () => {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
 
