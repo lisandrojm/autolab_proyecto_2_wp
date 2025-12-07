@@ -489,17 +489,19 @@ export const ManageVacationRequestsPage: React.FC = () => {
       >
         {selectedVacation && (
           <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="flex-1 overflow-y-auto">
               <div className="space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 dark:bg-gray-600/20 px-2">N° Solicitud: {getFormattedVacationNumber(selectedVacation.numeroPedido)}</span>
+                  </div>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">N° Solicitud: {getFormattedVacationNumber(selectedVacation.numeroPedido)}</span>
                     <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} />
                     {selectedVacation.firmaEstado !== "not_required" && renderSignatureStatus(selectedVacation)}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                   <div className="flex-shrink-0">
                     <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
                   </div>
@@ -510,16 +512,10 @@ export const ManageVacationRequestsPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Días Solicitados</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}
-                    </span>
-                  </div>
-
                   {selectedVacation.reglas && selectedVacation.reglas.length > 0 && (
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Reglas aplicadas</p>
+                    <div className="flex flex-col gap-1 p-3 bg-white dark:bg-gray-800">
+                      {/*  */}
+                      <span className="text-gray-600 dark:text-slate-500">Reglas aplicadas</span>
                       <div className="flex flex-wrap gap-2">
                         {selectedVacation.reglas.map((regla, index) => (
                           <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
@@ -529,10 +525,16 @@ export const ManageVacationRequestsPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+                  <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
+                    <span className="text-gray-600 dark:text-slate-500">Días Solicitados</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}
+                    </span>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300 block mb-1">Fecha de Solicitud</span>
+                    <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
+                      <span className="text-gray-600 dark:text-slate-500">Fecha de Solicitud</span>
                       <span className="text-sm text-gray-900 dark:text-white">{new Date(selectedVacation.fechaSolicitud).toLocaleDateString()}</span>
                     </div>
                   </div>
