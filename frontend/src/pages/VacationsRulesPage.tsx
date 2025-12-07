@@ -368,7 +368,7 @@ export default function VacationsRulesPage() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editingRule ? "Editar Regla de Vacaciones" : "Crear nueva regla de vacaciones"}
+        title={editingRule ? "Editar Regla de Vacaciones" : "Nueva regla de vacaciones"}
         size="lg"
         footer={
           <div className="flex gap-3 w-full">
