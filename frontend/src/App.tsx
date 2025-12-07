@@ -59,6 +59,7 @@ import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageOrderCategoriesPage } from "./pages/ManageOrderCategoriesPage";
 import { ManageVacationRequestsPage } from "./pages/ManageVacationRequestsPage";
+import VacationsRulesPage from "./pages/VacationsRulesPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
 import { RequestTypesManagementPage } from "./pages/RequestTypesManagementPage";
@@ -581,6 +582,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ManageVacationRequestsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/rules/vacations"
+                element={
+                  <ProtectedRoute>
+                    <VacationsRulesPage />
                   </ProtectedRoute>
                 }
               />
