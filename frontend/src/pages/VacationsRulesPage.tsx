@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faSpinner, faPlus, faEdit, faTrash, faToggleOn, faToggleOff, faPlus as faPlusCircle, faTimes, faGear } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faSpinner, faPlus, faEdit, faTrash, faToggleOn, faToggleOff, faPlus as faPlusCircle, faTimes, faGear, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { InfoModal } from "../components/ui/InfoModal";
 
 const HELP_KEY = "vacations" as const;
 
@@ -138,7 +139,7 @@ const initialFormState: Omit<VacationRule, "id"> = {
   maxDiasHabiles: undefined,
   anticipacionMinimaDias: undefined,
   permiteFraccionadas: false,
-  requiereFirma: false,
+  requiereFirma: true,
   firmadoPor: [],
 };
 
@@ -153,6 +154,18 @@ export default function VacationsRulesPage() {
   const [formData, setFormData] = useState<Omit<VacationRule, "id">>(initialFormState);
   const [submitting, setSubmitting] = useState(false);
   const [showMainInfo, setShowMainInfo] = useState(false);
+
+  const [showAntiguedadInfo, setShowAntiguedadInfo] = useState(false);
+  const [showMaxDiasGozadosInfo, setShowMaxDiasGozadosInfo] = useState(false);
+  const [showDiasBeneficioInfo, setShowDiasBeneficioInfo] = useState(false);
+  const [showArrastreInfo, setShowArrastreInfo] = useState(false);
+  const [showMaxDiasArrastreInfo, setShowMaxDiasArrastreInfo] = useState(false);
+  const [showVencimientoInfo, setShowVencimientoInfo] = useState(false);
+  const [showMinDiasInfo, setShowMinDiasInfo] = useState(false);
+  const [showMaxDiasCorridosInfo, setShowMaxDiasCorridosInfo] = useState(false);
+  const [showMaxDiasHabilesInfo, setShowMaxDiasHabilesInfo] = useState(false);
+  const [showAnticipacionInfo, setShowAnticipacionInfo] = useState(false);
+  const [showFraccionadasInfo, setShowFraccionadasInfo] = useState(false);
 
   const openCreateModal = () => {
     setEditingRule(null);
@@ -383,6 +396,7 @@ export default function VacationsRulesPage() {
       >
         <div className="p-6">
           <form id="vacation-rule-form" onSubmit={handleSubmit} className="space-y-6">
+            {/* Información general */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Información general</h3>
               <div className="space-y-4">
@@ -403,178 +417,239 @@ export default function VacationsRulesPage() {
               </div>
             </div>
 
-            <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Alcance</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aplicar a</label>
-                  <select
-                    value={formData.scope}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        scope: e.target.value as VacationRuleScope,
-                        cargo: null,
-                        nivel: null,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="all">Todos los empleados</option>
-                    <option value="cargo">Por cargo específico</option>
-                    <option value="nivel">Por nivel específico</option>
-                    <option value="cargo_nivel">Por cargo y nivel</option>
-                  </select>
-                </div>
-
-                {(formData.scope === "cargo" || formData.scope === "cargo_nivel") && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo</label>
-                    <select value={formData.cargo || ""} onChange={(e) => setFormData({ ...formData, cargo: e.target.value || null })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                      <option value="">Seleccionar cargo</option>
-                      {CARGOS_OPTIONS.map((cargo) => (
-                        <option key={cargo} value={cargo}>
-                          {cargo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {(formData.scope === "nivel" || formData.scope === "cargo_nivel") && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nivel</label>
-                    <select value={formData.nivel || ""} onChange={(e) => setFormData({ ...formData, nivel: e.target.value || null })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                      <option value="">Seleccionar nivel</option>
-                      {NIVELES_OPTIONS.map((nivel) => (
-                        <option key={nivel} value={nivel}>
-                          {nivel}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
+            {/* Alcance - OCULTO PARA MVP pero manteniendo los campos */}
+            <div className="hidden">
+              <input type="hidden" value={formData.scope} />
+              <input type="hidden" value={formData.cargo || ""} />
+              <input type="hidden" value={formData.nivel || ""} />
             </div>
 
+            {/* Días por antigüedad - Con labels mejorados e info icon */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Días por antigüedad</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Días de vacaciones según años de antigüedad</h3>
+                <button type="button" onClick={() => setShowAntiguedadInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Define cuántos días de vacaciones corresponden según la antigüedad del empleado en la empresa.</p>
               <div className="space-y-3">
                 {formData.antiguedadTramos.map((tramo, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <div className="flex-1">
-                      <input type="number" placeholder="Desde (años)" value={tramo.desde} onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Desde (años)</label>
+                      <input type="number" placeholder="0" value={tramo.desde} onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
                     <div className="flex-1">
-                      <input type="number" placeholder="Hasta (años)" value={tramo.hasta} onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Hasta (años)</label>
+                      <input type="number" placeholder="5" value={tramo.hasta} onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
                     <div className="flex-1">
-                      <input type="number" placeholder="Días" value={tramo.dias} onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Días de vacaciones</label>
+                      <input type="number" placeholder="14" value={tramo.dias} onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
-                    <button type="button" onClick={() => removeAntiguedadTramo(index)} className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Eliminar tramo">
+                    <button type="button" onClick={() => removeAntiguedadTramo(index)} className="p-2 mt-5 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Eliminar tramo">
                       <FontAwesomeIcon icon={faTimes} />
                     </button>
                   </div>
                 ))}
                 <button type="button" onClick={addAntiguedadTramo} className="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2">
                   <FontAwesomeIcon icon={faPlusCircle} />
-                  Agregar tramo
+                  Agregar tramo de antigüedad
                 </button>
               </div>
             </div>
 
+            {/* Límites y Días */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Límites y Días</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Máx. días gozados</label>
-                  <input type="number" value={formData.maxDiasGozados || ""} onChange={(e) => setFormData({ ...formData, maxDiasGozados: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo días gozados por año</label>
+                    <button type="button" onClick={() => setShowMaxDiasGozadosInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input type="number" value={formData.maxDiasGozados || ""} onChange={(e) => setFormData({ ...formData, maxDiasGozados: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="30" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Días beneficio</label>
-                  <input type="number" value={formData.diasBeneficio || ""} onChange={(e) => setFormData({ ...formData, diasBeneficio: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Días de beneficio</label>
+                    <button type="button" onClick={() => setShowDiasBeneficioInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input type="number" value={formData.diasBeneficio || ""} onChange={(e) => setFormData({ ...formData, diasBeneficio: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="14" />
                 </div>
                 <div className="col-span-2">
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="permiteArrastre" checked={formData.permiteArrastre} onChange={(e) => setFormData({ ...formData, permiteArrastre: e.target.checked })} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                    <label htmlFor="permiteArrastre" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Permite arrastre de días
-                    </label>
+                    <label htmlFor="permiteArrastre" className="text-sm font-medium text-gray-700 dark:text-gray-300">Permite arrastre de días no usados</label>
+                    <button type="button" onClick={() => setShowArrastreInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
                 {formData.permiteArrastre && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Máx. días arrastre</label>
-                      <input type="number" value={formData.maxDiasArrastre || ""} onChange={(e) => setFormData({ ...formData, maxDiasArrastre: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                      <div className="flex items-center gap-2 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo días de arrastre</label>
+                        <button type="button" onClick={() => setShowMaxDiasArrastreInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <input type="number" value={formData.maxDiasArrastre || ""} onChange={(e) => setFormData({ ...formData, maxDiasArrastre: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="7" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimiento arrastre (días)</label>
-                      <input type="number" value={formData.vencimientoArrastreDias || ""} onChange={(e) => setFormData({ ...formData, vencimientoArrastreDias: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                      <div className="flex items-center gap-2 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vencimiento del arrastre (días)</label>
+                        <button type="button" onClick={() => setShowVencimientoInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <input type="number" value={formData.vencimientoArrastreDias || ""} onChange={(e) => setFormData({ ...formData, vencimientoArrastreDias: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="180" />
                     </div>
                   </>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mín. días por solicitud</label>
-                  <input type="number" value={formData.minDiasPorSolicitud || ""} onChange={(e) => setFormData({ ...formData, minDiasPorSolicitud: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mínimo días por solicitud</label>
+                    <button type="button" onClick={() => setShowMinDiasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input type="number" value={formData.minDiasPorSolicitud || ""} onChange={(e) => setFormData({ ...formData, minDiasPorSolicitud: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="1" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Máx. días corridos</label>
-                  <input type="number" value={formData.maxDiasCorridos || ""} onChange={(e) => setFormData({ ...formData, maxDiasCorridos: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo días corridos</label>
+                    <button type="button" onClick={() => setShowMaxDiasCorridosInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input type="number" value={formData.maxDiasCorridos || ""} onChange={(e) => setFormData({ ...formData, maxDiasCorridos: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="14" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Máx. días hábiles</label>
-                  <input type="number" value={formData.maxDiasHabiles || ""} onChange={(e) => setFormData({ ...formData, maxDiasHabiles: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo días hábiles</label>
+                    <button type="button" onClick={() => setShowMaxDiasHabilesInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input type="number" value={formData.maxDiasHabiles || ""} onChange={(e) => setFormData({ ...formData, maxDiasHabiles: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="10" />
                 </div>
               </div>
             </div>
 
+            {/* Operativa */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Operativa</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Anticipación mínima (días)</label>
-                  <input type="number" value={formData.anticipacionMinimaDias || ""} onChange={(e) => setFormData({ ...formData, anticipacionMinimaDias: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Anticipación mínima para solicitar (días)</label>
+                    <button type="button" onClick={() => setShowAnticipacionInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                      <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input type="number" value={formData.anticipacionMinimaDias || ""} onChange={(e) => setFormData({ ...formData, anticipacionMinimaDias: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="15" />
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="permiteFraccionadas" checked={formData.permiteFraccionadas} onChange={(e) => setFormData({ ...formData, permiteFraccionadas: e.target.checked })} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                  <label htmlFor="permiteFraccionadas" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Permite vacaciones fraccionadas
-                  </label>
+                  <label htmlFor="permiteFraccionadas" className="text-sm font-medium text-gray-700 dark:text-gray-300">Permite vacaciones fraccionadas</label>
+                  <button type="button" onClick={() => setShowFraccionadasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
 
+            {/* Firma Digital - IGUAL AL ESTILO DE OrderCategoryForm */}
             <div className="pb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Firma Digital</h3>
-              <div className="space-y-4">
+              <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
                 <div className="flex items-center gap-2">
-                  <input type="checkbox" id="requiereFirma" checked={formData.requiereFirma} onChange={(e) => setFormData({ ...formData, requiereFirma: e.target.checked })} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                  <label htmlFor="requiereFirma" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Requiere firma digital
-                  </label>
+                  <input type="checkbox" id="requiereFirma" checked={formData.requiereFirma ?? true} onChange={(e) => setFormData({ ...formData, requiereFirma: e.target.checked })} className="w-4 h-4 text-blue-600" />
+                  <label htmlFor="requiereFirma" className="text-sm text-gray-700 dark:text-gray-300">Requiere FIRMA del usuario</label>
                 </div>
 
-                {formData.requiereFirma && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Firmado por</label>
-                    <div className="space-y-2">
-                      {FIRMANTES_OPTIONS.map((firmante) => (
-                        <div key={firmante} className="flex items-center gap-2">
-                          <input type="checkbox" id={`firmante-${firmante}`} checked={formData.firmadoPor.includes(firmante)} onChange={() => toggleFirmante(firmante)} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                          <label htmlFor={`firmante-${firmante}`} className="text-sm text-gray-700 dark:text-gray-300">
-                            {firmante}
-                          </label>
-                        </div>
-                      ))}
+                {(formData.requiereFirma ?? true) && (
+                  <>
+                    <p className="pt-3 text-sm text-gray-700 dark:text-gray-300">Cuando se apruebe esta solicitud de vacaciones, se enviará automáticamente para firma del usuario.</p>
+
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Firmantes autorizados</label>
+                      <div className="space-y-2">
+                        {FIRMANTES_OPTIONS.map((firmante) => (
+                          <div key={firmante} className="flex items-center gap-2">
+                            <input type="checkbox" id={`firmante-${firmante}`} checked={formData.firmadoPor.includes(firmante)} onChange={() => toggleFirmante(firmante)} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                            <label htmlFor={`firmante-${firmante}`} className="text-sm text-gray-700 dark:text-gray-300">{firmante}</label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Selecciona quiénes pueden firmar las solicitudes de vacaciones</p>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
           </form>
         </div>
       </Modal>
+
+      {/* Modales de información */}
+      <InfoModal isOpen={showAntiguedadInfo} onClose={() => setShowAntiguedadInfo(false)} title="Días por antigüedad">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Define tramos de años de antigüedad y los días de vacaciones que corresponden en cada uno.</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">Por ejemplo:</p>
+        <ul className="list-disc list-inside mt-2 text-sm text-gray-700 dark:text-gray-300">
+          <li>De 0 a 5 años: 14 días</li>
+          <li>De 6 a 10 años: 21 días</li>
+          <li>De 11 años en adelante: 28 días</li>
+        </ul>
+      </InfoModal>
+
+      <InfoModal isOpen={showMaxDiasGozadosInfo} onClose={() => setShowMaxDiasGozadosInfo(false)} title="Máximo días gozados por año">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Cantidad máxima de días de vacaciones que un empleado puede tomar en un año calendario, incluyendo días de arrastre de años anteriores.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showDiasBeneficioInfo} onClose={() => setShowDiasBeneficioInfo(false)} title="Días de beneficio">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Días adicionales de vacaciones que se otorgan como beneficio especial, además de los días por antigüedad. Estos días no dependen de la antigüedad del empleado.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showArrastreInfo} onClose={() => setShowArrastreInfo(false)} title="Arrastre de días">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Permite que los días de vacaciones no utilizados en un año puedan ser usados en el año siguiente dentro del plazo de vencimiento configurado.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showMaxDiasArrastreInfo} onClose={() => setShowMaxDiasArrastreInfo(false)} title="Máximo días de arrastre">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Cantidad máxima de días de vacaciones no utilizados que pueden arrastrarse al siguiente año. Por ejemplo, si se configuran 7 días, el empleado puede arrastrar hasta 7 días no usados.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showVencimientoInfo} onClose={() => setShowVencimientoInfo(false)} title="Vencimiento del arrastre">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Cantidad de días desde el inicio del nuevo año en los que los días arrastrados deben ser utilizados. Después de este plazo, los días no usados se pierden.</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">Por ejemplo, si se configuran 180 días, los días arrastrados deben usarse antes del 30 de junio.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showMinDiasInfo} onClose={() => setShowMinDiasInfo(false)} title="Mínimo días por solicitud">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Cantidad mínima de días que el empleado debe solicitar en cada pedido de vacaciones. Esto evita solicitudes de períodos muy cortos.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showMaxDiasCorridosInfo} onClose={() => setShowMaxDiasCorridosInfo(false)} title="Máximo días corridos">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Máxima cantidad de días corridos (incluyendo fines de semana y feriados) que pueden solicitarse en un solo período de vacaciones.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showMaxDiasHabilesInfo} onClose={() => setShowMaxDiasHabilesInfo(false)} title="Máximo días hábiles">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Máxima cantidad de días hábiles (excluyendo fines de semana y feriados) que pueden solicitarse en un solo período de vacaciones.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showAnticipacionInfo} onClose={() => setShowAnticipacionInfo(false)} title="Anticipación mínima">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Cantidad mínima de días de anticipación con la que el empleado debe solicitar sus vacaciones antes de la fecha de inicio deseada.</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">Por ejemplo, si se configuran 15 días, el empleado debe solicitar con al menos 15 días de anticipación.</p>
+      </InfoModal>
+
+      <InfoModal isOpen={showFraccionadasInfo} onClose={() => setShowFraccionadasInfo(false)} title="Vacaciones fraccionadas">
+        <p className="text-sm text-gray-700 dark:text-gray-300">Permite que el empleado pueda dividir sus días de vacaciones en múltiples períodos a lo largo del año, en lugar de tomarlos todos juntos.</p>
+      </InfoModal>
     </PageLayout>
   );
 }
