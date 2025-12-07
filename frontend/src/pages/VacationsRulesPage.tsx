@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faSpinner, faPlus, faEdit, faTrash, faToggleOn, faToggleOff, faPlus as faPlusCircle, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faSpinner, faPlus, faEdit, faTrash, faToggleOn, faToggleOff, faPlus as faPlusCircle, faTimes, faGear } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -75,9 +75,7 @@ const mockRules: VacationRule[] = [
     cargo: null,
     nivel: "Senior",
     activo: true,
-    antiguedadTramos: [
-      { desde: 0, hasta: 99, dias: 28 },
-    ],
+    antiguedadTramos: [{ desde: 0, hasta: 99, dias: 28 }],
     maxDiasGozados: 35,
     diasBeneficio: 21,
     permiteArrastre: true,
@@ -284,9 +282,9 @@ export default function VacationsRulesPage() {
 
   return (
     <PageLayout
-      title="Reglas de Vacaciones"
+      title="ABM Vacaciones | Reglas"
       subtitle="Administra las reglas de vacaciones del personal"
-      faIcon={{ icon: faCalendar }}
+      faIcon={{ icon: faGear }}
       onBack={() => navigate("/hr/manage-vacations")}
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{
@@ -316,11 +314,8 @@ export default function VacationsRulesPage() {
                 <table className="w-full dark:bg-slate-800/80">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre de regla</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Alcance</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nivel</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Requiere Firma</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                     </tr>
@@ -333,22 +328,10 @@ export default function VacationsRulesPage() {
                           {rule.description && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rule.description}</div>}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200">{getScopeLabel(rule.scope)}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{rule.cargo || "-"}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{rule.nivel || "-"}</span>
-                        </td>
-                        <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${rule.requiereFirma ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{rule.requiereFirma ? "Sí" : "No"}</span>
                         </td>
                         <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleToggleActive(rule)}
-                            className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${rule.activo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}
-                          >
+                          <button onClick={() => handleToggleActive(rule)} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${rule.activo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
                             <FontAwesomeIcon icon={rule.activo ? faToggleOn : faToggleOff} className="mr-1" />
                             {rule.activo ? "Activa" : "Inactiva"}
                           </button>
@@ -406,24 +389,11 @@ export default function VacationsRulesPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre de la regla</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="Ej: Vacaciones estándar"
-                    required
-                  />
+                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Ej: Vacaciones estándar" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción (opcional)</label>
-                  <textarea
-                    value={formData.description || ""}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="Descripción de la regla"
-                    rows={3}
-                  />
+                  <textarea value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Descripción de la regla" rows={3} />
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="activo" checked={formData.activo} onChange={(e) => setFormData({ ...formData, activo: e.target.checked })} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
@@ -494,34 +464,13 @@ export default function VacationsRulesPage() {
                 {formData.antiguedadTramos.map((tramo, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <div className="flex-1">
-                      <input
-                        type="number"
-                        placeholder="Desde (años)"
-                        value={tramo.desde}
-                        onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                        min="0"
-                      />
+                      <input type="number" placeholder="Desde (años)" value={tramo.desde} onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
                     <div className="flex-1">
-                      <input
-                        type="number"
-                        placeholder="Hasta (años)"
-                        value={tramo.hasta}
-                        onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                        min="0"
-                      />
+                      <input type="number" placeholder="Hasta (años)" value={tramo.hasta} onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
                     <div className="flex-1">
-                      <input
-                        type="number"
-                        placeholder="Días"
-                        value={tramo.dias}
-                        onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                        min="0"
-                      />
+                      <input type="number" placeholder="Días" value={tramo.dias} onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
                     <button type="button" onClick={() => removeAntiguedadTramo(index)} className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Eliminar tramo">
                       <FontAwesomeIcon icon={faTimes} />

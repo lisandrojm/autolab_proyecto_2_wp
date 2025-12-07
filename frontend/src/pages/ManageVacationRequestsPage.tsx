@@ -186,12 +186,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
       e.stopPropagation();
     }
 
-    const result = await sweetAlert.confirm(
-      "¿Eliminar esta solicitud?",
-      `La solicitud ${getFormattedVacationNumber(numeroPedido)} será eliminada permanentemente. Esta acción no se puede deshacer.`,
-      "Sí, Eliminar",
-      "Cancelar"
-    );
+    const result = await sweetAlert.confirm("¿Eliminar esta solicitud?", `La solicitud ${getFormattedVacationNumber(numeroPedido)} será eliminada permanentemente. Esta acción no se puede deshacer.`, "Sí, Eliminar", "Cancelar");
 
     if (!result.isConfirmed) return;
 
@@ -211,11 +206,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
 
   const filteredVacations = mockVacations.filter((vacation) => {
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      !searchTerm ||
-      getUserName(vacation.solicitante).toLowerCase().includes(searchLower) ||
-      vacation.reglas.some((r) => r.toLowerCase().includes(searchLower)) ||
-      vacation.numeroPedido.includes(searchTerm);
+    const matchesSearch = !searchTerm || getUserName(vacation.solicitante).toLowerCase().includes(searchLower) || vacation.reglas.some((r) => r.toLowerCase().includes(searchLower)) || vacation.numeroPedido.includes(searchTerm);
 
     const matchesStatus = statusFilter === "all" || vacation.estado === statusFilter;
 
@@ -228,7 +219,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Solicitudes de Vacaciones"
+      title="Vacaciones"
       subtitle="Gestión de solicitudes de vacaciones del personal"
       faIcon={{ icon: faCalendar }}
       infoModal={{
@@ -242,20 +233,10 @@ export const ManageVacationRequestsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/hr/rules/vacations")}
-            className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full"
-            title="Configurar reglas de vacaciones"
-            aria-label="Configurar reglas de vacaciones"
-          >
+          <button onClick={() => navigate("/hr/rules/vacations")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Configurar reglas de vacaciones" aria-label="Configurar reglas de vacaciones">
             <FontAwesomeIcon icon={faGear} />
           </button>
-          <button
-            onClick={() => setShowStatsModal(true)}
-            className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
-            aria-label="Ver resumen de vacaciones"
-            title="Ver resumen de vacaciones"
-          >
+          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de vacaciones" title="Ver resumen de vacaciones">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
         </div>
@@ -266,22 +247,12 @@ export const ManageVacationRequestsPage: React.FC = () => {
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar solicitudes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              />
+              <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
             </div>
 
             <div className="relative">
               <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              >
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                 <option value="all">Todos los estados</option>
                 <option value="pending">Pendientes</option>
                 <option value="approved">Aprobadas</option>
@@ -323,17 +294,12 @@ export const ManageVacationRequestsPage: React.FC = () => {
                         }}
                       >
                         <td className="py-3 px-4">
-                          <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">
-                            {getFormattedVacationNumber(vacation.numeroPedido)}
-                          </span>
+                          <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-2">
                             {vacation.reglas.map((regla, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit"
-                              >
+                              <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">
                                 {regla}
                               </span>
                             ))}
@@ -347,12 +313,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
                         <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(vacation.fechaSolicitud).toLocaleDateString()}</td>
                         <td className="py-3 px-4 text-center">
-                          <button
-                            onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)}
-                            className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                            title="Eliminar solicitud"
-                            aria-label="Eliminar solicitud"
-                          >
+                          <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
                             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                           </button>
                         </td>
@@ -365,29 +326,19 @@ export const ManageVacationRequestsPage: React.FC = () => {
               {filteredVacations.length === 0 && (
                 <div className="text-center py-12">
                   <FontAwesomeIcon icon={faCalendar} className="h-16 w-16 text-gray-400 mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {searchTerm || statusFilter !== "all" ? "No se encontraron solicitudes con los filtros aplicados" : "No hay solicitudes de vacaciones registradas"}
-                  </p>
+                  <p className="text-gray-600 dark:text-gray-400">{searchTerm || statusFilter !== "all" ? "No se encontraron solicitudes con los filtros aplicados" : "No hay solicitudes de vacaciones registradas"}</p>
                 </div>
               )}
 
               {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-6">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     Anterior
                   </button>
                   <span className="text-gray-600 dark:text-gray-400">
                     Página {page} de {totalPages}
                   </span>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     Siguiente
                   </button>
                 </div>
