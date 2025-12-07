@@ -34,36 +34,36 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
 
   return (
     <tr ref={setNodeRef} style={style} {...(isReorderMode ? { ...attributes, ...listeners } : {})} className={`border-b border-gray-100 dark:border-gray-700 ${isReorderMode ? "bg-blue-50 dark:bg-blue-900/20 cursor-grab active:cursor-grabbing" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}>
-      <td className="bg- py-3 px-4 text-center">
+      <td className="bg- py-3 px-4">
         <div className={`flex items-center justify-center ${isReorderMode ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-600"}`}>
           <FontAwesomeIcon icon={faGripVertical} className="h-5 w-5" />
         </div>
       </td>
-      <td className="py-3 px-4 text-center">
+      <td className="py-3 px-4">
         <span className="text-sm font-medium">{index + 1}</span>
       </td>
       <td className="py-3 px-4">
         <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
         {category.categoryType === "dinero" && category.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${category.montoMaximo.toLocaleString("es-ES")}</div>}
       </td>
-      <td className="py-3 px-4 text-center">
+      <td className="py-3 px-4">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
-      <td className="py-3 px-4 text-center">{category.requiresAction ? <div className="flex justify-start items-center gap-1">{category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
-      <td className="py-3 px-4 text-center">
+      <td className="py-3 px-4">{category.requiresAction ? <div className="flex justify-start items-center gap-1">{category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
+      <td className="py-3 px-4">
         <span className={`px-2 py-1 rounded text-xs font-medium ${(category.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(category.requiresSignature ?? true) ? "Sí" : "No"}</span>
       </td>
       {/*       <td className="py-3 px-4">
         <div className="text-sm text-gray-600 dark:text-gray-400">{category.informacion || "-"}</div>
       </td> */}
-      <td className="py-3 px-4 text-center">
+      <td className="py-3 px-4">
         <button onClick={() => onToggleActive(category)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${category.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
           <FontAwesomeIcon icon={category.isActive ? faToggleOn : faToggleOff} className="mr-1" />
           {category.isActive ? "Activa" : "Inactiva"}
         </button>
       </td>
       <td className="py-3 px-4">
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
           <button onClick={() => onEdit(category)} disabled={isReorderMode} className={`p-1.5 rounded-lg text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
@@ -500,15 +500,15 @@ export const ManageOrderCategoriesPage: React.FC = () => {
                   <table className="w-full dark:bg-slate-800/80">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">Ordenar</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">Ordenar</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                        {/*                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Información</th> */}
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-48">Acciones</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
+                        {/* <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Información</th> */}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                       </tr>
                     </thead>
                     <SortableContext items={(isReorderMode ? tempCategories : categories).map((c) => c._id)} strategy={verticalListSortingStrategy}>
