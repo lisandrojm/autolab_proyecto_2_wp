@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload, faTrash, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -614,10 +614,12 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "pending") {
       return (
         <>
-          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
-          <button onClick={handlePreApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handlePreApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faCheck} className="text-lg" />
             Pre-Aprobar
           </button>
         </>
@@ -627,10 +629,12 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "pre_approved") {
       return (
         <>
-          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
-          <button onClick={handleApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handleApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faCheck} className="text-lg" />
             Aprobar
           </button>
         </>
@@ -640,7 +644,8 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "approved") {
       return (
         <>
-          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
 
