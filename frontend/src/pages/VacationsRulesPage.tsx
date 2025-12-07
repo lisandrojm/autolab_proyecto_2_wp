@@ -298,7 +298,6 @@ export default function VacationsRulesPage() {
       headerActions={
         <button onClick={openCreateModal} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
           <FontAwesomeIcon icon={faPlus} />
-          <span className="hidden lg:inline">Nueva regla</span>
         </button>
       }
     >
