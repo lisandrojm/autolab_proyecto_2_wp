@@ -463,22 +463,30 @@ export const ManageVacationRequestsPage: React.FC = () => {
         </div>
       </div>
 
-      <Modal isOpen={showDetailModal && !!selectedVacation} onClose={() => setShowDetailModal(false)} title={
-        <div className="flex items-center justify-between w-full px-4">
-          <div className="flex items-center gap-4">
-            <button onClick={handleNavigatePrevVacation} disabled={currentVacationIndex === 0} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Solicitud anterior">
+      <Modal
+        isOpen={showDetailModal && !!selectedVacation}
+        onClose={() => setShowDetailModal(false)}
+        title={
+          <div className="flex items-center justify-between w-full px-4">
+            <div className="flex items-center gap-4">
+              {/*             <button onClick={handleNavigatePrevVacation} disabled={currentVacationIndex === 0} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Solicitud anterior">
               <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
-            </button>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Detalles de Vacaciones</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{currentVacationIndex + 1} de {filteredVacations.length}</p>
+            </button> */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Detalles de Vacaciones</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {currentVacationIndex + 1} de {filteredVacations.length}
+                </p>
+              </div>
+              {/*               <button onClick={handleNavigateNextVacation} disabled={currentVacationIndex === filteredVacations.length - 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Siguiente solicitud">
+                <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+              </button> */}
             </div>
-            <button onClick={handleNavigateNextVacation} disabled={currentVacationIndex === filteredVacations.length - 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Siguiente solicitud">
-              <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
-            </button>
           </div>
-        </div>
-      } size="2xl" hideDefaultCloseButton>
+        }
+        size="2xl"
+        hideDefaultCloseButton
+      >
         {selectedVacation && (
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -493,9 +501,7 @@ export const ManageVacationRequestsPage: React.FC = () => {
 
                 <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                   <div className="flex-shrink-0">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
-                      {getUserInitials(getUserName(selectedVacation.solicitante))}
-                    </div>
+                    <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white">{getUserName(selectedVacation.solicitante)}</h4>
@@ -506,7 +512,9 @@ export const ManageVacationRequestsPage: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Días Solicitados</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}
+                    </span>
                   </div>
 
                   {selectedVacation.reglas && selectedVacation.reglas.length > 0 && (
