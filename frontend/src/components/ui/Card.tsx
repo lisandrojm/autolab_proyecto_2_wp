@@ -108,7 +108,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
       case "danger":
         return "hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400";
       default:
-        return "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400";
+        return "hover:text-gray-800 dark:hover:text-gray-300 text-gray-600 dark:text-gray-400";
     }
   };
 

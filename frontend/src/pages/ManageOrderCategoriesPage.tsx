@@ -64,10 +64,10 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center justify-center gap-2">
-          <button onClick={() => onEdit(category)} disabled={isReorderMode} className={`p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
+          <button onClick={() => onEdit(category)} disabled={isReorderMode} className={`p-1.5 rounded-lg text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
-          <button onClick={() => onDelete(category)} disabled={isReorderMode} className={`p-1.5 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-colors ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
+          <button onClick={() => onDelete(category)} disabled={isReorderMode} className={`p-1.5 rounded-lg text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
           </button>
         </div>
