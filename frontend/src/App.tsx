@@ -64,7 +64,6 @@ import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
 import { RequestTypesManagementPage } from "./pages/RequestTypesManagementPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplates/PdfTemplatesPage";
-import { VacationsDevPage } from "./pages/VacationsDev/VacationsDevPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -597,14 +596,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <PdfTemplatesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vacations-dev"
-                element={
-                  <ProtectedRoute>
-                    <VacationsDevPage />
                   </ProtectedRoute>
                 }
               />
