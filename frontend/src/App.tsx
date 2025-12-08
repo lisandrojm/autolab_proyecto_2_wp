@@ -22,7 +22,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 import { CampaignDetailPage } from "./pages/CampaignDetailPage";
-import { PostDetailPage } from "./pages/PostDetailPage";
+
 import { ClientContextInfoPage } from "./pages/ClientContextInfoPage";
 import { ClientContextBrandKitPage } from "./pages/ClientContextBrandKitPage";
 import { ClientContextCampaignsPage } from "./pages/ClientContextCampaignsPage";
@@ -268,14 +268,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CampaignDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/posts/:postId"
-                element={
-                  <ProtectedRoute>
-                    <PostDetailPage />
                   </ProtectedRoute>
                 }
               />
