@@ -54,12 +54,12 @@ import { ManageCalendarEventsPage } from "./pages/ManageCalendarEventsPage";
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
-import { ManageOrderCategoriesPage } from "./pages/ManageOrderCategoriesPage";
+import { ManageOrdersCategoriesPage } from "./pages/ManageOrdersCategoriesPage";
 import { ManageVacationsPage } from "./pages/ManageVacationsPage";
 import { ManageVacationsRulesPage } from "./pages/ManageVacationsRulesPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
-import { RequestTypesManagementPage } from "./pages/RequestTypesManagementPage";
+import { ManageOrdersCategoriesTypesPage } from "./pages/ManageOrdersCategoriesTypesPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplates/PdfTemplatesPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
@@ -432,7 +432,7 @@ function App() {
                 path="/admin/request-types"
                 element={
                   <ProtectedRoute>
-                    <RequestTypesManagementPage />
+                    <ManageOrdersCategoriesTypesPage />
                   </ProtectedRoute>
                 }
               />
@@ -538,7 +538,7 @@ function App() {
                 path="/hr/order-categories"
                 element={
                   <ProtectedRoute>
-                    <ManageOrderCategoriesPage />
+                    <ManageOrdersCategoriesPage />
                   </ProtectedRoute>
                 }
               />

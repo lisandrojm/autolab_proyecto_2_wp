@@ -85,7 +85,7 @@ interface PdfTemplate {
   isActive: boolean;
 }
 
-export const ManageOrderCategoriesPage: React.FC = () => {
+export const ManageOrdersCategoriesPage: React.FC = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<OrderCategory[]>([]);
   const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
