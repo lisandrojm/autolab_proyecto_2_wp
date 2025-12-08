@@ -38,7 +38,7 @@ import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
 import { AIAssistantModal } from "./components/AIAssistantModal";
 import { AssistantRedirect } from "./pages/AssistantRedirect";
-import { PersonnelHomePage } from "./pages/PersonnelHomePage";
+
 import { ProfilePage } from "./pages/ProfilePage";
 import { DailyReportPage } from "./pages/DailyReportPage";
 
@@ -354,14 +354,7 @@ function App() {
               />
 
               {/* Personnel Module Routes */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <PersonnelHomePage />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/admin/personal/perfil"
                 element={
