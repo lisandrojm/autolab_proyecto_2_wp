@@ -171,9 +171,9 @@ export const PositionsPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+            <button onClick={openCreate} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
             </button>
           )}
