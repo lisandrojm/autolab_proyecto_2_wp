@@ -42,7 +42,7 @@ import { PersonnelHomePage } from "./pages/PersonnelHomePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { TeamPage } from "./pages/TeamPage";
 import { DailyReportPage } from "./pages/DailyReportPage";
-import { VacationsPage } from "./pages/VacationsPage";
+
 import { OtherRequestsPage } from "./pages/OtherRequestsPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
@@ -405,14 +405,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/pedidos/vacaciones"
-                element={
-                  <ProtectedRoute>
-                    <VacationsPage />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/admin/pedidos/pedidos"
                 element={

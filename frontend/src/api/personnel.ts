@@ -1,4 +1,4 @@
-import axios from './axiosConfig';
+import axios from "./axiosConfig";
 
 export interface ProfileData {
   _id: string;
@@ -38,45 +38,11 @@ export interface ProfileStats {
   };
 }
 
-export interface VacationRequest {
-  _id: string;
-  tenantId: string;
-  userId: string | {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  startDate: string;
-  endDate: string;
-  daysRequested: number;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  reason: string;
-  managerComment?: string;
-  approvedBy?: {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  approvedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface VacationStats {
-  pending: number;
-  approved: number;
-  rejected: number;
-  cancelled: number;
-  totalDays: number;
-}
-
 export interface DocumentData {
   _id: string;
   tenantId: string;
   userId: string;
-  type: 'contract' | 'payroll' | 'certificate' | 'other';
+  type: "contract" | "payroll" | "certificate" | "other";
   title: string;
   description?: string;
   filePath?: string;
@@ -100,7 +66,7 @@ export interface CalendarEvent {
   start: string;
   end: string;
   isAllDay: boolean;
-  visibility: 'private' | 'team' | 'company';
+  visibility: "private" | "team" | "company";
   createdBy: {
     _id: string;
     firstName: string;
@@ -116,7 +82,7 @@ export interface Notification {
   _id: string;
   tenantId: string;
   userId: string;
-  type: 'vacation' | 'order' | 'calendar' | 'document' | 'info';
+  type: "vacation" | "order" | "calendar" | "document" | "info";
   title: string;
   message: string;
   linkUrl?: string;
@@ -180,28 +146,32 @@ export interface FutureAction {
 export interface OrderData {
   _id: string;
   tenantId: string;
-  userId: string | {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
+  userId:
+    | string
+    | {
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+      };
   orderNumber: string;
   description: string;
   category: string;
-  categoryId?: string | {
-    _id: string;
-    name: string;
-    requiresSignature?: boolean;
-    requiresDocument?: boolean;
-  };
+  categoryId?:
+    | string
+    | {
+        _id: string;
+        name: string;
+        requiresSignature?: boolean;
+        requiresDocument?: boolean;
+      };
   subcategories: string[];
   dynamicValue?: any;
   actionCompleted?: boolean;
   amount?: number;
   photoUrl?: string;
   documentoUrl?: string;
-  status: 'pending' | 'pre_approved' | 'approved' | 'rejected' | 'delivered' | 'cancelled';
+  status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: string;
   preApprovedBy?: {
     _id: string;
@@ -219,7 +189,7 @@ export interface OrderData {
   approvedAt?: string;
   deliveredAt?: string;
   futureActionId?: FutureAction | string;
-  signatureStatus?: 'not_required' | 'pending' | 'sent' | 'signed';
+  signatureStatus?: "not_required" | "pending" | "sent" | "signed";
   signatureSentAt?: string;
   signatureNotifiedAt?: string;
   signedAt?: string;
@@ -236,63 +206,30 @@ export interface OrderData {
 export const personnelAPI = {
   // Profile endpoints
   getProfile: async (): Promise<ProfileData> => {
-    const { data } = await axios.get('/profile');
+    const { data } = await axios.get("/profile");
     return data;
   },
 
   updateProfile: async (profileData: Partial<ProfileData>): Promise<ProfileData> => {
-    const { data } = await axios.put('/profile', profileData);
+    const { data } = await axios.put("/profile", profileData);
     return data;
   },
 
   updateProfilePhoto: async (profilePhotoUrl: string): Promise<{ profilePhotoUrl: string }> => {
-    const { data } = await axios.put('/profile/photo', { profilePhotoUrl });
+    const { data } = await axios.put("/profile/photo", { profilePhotoUrl });
     return data;
   },
 
   getProfileStats: async (): Promise<ProfileStats> => {
-    const { data } = await axios.get('/profile/stats');
+    const { data } = await axios.get("/profile/stats");
     return data;
   },
 
   // Vacation endpoints
-  getVacations: async (): Promise<VacationRequest[]> => {
-    const { data } = await axios.get('/vacations');
-    return data;
-  },
-
-  getVacation: async (id: string): Promise<VacationRequest> => {
-    const { data } = await axios.get(`/vacations/${id}`);
-    return data;
-  },
-
-  createVacation: async (vacationData: { startDate: string; endDate: string; reason: string }): Promise<VacationRequest> => {
-    const { data } = await axios.post('/vacations', vacationData);
-    return data;
-  },
-
-  updateVacation: async (id: string, vacationData: Partial<VacationRequest>): Promise<VacationRequest> => {
-    const { data } = await axios.put(`/vacations/${id}`, vacationData);
-    return data;
-  },
-
-  deleteVacation: async (id: string): Promise<void> => {
-    await axios.delete(`/vacations/${id}`);
-  },
-
-  getVacationAvailable: async (): Promise<{ total: number; used: number; available: number }> => {
-    const { data } = await axios.get('/vacations/available');
-    return data;
-  },
-
-  getVacationStats: async (): Promise<VacationStats> => {
-    const { data } = await axios.get('/vacations/stats');
-    return data;
-  },
 
   // Document endpoints
   getDocuments: async (): Promise<DocumentData[]> => {
-    const { data } = await axios.get('/documents');
+    const { data } = await axios.get("/documents");
     return data;
   },
 
@@ -306,13 +243,13 @@ export const personnelAPI = {
   },
 
   filterDocuments: async (type: string): Promise<DocumentData[]> => {
-    const { data } = await axios.get('/documents/filter', { params: { type } });
+    const { data } = await axios.get("/documents/filter", { params: { type } });
     return data;
   },
 
   // Orders endpoints
   getOrders: async (): Promise<OrderData[]> => {
-    const { data } = await axios.get('/orders');
+    const { data } = await axios.get("/orders");
     return data;
   },
 
@@ -321,37 +258,24 @@ export const personnelAPI = {
     return data;
   },
 
-  createOrder: async (orderData: {
-    description?: string;
-    category?: string;
-    categoryId?: string;
-    subcategories?: string[];
-    dynamicValue?: any;
-    actionCompleted?: boolean;
-    amount?: number;
-    photo?: File | null;
-    document?: File | null;
-    futureActionPlazoDias?: number;
-    futureActionFechaLimite?: string;
-    futureActionDocumento?: string;
-  }): Promise<OrderData> => {
+  createOrder: async (orderData: { description?: string; category?: string; categoryId?: string; subcategories?: string[]; dynamicValue?: any; actionCompleted?: boolean; amount?: number; photo?: File | null; document?: File | null; futureActionPlazoDias?: number; futureActionFechaLimite?: string; futureActionDocumento?: string }): Promise<OrderData> => {
     const formData = new FormData();
-    if (orderData.description) formData.append('description', orderData.description);
-    if (orderData.category) formData.append('category', orderData.category);
-    if (orderData.categoryId) formData.append('categoryId', orderData.categoryId);
-    if (orderData.subcategories && orderData.subcategories.length > 0) formData.append('subcategories', JSON.stringify(orderData.subcategories));
-    if (orderData.dynamicValue !== undefined) formData.append('dynamicValue', JSON.stringify(orderData.dynamicValue));
-    if (orderData.actionCompleted !== undefined) formData.append('actionCompleted', orderData.actionCompleted.toString());
-    if (orderData.amount !== undefined) formData.append('amount', orderData.amount.toString());
-    if (orderData.futureActionPlazoDias !== undefined) formData.append('futureActionPlazoDias', orderData.futureActionPlazoDias.toString());
-    if (orderData.futureActionFechaLimite) formData.append('futureActionFechaLimite', orderData.futureActionFechaLimite);
-    if (orderData.futureActionDocumento) formData.append('futureActionDocumento', orderData.futureActionDocumento);
-    if (orderData.photo) formData.append('photo', orderData.photo);
-    if (orderData.document) formData.append('document', orderData.document);
+    if (orderData.description) formData.append("description", orderData.description);
+    if (orderData.category) formData.append("category", orderData.category);
+    if (orderData.categoryId) formData.append("categoryId", orderData.categoryId);
+    if (orderData.subcategories && orderData.subcategories.length > 0) formData.append("subcategories", JSON.stringify(orderData.subcategories));
+    if (orderData.dynamicValue !== undefined) formData.append("dynamicValue", JSON.stringify(orderData.dynamicValue));
+    if (orderData.actionCompleted !== undefined) formData.append("actionCompleted", orderData.actionCompleted.toString());
+    if (orderData.amount !== undefined) formData.append("amount", orderData.amount.toString());
+    if (orderData.futureActionPlazoDias !== undefined) formData.append("futureActionPlazoDias", orderData.futureActionPlazoDias.toString());
+    if (orderData.futureActionFechaLimite) formData.append("futureActionFechaLimite", orderData.futureActionFechaLimite);
+    if (orderData.futureActionDocumento) formData.append("futureActionDocumento", orderData.futureActionDocumento);
+    if (orderData.photo) formData.append("photo", orderData.photo);
+    if (orderData.document) formData.append("document", orderData.document);
 
-    const { data } = await axios.post('/orders', formData, {
+    const { data } = await axios.post("/orders", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
     return data;
@@ -359,11 +283,11 @@ export const personnelAPI = {
 
   uploadOrderDocument: async (orderId: string, document: File): Promise<OrderData> => {
     const formData = new FormData();
-    formData.append('document', document);
+    formData.append("document", document);
 
     const { data } = await axios.patch(`/orders/${orderId}/upload-document`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
     return data;
@@ -384,13 +308,13 @@ export const personnelAPI = {
   },
 
   getOrderStats: async (): Promise<{ pending: number; approved: number; rejected: number; delivered: number; cancelled: number }> => {
-    const { data } = await axios.get('/orders/stats');
+    const { data } = await axios.get("/orders/stats");
     return data;
   },
 
   // Calendar endpoints
   getCalendarEvents: async (): Promise<CalendarEvent[]> => {
-    const { data } = await axios.get('/calendar/events');
+    const { data } = await axios.get("/calendar/events");
     return data;
   },
 
@@ -406,17 +330,17 @@ export const personnelAPI = {
 
   // Notification endpoints
   getNotifications: async (): Promise<Notification[]> => {
-    const { data } = await axios.get('/notifications');
+    const { data } = await axios.get("/notifications");
     return data;
   },
 
   getUnreadNotifications: async (): Promise<Notification[]> => {
-    const { data } = await axios.get('/notifications/unread');
+    const { data } = await axios.get("/notifications/unread");
     return data;
   },
 
   getNotificationCount: async (): Promise<{ count: number }> => {
-    const { data } = await axios.get('/notifications/count');
+    const { data } = await axios.get("/notifications/count");
     return data;
   },
 
@@ -426,7 +350,7 @@ export const personnelAPI = {
   },
 
   markAllNotificationsRead: async (): Promise<{ message: string; count: number }> => {
-    const { data } = await axios.put('/notifications/read-all');
+    const { data } = await axios.put("/notifications/read-all");
     return data;
   },
 
@@ -437,12 +361,12 @@ export const personnelAPI = {
 
   // Activity endpoints
   getRecentActivity: async (): Promise<ActivityRecord[]> => {
-    const { data } = await axios.get('/activity/recent');
+    const { data } = await axios.get("/activity/recent");
     return data;
   },
 
   getAllActivity: async (page = 1, limit = 20): Promise<{ activities: ActivityRecord[]; pagination: { page: number; limit: number; total: number; pages: number } }> => {
-    const { data } = await axios.get('/activity/all', { params: { page, limit } });
+    const { data } = await axios.get("/activity/all", { params: { page, limit } });
     return data;
   },
 
@@ -451,7 +375,7 @@ export const personnelAPI = {
     const params: any = { page, limit };
     if (department) params.department = department;
     if (isActive !== undefined) params.isActive = isActive;
-    const { data } = await axios.get('/hr-admin/users', { params });
+    const { data } = await axios.get("/hr-admin/users", { params });
     return data;
   },
 
@@ -470,25 +394,9 @@ export const personnelAPI = {
     return data;
   },
 
-  // Admin vacation endpoints
-  getPendingVacations: async (): Promise<VacationRequest[]> => {
-    const { data } = await axios.get('/hr-admin/vacations/pending');
-    return data;
-  },
-
-  approveVacation: async (id: string, managerComment?: string): Promise<VacationRequest> => {
-    const { data } = await axios.put(`/hr-admin/vacations/${id}/approve`, { managerComment });
-    return data;
-  },
-
-  rejectVacation: async (id: string, managerComment: string): Promise<VacationRequest> => {
-    const { data } = await axios.put(`/hr-admin/vacations/${id}/reject`, { managerComment });
-    return data;
-  },
-
   // Admin orders endpoints
   getPendingOrders: async (): Promise<OrderData[]> => {
-    const { data } = await axios.get('/hr-admin/orders/pending');
+    const { data } = await axios.get("/hr-admin/orders/pending");
     return data;
   },
 
@@ -508,8 +416,8 @@ export const personnelAPI = {
   },
 
   // Admin calendar endpoints
-  createCalendarEventForUser: async (eventData: { userId?: string; title: string; description?: string; start: string; end: string; isAllDay?: boolean; visibility?: 'private' | 'team' | 'company' }): Promise<CalendarEvent> => {
-    const { data } = await axios.post('/hr-admin/calendar/events', eventData);
+  createCalendarEventForUser: async (eventData: { userId?: string; title: string; description?: string; start: string; end: string; isAllDay?: boolean; visibility?: "private" | "team" | "company" }): Promise<CalendarEvent> => {
+    const { data } = await axios.post("/hr-admin/calendar/events", eventData);
     return data;
   },
 
@@ -524,8 +432,8 @@ export const personnelAPI = {
   },
 
   // Admin document endpoints
-  createDocumentForUser: async (documentData: { userId: string; type: 'contract' | 'payroll' | 'certificate' | 'other'; title: string; description?: string; filePath?: string; fileUrl?: string; isVisibleToEmployee?: boolean }): Promise<DocumentData> => {
-    const { data } = await axios.post('/hr-admin/documents', documentData);
+  createDocumentForUser: async (documentData: { userId: string; type: "contract" | "payroll" | "certificate" | "other"; title: string; description?: string; filePath?: string; fileUrl?: string; isVisibleToEmployee?: boolean }): Promise<DocumentData> => {
+    const { data } = await axios.post("/hr-admin/documents", documentData);
     return data;
   },
 
