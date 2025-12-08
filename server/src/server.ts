@@ -26,7 +26,7 @@ import { healthRoutes } from "./routes/health.js";
 import { clientRoutes } from "./routes/clients.js";
 import { campaignRoutes } from "./routes/campaigns.js";
 import { postRoutes } from "./routes/posts.js";
-import { taskRoutes } from "./routes/tasks.js";
+
 import { briefRoutes } from "./routes/briefs.js";
 import { roleRoutes } from "./routes/roles.js";
 import { userRoutes } from "./routes/users.js";
@@ -133,7 +133,7 @@ app.use("/api/v1/secure", secureRoutes);
 app.use("/api/v1/clients", clientRoutes);
 app.use("/api/v1/campaigns", campaignRoutes);
 app.use("/api/v1/posts", postRoutes);
-app.use("/api/v1/tasks", taskRoutes);
+
 app.use("/api/v1/briefs", briefRoutes);
 app.use("/api/v1/roles", roleRoutes);
 app.use("/api/v1/users", userRoutes);

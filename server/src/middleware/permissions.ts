@@ -5,7 +5,7 @@ import { Campaign } from "../models/Campaign.js";
 import { Client } from "../models/Client.js";
 import { Post } from "../models/Post.js";
 import { Project } from "../models/Project.js";
-import { WorkflowTask } from "../models/WorkflowTask.js";
+
 import { AuthenticatedRequest } from "./auth.js";
 
 /**
@@ -133,8 +133,7 @@ function getModelByCollection(collection: string) {
       return Post;
     case "projects":
       return Project;
-    case "tasks":
-      return WorkflowTask;
+
     default:
       return null;
   }

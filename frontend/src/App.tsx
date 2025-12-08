@@ -8,7 +8,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterClientPage } from "./pages/RegisterClientPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ClientsPage } from "./pages/ClientsPage";
-import { TasksPage } from "./pages/TasksPage";
+
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { RolesPage } from "./pages/RolesPage";
 import { PositionsPage } from "./pages/PositionsPage";
@@ -280,14 +280,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/tasks"
-                element={
-                  <ProtectedRoute>
-                    <TasksPage />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/analytics"
                 element={

@@ -7,7 +7,7 @@ import { Project } from "../models/Project.js";
 import { Campaign } from "../models/Campaign.js";
 import { Post } from "../models/Post.js";
 import { Brief } from "../models/Brief.js";
-import { WorkflowTask } from "../models/WorkflowTask.js";
+
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { Asset } from "../models/Asset.js";
@@ -305,22 +305,6 @@ async function ensureBrief(data: any) {
   const doc = new Brief(data);
   await doc.save();
   console.log(`✅ ensureBrief: created ${data.title}`);
-  return doc;
-}
-
-async function ensureTask(data: any) {
-  const exists = await WorkflowTask.findOne({
-    tenantId: data.tenantId,
-    clientId: data.clientId,
-    title: data.title,
-  });
-  if (exists) {
-    console.log(`✔️ ensureTask: exists ${data.title}`);
-    return exists;
-  }
-  const doc = new WorkflowTask(data);
-  await doc.save();
-  console.log(`✅ ensureTask: created ${data.title}`);
   return doc;
 }
 
@@ -1412,75 +1396,6 @@ export async function seedOnStart() {
       ],
       createdBy: adminId,
       favorite: true,
-    });
-
-    // TASKS
-    await ensureTask({
-      tenantId,
-      campaignId: camp1Id,
-      clientId: arcorId,
-      title: "Diseñar creatividades para LinkedIn",
-      description: "Crear 5 creatividades diferentes para la campaña B2B de Arcor",
-      type: "design",
-      priority: "high",
-      status: "in_progress",
-      assignedTo: [adminId],
-      dueDate: new Date("2024-02-20"),
-      estimatedHours: 8,
-      actualHours: 4,
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-    });
-
-    await ensureTask({
-      tenantId,
-      campaignId: camp2Id,
-      clientId: pumaId,
-      title: "Redactar copy para posts de Instagram",
-      description: "Crear textos atractivos para 10 posts de Instagram sobre beneficios en estaciones Puma Energy",
-      type: "copy",
-      priority: "medium",
-      status: "todo",
-      assignedTo: [adminId],
-      dueDate: new Date("2024-02-18"),
-      estimatedHours: 4,
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
-    });
-
-    await ensureTask({
-      tenantId,
-      campaignId: camp1Id,
-      clientId: arcorId,
-      title: "Análisis de métricas Q1",
-      description: "Revisar y analizar todas las métricas del primer trimestre (reach, CPL, CTR)",
-      type: "analysis",
-      priority: "medium",
-      status: "done",
-      assignedTo: [adminId],
-      dueDate: new Date("2024-02-10"),
-      estimatedHours: 6,
-      actualHours: 5,
-      usuarios: [
-        {
-          id: adminId,
-          email: adminUser.email,
-          permiso: "editar",
-        },
-      ],
-      createdBy: adminId,
     });
 
     // ASSETS
