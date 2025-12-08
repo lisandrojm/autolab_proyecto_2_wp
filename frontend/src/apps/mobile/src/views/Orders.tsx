@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
@@ -216,7 +216,14 @@ export default function Orders({ onNavigate }: OrdersProps) {
             <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800">
               <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
             </button>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Pedidos</h1>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                <FontAwesomeIcon icon={faShoppingCart} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Pedidos</h1>
+              </div>
+            </div>
           </div>
           <span className="px-2 py-1 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase">Nuevo</span>
         </div>

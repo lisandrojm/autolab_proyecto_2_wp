@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCalendar, faCheckCircle, faClock, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCalendar, faCheckCircle, faClock, faTimesCircle, faShoppingCart, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -89,7 +89,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800">
             <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
           </button>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vacaciones</h1>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
+              <FontAwesomeIcon icon={faUmbrellaBeach} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Vacaciones</h1>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faUmbrella, faFileAlt, faReceipt, faCheckCircle, faFile, faUsers, faChartBar, faBell, faSun, faMoon, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faUmbrellaBeach, faFileAlt, faReceipt, faCheckCircle, faFile, faUsers, faChartBar, faBell, faSun, faMoon, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -54,7 +54,7 @@ export default function Home({ onNavigate }: HomeProps) {
       badgeText: "text-white",
     },
     {
-      icon: faUmbrella,
+      icon: faUmbrellaBeach,
       title: "Vacaciones",
       description: "Solicitá tus días libres",
       view: "vacations" as ViewType,
@@ -66,7 +66,7 @@ export default function Home({ onNavigate }: HomeProps) {
     },
     {
       icon: faFileAlt,
-      title: "Contratos",
+      title: "Legajos",
       description: "Consultá tus documentos",
       view: "documents" as ViewType,
       roles: ["coordinator", "collaborator"],
@@ -181,17 +181,21 @@ export default function Home({ onNavigate }: HomeProps) {
               key={index}
               onClick={() => !action.disabled && onNavigate(action.view)}
               disabled={action.disabled}
-              className={`relative flex flex-col gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
+              className={`relative flex flex-col gap-3 space-y-2 rounded-xl border p-4 text-left shadow-sm transition-transform
                 ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
               {/* BADGE */}
-              {(action as any).badge && <span className={`absolute top-4 right-4 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}
-
-              <FontAwesomeIcon icon={action.icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
-
-              <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{action.title}</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{action.description}</p>
+              <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
+              <div className="flex-col gap-1 items-center space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center">
+                    <FontAwesomeIcon icon={action.icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{action.title}</h2>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{action.description}</p>
+                </div>
               </div>
             </button>
           );
