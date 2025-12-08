@@ -16,6 +16,7 @@ import { OrderCategory } from "../models/OrderCategory.js";
 import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
+import { VacationRule } from "../models/VacationRule.js";
 import { Vacation } from "../models/Vacation.js";
 import { Types } from "mongoose";
 import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
@@ -675,264 +676,81 @@ export async function seedOnStart() {
       console.log("✔️ VacationRequest already present");
     }
 
-    // ---- Vacation System (Rules, Records, History) ----
-    const vacationSystemCount = await Vacation.countDocuments({ tenantId });
-    if (vacationSystemCount === 0) {
-      await Vacation.create([
-        // RULES - 4 reglas completas con todos los campos
+    // ---- Vacation Rules (vacationsRules collection) ----
+    const vacationRulesCount = await VacationRule.countDocuments({ tenantId });
+    if (vacationRulesCount === 0) {
+      await VacationRule.create([
         {
-          type: "rule",
           tenantId,
           active: true,
-          data: {
-            id: "rule-1",
-            name: "Vacaciones Estándar",
-            description: "Regla general para todos los empleados",
-            scope: "all",
-            cargo: null,
-            nivel: null,
-            activo: true,
-            antiguedadTramos: [
-              { desde: 0, hasta: 5, dias: 14 },
-              { desde: 6, hasta: 10, dias: 21 },
-              { desde: 11, hasta: 99, dias: 28 },
-            ],
-            maxDiasGozados: 30,
-            diasBeneficio: 14,
-            permiteArrastre: true,
-            maxDiasArrastre: 7,
-            vencimientoArrastreDias: 180,
-            minDiasPorSolicitud: 1,
-            maxDiasCorridos: 14,
-            maxDiasHabiles: 10,
-            anticipacionMinimaDias: 15,
-            permiteFraccionadas: true,
-            requiereFirma: false,
-            isActive: true,
-          },
+          name: "Regla para Coordinadores",
+          diasAnuales: 21,
+          diasBeneficio: 2,
+          requiereFirma: true,
+          scope: "cargo",
+          position: "Productor", // María es Productora
         },
         {
-          type: "rule",
           tenantId,
           active: true,
-          data: {
-            id: "rule-2",
-            name: "Vacaciones Senior",
-            description: "Regla especial para empleados de nivel Senior",
-            scope: "nivel",
-            cargo: null,
-            nivel: "Senior",
-            activo: true,
-            antiguedadTramos: [{ desde: 0, hasta: 99, dias: 28 }],
-            maxDiasGozados: 35,
-            diasBeneficio: 21,
-            permiteArrastre: true,
-            maxDiasArrastre: 14,
-            vencimientoArrastreDias: 365,
-            minDiasPorSolicitud: 1,
-            maxDiasCorridos: 21,
-            maxDiasHabiles: 15,
-            anticipacionMinimaDias: 7,
-            permiteFraccionadas: true,
-            requiereFirma: true,
-            isActive: true,
-          },
+          name: "Regla para Colaboradores",
+          diasAnuales: 14,
+          diasBeneficio: 0,
+          requiereFirma: true,
+          scope: "cargo",
+          position: "Editor", // Juan es Editor
         },
         {
-          type: "rule",
           tenantId,
           active: true,
-          data: {
-            id: "rule-3",
-            name: "Vacaciones Productores",
-            description: "Regla específica para el cargo de Productor",
-            scope: "cargo",
-            cargo: "Productor",
-            nivel: null,
-            activo: true,
-            antiguedadTramos: [
-              { desde: 0, hasta: 3, dias: 15 },
-              { desde: 4, hasta: 99, dias: 21 },
-            ],
-            maxDiasGozados: 25,
-            diasBeneficio: 15,
-            permiteArrastre: true,
-            maxDiasArrastre: 10,
-            vencimientoArrastreDias: 270,
-            minDiasPorSolicitud: 2,
-            maxDiasCorridos: 15,
-            maxDiasHabiles: 12,
-            anticipacionMinimaDias: 20,
-            permiteFraccionadas: true,
-            requiereFirma: true,
-            isActive: true,
-          },
-        },
-        {
-          type: "rule",
-          tenantId,
-          active: true,
-          data: {
-            id: "rule-4",
-            name: "Vacaciones Editores Junior",
-            description: "Regla para Editores de nivel Junior",
-            scope: "cargo_nivel",
-            cargo: "Editor",
-            nivel: "Junior",
-            activo: true,
-            antiguedadTramos: [
-              { desde: 0, hasta: 2, dias: 10 },
-              { desde: 3, hasta: 99, dias: 14 },
-            ],
-            maxDiasGozados: 20,
-            diasBeneficio: 10,
-            permiteArrastre: false,
-            maxDiasArrastre: 0,
-            vencimientoArrastreDias: 0,
-            minDiasPorSolicitud: 2,
-            maxDiasCorridos: 10,
-            maxDiasHabiles: 8,
-            anticipacionMinimaDias: 30,
-            permiteFraccionadas: false,
-            requiereFirma: true,
-            isActive: true,
-          },
-        },
-        // RECORDS - Solicitudes de Juan y María
-        {
-          type: "record",
-          tenantId,
-          active: true,
-          data: {
-            id: `rec-${collab._id}`,
-            userId: String(collab._id),
-            userName: "Juan Colaborador",
-            position: "Editor",
-            level: "Junior",
-            startDate: "2025-01-12",
-            endDate: "2025-01-15",
-            daysRequested: 3,
-            status: "approved",
-            reason: "Vacaciones de fin de año",
-            createdAt: "2025-01-02T10:22:11",
-            approvedBy: "Admin User",
-            approvedAt: "2025-01-03T14:00:00",
-            dias_de_vacaciones_anuales: 14,
-            balance: 11,
-            comments: "Aprobado sin observaciones",
-          },
-        },
-        {
-          type: "record",
-          tenantId,
-          active: true,
-          data: {
-            id: `rec-${coord._id}`,
-            userId: String(coord._id),
-            userName: "María Coordinadora",
-            position: "Productor",
-            level: "Senior",
-            startDate: "2025-02-01",
-            endDate: "2025-02-05",
-            daysRequested: 5,
-            status: "pending",
-            reason: "Asuntos personales",
-            createdAt: "2025-01-25T09:15:00",
-            dias_de_vacaciones_anuales: 21,
-            balance: 21,
-            comments: null,
-          },
-        },
-        // HISTORY (Calendar) - Historial con usuarios reales
-        {
-          type: "history",
-          tenantId,
-          active: true,
-          data: {
-            id: "vac-001",
-            userId: String(collab._id),
-            userName: "Juan Colaborador",
-            periodStart: "2025-02-12",
-            periodEnd: "2025-02-18",
-            days: 6,
-            status: "requested",
-            timestamp: "2025-01-20T09:15:00",
-            createdBy: "Juan Colaborador",
-            comments: null,
-          },
-        },
-        {
-          type: "history",
-          tenantId,
-          active: true,
-          data: {
-            id: "vac-002",
-            userId: String(coord._id),
-            userName: "María Coordinadora",
-            periodStart: "2025-03-05",
-            periodEnd: "2025-03-10",
-            days: 5,
-            status: "approved",
-            timestamp: "2025-02-15T14:30:00",
-            createdBy: "María Coordinadora",
-            comments: "Aprobado por gerencia",
-          },
-        },
-        {
-          type: "history",
-          tenantId,
-          active: true,
-          data: {
-            id: "vac-003",
-            userId: String(collab._id),
-            userName: "Juan Colaborador",
-            periodStart: "2025-04-01",
-            periodEnd: "2025-04-07",
-            days: 7,
-            status: "pending",
-            timestamp: "2025-03-10T10:00:00",
-            createdBy: "Juan Colaborador",
-            comments: null,
-          },
-        },
-        {
-          type: "history",
-          tenantId,
-          active: true,
-          data: {
-            id: "vac-004",
-            userId: String(coord._id),
-            userName: "María Coordinadora",
-            periodStart: "2025-05-15",
-            periodEnd: "2025-05-20",
-            days: 5,
-            status: "rejected",
-            timestamp: "2025-04-20T11:45:00",
-            createdBy: "María Coordinadora",
-            comments: "Rechazado por conflicto de fechas",
-          },
-        },
-        {
-          type: "history",
-          tenantId,
-          active: true,
-          data: {
-            id: "vac-005",
-            userId: String(adminUser._id),
-            userName: "Admin User",
-            periodStart: "2025-06-10",
-            periodEnd: "2025-06-17",
-            days: 7,
-            status: "approved",
-            timestamp: "2025-05-05T09:30:00",
-            createdBy: "Admin User",
-            comments: "Aprobado sin observaciones",
-          },
+          name: "Regla General",
+          diasAnuales: 18,
+          diasBeneficio: 0,
+          requiereFirma: true,
+          scope: "all",
         },
       ]);
-      console.log("✅ Vacation system (4 rules, 2 records, 5 history) seeded");
+      console.log("✅ Vacation rules (3 rules) seeded");
     } else {
-      console.log("✔️ Vacation system already present");
+      console.log("✔️ Vacation rules already present");
+    }
+
+    // ---- Vacation Requests (vacations collection) ----
+    const vacationsCount = await Vacation.countDocuments({ tenantId });
+    if (vacationsCount === 0) {
+      await Vacation.create([
+        {
+          tenantId,
+          userId: coord._id,
+          userName: "María Coordinadora",
+          position: "Productor",
+          level: "Senior",
+          startDate: new Date("2025-03-10"),
+          endDate: new Date("2025-03-15"),
+          daysRequested: 5,
+          status: "approved",
+          diasDeVacacionesAnuales: 21,
+          balance: 16,
+          comments: null,
+        },
+        {
+          tenantId,
+          userId: collab._id,
+          userName: "Juan Colaborador",
+          position: "Editor",
+          level: "Junior",
+          startDate: new Date("2025-02-01"),
+          endDate: new Date("2025-02-03"),
+          daysRequested: 2,
+          status: "pending",
+          diasDeVacacionesAnuales: 14,
+          balance: 12,
+          comments: null,
+        },
+      ]);
+      console.log("✅ Vacation requests (2 requests) seeded");
+    } else {
+      console.log("✔️ Vacation requests already present");
     }
 
     // ---- RequestTypes ----

@@ -1,100 +1,91 @@
 // Frontend API client for vacation system
 import axios from "./axiosConfig";
 
+// Vacation Rules interfaces
 export interface VacationRule {
   _id: string;
-  type: "rule";
   tenantId: string;
   active: boolean;
-  data: any;
+  name: string;
+  diasAnuales: number;
+  diasBeneficio: number;
+  requiereFirma: boolean;
+  scope: "all" | "cargo" | "nivel" | "cargo_nivel";
+  position?: string;
+  level?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface VacationRecord {
+// Vacation Request interfaces
+export interface VacationRequest {
   _id: string;
-  type: "record";
   tenantId: string;
-  active: boolean;
-  data: any;
+  userId: string;
+  userName: string;
+  position: string;
+  level: string;
+  startDate: string;
+  endDate: string;
+  daysRequested: number;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  diasDeVacacionesAnuales: number;
+  balance: number;
+  comments?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface VacationHistory {
-  _id: string;
-  type: "history";
-  tenantId: string;
-  active: boolean;
-  data: any;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// RULES API
+// VACATION RULES API
 export const vacationRulesAPI = {
   getAll: async (): Promise<VacationRule[]> => {
-    const response = await axios.get("/vacations/rules");
+    const response = await axios.get("/vacationsrules");
     return response.data;
   },
 
-  create: async (data: any): Promise<VacationRule> => {
-    const response = await axios.post("/vacations/rules", { data });
+  getById: async (id: string): Promise<VacationRule> => {
+    const response = await axios.get(`/vacationsrules/${id}`);
     return response.data;
   },
 
-  update: async (id: string, data: any, active?: boolean): Promise<VacationRule> => {
-    const payload: any = {};
-    if (data !== undefined) payload.data = data;
-    if (active !== undefined) payload.active = active;
-    const response = await axios.patch(`/vacations/rules/${id}`, payload);
+  create: async (data: Partial<VacationRule>): Promise<VacationRule> => {
+    const response = await axios.post("/vacationsrules", data);
     return response.data;
   },
 
-  delete: async (id: string): Promise<void> => {
-    await axios.delete(`/vacations/rules/${id}`);
-  },
-};
-
-// RECORDS API
-export const vacationRecordsAPI = {
-  getAll: async (): Promise<VacationRecord[]> => {
-    const response = await axios.get("/vacations/records");
-    return response.data;
-  },
-
-  getById: async (id: string): Promise<VacationRecord> => {
-    const response = await axios.get(`/vacations/records/${id}`);
-    return response.data;
-  },
-
-  create: async (data: any): Promise<VacationRecord> => {
-    const response = await axios.post("/vacations/records", { data });
-    return response.data;
-  },
-
-  update: async (id: string, data: any, active?: boolean): Promise<VacationRecord> => {
-    const payload: any = {};
-    if (data !== undefined) payload.data = data;
-    if (active !== undefined) payload.active = active;
-    const response = await axios.patch(`/vacations/records/${id}`, payload);
+  update: async (id: string, data: Partial<VacationRule>): Promise<VacationRule> => {
+    const response = await axios.patch(`/vacationsrules/${id}`, data);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await axios.delete(`/vacations/records/${id}`);
+    await axios.delete(`/vacationsrules/${id}`);
   },
 };
 
-// HISTORY API
-export const vacationHistoryAPI = {
-  getAll: async (): Promise<VacationHistory[]> => {
-    const response = await axios.get("/vacations/history");
+// VACATION REQUESTS API
+export const vacationsAPI = {
+  getAll: async (): Promise<VacationRequest[]> => {
+    const response = await axios.get("/vacations");
     return response.data;
   },
 
-  create: async (data: any): Promise<VacationHistory> => {
-    const response = await axios.post("/vacations/history", { data });
+  getById: async (id: string): Promise<VacationRequest> => {
+    const response = await axios.get(`/vacations/${id}`);
     return response.data;
+  },
+
+  create: async (data: Partial<VacationRequest>): Promise<VacationRequest> => {
+    const response = await axios.post("/vacations", data);
+    return response.data;
+  },
+
+  update: async (id: string, data: Partial<VacationRequest>): Promise<VacationRequest> => {
+    const response = await axios.patch(`/vacations/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await axios.delete(`/vacations/${id}`);
   },
 };

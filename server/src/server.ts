@@ -53,7 +53,8 @@ import { futureActionsRoutes } from "./routes/futureActions.js";
 import { positionRoutes } from "./routes/positions.js";
 import { levelRoutes } from "./routes/levels.js";
 import { pdfTemplateRoutes } from "./routes/pdfTemplates.js";
-import { vacationRoutes } from "./routes/vacations.js";
+import { vacationRulesRoutes } from "./routes/vacationRules.js";
+import { vacationsRoutes } from "./routes/vacations.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -163,7 +164,8 @@ app.use("/api/v1/future-actions", futureActionsRoutes);
 app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/levels", levelRoutes);
 app.use("/api/v1/pdf-templates", pdfTemplateRoutes);
-app.use("/api/v1/vacations", vacationRoutes);
+app.use("/api/vacationsrules", vacationRulesRoutes);
+app.use("/api/vacations", vacationsRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

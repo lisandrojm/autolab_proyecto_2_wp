@@ -1,36 +1,78 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IVacation extends Document {
-  type: "rule" | "record" | "history";
   tenantId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  userName: string;
+  position: string;
+  level: string;
+  startDate: Date;
+  endDate: Date;
+  daysRequested: number;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  diasDeVacacionesAnuales: number;
+  balance: number;
+  comments?: string;
   createdAt: Date;
   updatedAt: Date;
-  active: boolean;
-  data: any;
 }
 
 const VacationSchema = new Schema<IVacation>(
   {
-    type: {
-      type: String,
-      required: true,
-      enum: ["rule", "record", "history"],
-      index: true,
-    },
     tenantId: {
       type: Schema.Types.ObjectId,
       ref: "Tenant",
       required: true,
       index: true,
     },
-    active: {
-      type: Boolean,
-      default: true,
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
       index: true,
     },
-    data: {
-      type: Schema.Types.Mixed,
+    userName: {
+      type: String,
       required: true,
+    },
+    position: {
+      type: String,
+      required: true,
+    },
+    level: {
+      type: String,
+      required: true,
+    },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+    },
+    daysRequested: {
+      type: Number,
+      required: true,
+    },
+    status: {
+      type: String,
+      required: true,
+      enum: ["pending", "approved", "rejected", "cancelled"],
+      default: "pending",
+      index: true,
+    },
+    diasDeVacacionesAnuales: {
+      type: Number,
+      required: true,
+    },
+    balance: {
+      type: Number,
+      required: true,
+    },
+    comments: {
+      type: String,
+      required: false,
     },
   },
   {
@@ -39,7 +81,8 @@ const VacationSchema = new Schema<IVacation>(
   }
 );
 
-// Índice compuesto para búsquedas eficientes
-VacationSchema.index({ tenantId: 1, type: 1, active: 1 });
+// Índices compuestos para búsquedas eficientes
+VacationSchema.index({ tenantId: 1, status: 1 });
+VacationSchema.index({ tenantId: 1, userId: 1 });
 
 export const Vacation = mongoose.model<IVacation>("Vacation", VacationSchema);
