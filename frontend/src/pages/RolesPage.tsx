@@ -679,7 +679,7 @@ export const RolesPage: React.FC = () => {
       }}
     >
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-0.5 lg:mx-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
         {filteredRoles.map((role) => {
           const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
 
