@@ -11,8 +11,8 @@ import { ClientsPage } from "./pages/ClientsPage";
 
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { RolesPage } from "./pages/RolesPage";
-import { PositionsPage } from "./pages/PositionsPage";
-import { LevelsPage } from "./pages/LevelsPage";
+import { PositionsPage } from "./pages/ManagePositionsPage";
+import { LevelsPage } from "./pages/ManageLevelsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { TenantsPage } from "./pages/TenantsPage";
 import { ClientDetailPage } from "./pages/ClientDetailPage";
@@ -41,14 +41,13 @@ import { AssistantRedirect } from "./pages/AssistantRedirect";
 import { PersonnelHomePage } from "./pages/PersonnelHomePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { DailyReportPage } from "./pages/DailyReportPage";
-import { OtherRequestsPage } from "./pages/OtherRequestsPage";
+
 import { OrdersPage } from "./pages/OrdersPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { ActivityPage } from "./pages/ActivityPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
-import { PendingVacationsPage } from "./pages/PendingVacationsPage";
-import { PendingRequestsPage } from "./pages/PendingRequestsPage";
+
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
 import { ManageCalendarEventsPage } from "./pages/ManageCalendarEventsPage";
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
@@ -396,14 +395,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/pedidos/otras-solicitudes"
-                element={
-                  <ProtectedRoute>
-                    <OtherRequestsPage />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/admin/pedidos/ausencias"
                 element={
@@ -473,22 +465,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EmployeesAdminPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/administracion/aprobaciones/vacaciones-pendientes"
-                element={
-                  <ProtectedRoute>
-                    <PendingVacationsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/administracion/aprobaciones/pedidos-pendientes"
-                element={
-                  <ProtectedRoute>
-                    <PendingRequestsPage />
                   </ProtectedRoute>
                 }
               />
