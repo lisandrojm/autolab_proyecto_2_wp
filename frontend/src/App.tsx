@@ -42,7 +42,6 @@ import { AssistantRedirect } from "./pages/AssistantRedirect";
 import { ProfilePage } from "./pages/ProfilePage";
 import { DailyReportPage } from "./pages/DailyReportPage";
 
-import { OrdersPage } from "./pages/OrdersPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { ActivityPage } from "./pages/ActivityPage";
@@ -368,15 +367,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <DailyReportPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/admin/pedidos/pedidos"
-                element={
-                  <ProtectedRoute>
-                    <OrdersPage />
                   </ProtectedRoute>
                 }
               />
