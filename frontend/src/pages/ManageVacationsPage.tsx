@@ -53,7 +53,7 @@ export const ManageVacationsPage: React.FC = () => {
   const loadRecords = async () => {
     try {
       setLoading(true);
-      const data = await vacationRecordsAPI.getAll();
+      const data = await vacationsAPI.getAll();
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
