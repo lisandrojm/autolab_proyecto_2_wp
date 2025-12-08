@@ -621,8 +621,8 @@ export async function seedOnStart() {
     }
 
     // ---- VacationRequest ----
-    const vacationsCount = await VacationRequest.countDocuments({ tenantId });
-    if (vacationsCount === 0) {
+    const vacationRequestsLegacyCount = await VacationRequest.countDocuments({ tenantId });
+    if (vacationRequestsLegacyCount === 0) {
       await VacationRequest.create([
         // Colaborador: aprobada pasado
         {
@@ -716,8 +716,8 @@ export async function seedOnStart() {
     }
 
     // ---- Vacation Requests (vacations collection) ----
-    const vacationsCount = await Vacation.countDocuments({ tenantId });
-    if (vacationsCount === 0) {
+    const vacationRequestsCount = await Vacation.countDocuments({ tenantId });
+    if (vacationRequestsCount === 0) {
       await Vacation.create([
         {
           tenantId,
