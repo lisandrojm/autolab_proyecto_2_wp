@@ -1,3 +1,12 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck } from "@fortawesome/free-solid-svg-icons";
+import { vacationsAPI } from "../api/vacations";
+import { PageLayout } from "../components/ui/PageLayout";
+import { Modal } from "../components/ui/Modal";
+import { StatusBadge } from "../components/ui/StatusBadge";
+import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, isVacationInFinalState } from "../utils/statusHelpers";
 
@@ -44,7 +53,7 @@ export const ManageVacationsPage: React.FC = () => {
   const loadRecords = async () => {
     try {
       setLoading(true);
-      const data = await vacationsAPI.getAll();
+      const data = await vacationRecordsAPI.getAll();
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
