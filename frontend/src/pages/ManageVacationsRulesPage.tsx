@@ -148,7 +148,7 @@ const initialFormState: Omit<VacationRule, "id"> = {
   isActive: true,
 };
 
-export function VacationsRulesPage() {
+export function ManageVacationsRulesPage() {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
 
