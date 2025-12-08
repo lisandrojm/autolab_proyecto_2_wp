@@ -40,15 +40,12 @@ import { AIAssistantModal } from "./components/AIAssistantModal";
 import { AssistantRedirect } from "./pages/AssistantRedirect";
 import { PersonnelHomePage } from "./pages/PersonnelHomePage";
 import { ProfilePage } from "./pages/ProfilePage";
-import { TeamPage } from "./pages/TeamPage";
 import { DailyReportPage } from "./pages/DailyReportPage";
-
 import { OtherRequestsPage } from "./pages/OtherRequestsPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { ActivityPage } from "./pages/ActivityPage";
-import { TasksPersonnelPage } from "./pages/TasksPersonnelPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 import { PendingVacationsPage } from "./pages/PendingVacationsPage";
 import { PendingRequestsPage } from "./pages/PendingRequestsPage";
@@ -390,14 +387,6 @@ function App() {
                 }
               />
               <Route
-                path="/admin/personal/equipo"
-                element={
-                  <ProtectedRoute>
-                    <TeamPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/admin/novedades/reporte-diario"
                 element={
                   <ProtectedRoute>
@@ -483,14 +472,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ActivityPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/personal/tareas"
-                element={
-                  <ProtectedRoute>
-                    <TasksPersonnelPage />
                   </ProtectedRoute>
                 }
               />
