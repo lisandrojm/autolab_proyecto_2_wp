@@ -16,6 +16,7 @@ import { OrderCategory } from "../models/OrderCategory.js";
 import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
+import { Vacation } from "../models/Vacation.js";
 import { Types } from "mongoose";
 import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
 import { migrateOrderCategoryImprovements } from "./migrateOrderCategoryImprovements.js";
@@ -672,6 +673,181 @@ export async function seedOnStart() {
       console.log("✅ VacationRequest seeded");
     } else {
       console.log("✔️ VacationRequest already present");
+    }
+
+    // ---- Vacation System (Rules, Records, History) ----
+    const vacationsCount = await Vacation.countDocuments({ tenantId });
+    if (vacationsCount === 0) {
+      await Vacation.create([
+        // RULES
+        {
+          type: "rule",
+          tenantId,
+          active: true,
+          data: {
+            id: "rule-1",
+            acumulados: 30,
+            active: true,
+          },
+        },
+        {
+          type: "rule",
+          tenantId,
+          active: true,
+          data: {
+            id: "rule-2",
+            limite_de_dias: 15,
+            active: true,
+          },
+        },
+        {
+          type: "rule",
+          tenantId,
+          active: true,
+          data: {
+            id: "rule-3",
+            rematar_vacaciones_legal: 45,
+            active: true,
+          },
+        },
+        // RECORDS
+        {
+          type: "record",
+          tenantId,
+          active: true,
+          data: {
+            id: "rec-1",
+            userId: "usr-201",
+            userName: "Juan Pérez",
+            position: "Programador",
+            level: "Junior",
+            startDate: "2025-01-12",
+            endDate: "2025-01-15",
+            vacacionesRequested: true,
+            licenciasRequested: true,
+            dias_de_vacaciones_anuales: 15,
+            balance: 30,
+            vacaciones: [
+              {
+                id: "vac-1",
+                status: "approved",
+                createdAt: "2025-01-02T10:22:11",
+                approvedBy: "Laura Gómez",
+                approvedAt: "2025-01-03T14:00:00",
+                daysRequested: 3,
+              },
+            ],
+            comments: "Aprobado sin observaciones",
+          },
+        },
+        {
+          type: "record",
+          tenantId,
+          active: true,
+          data: {
+            id: "rec-2",
+            userId: "usr-202",
+            userName: "María López",
+            reason: "Asuntos personales",
+            startDate: "2025-02-01",
+            endDate: "2025-02-05",
+            daysRequested: 5,
+            status: "pending",
+            createdAt: "2025-01-25T09:15:00",
+            dias_al_anio: 24,
+            balance_a_la_fecha: 24,
+          },
+        },
+        // HISTORY (Calendar)
+        {
+          type: "history",
+          tenantId,
+          active: true,
+          data: {
+            id: "vac-001",
+            userId: "usr-101",
+            userName: "Juan Pérez",
+            periodStart: "2025-02-12",
+            periodEnd: "2025-02-18",
+            days: 6,
+            status: "requested",
+            timestamp: "2025-01-20T09:15:00",
+            createdBy: "Juan Pérez",
+            comments: null,
+          },
+        },
+        {
+          type: "history",
+          tenantId,
+          active: true,
+          data: {
+            id: "vac-002",
+            userId: "usr-102",
+            userName: "María López",
+            periodStart: "2025-03-05",
+            periodEnd: "2025-03-10",
+            days: 5,
+            status: "approved",
+            timestamp: "2025-02-15T14:30:00",
+            createdBy: "María López",
+            comments: "Aprobado por gerencia",
+          },
+        },
+        {
+          type: "history",
+          tenantId,
+          active: true,
+          data: {
+            id: "vac-003",
+            userId: "usr-103",
+            userName: "Carlos Rodríguez",
+            periodStart: "2025-04-01",
+            periodEnd: "2025-04-07",
+            days: 7,
+            status: "pending",
+            timestamp: "2025-03-10T10:00:00",
+            createdBy: "Carlos Rodríguez",
+            comments: null,
+          },
+        },
+        {
+          type: "history",
+          tenantId,
+          active: true,
+          data: {
+            id: "vac-004",
+            userId: "usr-104",
+            userName: "Ana Martínez",
+            periodStart: "2025-05-15",
+            periodEnd: "2025-05-20",
+            days: 5,
+            status: "rejected",
+            timestamp: "2025-04-20T11:45:00",
+            createdBy: "Ana Martínez",
+            comments: "Rechazado por conflicto de fechas",
+          },
+        },
+        {
+          type: "history",
+          tenantId,
+          active: true,
+          data: {
+            id: "vac-005",
+            userId: "usr-105",
+            userName: "Luis Fernández",
+            periodStart: "2025-06-10",
+            periodEnd: "2025-06-17",
+            days: 7,
+            status: "approved",
+            timestamp: "2025-05-05T09:30:00",
+            createdBy: "Luis Fernández",
+            comments: "Aprobado sin observaciones",
+          },
+        },
+      ]);
+      console.log("✅ Vacation system (rules, records, history) seeded");
+    } else {
+      console.log("✔️ Vacation system already present");
     }
 
     // ---- RequestTypes ----

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faFileArrowUp, faUser, faChevronLeft, faChevronRight, faTimes, faFilePdf, faCheck, faTruck } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, VacationRequest } from "../api/hrManagement";
+import { vacationRecordsAPI } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -27,89 +28,18 @@ interface VacationRequestMock {
   diasSolicitados: number;
 }
 
-const MOCK_VACATION_DATA: VacationRequestMock[] = [
-  {
-    id: "1",
-    numeroPedido: "000031",
-    reglas: ["Vacaciones anuales"],
-    solicitante: { nombre: "Juan Colaborador", cargo: "Editor" },
-    estado: "pending",
-    firmaEstado: "not_required",
-    fechaSolicitud: "2025-12-04T00:00:00Z",
-    diasSolicitados: 3,
-  },
-  {
-    id: "2",
-    numeroPedido: "000030",
-    reglas: ["Asuntos personales"],
-    solicitante: { nombre: "María González", cargo: "Diseñadora" },
-    estado: "approved",
-    firmaEstado: "signed",
-    fechaSolicitud: "2025-12-01T00:00:00Z",
-    diasSolicitados: 5,
-  },
-  {
-    id: "3",
-    numeroPedido: "000029",
-    reglas: ["Vacaciones anuales", "Día personal"],
-    solicitante: { nombre: "Carlos Rodríguez", cargo: "Desarrollador" },
-    estado: "approved",
-    firmaEstado: "sent",
-    fechaSolicitud: "2025-11-28T00:00:00Z",
-    diasSolicitados: 7,
-  },
-  {
-    id: "4",
-    numeroPedido: "000028",
-    reglas: ["Licencia médica"],
-    solicitante: { nombre: "Ana Martínez", cargo: "Gerente" },
-    estado: "rejected",
-    firmaEstado: "pending",
-    fechaSolicitud: "2025-11-25T00:00:00Z",
-    diasSolicitados: 2,
-  },
-  {
-    id: "5",
-    numeroPedido: "000027",
-    reglas: ["Vacaciones anuales"],
-    solicitante: { nombre: "Pedro López", cargo: "Analista" },
-    estado: "cancelled",
-    firmaEstado: "not_required",
-    fechaSolicitud: "2025-11-20T00:00:00Z",
-    diasSolicitados: 4,
-  },
-  {
-    id: "6",
-    numeroPedido: "000026",
-    reglas: ["Día personal", "Asuntos personales"],
-    solicitante: { nombre: "Laura Fernández", cargo: "Coordinadora" },
-    estado: "approved",
-    firmaEstado: "signed",
-    fechaSolicitud: "2025-11-15T00:00:00Z",
-    diasSolicitados: 1,
-  },
-  {
-    id: "7",
-    numeroPedido: "000025",
-    reglas: ["Vacaciones anuales"],
-    solicitante: { nombre: "Diego Sánchez", cargo: "Supervisor" },
-    estado: "pending",
-    firmaEstado: "pending",
-    fechaSolicitud: "2025-11-10T00:00:00Z",
-    diasSolicitados: 10,
-  },
-];
+// Mock vacation data removed - now using API
 
 export const ManageVacationsPage: React.FC = () => {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
 
   const [openInfo, setOpenInfo] = useState(false);
-  const [mockVacations, setMockVacations] = useState<VacationRequestMock[]>(MOCK_VACATION_DATA);
+  const [mockVacations, setMockVacations] = useState<VacationRequestMock[]>([]);
   const [selectedVacation, setSelectedVacation] = useState<VacationRequestMock | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -117,6 +47,38 @@ export const ManageVacationsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stats, setStats] = useState({ pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
   const [currentVacationIndex, setCurrentVacationIndex] = useState<number>(0);
+
+  useEffect(() => {
+    loadRecords();
+  }, []);
+
+  const loadRecords = async () => {
+    try {
+      setLoading(true);
+      const data = await vacationRecordsAPI.getAll();
+      // Transform API data to match VacationRequestMock interface
+      const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
+        id: item._id,
+        numeroPedido: item.data.id || item._id,
+        reglas: item.data.reason ? [item.data.reason] : [],
+        solicitante: {
+          nombre: item.data.userName || "Usuario",
+          cargo: item.data.position || "-",
+        },
+        estado: item.data.status || "pending",
+        firmaEstado: "not_required",
+        fechaSolicitud: item.data.createdAt || item.createdAt,
+        diasSolicitados: item.data.daysRequested || item.data.dias_de_vacaciones_anuales || 0,
+      }));
+      setMockVacations(transformedRecords);
+      calculateStats(transformedRecords);
+    } catch (error) {
+      console.error("Error loading vacation records:", error);
+      sweetAlert.error("Error", "No se pudieron cargar los registros de vacaciones");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getFormattedVacationNumber = (orderNumber: string): string => {
     if (orderNumber.startsWith("#")) return orderNumber;

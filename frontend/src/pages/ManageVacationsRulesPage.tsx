@@ -8,6 +8,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { InfoModal } from "../components/ui/InfoModal";
 import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
+import { vacationRulesAPI } from "../api/vacations";
 
 const HELP_KEY = "vacations" as const;
 
@@ -43,84 +44,7 @@ interface VacationRule {
   isActive: boolean;
 }
 
-const mockRules: VacationRule[] = [
-  {
-    id: "rule-1",
-    name: "Vacaciones estándar",
-    description: "Regla general para todos los empleados",
-    scope: "all",
-    cargo: null,
-    nivel: null,
-    activo: true,
-    antiguedadTramos: [
-      { desde: 0, hasta: 5, dias: 14 },
-      { desde: 6, hasta: 10, dias: 21 },
-      { desde: 11, hasta: 99, dias: 28 },
-    ],
-    maxDiasGozados: 30,
-    diasBeneficio: 14,
-    permiteArrastre: true,
-    maxDiasArrastre: 7,
-    vencimientoArrastreDias: 180,
-    minDiasPorSolicitud: 1,
-    maxDiasCorridos: 14,
-    maxDiasHabiles: 10,
-    anticipacionMinimaDias: 15,
-    permiteFraccionadas: true,
-    requiereFirma: false,
-    pdfTemplateId: undefined,
-    isActive: true,
-  },
-  {
-    id: "rule-2",
-    name: "Ejecutivos Senior",
-    description: "Regla especial para nivel senior",
-    scope: "nivel",
-    cargo: null,
-    nivel: "Senior",
-    activo: true,
-    antiguedadTramos: [{ desde: 0, hasta: 99, dias: 28 }],
-    maxDiasGozados: 35,
-    diasBeneficio: 21,
-    permiteArrastre: true,
-    maxDiasArrastre: 14,
-    vencimientoArrastreDias: 365,
-    minDiasPorSolicitud: 1,
-    maxDiasCorridos: 21,
-    maxDiasHabiles: 15,
-    anticipacionMinimaDias: 7,
-    permiteFraccionadas: true,
-    requiereFirma: true,
-    pdfTemplateId: undefined,
-    isActive: true,
-  },
-  {
-    id: "rule-3",
-    name: "Operarios Jornada Completa",
-    description: "Regla para operarios de tiempo completo",
-    scope: "cargo",
-    cargo: "Operario",
-    nivel: null,
-    activo: false,
-    antiguedadTramos: [
-      { desde: 0, hasta: 3, dias: 10 },
-      { desde: 4, hasta: 99, dias: 14 },
-    ],
-    maxDiasGozados: 20,
-    diasBeneficio: 10,
-    permiteArrastre: false,
-    maxDiasArrastre: 0,
-    vencimientoArrastreDias: 0,
-    minDiasPorSolicitud: 2,
-    maxDiasCorridos: 10,
-    maxDiasHabiles: 8,
-    anticipacionMinimaDias: 30,
-    permiteFraccionadas: false,
-    requiereFirma: true,
-    pdfTemplateId: undefined,
-    isActive: true,
-  },
-];
+// Mock rules removed - now using API
 
 const CARGOS_OPTIONS = ["Operario", "Analista", "Coordinador", "Manager", "Director"];
 const NIVELES_OPTIONS = ["Junior", "Semi-Senior", "Senior", "Lead"];
@@ -152,8 +76,8 @@ export function ManageVacationsRulesPage() {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
 
-  const [rules, setRules] = useState<VacationRule[]>(mockRules);
-  const [loading, setLoading] = useState(false);
+  const [rules, setRules] = useState<VacationRule[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingRule, setEditingRule] = useState<VacationRule | null>(null);
   const [formData, setFormData] = useState<Omit<VacationRule, "id">>(initialFormState);
@@ -175,8 +99,28 @@ export function ManageVacationsRulesPage() {
   const [showFraccionadasInfo, setShowFraccionadasInfo] = useState(false);
 
   useEffect(() => {
+    loadRules();
     loadPdfTemplates();
   }, []);
+
+  const loadRules = async () => {
+    try {
+      setLoading(true);
+      const data = await vacationRulesAPI.getAll();
+      // Transform API data to match VacationRule interface
+      const transformedRules: VacationRule[] = data.map((item: any) => ({
+        id: item._id,
+        ...item.data,
+        isActive: item.active,
+      }));
+      setRules(transformedRules);
+    } catch (error) {
+      console.error("Error loading vacation rules:", error);
+      sweetAlert.error("Error", "No se pudieron cargar las reglas de vacaciones");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadPdfTemplates = async () => {
     try {
@@ -232,18 +176,15 @@ export function ManageVacationsRulesPage() {
       }
 
       if (editingRule) {
-        setRules((prev) => prev.map((r) => (r.id === editingRule.id ? { ...formData, id: editingRule.id } : r)));
+        await vacationRulesAPI.update(editingRule.id, formData, formData.isActive);
         await sweetAlert.success("Regla actualizada", "La regla de vacaciones se actualizó correctamente");
       } else {
-        const newRule: VacationRule = {
-          ...formData,
-          id: `rule-${Date.now()}`,
-        };
-        setRules((prev) => [...prev, newRule]);
+        await vacationRulesAPI.create(formData);
         await sweetAlert.success("Regla creada", "La regla de vacaciones se creó correctamente");
       }
 
       setShowModal(false);
+      await loadRules();
     } catch (error: any) {
       sweetAlert.error("Error", "No se pudo guardar la regla");
     } finally {
@@ -256,8 +197,9 @@ export function ManageVacationsRulesPage() {
     if (!result.isConfirmed) return;
 
     try {
-      setRules((prev) => prev.filter((r) => r.id !== rule.id));
+      await vacationRulesAPI.delete(rule.id);
       sweetAlert.success("Regla eliminada", "La regla se eliminó correctamente");
+      await loadRules();
     } catch (error: any) {
       sweetAlert.error("Error", "No se pudo eliminar la regla");
     }
@@ -265,7 +207,9 @@ export function ManageVacationsRulesPage() {
 
   const handleToggleActive = async (rule: VacationRule) => {
     try {
-      setRules((prev) => prev.map((r) => (r.id === rule.id ? { ...r, activo: !r.activo } : r)));
+      const newActivo = !rule.activo;
+      await vacationRulesAPI.update(rule.id, { ...rule, activo: newActivo }, rule.isActive);
+      await loadRules();
     } catch (error: any) {
       sweetAlert.error("Error", "No se pudo actualizar el estado");
     }
