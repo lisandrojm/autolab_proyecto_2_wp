@@ -676,8 +676,8 @@ export async function seedOnStart() {
     }
 
     // ---- Vacation System (Rules, Records, History) ----
-    const vacationsCount = await Vacation.countDocuments({ tenantId });
-    if (vacationsCount === 0) {
+    const vacationSystemCount = await Vacation.countDocuments({ tenantId });
+    if (vacationSystemCount === 0) {
       await Vacation.create([
         // RULES
         {
