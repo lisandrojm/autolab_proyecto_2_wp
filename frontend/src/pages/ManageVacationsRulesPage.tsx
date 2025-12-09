@@ -457,7 +457,7 @@ export function ManageVacationsRulesPage() {
           </div>
         }
       >
-        <div className="p-6">
+        <div className="">
           <form id="vacation-rule-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Información general */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
@@ -473,14 +473,12 @@ export function ManageVacationsRulesPage() {
                 </div>
               </div>
             </div>
-
             {/* Alcance - OCULTO PARA MVP pero manteniendo los campos */}
             <div className="hidden">
               <input type="hidden" value={formData.scope} />
               <input type="hidden" value={formData.cargo || ""} />
               <input type="hidden" value={formData.nivel || ""} />
             </div>
-
             {/* Días por antigüedad - Con labels mejorados e info icon */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <div className="flex items-center gap-2 mb-4">
@@ -492,7 +490,7 @@ export function ManageVacationsRulesPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Define cuántos días de vacaciones corresponden según la antigüedad del empleado en la empresa.</p>
               <div className="space-y-3">
                 {formData.antiguedadTramos.map((tramo, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className="flex items-end gap-2">
                     <div className="flex-1">
                       <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Desde (años)</label>
                       <input type="number" placeholder="0" value={tramo.desde} onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
@@ -502,7 +500,7 @@ export function ManageVacationsRulesPage() {
                       <input type="number" placeholder="5" value={tramo.hasta} onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Días de vacaciones</label>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Días</label>
                       <input type="number" placeholder="14" value={tramo.dias} onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
                     </div>
                     <button type="button" onClick={() => removeAntiguedadTramo(index)} className="p-2 mt-5 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Eliminar tramo">
@@ -516,11 +514,10 @@ export function ManageVacationsRulesPage() {
                 </button>
               </div>
             </div>
-
             {/* Límites y Días */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Límites y Días</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid lg:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo días gozados por año</label>
@@ -572,7 +569,7 @@ export function ManageVacationsRulesPage() {
                     </div>
                   </>
                 )}
-                <div>
+                <div className="">
                   <div className="flex items-center gap-2 mb-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mínimo días por solicitud</label>
                     <button type="button" onClick={() => setShowMinDiasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
@@ -581,7 +578,8 @@ export function ManageVacationsRulesPage() {
                   </div>
                   <input type="number" value={formData.minDiasPorSolicitud || ""} onChange={(e) => setFormData({ ...formData, minDiasPorSolicitud: parseInt(e.target.value) || undefined })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="1" />
                 </div>
-                <div>
+                <div aria-hidden className="col-span-2" />
+                <div className="">
                   <div className="flex items-center gap-2 mb-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo días corridos</label>
                     <button type="button" onClick={() => setShowMaxDiasCorridosInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
@@ -601,7 +599,6 @@ export function ManageVacationsRulesPage() {
                 </div>
               </div>
             </div>
-
             {/* Operativa */}
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Operativa</h3>
@@ -626,7 +623,6 @@ export function ManageVacationsRulesPage() {
                 </div>
               </div>
             </div>
-
             {/* Firma Digital */}
             <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
               <div className="flex items-center gap-2">
@@ -673,7 +669,6 @@ export function ManageVacationsRulesPage() {
                 </>
               )}
             </div>
-
             {/* Visibilidad */}
             <div className="pt-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Visibilidad en el formulario</label>
