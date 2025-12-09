@@ -295,8 +295,8 @@ export const ManageVacationsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    calculateStats(filteredVacations);
-  }, [filteredVacations]);
+    calculateStats(mockVacations);
+  }, [mockVacations]);
 
   return (
     <PageLayout
