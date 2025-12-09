@@ -302,7 +302,7 @@ export function ManageVacationsRulesPage() {
 
   const formatAntiguedadTramos = (tramos: AntiguedadTranche[]) => {
     if (!tramos || tramos.length === 0) return "-";
-    return tramos.map(t => `${t.desde}-${t.hasta}a: ${t.dias}d`).join(", ");
+    return tramos.map((t) => `${t.desde}-${t.hasta}a: ${t.dias}d`).join(", ");
   };
 
   const formatLimites = (rule: VacationRule) => {
@@ -355,10 +355,10 @@ export function ManageVacationsRulesPage() {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días por Antigüedad</th>
+                      {/* <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días por Antigüedad</th> */}
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Límites</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Operativa</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Arrastre</th>
+                      {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Operativa</th> */}
+                      {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Arrastre</th> */}
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
@@ -368,58 +368,48 @@ export function ManageVacationsRulesPage() {
                     {rules.map((rule) => (
                       <tr key={rule.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td className="py-3 px-4">
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{rule.name}</div>
-                          {rule.description && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rule.description}</div>}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="text-sm text-gray-700 dark:text-gray-300">
-                            {formatAntiguedadTramos(rule.antiguedadTramos)}
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">{rule.name}</div>
+                            {rule.description && <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{rule.description}</div>}
                           </div>
-                          {rule.diasBeneficio && (
-                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                              +{rule.diasBeneficio}d beneficio
-                            </div>
-                          )}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="text-xs text-gray-700 dark:text-gray-300">
-                            {formatLimites(rule)}
+                        {/*                         <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{formatAntiguedadTramos(rule.antiguedadTramos)}</div>
+                            <span className="bg-"> {rule.diasBeneficio && <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">+{rule.diasBeneficio}d beneficio</div>}</span>
                           </div>
-                          {rule.maxDiasGozados && (
-                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                              Máx/año: {rule.maxDiasGozados}d
-                            </div>
-                          )}
-                        </td>
+                        </td> */}
                         <td className="py-3 px-4">
-                          <div className="space-y-1">
-                            {rule.anticipacionMinimaDias && (
-                              <div className="text-xs text-gray-700 dark:text-gray-300">
-                                Anticip: {rule.anticipacionMinimaDias}d
-                              </div>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{formatLimites(rule)}</div>
+                            {rule.maxDiasGozados && <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">Máx/año: {rule.maxDiasGozados}d</div>}
+                          </div>
+                        </td>{" "}
+                        {/*                         <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            {rule.anticipacionMinimaDias && <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">Anticip: {rule.anticipacionMinimaDias}d</div>}
                             <div>
-                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${rule.permiteFraccionadas ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-300"}`}>
-                                {rule.permiteFraccionadas ? "Fraccionadas: Sí" : "Fraccionadas: No"}
-                              </span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${rule.permiteFraccionadas ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-300"}`}>{rule.permiteFraccionadas ? "Fraccionadas: Sí" : "Fraccionadas: No"}</span>
                             </div>
                           </div>
-                        </td>
+                        </td> */}
+                        {/*                         <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{formatArrastre(rule)}</div>
+                          </div>
+                        </td> */}
                         <td className="py-3 px-4">
-                          <div className="text-xs text-gray-700 dark:text-gray-300">
-                            {formatArrastre(rule)}
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${rule.requiereFirma ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{rule.requiereFirma ? "Sí" : "No"}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${rule.requiereFirma ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
-                            {rule.requiereFirma ? "Sí" : "No"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button onClick={() => handleToggleActive(rule)} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${rule.activo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
-                            <FontAwesomeIcon icon={rule.activo ? faToggleOn : faToggleOff} className="mr-1" />
-                            {rule.activo ? "Activa" : "Inactiva"}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleToggleActive(rule)} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${rule.activo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
+                              <FontAwesomeIcon icon={rule.activo ? faToggleOn : faToggleOff} className="mr-1" />
+                              {rule.activo ? "Activa" : "Inactiva"}
+                            </button>
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
