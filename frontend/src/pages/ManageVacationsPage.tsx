@@ -371,7 +371,7 @@ export const ManageVacationsPage: React.FC = () => {
                         }}
                       >
                         <td className="py-3 px-4">
-                          <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
+                          <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-2">
