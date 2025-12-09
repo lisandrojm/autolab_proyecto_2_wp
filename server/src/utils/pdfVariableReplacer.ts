@@ -1,6 +1,7 @@
 import { IOrder } from "../models/Order.js";
 import { IOrderCategory } from "../models/OrderCategory.js";
 import { IUser } from "../models/User.js";
+import { IVacationRequest } from "../models/VacationRequest.js";
 
 interface PdfVariables {
   categoria: string;
@@ -118,6 +119,40 @@ export function prepareVariables(
     fechaDesde,
     fechaHasta,
     fechaUnica,
+    dias,
+    nombreCompleto: sanitizeHtml(nombreCompleto),
+    numeroPedido,
+    fechaSolicitud,
+    fechaAprobacion,
+    tenantName: sanitizeHtml(tenantName),
+    descripcion,
+  };
+}
+
+export function prepareVacationVariables(
+  vacation: IVacationRequest,
+  user: IUser,
+  tenantName: string,
+  vacationNumber: string
+): PdfVariables {
+  const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario";
+
+  const fechaDesde = formatDate(vacation.startDate);
+  const fechaHasta = formatDate(vacation.endDate);
+  const dias = vacation.daysRequested.toString();
+
+  const numeroPedido = sanitizeHtml(vacationNumber || "-");
+  const fechaSolicitud = formatDate(vacation.createdAt);
+  const fechaAprobacion = formatDate(vacation.preApprovedAt);
+  const descripcion = sanitizeHtml(vacation.reason || "-");
+
+  return {
+    categoria: "Vacaciones",
+    subcategoria: "-",
+    monto: "-",
+    fechaDesde,
+    fechaHasta,
+    fechaUnica: "-",
     dias,
     nombreCompleto: sanitizeHtml(nombreCompleto),
     numeroPedido,

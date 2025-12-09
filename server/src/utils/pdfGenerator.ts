@@ -3,8 +3,9 @@ import { IOrder } from "../models/Order.js";
 import { IOrderCategory } from "../models/OrderCategory.js";
 import { IPdfTemplate } from "../models/PdfTemplate.js";
 import { IUser } from "../models/User.js";
-import { prepareVariables, replacePdfVariables } from "./pdfVariableReplacer.js";
-import { savePdfToStorage } from "./pdfStorage.js";
+import { IVacationRequest } from "../models/VacationRequest.js";
+import { prepareVariables, prepareVacationVariables, replacePdfVariables } from "./pdfVariableReplacer.js";
+import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
 
 interface GeneratePdfResult {
   pdfUrl: string;
@@ -82,6 +83,89 @@ export async function generateOrderPDF(
     };
   } catch (error) {
     console.error("[PDF GENERATOR ERROR] Error generating PDF:", error);
+    if (error instanceof Error) {
+      console.error("[PDF GENERATOR ERROR] Error message:", error.message);
+      console.error("[PDF GENERATOR ERROR] Error stack:", error.stack);
+    }
+
+    return {
+      pdfUrl: "",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function generateVacationPDF(
+  vacation: IVacationRequest,
+  template: IPdfTemplate,
+  user: IUser,
+  tenantId: string,
+  tenantName: string,
+  vacationNumber: string
+): Promise<GeneratePdfResult> {
+  try {
+    console.log("[PDF GENERATOR] Starting vacation PDF generation...");
+    console.log("[PDF GENERATOR] Vacation ID:", vacation._id);
+    console.log("[PDF GENERATOR] Vacation Number:", vacationNumber);
+    console.log("[PDF GENERATOR] Template ID:", template._id);
+    console.log("[PDF GENERATOR] Template Name:", template.name);
+
+    const variables = prepareVacationVariables(vacation, user, tenantName, vacationNumber);
+    console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
+
+    const htmlContent = replacePdfVariables(template.content, variables);
+    console.log("[PDF GENERATOR] HTML content generated, length:", htmlContent.length, "characters");
+
+    const options = {
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "20mm",
+        right: "15mm",
+        bottom: "20mm",
+        left: "15mm",
+      },
+    };
+
+    const file = {
+      content: htmlContent,
+    };
+
+    console.log("[PDF GENERATOR] Generating PDF buffer...");
+    const pdfBuffer = await htmlPdf.generatePdf(file, options);
+    console.log("[PDF GENERATOR] PDF buffer generated, size:", pdfBuffer.length, "bytes");
+
+    console.log("[PDF GENERATOR] Extracting user ID...");
+    console.log("[PDF GENERATOR] vacation.userId type:", typeof vacation.userId);
+    console.log("[PDF GENERATOR] vacation.userId value:", vacation.userId);
+
+    let userId: string;
+    if (typeof vacation.userId === 'object' && vacation.userId !== null && '_id' in vacation.userId) {
+      userId = (vacation.userId as any)._id.toString();
+      console.log("[PDF GENERATOR] Extracted userId from populated object:", userId);
+    } else {
+      userId = vacation.userId.toString();
+      console.log("[PDF GENERATOR] Extracted userId from ObjectId:", userId);
+    }
+
+    console.log("[PDF GENERATOR] Final userId:", userId);
+    console.log("[PDF GENERATOR] userId length:", userId.length);
+
+    console.log("[PDF GENERATOR] Saving vacation PDF to storage...");
+    console.log("[PDF GENERATOR] Tenant ID:", tenantId);
+    console.log("[PDF GENERATOR] User ID:", userId);
+
+    const pdfUrl = await savePdfVacationToStorage(tenantId, userId, vacationNumber, pdfBuffer);
+    console.log("[PDF GENERATOR] Vacation PDF saved successfully!");
+    console.log("[PDF GENERATOR] PDF URL:", pdfUrl);
+
+    return {
+      pdfUrl,
+      success: true,
+    };
+  } catch (error) {
+    console.error("[PDF GENERATOR ERROR] Error generating vacation PDF:", error);
     if (error instanceof Error) {
       console.error("[PDF GENERATOR ERROR] Error message:", error.message);
       console.error("[PDF GENERATOR ERROR] Error stack:", error.stack);

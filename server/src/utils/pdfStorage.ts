@@ -80,6 +80,70 @@ export async function savePdfToStorage(
   }
 }
 
+export async function savePdfVacationToStorage(
+  tenantId: string,
+  userId: string,
+  vacationNumber: string,
+  pdfBuffer: Buffer
+): Promise<string> {
+  try {
+    console.log("[PDF STORAGE] Starting vacation PDF save process...");
+    console.log("[PDF STORAGE] Tenant ID:", tenantId);
+    console.log("[PDF STORAGE] User ID:", userId);
+    console.log("[PDF STORAGE] Vacation Number:", vacationNumber);
+    console.log("[PDF STORAGE] Buffer size:", pdfBuffer.length, "bytes");
+
+    console.log("[PDF STORAGE] Validating IDs...");
+    if (!isValidObjectId(tenantId)) {
+      const error = `Invalid tenantId format: ${tenantId}`;
+      console.error("[PDF STORAGE ERROR]", error);
+      throw new Error(error);
+    }
+
+    if (!isValidObjectId(userId)) {
+      const error = `Invalid userId format. Length: ${userId.length}, Value: ${userId.substring(0, 50)}...`;
+      console.error("[PDF STORAGE ERROR]", error);
+      throw new Error(error);
+    }
+
+    console.log("[PDF STORAGE] IDs validated successfully");
+
+    const serverRoot = process.cwd();
+    console.log("[PDF STORAGE] Server root (process.cwd()):", serverRoot);
+
+    const storageDir = path.join(serverRoot, "storage", tenantId, userId, "vacations", "pdfs");
+    console.log("[PDF STORAGE] Storage directory path:", storageDir);
+
+    await ensureDir(storageDir);
+
+    const timestamp = Date.now();
+    const sanitizedVacationNumber = vacationNumber.replace(/[^a-zA-Z0-9-]/g, "_");
+    const filename = `vacacion_${sanitizedVacationNumber}_${timestamp}.pdf`;
+    console.log("[PDF STORAGE] Filename:", filename);
+
+    const filePath = path.join(storageDir, filename);
+    console.log("[PDF STORAGE] Full file path:", filePath);
+
+    await fs.writeFile(filePath, pdfBuffer);
+    console.log("[PDF STORAGE] PDF file written successfully!");
+
+    const fileStats = await fs.stat(filePath);
+    console.log("[PDF STORAGE] File size on disk:", fileStats.size, "bytes");
+
+    const publicUrl = `/storage/${tenantId}/${userId}/vacations/pdfs/${filename}`;
+    console.log("[PDF STORAGE] Public URL:", publicUrl);
+
+    return publicUrl;
+  } catch (error) {
+    console.error("[PDF STORAGE ERROR] Error saving vacation PDF to storage:", error);
+    if (error instanceof Error) {
+      console.error("[PDF STORAGE ERROR] Error message:", error.message);
+      console.error("[PDF STORAGE ERROR] Error stack:", error.stack);
+    }
+    throw new Error("Failed to save vacation PDF to storage");
+  }
+}
+
 export async function deletePdfFromStorage(pdfUrl: string): Promise<void> {
   try {
     if (!pdfUrl) return;

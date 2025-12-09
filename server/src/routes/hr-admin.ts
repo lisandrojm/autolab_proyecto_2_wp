@@ -3,6 +3,7 @@ import { z } from "zod";
 import { User } from "../models/User.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
+import { VacationRule } from "../models/VacationRule.js";
 import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
@@ -15,7 +16,7 @@ import { authenticateToken, AuthenticatedRequest, requireRole } from "../middlew
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
-import { generateOrderPDF } from "../utils/pdfGenerator.js";
+import { generateOrderPDF, generateVacationPDF } from "../utils/pdfGenerator.js";
 
 const router = Router();
 
@@ -370,7 +371,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
     const vacation = await VacationRequest.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate("userId");
+    }).populate("userId").populate("ruleIds");
 
     if (!vacation) {
       res.status(404).json({ error: "Vacation request not found" });
@@ -385,6 +386,71 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
     vacation.status = "pre_approved";
     vacation.preApprovedBy = new Types.ObjectId(preApproverId);
     vacation.preApprovedAt = new Date();
+
+    const tenant = await Tenant.findById(req.tenantObjectId);
+    if (!tenant) {
+      res.status(404).json({ error: "Tenant not found" });
+      return;
+    }
+
+    let requiresSignature = false;
+    let pdfTemplateId: string | undefined;
+
+    if (vacation.ruleIds && vacation.ruleIds.length > 0) {
+      const firstRule = Array.isArray(vacation.ruleIds) ? vacation.ruleIds[0] : vacation.ruleIds;
+
+      if (typeof firstRule === 'object' && firstRule !== null) {
+        const rule = firstRule as any;
+        requiresSignature = rule.requiereFirma || false;
+        pdfTemplateId = rule.pdfTemplateId;
+      } else {
+        const rule = await VacationRule.findById(firstRule);
+        if (rule) {
+          requiresSignature = rule.requiereFirma;
+          pdfTemplateId = rule.pdfTemplateId?.toString();
+        }
+      }
+    }
+
+    vacation.requiresSignature = requiresSignature;
+    vacation.signatureStatus = requiresSignature ? "pending" : "not_required";
+
+    if (pdfTemplateId) {
+      const template = await PdfTemplate.findById(pdfTemplateId);
+
+      if (template) {
+        console.log("[PRE-APPROVE] Generating PDF for vacation:", vacation._id);
+
+        const user = typeof vacation.userId === 'object' && 'firstName' in vacation.userId
+          ? vacation.userId as any
+          : await User.findById(vacation.userId);
+
+        if (!user) {
+          res.status(404).json({ error: "User not found" });
+          return;
+        }
+
+        const vacationNumber = `VAC-${vacation._id.toString().slice(-6).toUpperCase()}`;
+
+        const pdfResult = await generateVacationPDF(
+          vacation,
+          template,
+          user,
+          req.tenantObjectId.toString(),
+          tenant.name,
+          vacationNumber
+        );
+
+        if (pdfResult.success) {
+          vacation.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+          console.log("[PRE-APPROVE] PDF generated successfully:", pdfResult.pdfUrl);
+        } else {
+          console.error("[PRE-APPROVE] PDF generation failed:", pdfResult.error);
+        }
+      } else {
+        console.warn("[PRE-APPROVE] PDF template not found:", pdfTemplateId);
+      }
+    }
 
     await vacation.save();
 
