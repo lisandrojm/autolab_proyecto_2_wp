@@ -110,7 +110,25 @@ export function ManageVacationsRulesPage() {
       // Transform API data to match VacationRule interface
       const transformedRules: VacationRule[] = data.map((item: any) => ({
         id: item._id,
-        ...item.data,
+        name: item.name,
+        description: item.description || "",
+        activo: item.active,
+        scope: item.scope,
+        cargo: item.position || null,
+        nivel: item.level || null,
+        antiguedadTramos: item.antiguedadTramos || [],
+        maxDiasGozados: item.maxDiasGozados,
+        diasBeneficio: item.diasBeneficio,
+        permiteArrastre: item.permiteArrastre || false,
+        maxDiasArrastre: item.maxDiasArrastre,
+        vencimientoArrastreDias: item.vencimientoArrastreDias,
+        minDiasPorSolicitud: item.minDiasPorSolicitud,
+        maxDiasCorridos: item.maxDiasCorridos,
+        maxDiasHabiles: item.maxDiasHabiles,
+        anticipacionMinimaDias: item.anticipacionMinimaDias,
+        permiteFraccionadas: item.permiteFraccionadas || false,
+        requiereFirma: item.requiereFirma,
+        pdfTemplateId: item.pdfTemplateId,
         isActive: item.active,
       }));
       setRules(transformedRules);

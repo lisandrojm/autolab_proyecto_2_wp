@@ -164,8 +164,8 @@ app.use("/api/v1/future-actions", futureActionsRoutes);
 app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/levels", levelRoutes);
 app.use("/api/v1/pdf-templates", pdfTemplateRoutes);
-app.use("/api/vacationsrules", vacationRulesRoutes);
-app.use("/api/vacations", vacationsRoutes);
+app.use("/api/v1/vacationsrules", vacationRulesRoutes);
+app.use("/api/v1/vacations", vacationsRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

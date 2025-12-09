@@ -7,12 +7,28 @@ export interface VacationRule {
   tenantId: string;
   active: boolean;
   name: string;
+  description?: string;
   diasAnuales: number;
-  diasBeneficio: number;
+  diasBeneficio?: number;
   requiereFirma: boolean;
   scope: "all" | "cargo" | "nivel" | "cargo_nivel";
   position?: string;
   level?: string;
+  antiguedadTramos?: Array<{
+    desde: number;
+    hasta: number;
+    dias: number;
+  }>;
+  maxDiasGozados?: number;
+  permiteArrastre: boolean;
+  maxDiasArrastre?: number;
+  vencimientoArrastreDias?: number;
+  minDiasPorSolicitud?: number;
+  maxDiasCorridos?: number;
+  maxDiasHabiles?: number;
+  anticipacionMinimaDias?: number;
+  permiteFraccionadas: boolean;
+  pdfTemplateId?: string;
   createdAt: string;
   updatedAt: string;
 }

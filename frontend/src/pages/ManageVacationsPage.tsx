@@ -45,34 +45,37 @@ export const ManageVacationsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stats, setStats] = useState({ pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
   const [currentVacationIndex, setCurrentVacationIndex] = useState<number>(0);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   useEffect(() => {
-    loadRecords();
-  }, []);
+    if (!hasLoadedOnce) {
+      loadRecords();
+    }
+  }, [hasLoadedOnce]);
 
   const loadRecords = async () => {
     try {
       setLoading(true);
+      setHasLoadedOnce(true);
       const data = await vacationsAPI.getAll();
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
-        numeroPedido: item.data.id || item._id,
-        reglas: item.data.reason ? [item.data.reason] : [],
+        numeroPedido: item._id,
+        reglas: [],
         solicitante: {
-          nombre: item.data.userName || "Usuario",
-          cargo: item.data.position || "-",
+          nombre: item.userName || "Usuario",
+          cargo: item.position || "-",
         },
-        estado: item.data.status || "pending",
+        estado: item.status || "pending",
         firmaEstado: "not_required",
-        fechaSolicitud: item.data.createdAt || item.createdAt,
-        diasSolicitados: item.data.daysRequested || item.data.dias_de_vacaciones_anuales || 0,
+        fechaSolicitud: item.createdAt,
+        diasSolicitados: item.daysRequested || 0,
       }));
       setMockVacations(transformedRecords);
       calculateStats(transformedRecords);
     } catch (error) {
       console.error("Error loading vacation records:", error);
-      sweetAlert.error("Error", "No se pudieron cargar los registros de vacaciones");
     } finally {
       setLoading(false);
     }
