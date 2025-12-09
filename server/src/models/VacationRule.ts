@@ -11,7 +11,7 @@ export interface IVacationRule extends Document {
   active: boolean;
   name: string;
   description?: string;
-  diasAnuales: number;
+  diasAnuales?: number;
   diasBeneficio?: number;
   requiereFirma: boolean;
   scope: "all" | "cargo" | "nivel" | "cargo_nivel";
@@ -55,7 +55,8 @@ const VacationRuleSchema = new Schema<IVacationRule>(
     },
     diasAnuales: {
       type: Number,
-      required: true,
+      required: false,
+      default: 0,
     },
     diasBeneficio: {
       type: Number,
@@ -136,6 +137,19 @@ const VacationRuleSchema = new Schema<IVacationRule>(
     collection: "vacationsRules",
   }
 );
+
+// Validación pre-guardado
+VacationRuleSchema.pre('save', function(next) {
+  const hasAntiguedadTramos = this.antiguedadTramos && this.antiguedadTramos.length > 0;
+  const hasDiasAnuales = this.diasAnuales && this.diasAnuales > 0;
+
+  if (!hasAntiguedadTramos && !hasDiasAnuales) {
+    const error = new Error('Debe especificar diasAnuales o al menos un tramo de antigüedad');
+    return next(error);
+  }
+
+  next();
+});
 
 // Índice compuesto para búsquedas eficientes
 VacationRuleSchema.index({ tenantId: 1, active: 1 });

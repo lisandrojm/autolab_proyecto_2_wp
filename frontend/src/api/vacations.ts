@@ -8,7 +8,7 @@ export interface VacationRule {
   active: boolean;
   name: string;
   description?: string;
-  diasAnuales: number;
+  diasAnuales?: number;
   diasBeneficio?: number;
   requiereFirma: boolean;
   scope: "all" | "cargo" | "nivel" | "cargo_nivel";

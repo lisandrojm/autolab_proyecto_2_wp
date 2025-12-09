@@ -193,18 +193,49 @@ export function ManageVacationsRulesPage() {
         return;
       }
 
+      const backendData = {
+        name: formData.name,
+        description: formData.description,
+        active: formData.isActive,
+        scope: formData.scope,
+        position: formData.cargo,
+        level: formData.nivel,
+        antiguedadTramos: formData.antiguedadTramos,
+        maxDiasGozados: formData.maxDiasGozados,
+        diasBeneficio: formData.diasBeneficio,
+        permiteArrastre: formData.permiteArrastre,
+        maxDiasArrastre: formData.maxDiasArrastre,
+        vencimientoArrastreDias: formData.vencimientoArrastreDias,
+        minDiasPorSolicitud: formData.minDiasPorSolicitud,
+        maxDiasCorridos: formData.maxDiasCorridos,
+        maxDiasHabiles: formData.maxDiasHabiles,
+        anticipacionMinimaDias: formData.anticipacionMinimaDias,
+        permiteFraccionadas: formData.permiteFraccionadas,
+        requiereFirma: formData.requiereFirma,
+        pdfTemplateId: formData.pdfTemplateId,
+      };
+
       if (editingRule) {
-        await vacationRulesAPI.update(editingRule.id, formData, formData.isActive);
+        await vacationRulesAPI.update(editingRule.id, backendData);
         await sweetAlert.success("Regla actualizada", "La regla de vacaciones se actualizó correctamente");
       } else {
-        await vacationRulesAPI.create(formData);
+        await vacationRulesAPI.create(backendData);
         await sweetAlert.success("Regla creada", "La regla de vacaciones se creó correctamente");
       }
 
       setShowModal(false);
       await loadRules();
     } catch (error: any) {
-      sweetAlert.error("Error", "No se pudo guardar la regla");
+      console.error("Error saving vacation rule:", error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "No se pudo guardar la regla";
+      const errorDetails = error.response?.data?.details;
+
+      if (errorDetails && Array.isArray(errorDetails)) {
+        const detailsText = errorDetails.map((d: any) => `${d.field}: ${d.message}`).join("\n");
+        sweetAlert.error("Error de validación", detailsText);
+      } else {
+        sweetAlert.error("Error", errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -226,7 +257,7 @@ export function ManageVacationsRulesPage() {
   const handleToggleActive = async (rule: VacationRule) => {
     try {
       const newActivo = !rule.activo;
-      await vacationRulesAPI.update(rule.id, { ...rule, activo: newActivo }, rule.isActive);
+      await vacationRulesAPI.update(rule.id, { active: newActivo });
       await loadRules();
     } catch (error: any) {
       sweetAlert.error("Error", "No se pudo actualizar el estado");

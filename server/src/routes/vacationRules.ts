@@ -48,13 +48,33 @@ router.post("/", async (req, res) => {
       requiereFirma: true, // Always true as per requirements
     };
 
+    console.log("Creating vacation rule with data:", JSON.stringify(ruleData, null, 2));
+
     const newRule = new VacationRule(ruleData);
     await newRule.save();
 
     res.status(201).json(newRule);
   } catch (error: any) {
     console.error("Error creating vacation rule:", error);
-    res.status(500).json({ error: "Error al crear la regla de vacaciones" });
+    console.error("Request body:", JSON.stringify(req.body, null, 2));
+
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.keys(error.errors || {}).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      }));
+      console.error("Validation errors:", validationErrors);
+      return res.status(400).json({
+        error: "Error de validación",
+        details: validationErrors,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: "Error al crear la regla de vacaciones",
+      message: error.message
+    });
   }
 });
 
@@ -64,9 +84,11 @@ router.patch("/:id", async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
 
+    console.log(`Updating vacation rule ${id} with data:`, JSON.stringify(req.body, null, 2));
+
     const updatedRule = await VacationRule.findOneAndUpdate(
       { _id: id, tenantId },
-      { $set: { ...req.body, requiereFirma: true } }, // Ensure requiereFirma is always true
+      { $set: { ...req.body, requiereFirma: true } },
       { new: true, runValidators: true }
     );
 
@@ -77,7 +99,25 @@ router.patch("/:id", async (req, res) => {
     res.json(updatedRule);
   } catch (error: any) {
     console.error("Error updating vacation rule:", error);
-    res.status(500).json({ error: "Error al actualizar la regla de vacaciones" });
+    console.error("Request body:", JSON.stringify(req.body, null, 2));
+
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.keys(error.errors || {}).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      }));
+      console.error("Validation errors:", validationErrors);
+      return res.status(400).json({
+        error: "Error de validación",
+        details: validationErrors,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      error: "Error al actualizar la regla de vacaciones",
+      message: error.message
+    });
   }
 });
 
