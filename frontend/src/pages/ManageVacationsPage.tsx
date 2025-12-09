@@ -62,7 +62,11 @@ export const ManageVacationsPage: React.FC = () => {
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
         numeroPedido: item.vacationNumber || item._id,
-        reglas: [],
+        reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds)
+          ? item.vacationRuleIds.map((rule: any) =>
+              typeof rule === 'object' && rule.name ? rule.name : ''
+            ).filter((name: string) => name !== '')
+          : [],
         solicitante: {
           nombre: item.userName || "Usuario",
           cargo: item.position || "-",

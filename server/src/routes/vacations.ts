@@ -11,7 +11,9 @@ router.use(authenticateToken);
 router.get("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const vacations = await Vacation.find({ tenantId }).sort({ createdAt: -1 });
+    const vacations = await Vacation.find({ tenantId })
+      .populate('vacationRuleIds', 'name')
+      .sort({ createdAt: -1 });
     res.json(vacations);
   } catch (error: any) {
     console.error("Error fetching vacations:", error);
@@ -25,7 +27,8 @@ router.get("/:id", async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
 
-    const vacation = await Vacation.findOne({ _id: id, tenantId });
+    const vacation = await Vacation.findOne({ _id: id, tenantId })
+      .populate('vacationRuleIds', 'name');
 
     if (!vacation) {
       return res.status(404).json({ error: "Solicitud no encontrada" });
