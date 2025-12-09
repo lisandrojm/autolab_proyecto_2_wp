@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
-import { OrderCounter } from "./OrderCounter.js";
+import { getNextOrderNumber } from "../utils/orderHelpers.js";
 
 export interface IOrder extends Document {
   tenantId: Types.ObjectId;
@@ -85,26 +85,38 @@ orderSchema.pre("validate", async function (next) {
     return next();
   }
 
-  try {
-    const Tenant = mongoose.model("Tenant");
-    const tenant = await Tenant.findById(this.tenantId);
+  const maxRetries = 5;
+  let attempt = 0;
 
-    if (!tenant) {
-      throw new Error("Tenant not found");
+  while (attempt < maxRetries) {
+    try {
+      const Tenant = mongoose.model("Tenant");
+      const tenant = await Tenant.findById(this.tenantId);
+
+      if (!tenant) {
+        throw new Error("Tenant not found");
+      }
+
+      const prefix = tenant.slug.toUpperCase().slice(0, 3);
+      this.orderNumber = await getNextOrderNumber(this.tenantId, prefix);
+
+      console.log(`📝 Generado orderNumber: ${this.orderNumber} para tenant ${tenant.slug} (intento ${attempt + 1})`);
+
+      return next();
+    } catch (error: any) {
+      if (error.code === 11000 && attempt < maxRetries - 1) {
+        attempt++;
+        console.warn(`⚠️  Colisión detectada en orderNumber, reintentando (${attempt}/${maxRetries})...`);
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 100));
+        continue;
+      }
+
+      console.error("❌ Error generando orderNumber:", error);
+      return next(error as Error);
     }
-
-    const prefix = tenant.slug.toUpperCase().slice(0, 3);
-    const sequence = await OrderCounter.getNextSequence(this.tenantId);
-    const paddedNumber = sequence.toString().padStart(6, "0");
-    this.orderNumber = `${prefix}-ORD-${paddedNumber}`;
-
-    console.log(`📝 Generado orderNumber: ${this.orderNumber} para tenant ${tenant.slug} (secuencia: ${sequence})`);
-
-    next();
-  } catch (error) {
-    console.error("❌ Error generando orderNumber:", error);
-    next(error as Error);
   }
+
+  return next(new Error("Failed to generate unique order number after multiple attempts"));
 });
 
 export const Order = mongoose.model<IOrder>("Order", orderSchema);

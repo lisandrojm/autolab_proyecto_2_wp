@@ -318,9 +318,17 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
-    const order = new Order(orderData);
+    const session = await mongoose.startSession();
+    let order;
 
-    await order.save();
+    try {
+      await session.withTransaction(async () => {
+        order = new Order(orderData);
+        await order.save({ session });
+      });
+    } finally {
+      await session.endSession();
+    }
 
     if (data.categoryId) {
       const category = await OrderCategory.findById(data.categoryId);

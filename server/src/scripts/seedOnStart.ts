@@ -18,7 +18,6 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { VacationRule } from "../models/VacationRule.js";
 import { Vacation } from "../models/Vacation.js";
-import { OrderCounter } from "../models/OrderCounter.js";
 import { VacationCounter } from "../models/VacationCounter.js";
 import { Types } from "mongoose";
 import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
@@ -287,9 +286,7 @@ export async function seedOnStart() {
     const tenantId = new Types.ObjectId(tenant._id as any);
     console.log(`🏢 Tenant ready - Slug: ${tenantSlug}, ObjectId: ${String(tenantId)}`);
 
-    // Clean counters for fresh seed
-    console.log("🧹 Cleaning counters for fresh seed...");
-    await OrderCounter.deleteMany({ tenantId });
+    console.log("🧹 Cleaning vacation counters for fresh seed...");
     await VacationCounter.deleteMany({ tenantId });
 
     // ---- ROLES ----
