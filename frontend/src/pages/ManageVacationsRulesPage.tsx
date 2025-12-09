@@ -269,6 +269,27 @@ export function ManageVacationsRulesPage() {
     }
   };
 
+  const formatAntiguedadTramos = (tramos: AntiguedadTranche[]) => {
+    if (!tramos || tramos.length === 0) return "-";
+    return tramos.map(t => `${t.desde}-${t.hasta}a: ${t.dias}d`).join(", ");
+  };
+
+  const formatLimites = (rule: VacationRule) => {
+    const limits = [];
+    if (rule.minDiasPorSolicitud) limits.push(`Mín: ${rule.minDiasPorSolicitud}d`);
+    if (rule.maxDiasCorridos) limits.push(`Máx corridos: ${rule.maxDiasCorridos}d`);
+    if (rule.maxDiasHabiles) limits.push(`Máx hábiles: ${rule.maxDiasHabiles}d`);
+    return limits.length > 0 ? limits.join(" | ") : "-";
+  };
+
+  const formatArrastre = (rule: VacationRule) => {
+    if (!rule.permiteArrastre) return "No";
+    const parts = ["Sí"];
+    if (rule.maxDiasArrastre) parts.push(`máx ${rule.maxDiasArrastre}d`);
+    if (rule.vencimientoArrastreDias) parts.push(`vence ${rule.vencimientoArrastreDias}d`);
+    return parts.join(", ");
+  };
+
   return (
     <PageLayout
       title="ABM Vacaciones | Reglas"
@@ -299,10 +320,14 @@ export function ManageVacationsRulesPage() {
           ) : (
             <>
               <div className="overflow-x-auto rounded border dark:border-slate-800">
-                <table className="w-full dark:bg-slate-800/80">
+                <table className="w-full dark:bg-slate-800/80 min-w-[1200px]">
                   <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días por Antigüedad</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Límites</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Operativa</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Arrastre</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
@@ -316,7 +341,48 @@ export function ManageVacationsRulesPage() {
                           {rule.description && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{rule.description}</div>}
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${rule.requiereFirma ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{rule.requiereFirma ? "Sí" : "No"}</span>
+                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                            {formatAntiguedadTramos(rule.antiguedadTramos)}
+                          </div>
+                          {rule.diasBeneficio && (
+                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                              +{rule.diasBeneficio}d beneficio
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-xs text-gray-700 dark:text-gray-300">
+                            {formatLimites(rule)}
+                          </div>
+                          {rule.maxDiasGozados && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              Máx/año: {rule.maxDiasGozados}d
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="space-y-1">
+                            {rule.anticipacionMinimaDias && (
+                              <div className="text-xs text-gray-700 dark:text-gray-300">
+                                Anticip: {rule.anticipacionMinimaDias}d
+                              </div>
+                            )}
+                            <div>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${rule.permiteFraccionadas ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-300"}`}>
+                                {rule.permiteFraccionadas ? "Fraccionadas: Sí" : "Fraccionadas: No"}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-xs text-gray-700 dark:text-gray-300">
+                            {formatArrastre(rule)}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${rule.requiereFirma ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
+                            {rule.requiereFirma ? "Sí" : "No"}
+                          </span>
                         </td>
                         <td className="py-3 px-4">
                           <button onClick={() => handleToggleActive(rule)} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center ${rule.activo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
