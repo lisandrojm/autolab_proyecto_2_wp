@@ -38,6 +38,7 @@ export interface VacationRequest {
   _id: string;
   tenantId: string;
   userId: string;
+  vacationNumber: string;
   userName: string;
   position: string;
   level: string;

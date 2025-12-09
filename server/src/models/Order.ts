@@ -96,7 +96,7 @@ orderSchema.pre("validate", async function (next) {
     const prefix = tenant.slug.toUpperCase().slice(0, 3);
     const sequence = await OrderCounter.getNextSequence(this.tenantId);
     const paddedNumber = sequence.toString().padStart(6, "0");
-    this.orderNumber = `${prefix}-${paddedNumber}`;
+    this.orderNumber = `${prefix}-ORD-${paddedNumber}`;
 
     next();
   } catch (error) {

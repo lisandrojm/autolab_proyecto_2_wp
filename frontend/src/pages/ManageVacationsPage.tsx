@@ -61,7 +61,7 @@ export const ManageVacationsPage: React.FC = () => {
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
-        numeroPedido: item._id,
+        numeroPedido: item.vacationNumber || item._id,
         reglas: [],
         solicitante: {
           nombre: item.userName || "Usuario",
@@ -81,9 +81,8 @@ export const ManageVacationsPage: React.FC = () => {
     }
   };
 
-  const getFormattedVacationNumber = (orderNumber: string): string => {
-    if (orderNumber.startsWith("#")) return orderNumber;
-    return `#${orderNumber}`;
+  const getFormattedVacationNumber = (vacationNumber: string): string => {
+    return vacationNumber || "";
   };
 
   const getUserName = (solicitante: any): string => {
