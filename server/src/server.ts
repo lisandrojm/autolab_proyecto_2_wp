@@ -17,6 +17,7 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
+import { syncOrderCounters, validateOrderCounters } from "./scripts/syncOrderCounters.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 
@@ -186,6 +187,19 @@ connectDB()
       console.log("✅ Role verification completed successfully");
     } catch (error) {
       console.error("❌ Role verification failed:", error);
+    }
+
+    try {
+      console.log("🔄 Synchronizing order counters...");
+      await syncOrderCounters();
+      const isValid = await validateOrderCounters();
+      if (isValid) {
+        console.log("✅ Order counters synchronized and validated");
+      } else {
+        console.warn("⚠️  Order counters have issues - check logs above");
+      }
+    } catch (error) {
+      console.error("❌ Order counter synchronization failed:", error);
     }
 
     if (String(env.SEED_ON_START) === "true") {

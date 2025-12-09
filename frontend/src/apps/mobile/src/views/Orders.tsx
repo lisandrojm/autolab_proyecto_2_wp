@@ -187,7 +187,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setDocument(null);
       setDocumentPreview(null);
     } catch (err: any) {
-      await sweetAlert.error("Error", err.response?.data?.error || "Error al crear pedido");
+      const errorMessage = err.response?.data?.error || "Error al crear pedido";
+      const isRetryable = errorMessage.includes("número de pedido único") || errorMessage.includes("duplicate key");
+
+      const result = await sweetAlert.error(
+        "Error al crear pedido",
+        isRetryable
+          ? "Hubo un problema generando el número de pedido. ¿Deseas intentar nuevamente?"
+          : errorMessage,
+        isRetryable ? "Reintentar" : undefined
+      );
+
+      if (isRetryable && result.isConfirmed) {
+        return handleSubmit(e);
+      }
     } finally {
       setSubmitting(false);
     }

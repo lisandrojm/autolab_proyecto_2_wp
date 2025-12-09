@@ -309,6 +309,9 @@ router.get("/orders/count", async (req: AuthenticatedRequest & TenantRequest, re
 });
 
 router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  const MAX_RETRIES = 5;
+  let attempt = 0;
+
   try {
     const userId = req.user!.userId;
     let photoUrl: string | undefined;
@@ -324,36 +327,53 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
       photoUrl,
     });
 
-    const order = new Order({
-      tenantId: req.tenantObjectId,
-      userId,
-      ...data,
-      status: "pending",
-      requestedAt: new Date(),
-    });
+    while (attempt < MAX_RETRIES) {
+      try {
+        attempt++;
 
-    await order.save();
+        const order = new Order({
+          tenantId: req.tenantObjectId,
+          userId,
+          ...data,
+          status: "pending",
+          requestedAt: new Date(),
+        });
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
-    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
-    const orderDisplayName = `${categoryName}${subcategoryText}`;
+        await order.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "order_created",
-      description: `Pedido creado: ${orderDisplayName}`,
-      entityType: "Order",
-      entityId: order._id,
-    });
+        const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+        const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+        const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    const populatedOrder = await Order.findById(order._id)
-      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
-      .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId")
-      .populate("futureActionId");
+        await ActivityLog.create({
+          tenantId: req.tenantObjectId,
+          userId,
+          action: "order_created",
+          description: `Pedido creado: ${orderDisplayName}`,
+          entityType: "Order",
+          entityId: order._id,
+        });
 
-    res.status(201).json(populatedOrder);
+        const populatedOrder = await Order.findById(order._id)
+          .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+          .populate("approvedBy", "firstName lastName email")
+          .populate("categoryId")
+          .populate("futureActionId");
+
+        res.status(201).json(populatedOrder);
+        return;
+      } catch (saveError: any) {
+        if (saveError.code === 11000 && attempt < MAX_RETRIES) {
+          console.warn(`⚠️  Número de pedido duplicado (intento ${attempt}/${MAX_RETRIES}), reintentando...`);
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+          continue;
+        }
+        throw saveError;
+      }
+    }
+
+    console.error(`❌ Falló después de ${MAX_RETRIES} intentos - número duplicado persistente`);
+    res.status(500).json({ error: "No se pudo generar un número de pedido único. Por favor, intenta nuevamente." });
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });

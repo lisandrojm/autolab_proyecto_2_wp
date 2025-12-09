@@ -98,8 +98,11 @@ orderSchema.pre("validate", async function (next) {
     const paddedNumber = sequence.toString().padStart(6, "0");
     this.orderNumber = `${prefix}-ORD-${paddedNumber}`;
 
+    console.log(`📝 Generado orderNumber: ${this.orderNumber} para tenant ${tenant.slug} (secuencia: ${sequence})`);
+
     next();
   } catch (error) {
+    console.error("❌ Error generando orderNumber:", error);
     next(error as Error);
   }
 });

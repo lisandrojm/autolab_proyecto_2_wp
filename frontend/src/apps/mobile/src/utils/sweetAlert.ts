@@ -22,12 +22,12 @@ export const sweetAlert = {
     });
   },
 
-  error: (title: string, text?: string) => {
+  error: (title: string, text?: string, confirmButtonText = "Entendido") => {
     return Swal.fire({
       icon: "error",
       title,
       text,
-      confirmButtonText: "Entendido",
+      confirmButtonText,
       confirmButtonColor: "#3b82f6",
       customClass: {
         popup: 'mobile-swal-popup',
