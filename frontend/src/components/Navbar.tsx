@@ -51,7 +51,6 @@ function getActiveClientId(user: any): string | null {
 
 interface AdminCounts {
   clients: number;
-  tasks: number;
   tenants: number;
   roles: number;
   users: number;
@@ -111,7 +110,7 @@ export const MobileNavbar: React.FC = () => {
     if (newVal) localStorage.setItem("adminOpenSection", newVal);
     else localStorage.removeItem("adminOpenSection");
   };
-  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tasks: 0, tenants: 0, roles: 0, users: 0, positions: 0, levels: 0 });
+  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, positions: 0, levels: 0 });
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -151,9 +150,6 @@ export const MobileNavbar: React.FC = () => {
         const promises: Array<Promise<any>> = [];
 
         if (hasPermission("clients:view")) promises.push(axios.get("/clients/count").catch(() => ({ data: { count: 0 } })));
-        else promises.push(Promise.resolve({ data: { count: 0 } }));
-
-        if (hasPermission("tasks:view")) promises.push(axios.get("/tasks/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
         if (hasPermission("tenants:view")) promises.push(axios.get("/tenants/count").catch(() => ({ data: { count: 0 } })));
@@ -204,11 +200,10 @@ export const MobileNavbar: React.FC = () => {
           usersCount = await tryFetchClientUsers();
         }
 
-        const [clientsRes, tasksRes, tenantsRes, rolesRes, positionsRes, levelsRes, usersRes] = await Promise.all(promises);
+        const [clientsRes, tenantsRes, rolesRes, positionsRes, levelsRes, usersRes] = await Promise.all(promises);
 
         setAdminCounts({
           clients: clientsRes?.data?.count || 0,
-          tasks: tasksRes?.data?.count || 0,
           tenants: tenantsRes?.data?.count || 0,
           roles: rolesRes?.data?.count || 0,
           positions: positionsRes?.data?.count || 0,
