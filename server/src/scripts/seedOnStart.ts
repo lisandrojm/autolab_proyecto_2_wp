@@ -678,8 +678,10 @@ export async function seedOnStart() {
 
     // ---- Vacation Rules (vacationsRules collection) ----
     const vacationRulesCount = await VacationRule.countDocuments({ tenantId });
+    let ruleCoordinadores, ruleColaboradores, ruleGeneral;
+
     if (vacationRulesCount === 0) {
-      await VacationRule.create([
+      const createdRules = await VacationRule.create([
         {
           tenantId,
           active: true,
@@ -710,8 +712,16 @@ export async function seedOnStart() {
           scope: "all",
         },
       ]);
+
+      ruleCoordinadores = createdRules[0];
+      ruleColaboradores = createdRules[1];
+      ruleGeneral = createdRules[2];
+
       console.log("✅ Vacation rules (3 rules) seeded");
     } else {
+      ruleCoordinadores = await VacationRule.findOne({ tenantId, name: "Regla para Coordinadores" });
+      ruleColaboradores = await VacationRule.findOne({ tenantId, name: "Regla para Colaboradores" });
+      ruleGeneral = await VacationRule.findOne({ tenantId, name: "Regla General" });
       console.log("✔️ Vacation rules already present");
     }
 
@@ -725,6 +735,7 @@ export async function seedOnStart() {
           userName: "María Coordinadora",
           position: "Productor",
           level: "Senior",
+          vacationRuleIds: [ruleCoordinadores?._id, ruleGeneral?._id],
           startDate: new Date("2025-03-10"),
           endDate: new Date("2025-03-15"),
           daysRequested: 5,
@@ -739,6 +750,7 @@ export async function seedOnStart() {
           userName: "Juan Colaborador",
           position: "Editor",
           level: "Junior",
+          vacationRuleIds: [ruleColaboradores?._id],
           startDate: new Date("2025-02-01"),
           endDate: new Date("2025-02-03"),
           daysRequested: 2,

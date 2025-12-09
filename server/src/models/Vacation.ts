@@ -6,6 +6,7 @@ export interface IVacation extends Document {
   userName: string;
   position: string;
   level: string;
+  vacationRuleIds?: mongoose.Types.ObjectId[]; // Array de reglas aplicadas
   startDate: Date;
   endDate: Date;
   daysRequested: number;
@@ -42,6 +43,12 @@ const VacationSchema = new Schema<IVacation>(
     level: {
       type: String,
       required: true,
+    },
+    vacationRuleIds: {
+      type: [Schema.Types.ObjectId],
+      ref: "VacationRule",
+      required: false,
+      default: [],
     },
     startDate: {
       type: Date,

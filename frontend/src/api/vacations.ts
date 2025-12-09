@@ -25,6 +25,7 @@ export interface VacationRequest {
   userName: string;
   position: string;
   level: string;
+  vacationRuleIds?: string[];
   startDate: string;
   endDate: string;
   daysRequested: number;
