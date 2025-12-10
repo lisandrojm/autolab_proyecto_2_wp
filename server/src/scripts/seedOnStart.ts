@@ -16,7 +16,7 @@ import { OrderCategory } from "../models/OrderCategory.js";
 import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
-import { VacationRule } from "../models/VacationRule.js";
+import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
 import { VacationCounter } from "../models/VacationCounter.js";
 import { Types } from "mongoose";
@@ -680,58 +680,45 @@ export async function seedOnStart() {
       console.log("✔️ VacationRequest already present");
     }
 
-    // ---- Vacation Rules (vacationsRules collection) ----
-    const vacationRulesCount = await VacationRule.countDocuments({ tenantId });
-    let ruleCoordinadores, ruleColaboradores, ruleGeneral;
+    // ---- Global Vacation Config ----
+    let globalConfig = await GlobalVacationConfig.findOne({ tenantId });
 
-    if (vacationRulesCount === 0) {
-      const createdRules = await VacationRule.create([
-        {
-          tenantId,
-          active: true,
-          name: "Regla para Coordinadores",
-          diasAnuales: 21,
-          diasBeneficio: 2,
-          requiereFirma: true,
-          scope: "cargo",
-          position: "Productor", // María es Productora
-        },
-        {
-          tenantId,
-          active: true,
-          name: "Regla para Colaboradores",
-          diasAnuales: 14,
-          diasBeneficio: 0,
-          requiereFirma: true,
-          scope: "cargo",
-          position: "Editor", // Juan es Editor
-        },
-        {
-          tenantId,
-          active: true,
-          name: "Regla General",
-          diasAnuales: 18,
-          diasBeneficio: 0,
-          requiereFirma: true,
-          scope: "all",
-        },
-      ]);
-
-      ruleCoordinadores = createdRules[0];
-      ruleColaboradores = createdRules[1];
-      ruleGeneral = createdRules[2];
-
-      console.log("✅ Vacation rules (3 rules) seeded");
+    if (!globalConfig) {
+      globalConfig = await GlobalVacationConfig.create({
+        tenantId,
+        diasAnuales: 18,
+        diasBeneficio: 0,
+        permiteArrastre: false,
+        permiteFraccionadas: true,
+        requiereFirma: true,
+        antiguedadTramos: [],
+        maxDiasGozados: 30,
+      });
+      console.log("✅ Global vacation config created");
     } else {
-      ruleCoordinadores = await VacationRule.findOne({ tenantId, name: "Regla para Coordinadores" });
-      ruleColaboradores = await VacationRule.findOne({ tenantId, name: "Regla para Colaboradores" });
-      ruleGeneral = await VacationRule.findOne({ tenantId, name: "Regla General" });
-      console.log("✔️ Vacation rules already present");
+      console.log("✔️ Global vacation config already present");
     }
 
     // ---- Vacation Requests (vacations collection) ----
     const vacationRequestsCount = await Vacation.countDocuments({ tenantId });
     if (vacationRequestsCount === 0) {
+      const rulesSnapshot = {
+        diasAnuales: globalConfig.diasAnuales,
+        diasBeneficio: globalConfig.diasBeneficio,
+        antiguedadTramos: globalConfig.antiguedadTramos,
+        maxDiasGozados: globalConfig.maxDiasGozados,
+        permiteArrastre: globalConfig.permiteArrastre,
+        maxDiasArrastre: globalConfig.maxDiasArrastre,
+        vencimientoArrastreDias: globalConfig.vencimientoArrastreDias,
+        minDiasPorSolicitud: globalConfig.minDiasPorSolicitud,
+        maxDiasCorridos: globalConfig.maxDiasCorridos,
+        maxDiasHabiles: globalConfig.maxDiasHabiles,
+        anticipacionMinimaDias: globalConfig.anticipacionMinimaDias,
+        permiteFraccionadas: globalConfig.permiteFraccionadas,
+        requiereFirma: globalConfig.requiereFirma,
+        pdfTemplateId: globalConfig.pdfTemplateId,
+      };
+
       await Vacation.create([
         {
           tenantId,
@@ -739,13 +726,13 @@ export async function seedOnStart() {
           userName: "María Coordinadora",
           position: "Productor",
           level: "Senior",
-          vacationRuleIds: [ruleCoordinadores?._id, ruleGeneral?._id],
+          rules: rulesSnapshot,
           startDate: new Date("2025-03-10"),
           endDate: new Date("2025-03-15"),
           daysRequested: 5,
           status: "approved",
-          diasDeVacacionesAnuales: 21,
-          balance: 16,
+          diasDeVacacionesAnuales: 18,
+          balance: 13,
           comments: null,
           approvedBy: adminId,
           approvedAt: new Date(2025, 2, 1),
@@ -761,13 +748,13 @@ export async function seedOnStart() {
           userName: "Juan Colaborador",
           position: "Editor",
           level: "Junior",
-          vacationRuleIds: [ruleColaboradores?._id],
+          rules: rulesSnapshot,
           startDate: new Date("2025-02-01"),
           endDate: new Date("2025-02-03"),
           daysRequested: 2,
           status: "pending",
-          diasDeVacacionesAnuales: 14,
-          balance: 12,
+          diasDeVacacionesAnuales: 18,
+          balance: 16,
           comments: null,
           requiresSignature: false,
           signatureStatus: "not_required",
@@ -778,13 +765,13 @@ export async function seedOnStart() {
           userName: "María Coordinadora",
           position: "Productor",
           level: "Senior",
-          vacationRuleIds: [ruleCoordinadores?._id],
+          rules: rulesSnapshot,
           startDate: new Date("2024-12-20"),
           endDate: new Date("2024-12-31"),
           daysRequested: 10,
           status: "delivered",
-          diasDeVacacionesAnuales: 21,
-          balance: 11,
+          diasDeVacacionesAnuales: 18,
+          balance: 8,
           comments: null,
           approvedBy: adminId,
           approvedAt: new Date(2024, 11, 10),
@@ -802,13 +789,13 @@ export async function seedOnStart() {
           userName: "Juan Colaborador",
           position: "Editor",
           level: "Junior",
-          vacationRuleIds: [ruleColaboradores?._id, ruleGeneral?._id],
+          rules: rulesSnapshot,
           startDate: new Date("2025-04-15"),
           endDate: new Date("2025-04-20"),
           daysRequested: 5,
           status: "pre_approved",
-          diasDeVacacionesAnuales: 14,
-          balance: 9,
+          diasDeVacacionesAnuales: 18,
+          balance: 13,
           comments: null,
           preApprovedBy: adminId,
           preApprovedAt: new Date(2025, 3, 1),

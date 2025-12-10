@@ -3,7 +3,6 @@ import { z } from "zod";
 import { User } from "../models/User.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
-import { VacationRule } from "../models/VacationRule.js";
 import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
@@ -371,7 +370,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
     const vacation = await VacationRequest.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate("userId").populate("ruleIds");
+    }).populate("userId");
 
     if (!vacation) {
       res.status(404).json({ error: "Vacation request not found" });
@@ -393,24 +392,8 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
       return;
     }
 
-    let requiresSignature = false;
-    let pdfTemplateId: string | undefined;
-
-    if (vacation.ruleIds && vacation.ruleIds.length > 0) {
-      const firstRule = Array.isArray(vacation.ruleIds) ? vacation.ruleIds[0] : vacation.ruleIds;
-
-      if (typeof firstRule === 'object' && firstRule !== null) {
-        const rule = firstRule as any;
-        requiresSignature = rule.requiereFirma || false;
-        pdfTemplateId = rule.pdfTemplateId;
-      } else {
-        const rule = await VacationRule.findById(firstRule);
-        if (rule) {
-          requiresSignature = rule.requiereFirma;
-          pdfTemplateId = rule.pdfTemplateId?.toString();
-        }
-      }
-    }
+    const requiresSignature = vacation.rules?.requiereFirma || false;
+    const pdfTemplateId = vacation.rules?.pdfTemplateId;
 
     vacation.requiresSignature = requiresSignature;
     vacation.signatureStatus = requiresSignature ? "pending" : "not_required";

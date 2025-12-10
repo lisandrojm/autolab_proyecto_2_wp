@@ -1,7 +1,7 @@
 import express from "express";
 import { Types } from "mongoose";
 import { Vacation } from "../models/Vacation.js";
-import { VacationRule } from "../models/VacationRule.js";
+import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
 import { Notification } from "../models/Notification.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { Tenant } from "../models/Tenant.js";
@@ -19,7 +19,6 @@ router.get("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const vacations = await Vacation.find({ tenantId })
-      .populate('vacationRuleIds', 'name')
       .sort({ createdAt: -1 });
     res.json(vacations);
   } catch (error: any) {
@@ -34,8 +33,7 @@ router.get("/:id", async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
 
-    const vacation = await Vacation.findOne({ _id: id, tenantId })
-      .populate('vacationRuleIds', 'name');
+    const vacation = await Vacation.findOne({ _id: id, tenantId });
 
     if (!vacation) {
       return res.status(404).json({ error: "Solicitud no encontrada" });
@@ -52,9 +50,32 @@ router.get("/:id", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
+
+    const globalConfig = await GlobalVacationConfig.findOne({ tenantId });
+
+    if (!globalConfig) {
+      return res.status(400).json({ error: "No se encontró configuración global de vacaciones para este tenant" });
+    }
+
     const vacationData = {
       ...req.body,
       tenantId,
+      rules: {
+        diasAnuales: globalConfig.diasAnuales,
+        diasBeneficio: globalConfig.diasBeneficio,
+        antiguedadTramos: globalConfig.antiguedadTramos,
+        maxDiasGozados: globalConfig.maxDiasGozados,
+        permiteArrastre: globalConfig.permiteArrastre,
+        maxDiasArrastre: globalConfig.maxDiasArrastre,
+        vencimientoArrastreDias: globalConfig.vencimientoArrastreDias,
+        minDiasPorSolicitud: globalConfig.minDiasPorSolicitud,
+        maxDiasCorridos: globalConfig.maxDiasCorridos,
+        maxDiasHabiles: globalConfig.maxDiasHabiles,
+        anticipacionMinimaDias: globalConfig.anticipacionMinimaDias,
+        permiteFraccionadas: globalConfig.permiteFraccionadas,
+        requiereFirma: globalConfig.requiereFirma,
+        pdfTemplateId: globalConfig.pdfTemplateId,
+      },
     };
 
     const newVacation = new Vacation(vacationData);
@@ -114,7 +135,7 @@ router.put("/:id/pre-approve", async (req: any, res) => {
     const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId,
-    }).populate("userId").populate("vacationRuleIds");
+    }).populate("userId");
 
     if (!vacation) {
       return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
@@ -139,42 +160,38 @@ router.put("/:id/pre-approve", async (req: any, res) => {
       entityId: vacation._id,
     });
 
-    // Generate PDF if rule has template
-    const rules = vacation.vacationRuleIds as any[];
-    if (rules && rules.length > 0) {
-      const firstRule = rules[0];
-      if (firstRule.pdfTemplateId) {
-        try {
-          const template = await PdfTemplate.findOne({
-            _id: firstRule.pdfTemplateId,
-            tenantId,
-            isActive: true,
-          });
+    // Generate PDF if rules has template
+    if (vacation.rules?.pdfTemplateId) {
+      try {
+        const template = await PdfTemplate.findOne({
+          _id: vacation.rules.pdfTemplateId,
+          tenantId,
+          isActive: true,
+        });
 
-          if (template) {
-            const user = vacation.userId as any;
-            const tenant = await Tenant.findById(tenantId);
-            const tenantName = tenant?.name || tenant?.slug || "Organización";
+        if (template) {
+          const user = vacation.userId as any;
+          const tenant = await Tenant.findById(tenantId);
+          const tenantName = tenant?.name || tenant?.slug || "Organización";
 
-            const result = await generateVacationPDF(
-              vacation as any,
-              template,
-              user,
-              tenantId.toString(),
-              tenantName,
-              vacation.vacationNumber
-            );
+          const result = await generateVacationPDF(
+            vacation as any,
+            template,
+            user,
+            tenantId.toString(),
+            tenantName,
+            vacation.vacationNumber
+          );
 
-            if (result.success && result.pdfUrl) {
-              vacation.pdfPreAprobacionUrl = result.pdfUrl;
-              await vacation.save();
-            } else {
-              console.error("Error generating PDF for vacation:", result.error);
-            }
+          if (result.success && result.pdfUrl) {
+            vacation.pdfPreAprobacionUrl = result.pdfUrl;
+            await vacation.save();
+          } else {
+            console.error("Error generating PDF for vacation:", result.error);
           }
-        } catch (pdfError) {
-          console.error("Error generating PDF for vacation:", pdfError);
         }
+      } catch (pdfError) {
+        console.error("Error generating PDF for vacation:", pdfError);
       }
     }
 
@@ -194,7 +211,7 @@ router.put("/:id/approve", async (req: any, res) => {
     const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId,
-    }).populate("vacationRuleIds");
+    });
 
     if (!vacation) {
       return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
@@ -208,9 +225,8 @@ router.put("/:id/approve", async (req: any, res) => {
     vacation.approvedBy = new Types.ObjectId(approverId);
     vacation.approvedAt = new Date();
 
-    // Check if any rule requires signature
-    const rules = vacation.vacationRuleIds as any[];
-    const requiresSignature = rules && rules.some((rule: any) => rule.requiereFirma);
+    // Check if rules requires signature
+    const requiresSignature = vacation.rules?.requiereFirma || false;
     vacation.requiresSignature = requiresSignature;
 
     if (requiresSignature) {

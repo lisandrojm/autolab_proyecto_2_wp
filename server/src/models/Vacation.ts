@@ -1,6 +1,29 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { VacationCounter } from "./VacationCounter.js";
 
+interface AntiguedadTramo {
+  desde: number;
+  hasta: number;
+  dias: number;
+}
+
+interface VacationRules {
+  diasAnuales: number;
+  diasBeneficio?: number;
+  antiguedadTramos?: AntiguedadTramo[];
+  maxDiasGozados?: number;
+  permiteArrastre: boolean;
+  maxDiasArrastre?: number;
+  vencimientoArrastreDias?: number;
+  minDiasPorSolicitud?: number;
+  maxDiasCorridos?: number;
+  maxDiasHabiles?: number;
+  anticipacionMinimaDias?: number;
+  permiteFraccionadas: boolean;
+  requiereFirma: boolean;
+  pdfTemplateId?: string;
+}
+
 export interface IVacation extends Document {
   tenantId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
@@ -8,7 +31,7 @@ export interface IVacation extends Document {
   userName: string;
   position: string;
   level: string;
-  vacationRuleIds?: mongoose.Types.ObjectId[]; // Array de reglas aplicadas
+  rules?: VacationRules;
   startDate: Date;
   endDate: Date;
   daysRequested: number;
@@ -65,11 +88,32 @@ const VacationSchema = new Schema<IVacation>(
       type: String,
       required: true,
     },
-    vacationRuleIds: {
-      type: [Schema.Types.ObjectId],
-      ref: "VacationRule",
+    rules: {
+      type: {
+        diasAnuales: { type: Number, required: true },
+        diasBeneficio: { type: Number, required: false },
+        antiguedadTramos: {
+          type: [{
+            desde: { type: Number, required: true },
+            hasta: { type: Number, required: true },
+            dias: { type: Number, required: true },
+          }],
+          required: false,
+          default: [],
+        },
+        maxDiasGozados: { type: Number, required: false },
+        permiteArrastre: { type: Boolean, required: true },
+        maxDiasArrastre: { type: Number, required: false },
+        vencimientoArrastreDias: { type: Number, required: false },
+        minDiasPorSolicitud: { type: Number, required: false },
+        maxDiasCorridos: { type: Number, required: false },
+        maxDiasHabiles: { type: Number, required: false },
+        anticipacionMinimaDias: { type: Number, required: false },
+        permiteFraccionadas: { type: Boolean, required: true },
+        requiereFirma: { type: Boolean, required: true },
+        pdfTemplateId: { type: String, required: false },
+      },
       required: false,
-      default: [],
     },
     startDate: {
       type: Date,

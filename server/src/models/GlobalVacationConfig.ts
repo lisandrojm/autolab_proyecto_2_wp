@@ -6,17 +6,10 @@ interface AntiguedadTramo {
   dias: number;
 }
 
-export interface IVacationRule extends Document {
+export interface IGlobalVacationConfig extends Document {
   tenantId: mongoose.Types.ObjectId;
-  active: boolean;
-  name: string;
-  description?: string;
-  diasAnuales?: number;
+  diasAnuales: number;
   diasBeneficio?: number;
-  requiereFirma: boolean;
-  scope: "all" | "cargo" | "nivel" | "cargo_nivel";
-  position?: string;
-  level?: string;
   antiguedadTramos?: AntiguedadTramo[];
   maxDiasGozados?: number;
   permiteArrastre: boolean;
@@ -27,58 +20,31 @@ export interface IVacationRule extends Document {
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
+  requiereFirma: boolean;
   pdfTemplateId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const VacationRuleSchema = new Schema<IVacationRule>(
+const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
   {
     tenantId: {
       type: Schema.Types.ObjectId,
       ref: "Tenant",
       required: true,
+      unique: true,
       index: true,
-    },
-    active: {
-      type: Boolean,
-      default: true,
-      index: true,
-    },
-    name: {
-      type: String,
-      required: true,
-    },
-    description: {
-      type: String,
-      required: false,
     },
     diasAnuales: {
       type: Number,
-      required: false,
-      default: 0,
+      required: true,
+      default: 18,
+      min: 0,
     },
     diasBeneficio: {
       type: Number,
       required: false,
-    },
-    requiereFirma: {
-      type: Boolean,
-      required: true,
-      default: true,
-    },
-    scope: {
-      type: String,
-      required: true,
-      enum: ["all", "cargo", "nivel", "cargo_nivel"],
-    },
-    position: {
-      type: String,
-      required: false,
-    },
-    level: {
-      type: String,
-      required: false,
+      min: 0,
     },
     antiguedadTramos: {
       type: [{
@@ -92,6 +58,7 @@ const VacationRuleSchema = new Schema<IVacationRule>(
     maxDiasGozados: {
       type: Number,
       required: false,
+      min: 0,
     },
     permiteArrastre: {
       type: Boolean,
@@ -101,31 +68,42 @@ const VacationRuleSchema = new Schema<IVacationRule>(
     maxDiasArrastre: {
       type: Number,
       required: false,
+      min: 0,
     },
     vencimientoArrastreDias: {
       type: Number,
       required: false,
+      min: 0,
     },
     minDiasPorSolicitud: {
       type: Number,
       required: false,
+      min: 0,
     },
     maxDiasCorridos: {
       type: Number,
       required: false,
+      min: 0,
     },
     maxDiasHabiles: {
       type: Number,
       required: false,
+      min: 0,
     },
     anticipacionMinimaDias: {
       type: Number,
       required: false,
+      min: 0,
     },
     permiteFraccionadas: {
       type: Boolean,
       required: true,
       default: false,
+    },
+    requiereFirma: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
     pdfTemplateId: {
       type: String,
@@ -134,25 +112,28 @@ const VacationRuleSchema = new Schema<IVacationRule>(
   },
   {
     timestamps: true,
-    collection: "vacationsRules",
+    collection: "globalVacationConfig",
   }
 );
 
-// Validación pre-guardado
-VacationRuleSchema.pre('save', function(next) {
-  const hasAntiguedadTramos = this.antiguedadTramos && this.antiguedadTramos.length > 0;
-  const hasDiasAnuales = this.diasAnuales && this.diasAnuales > 0;
+GlobalVacationConfigSchema.statics.getOrCreateDefault = async function(tenantId: mongoose.Types.ObjectId) {
+  let config = await this.findOne({ tenantId });
 
-  if (!hasAntiguedadTramos && !hasDiasAnuales) {
-    const error = new Error('Debe especificar diasAnuales o al menos un tramo de antigüedad');
-    return next(error);
+  if (!config) {
+    config = await this.create({
+      tenantId,
+      diasAnuales: 18,
+      permiteArrastre: false,
+      permiteFraccionadas: true,
+      requiereFirma: true,
+      antiguedadTramos: [],
+    });
   }
 
-  next();
-});
+  return config;
+};
 
-// Índice compuesto para búsquedas eficientes
-VacationRuleSchema.index({ tenantId: 1, active: 1 });
-VacationRuleSchema.index({ tenantId: 1, scope: 1 });
-
-export const VacationRule = mongoose.model<IVacationRule>("VacationRule", VacationRuleSchema);
+export const GlobalVacationConfig = mongoose.model<IGlobalVacationConfig>(
+  "GlobalVacationConfig",
+  GlobalVacationConfigSchema
+);

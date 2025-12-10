@@ -1,24 +1,16 @@
 // Frontend API client for vacation system
 import axios from "./axiosConfig";
 
-// Vacation Rules interfaces
-export interface VacationRule {
-  _id: string;
-  tenantId: string;
-  active: boolean;
-  name: string;
-  description?: string;
-  diasAnuales?: number;
+interface AntiguedadTramo {
+  desde: number;
+  hasta: number;
+  dias: number;
+}
+
+interface VacationRules {
+  diasAnuales: number;
   diasBeneficio?: number;
-  requiereFirma: boolean;
-  scope: "all" | "cargo" | "nivel" | "cargo_nivel";
-  position?: string;
-  level?: string;
-  antiguedadTramos?: Array<{
-    desde: number;
-    hasta: number;
-    dias: number;
-  }>;
+  antiguedadTramos?: AntiguedadTramo[];
   maxDiasGozados?: number;
   permiteArrastre: boolean;
   maxDiasArrastre?: number;
@@ -28,12 +20,10 @@ export interface VacationRule {
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
+  requiereFirma: boolean;
   pdfTemplateId?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
-// Vacation Request interfaces
 export interface VacationRequest {
   _id: string;
   tenantId: string;
@@ -42,7 +32,7 @@ export interface VacationRequest {
   userName: string;
   position: string;
   level: string;
-  vacationRuleIds?: string[];
+  rules?: VacationRules;
   startDate: string;
   endDate: string;
   daysRequested: number;
@@ -65,37 +55,10 @@ export interface VacationRequest {
   signedAt?: string;
   signedBy?: string;
   pdfPreAprobacionUrl?: string;
-  ruleIds?: string[];
   createdAt: string;
   updatedAt: string;
 }
 
-// VACATION RULES API
-export const vacationRulesAPI = {
-  getAll: async (): Promise<VacationRule[]> => {
-    const response = await axios.get("/vacationsrules");
-    return response.data;
-  },
-
-  getById: async (id: string): Promise<VacationRule> => {
-    const response = await axios.get(`/vacationsrules/${id}`);
-    return response.data;
-  },
-
-  create: async (data: Partial<VacationRule>): Promise<VacationRule> => {
-    const response = await axios.post("/vacationsrules", data);
-    return response.data;
-  },
-
-  update: async (id: string, data: Partial<VacationRule>): Promise<VacationRule> => {
-    const response = await axios.patch(`/vacationsrules/${id}`, data);
-    return response.data;
-  },
-
-  delete: async (id: string): Promise<void> => {
-    await axios.delete(`/vacationsrules/${id}`);
-  },
-};
 
 // VACATION REQUESTS API
 export const vacationsAPI = {
