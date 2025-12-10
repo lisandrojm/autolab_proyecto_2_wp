@@ -354,6 +354,84 @@ export const ManageVacationsPage: React.FC = () => {
     calculateStats(mockVacations);
   }, [mockVacations]);
 
+  const renderModalFooter = () => {
+    if (updating) {
+      return (
+        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <FontAwesomeIcon icon={faSpinner} spin />
+          <span className="text-sm">Actualizando...</span>
+        </div>
+      );
+    }
+
+    if (!selectedVacation) return null;
+
+    if (selectedVacation.estado === "pending") {
+      return (
+        <>
+          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faBan} className="text-lg" />
+            Rechazar
+          </button>
+          <button onClick={handlePreApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faCheck} className="text-lg" />
+            Pre-Aprobar
+          </button>
+        </>
+      );
+    }
+
+    if (selectedVacation.estado === "pre_approved") {
+      return (
+        <>
+          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faBan} className="text-lg" />
+            Rechazar
+          </button>
+          <button onClick={handleApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faCheck} className="text-lg" />
+            Aprobar
+          </button>
+        </>
+      );
+    }
+
+    if (selectedVacation.estado === "approved") {
+      return (
+        <>
+          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+            <FontAwesomeIcon icon={faBan} className="text-lg" />
+            Rechazar
+          </button>
+
+          {selectedVacation.requiresSignature && (
+            <>
+              {selectedVacation.firmaEstado === "pending" && (
+                <button onClick={handleSendSignature} disabled={updating} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <FontAwesomeIcon icon={faFileArrowUp} />
+                  Enviar para Firma
+                </button>
+              )}
+              {selectedVacation.firmaEstado === "sent" && (
+                <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCheckCircle} />
+                  Marcar como Firmado
+                </button>
+              )}
+            </>
+          )}
+
+          <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <FontAwesomeIcon icon={faTruck} />
+            Marcar como Entregado
+          </button>
+        </>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <PageLayout
       title="Vacaciones"
@@ -498,202 +576,157 @@ export const ManageVacationsPage: React.FC = () => {
       <Modal
         isOpen={showDetailModal && !!selectedVacation}
         onClose={() => setShowDetailModal(false)}
-        title={
-          <div className="flex items-center justify-between w-full px-4">
-            <div className="flex items-center gap-4">
-              {/*             <button onClick={handleNavigatePrevVacation} disabled={currentVacationIndex === 0} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Solicitud anterior">
-              <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
-            </button> */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Detalles de Vacaciones</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+        title="Detalles de Vacaciones"
+        size="md"
+        footer={renderModalFooter()}
+        customHeader={
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles de Vacaciones</h2>
+              {currentVacationIndex >= 0 && (
+                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                   {currentVacationIndex + 1} de {filteredVacations.length}
-                </p>
-              </div>
-              {/*               <button onClick={handleNavigateNextVacation} disabled={currentVacationIndex === filteredVacations.length - 1} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" aria-label="Siguiente solicitud">
-                <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
-              </button> */}
+                </span>
+              )}
             </div>
+            <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
+              <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
+            </button>
           </div>
         }
-        size="2xl"
-        hideDefaultCloseButton
       >
         {selectedVacation && (
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 dark:bg-gray-600/20 px-2">N° Solicitud: {getFormattedVacationNumber(selectedVacation.numeroPedido)}</span>
-                  </div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} />
-                    {selectedVacation.firmaEstado !== "not_required" && (
-                      <div className="flex items-center gap-1.5">
-                        <StatusBadge
-                          type={
-                            mapVacationSignatureStateToStatusType({
-                              status: selectedVacation.estado,
-                              requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
-                              signatureStatus: selectedVacation.firmaEstado,
-                            })!
-                          }
-                          size="sm"
-                          overrideStyle={isVacationInFinalState(selectedVacation.estado)}
-                        />
-                        {selectedVacation.firmaEstado === "sent" && selectedVacation.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" />}
-                        {selectedVacation.pdfPreAprobacionUrl && <FontAwesomeIcon icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" />}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                  <div className="flex-shrink-0">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">{getUserName(selectedVacation.solicitante)}</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{getUserPosition(selectedVacation.solicitante)}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {selectedVacation.reglas && selectedVacation.reglas.length > 0 && (
-                    <div className="flex flex-col gap-1 p-3 bg-white dark:bg-gray-800">
-                      {/*  */}
-                      <span className="text-gray-600 dark:text-slate-500">Reglas aplicadas</span>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedVacation.reglas.map((regla, index) => (
-                          <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                            {regla}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+          <div className="space-y-6">
+            <div className="flex flex-wrap justify-between gap-3">
+              <span>
+                <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Solicitud: {getFormattedVacationNumber(selectedVacation.numeroPedido)}</p>
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} size="sm" />
+                <div className="flex items-center gap-1.5">
+                  {selectedVacation.firmaEstado !== "not_required" && (
+                    <StatusBadge
+                      type={mapVacationSignatureStateToStatusType({
+                        status: selectedVacation.estado,
+                        requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
+                        signatureStatus: selectedVacation.firmaEstado
+                      })!}
+                      size="sm"
+                      overrideStyle={isVacationInFinalState(selectedVacation.estado)}
+                    />
+                  )}
+                  {selectedVacation.firmaEstado === "sent" && selectedVacation.signatureNotifiedAt && (
+                    <FontAwesomeIcon
+                      icon={faClock}
+                      className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
+                      title="Esperando verificación de firma"
+                    />
                   )}
                   {selectedVacation.pdfPreAprobacionUrl && (
-                    <div>
-                      <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
-                        <FontAwesomeIcon icon={faDownload} />
-                        Descargar
-                        <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
-                      </a>
-                    </div>
+                    <FontAwesomeIcon
+                      icon={faFilePdf}
+                      className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
+                      title="PDF disponible"
+                    />
                   )}
-                  {selectedVacation.startDate && selectedVacation.endDate && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
-                        <span className="text-gray-600 dark:text-slate-500">Desde</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">{new Date(selectedVacation.startDate).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
-                        <span className="text-gray-600 dark:text-slate-500">Hasta</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">{new Date(selectedVacation.endDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
-                    <span className="text-gray-600 dark:text-slate-500">Días Solicitados</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
-                      <span className="text-gray-600 dark:text-slate-500">Fecha de Solicitud</span>
-                      <span className="text-sm text-gray-900 dark:text-white">{new Date(selectedVacation.fechaSolicitud).toLocaleDateString()}</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
 
-            {!isVacationInFinalState(selectedVacation.estado) && (
-              <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
-                {(() => {
-                  return (
-                    selectedVacation.requiresSignature &&
-                    selectedVacation.firmaEstado === "sent" &&
-                    selectedVacation.signatureNotifiedAt && (
-                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg mb-4">
-                        <div className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
-                            <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">El usuario {getUserName(selectedVacation.solicitante)} indica que completó la firma del documento. Por favor verificá antes de confirmar.</p>
-                            <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(selectedVacation.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  );
-                })()}
-                <div className="flex items-center justify-end gap-3 flex-wrap">
-                  {updating ? (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <FontAwesomeIcon icon={faSpinner} spin className="h-4 w-4" />
-                      <span className="text-sm">Actualizando...</span>
-                    </div>
-                  ) : (
-                    <>
-                      {selectedVacation.estado === "pending" && (
-                        <>
-                          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-                            <FontAwesomeIcon icon={faBan} className="text-lg" />
-                            Rechazar
-                          </button>
-                          <button onClick={handlePreApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-                            <FontAwesomeIcon icon={faCheck} className="text-lg" />
-                            Pre-Aprobar
-                          </button>
-                        </>
-                      )}
-
-                      {selectedVacation.estado === "pre_approved" && (
-                        <>
-                          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-                            <FontAwesomeIcon icon={faBan} className="text-lg" />
-                            Rechazar
-                          </button>
-                          <button onClick={handleApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-                            <FontAwesomeIcon icon={faCheck} className="text-lg" />
-                            Aprobar
-                          </button>
-                        </>
-                      )}
-
-                      {selectedVacation.estado === "approved" && (
-                        <>
-                          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-                            <FontAwesomeIcon icon={faBan} className="text-lg" />
-                            Rechazar
-                          </button>
-                          {selectedVacation.requiresSignature && selectedVacation.firmaEstado === "pending" && (
-                            <button onClick={handleSendSignature} disabled={updating} className="px-6 py-2.5 rounded-lg bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                              <FontAwesomeIcon icon={faFileArrowUp} />
-                              Enviar para Firma
-                            </button>
-                          )}
-                          {selectedVacation.requiresSignature && selectedVacation.firmaEstado === "sent" && (
-                            <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-green-600 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                              <FontAwesomeIcon icon={faCheckCircle} />
-                              Marcar como Firmado
-                            </button>
-                          )}
-                          <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                            <FontAwesomeIcon icon={faTruck} />
-                            Marcar como Entregado
-                          </button>
-                        </>
-                      )}
-                    </>
-                  )}
+            <div className="flex items-center gap-3">
+              <div>
+                <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                  {getUserInitials(getUserName(selectedVacation.solicitante))}
                 </div>
               </div>
-            )}
+              <div className="bg-slate-800">
+                <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedVacation.solicitante)}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{getUserPosition(selectedVacation.solicitante)}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {selectedVacation.reglas && selectedVacation.reglas.length > 0 && (
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Reglas aplicadas</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {selectedVacation.reglas.map((regla, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300"
+                      >
+                        {regla}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedVacation.pdfPreAprobacionUrl && (
+                <div className="border-slate-200 dark:border-slate-700">
+                  <a
+                    href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm"
+                  >
+                    <FontAwesomeIcon icon={faDownload} />
+                    Descargar PDF
+                  </a>
+                </div>
+              )}
+
+              <div className="flex gap-10">
+                {selectedVacation.startDate && (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{new Date(selectedVacation.startDate).toLocaleDateString()}</p>
+                  </div>
+                )}
+                {selectedVacation.endDate && (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{new Date(selectedVacation.endDate).toLocaleDateString()}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Días Solicitados</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}</p>
+                </div>
+              </div>
+            </div>
+
+            {(() => {
+              if (selectedVacation.estado === "delivered") return null;
+
+              return (
+                selectedVacation.requiresSignature &&
+                selectedVacation.firmaEstado === "sent" &&
+                selectedVacation.signatureNotifiedAt && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+                          El usuario {getUserName(selectedVacation.solicitante)} indica que completó la firma del documento. Por favor verificá antes de confirmar.
+                        </p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          Notificado el: {new Date(selectedVacation.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              );
+            })()}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Solicitud</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{new Date(selectedVacation.fechaSolicitud).toLocaleDateString()}</p>
+              </div>
+            </div>
           </div>
         )}
       </Modal>
