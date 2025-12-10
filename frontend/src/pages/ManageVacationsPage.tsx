@@ -23,6 +23,8 @@ interface VacationRequestMock {
   estado: "pending" | "pre_approved" | "approved" | "rejected" | "cancelled" | "delivered";
   firmaEstado: "not_required" | "pending" | "sent" | "signed";
   fechaSolicitud: string;
+  startDate: string;
+  endDate: string;
   diasSolicitados: number;
   requiresSignature?: boolean;
   signatureNotifiedAt?: string;
@@ -77,6 +79,8 @@ export const ManageVacationsPage: React.FC = () => {
         estado: item.status || "pending",
         firmaEstado: item.signatureStatus || "not_required",
         fechaSolicitud: item.createdAt,
+        startDate: item.startDate,
+        endDate: item.endDate,
         diasSolicitados: item.daysRequested || 0,
         requiresSignature: item.requiresSignature || false,
         signatureNotifiedAt: item.signatureNotifiedAt,
@@ -596,6 +600,20 @@ export const ManageVacationsPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
+                      <span className="text-gray-600 dark:text-slate-500">Desde</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {new Date(selectedVacation.startDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
+                      <span className="text-gray-600 dark:text-slate-500">Hasta</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {new Date(selectedVacation.endDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
                     <span className="text-gray-600 dark:text-slate-500">Días Solicitados</span>
                     <span className="font-semibold text-gray-900 dark:text-white">
