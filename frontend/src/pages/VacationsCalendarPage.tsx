@@ -52,12 +52,20 @@ export const VacationsCalendarPage: React.FC = () => {
     if (vacations.length > 0 && timelineRef.current) {
       initializeTimeline();
     }
+  }, [vacations, statusFilter]);
+
+  useEffect(() => {
     return () => {
       if (timelineInstanceRef.current) {
-        timelineInstanceRef.current.destroy();
+        try {
+          timelineInstanceRef.current.destroy();
+          timelineInstanceRef.current = null;
+        } catch (error) {
+          console.error("Error destroying timeline:", error);
+        }
       }
     };
-  }, [vacations, statusFilter]);
+  }, []);
 
   const loadVacations = async () => {
     try {
@@ -79,7 +87,12 @@ export const VacationsCalendarPage: React.FC = () => {
     if (!timelineRef.current) return;
 
     if (timelineInstanceRef.current) {
-      timelineInstanceRef.current.destroy();
+      try {
+        timelineInstanceRef.current.destroy();
+        timelineInstanceRef.current = null;
+      } catch (error) {
+        console.error("Error destroying previous timeline:", error);
+      }
     }
 
     const filteredVacations = statusFilter === "all"
