@@ -432,7 +432,7 @@ export const ManageVacationsPage: React.FC = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                     </tr>
                   </thead>
@@ -465,7 +465,15 @@ export const ManageVacationsPage: React.FC = () => {
                           <StatusBadge type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />
                         </td>
                         <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(vacation.fechaSolicitud).toLocaleDateString()}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
+                          {vacation.startDate && vacation.endDate ? (
+                            <>
+                              {new Date(vacation.startDate).toLocaleDateString()} - {new Date(vacation.endDate).toLocaleDateString()}
+                            </>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">-</span>
+                          )}
+                        </td>
                         <td className="py-3 px-4 text-center">
                           <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
                             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
@@ -600,20 +608,22 @@ export const ManageVacationsPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
-                      <span className="text-gray-600 dark:text-slate-500">Desde</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {new Date(selectedVacation.startDate).toLocaleDateString()}
-                      </span>
+                  {selectedVacation.startDate && selectedVacation.endDate && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
+                        <span className="text-gray-600 dark:text-slate-500">Desde</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {new Date(selectedVacation.startDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
+                        <span className="text-gray-600 dark:text-slate-500">Hasta</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {new Date(selectedVacation.endDate).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
-                      <span className="text-gray-600 dark:text-slate-500">Hasta</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {new Date(selectedVacation.endDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
+                  )}
                   <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
                     <span className="text-gray-600 dark:text-slate-500">Días Solicitados</span>
                     <span className="font-semibold text-gray-900 dark:text-white">
