@@ -12,10 +12,22 @@ export interface IVacation extends Document {
   startDate: Date;
   endDate: Date;
   daysRequested: number;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "pre_approved" | "approved" | "rejected" | "cancelled" | "delivered";
   diasDeVacacionesAnuales: number;
   balance: number;
   comments?: string;
+  preApprovedBy?: mongoose.Types.ObjectId;
+  preApprovedAt?: Date;
+  approvedBy?: mongoose.Types.ObjectId;
+  approvedAt?: Date;
+  deliveredAt?: Date;
+  requiresSignature?: boolean;
+  signatureStatus?: "not_required" | "pending" | "sent" | "signed";
+  signatureSentAt?: Date;
+  signatureNotifiedAt?: Date;
+  signedAt?: Date;
+  signedBy?: mongoose.Types.ObjectId;
+  pdfPreAprobacionUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,7 +86,7 @@ const VacationSchema = new Schema<IVacation>(
     status: {
       type: String,
       required: true,
-      enum: ["pending", "approved", "rejected", "cancelled"],
+      enum: ["pending", "pre_approved", "approved", "rejected", "cancelled", "delivered"],
       default: "pending",
       index: true,
     },
@@ -90,6 +102,22 @@ const VacationSchema = new Schema<IVacation>(
       type: String,
       required: false,
     },
+    preApprovedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    preApprovedAt: { type: Date },
+    approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    approvedAt: { type: Date },
+    deliveredAt: { type: Date },
+    requiresSignature: { type: Boolean, default: false },
+    signatureStatus: {
+      type: String,
+      enum: ["not_required", "pending", "sent", "signed"],
+      default: "not_required"
+    },
+    signatureSentAt: { type: Date },
+    signatureNotifiedAt: { type: Date },
+    signedAt: { type: Date },
+    signedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    pdfPreAprobacionUrl: { type: String, trim: true },
   },
   {
     timestamps: true,

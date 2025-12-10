@@ -124,32 +124,32 @@ export const vacationsAPI = {
   },
 
   preApprove: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.put(`/hr-admin/vacations/${id}/pre-approve`);
+    const response = await axios.put(`/vacations/${id}/pre-approve`);
     return response.data;
   },
 
   approve: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.put(`/hr-admin/vacations/${id}/approve`);
+    const response = await axios.put(`/vacations/${id}/approve`);
     return response.data;
   },
 
   reject: async (id: string, reason?: string): Promise<VacationRequest> => {
-    const response = await axios.put(`/hr-admin/vacations/${id}/reject`, { reason });
+    const response = await axios.put(`/vacations/${id}/reject`, { reason });
     return response.data;
   },
 
   deliver: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.put(`/hr-admin/vacations/${id}/deliver`);
+    const response = await axios.put(`/vacations/${id}/deliver`);
     return response.data;
   },
 
   sendSignature: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.put(`/hr-admin/vacations/${id}/send-signature`);
+    const response = await axios.put(`/vacations/${id}/send-signature`);
     return response.data;
   },
 
   markSigned: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.put(`/hr-admin/vacations/${id}/mark-signed`);
+    const response = await axios.put(`/vacations/${id}/mark-signed`);
     return response.data;
   },
 };

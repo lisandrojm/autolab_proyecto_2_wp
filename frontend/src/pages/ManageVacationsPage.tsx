@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -20,10 +20,13 @@ interface VacationRequestMock {
     nombre: string;
     cargo: string;
   };
-  estado: "pending" | "approved" | "rejected" | "cancelled";
+  estado: "pending" | "pre_approved" | "approved" | "rejected" | "cancelled" | "delivered";
   firmaEstado: "not_required" | "pending" | "sent" | "signed";
   fechaSolicitud: string;
   diasSolicitados: number;
+  requiresSignature?: boolean;
+  signatureNotifiedAt?: string;
+  pdfPreAprobacionUrl?: string;
 }
 
 // Mock vacation data removed - now using API
@@ -72,9 +75,12 @@ export const ManageVacationsPage: React.FC = () => {
           cargo: item.position || "-",
         },
         estado: item.status || "pending",
-        firmaEstado: "not_required",
+        firmaEstado: item.signatureStatus || "not_required",
         fechaSolicitud: item.createdAt,
         diasSolicitados: item.daysRequested || 0,
+        requiresSignature: item.requiresSignature || false,
+        signatureNotifiedAt: item.signatureNotifiedAt,
+        pdfPreAprobacionUrl: item.pdfPreAprobacionUrl,
       }));
       setMockVacations(transformedRecords);
       calculateStats(transformedRecords);
@@ -102,11 +108,49 @@ export const ManageVacationsPage: React.FC = () => {
   };
 
   const renderSignatureStatus = (vacation: VacationRequestMock): JSX.Element => {
-    const statusType = mapVacationSignatureStateToStatusType({ status: vacation.estado, requiresSignature: vacation.firmaEstado !== "not_required", signatureStatus: vacation.firmaEstado });
+    const statusType = mapVacationSignatureStateToStatusType({
+      status: vacation.estado,
+      requiresSignature: vacation.requiresSignature || vacation.firmaEstado !== "not_required",
+      signatureStatus: vacation.firmaEstado
+    });
+
+    const isInFinalState = isVacationInFinalState(vacation.estado);
+    const isFinalStatus = ["delivered", "rejected", "cancelled"].includes(vacation.estado);
+
     if (!statusType) {
       return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
     }
-    return <StatusBadge type={statusType} size="sm" />;
+
+    const isWaitingVerification = vacation.firmaEstado === "sent" && vacation.signatureNotifiedAt;
+
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <StatusBadge type={statusType} size="sm" overrideStyle={isInFinalState} />
+        </div>
+        <div className="flex gap-3">
+          {isWaitingVerification && (
+            <FontAwesomeIcon
+              icon={faClock}
+              className={`${isFinalStatus ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
+              title="Usuario notificó que completó la firma - Esperando verificación"
+            />
+          )}
+          {vacation.pdfPreAprobacionUrl && (
+            <a
+              href={`${import.meta.env.VITE_API_URL}${vacation.pdfPreAprobacionUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${isFinalStatus ? "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300" : "text-violet-600 hover:text-violet-800 dark:text-violet-600 dark:hover:text-violet-300"} transition-colors`}
+              title="Descargar documento PDF"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
+            </a>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const calculateStats = (vacations: VacationRequestMock[]) => {
@@ -151,11 +195,15 @@ export const ManageVacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      await sweetAlert.success("Preaprobada", "La solicitud ha sido preaprobada correctamente");
-      setShowDetailModal(false);
+      const updatedVacation = await vacationsAPI.preApprove(selectedVacation.id);
+      await loadRecords();
+      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
+      if (refreshed) {
+        setSelectedVacation(refreshed);
+      }
+      await sweetAlert.success("Preaprobada", updatedVacation.pdfPreAprobacionUrl ? "La solicitud ha sido preaprobada y se ha generado el PDF" : "La solicitud ha sido preaprobada correctamente");
     } catch (error: any) {
-      await sweetAlert.error("Error", "No se pudo pre-aprobar la solicitud");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo pre-aprobar la solicitud");
     } finally {
       setUpdating(false);
     }
@@ -164,7 +212,7 @@ export const ManageVacationsPage: React.FC = () => {
   const handleApprove = async () => {
     if (!selectedVacation || updating) return;
 
-    const requiresSignature = selectedVacation.firmaEstado !== "not_required";
+    const requiresSignature = selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required";
     const message = requiresSignature ? "El usuario recibirá una notificación para firmar el documento por email" : "El usuario será notificado";
 
     const result = await sweetAlert.confirm("¿Aprobar esta solicitud?", message, "Sí, Aprobar", "Cancelar");
@@ -172,11 +220,16 @@ export const ManageVacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      await sweetAlert.success("Aprobada", "La solicitud ha sido aprobada correctamente");
-      setShowDetailModal(false);
+      await vacationsAPI.approve(selectedVacation.id);
+      await loadRecords();
+      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
+      if (refreshed) {
+        setSelectedVacation(refreshed);
+      }
+      const successMessage = requiresSignature ? "Se ha notificado al usuario que debe firmar el documento por email" : "La solicitud ha sido aprobada correctamente";
+      await sweetAlert.success("Aprobada", successMessage);
     } catch (error: any) {
-      await sweetAlert.error("Error", "No se pudo aprobar la solicitud");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo aprobar la solicitud");
     } finally {
       setUpdating(false);
     }
@@ -190,11 +243,15 @@ export const ManageVacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await vacationsAPI.reject(selectedVacation.id);
+      await loadRecords();
+      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
+      if (refreshed) {
+        setSelectedVacation(refreshed);
+      }
       await sweetAlert.success("Rechazada", "La solicitud ha sido rechazada");
-      setShowDetailModal(false);
     } catch (error: any) {
-      await sweetAlert.error("Error", "No se pudo rechazar la solicitud");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo rechazar la solicitud");
     } finally {
       setUpdating(false);
     }
@@ -208,11 +265,15 @@ export const ManageVacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await vacationsAPI.deliver(selectedVacation.id);
+      await loadRecords();
+      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
+      if (refreshed) {
+        setSelectedVacation(refreshed);
+      }
       await sweetAlert.success("Entregado", "La solicitud ha sido marcada como entregada");
-      setShowDetailModal(false);
     } catch (error: any) {
-      await sweetAlert.error("Error", "No se pudo marcar como entregado");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
     } finally {
       setUpdating(false);
     }
@@ -226,11 +287,15 @@ export const ManageVacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await vacationsAPI.sendSignature(selectedVacation.id);
+      await loadRecords();
+      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
+      if (refreshed) {
+        setSelectedVacation(refreshed);
+      }
       await sweetAlert.success("Enviado", "El documento ha sido enviado para firma");
-      setShowDetailModal(false);
     } catch (error: any) {
-      await sweetAlert.error("Error", "No se pudo enviar para firma");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo enviar para firma");
     } finally {
       setUpdating(false);
     }
@@ -239,16 +304,20 @@ export const ManageVacationsPage: React.FC = () => {
   const handleMarkSigned = async () => {
     if (!selectedVacation || updating) return;
 
-    const result = await sweetAlert.confirm("¿Marcar como Firmado?", "Asegúrate de que la firma ha sido completada antes de confirmar", "Sí, Marcar Firmado", "Cancelar");
+    const result = await sweetAlert.confirm("¿Confirmar firma del documento?", "Esto marcará el documento como firmado. Asegúrate de haber verificado que la firma fue completada correctamente.", "Sí, confirmar firma", "Cancelar");
     if (!result.isConfirmed) return;
 
     setUpdating(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      await sweetAlert.success("Firmado", "El documento ha sido marcado como firmado");
-      setShowDetailModal(false);
+      await vacationsAPI.markSigned(selectedVacation.id);
+      await loadRecords();
+      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
+      if (refreshed) {
+        setSelectedVacation(refreshed);
+      }
+      await sweetAlert.success("Firma confirmada", "El documento ha sido marcado como firmado. El usuario será notificado.");
     } catch (error: any) {
-      await sweetAlert.error("Error", "No se pudo marcar como firmado");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo confirmar la firma");
     } finally {
       setUpdating(false);
     }
@@ -463,9 +532,45 @@ export const ManageVacationsPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-3 flex-wrap">
                     <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} />
-                    {selectedVacation.firmaEstado !== "not_required" && renderSignatureStatus(selectedVacation)}
+                    {selectedVacation.firmaEstado !== "not_required" && (
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge type={mapVacationSignatureStateToStatusType({
+                          status: selectedVacation.estado,
+                          requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
+                          signatureStatus: selectedVacation.firmaEstado
+                        })!} size="sm" overrideStyle={isVacationInFinalState(selectedVacation.estado)} />
+                        {selectedVacation.firmaEstado === "sent" && selectedVacation.signatureNotifiedAt && (
+                          <FontAwesomeIcon
+                            icon={faClock}
+                            className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
+                            title="Esperando verificación de firma"
+                          />
+                        )}
+                        {selectedVacation.pdfPreAprobacionUrl && (
+                          <FontAwesomeIcon
+                            icon={faFilePdf}
+                            className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
+                            title="PDF disponible"
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {selectedVacation.pdfPreAprobacionUrl && (
+                  <div className="flex justify-end">
+                    <a
+                      href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-2.5 rounded-lg bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 transition-colors flex items-center gap-2"
+                    >
+                      <FontAwesomeIcon icon={faDownload} />
+                      Descargar PDF
+                    </a>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                   <div className="flex-shrink-0">
@@ -510,6 +615,28 @@ export const ManageVacationsPage: React.FC = () => {
 
             {!isVacationInFinalState(selectedVacation.estado) && (
               <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
+                {(() => {
+                  return (
+                    selectedVacation.requiresSignature &&
+                    selectedVacation.firmaEstado === "sent" &&
+                    selectedVacation.signatureNotifiedAt && (
+                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg mb-4">
+                        <div className="flex items-start gap-3">
+                          <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
+                            <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+                              El usuario {getUserName(selectedVacation.solicitante)} indica que completó la firma del documento. Por favor verificá antes de confirmar.
+                            </p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                              Notificado el: {new Date(selectedVacation.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  );
+                })()}
                 <div className="flex items-center justify-end gap-3 flex-wrap">
                   {updating ? (
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
@@ -550,6 +677,18 @@ export const ManageVacationsPage: React.FC = () => {
                             <FontAwesomeIcon icon={faBan} className="text-lg" />
                             Rechazar
                           </button>
+                          {selectedVacation.requiresSignature && selectedVacation.firmaEstado === "pending" && (
+                            <button onClick={handleSendSignature} disabled={updating} className="px-6 py-2.5 rounded-lg bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                              <FontAwesomeIcon icon={faFileArrowUp} />
+                              Enviar para Firma
+                            </button>
+                          )}
+                          {selectedVacation.requiresSignature && selectedVacation.firmaEstado === "sent" && (
+                            <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-green-600 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                              <FontAwesomeIcon icon={faCheckCircle} />
+                              Marcar como Firmado
+                            </button>
+                          )}
                           <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                             <FontAwesomeIcon icon={faTruck} />
                             Marcar como Entregado
