@@ -524,22 +524,8 @@ export const ManageVacationsPage: React.FC = () => {
               size="sm"
               overrideStyle={isInFinalState}
             />,
-            vacation.firmaEstado === "sent" && vacation.signatureNotifiedAt ? (
-              <FontAwesomeIcon
-                key="clock-icon"
-                icon={faClock}
-                className={`${["delivered", "rejected", "cancelled"].includes(vacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
-                title="Esperando verificación de firma"
-              />
-            ) : null,
-            vacation.pdfPreAprobacionUrl ? (
-              <FontAwesomeIcon
-                key="pdf-icon"
-                icon={faFilePdf}
-                className={`${["delivered", "rejected", "cancelled"].includes(vacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
-                title="PDF disponible"
-              />
-            ) : null,
+            vacation.firmaEstado === "sent" && vacation.signatureNotifiedAt ? <FontAwesomeIcon key="clock-icon" icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(vacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" /> : null,
+            vacation.pdfPreAprobacionUrl ? <FontAwesomeIcon key="pdf-icon" icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(vacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" /> : null,
           ].filter(Boolean);
 
           const badgesBottom = vacation.reglas.map((regla, index) => (
@@ -620,16 +606,6 @@ export const ManageVacationsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          {isXXL && (
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <button onClick={() => setViewMode("table")} className={`p-2 rounded transition-colors ${viewMode === "table" ? "bg-white dark:bg-gray-600 shadow-sm" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`} title="Vista de tabla" aria-label="Vista de tabla">
-                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-              </button>
-              <button onClick={() => setViewMode("cards")} className={`p-2 rounded transition-colors ${viewMode === "cards" ? "bg-white dark:bg-gray-600 shadow-sm" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-              </button>
-            </div>
-          )}
           <button onClick={() => navigate("/hr/rules/vacations")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Configurar reglas de vacaciones" aria-label="Configurar reglas de vacaciones">
             <FontAwesomeIcon icon={faGear} />
           </button>
@@ -657,6 +633,16 @@ export const ManageVacationsPage: React.FC = () => {
                 <option value="cancelled">Canceladas</option>
               </select>
             </div>
+            {isXXL && (
+              <div className="flex items-center gap-2 ">
+                <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                  <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                </button>
+                <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                  <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           {loading ? (

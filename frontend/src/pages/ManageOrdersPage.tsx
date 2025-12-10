@@ -538,22 +538,8 @@ export const ManageOrdersPage: React.FC = () => {
             <StatusBadge key="status" type={mapOrderStatusToStatusType(order.status)} size="sm" />,
             docStatusType ? <StatusBadge key="doc-status" type={docStatusType} size="sm" overrideStyle={isInFinalState} /> : null,
             <StatusBadge key="signature" type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isInFinalState} />,
-            order.signatureStatus === "sent" && order.signatureNotifiedAt ? (
-              <FontAwesomeIcon
-                key="clock-icon"
-                icon={faClock}
-                className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
-                title="Esperando verificación de firma"
-              />
-            ) : null,
-            order.pdfPreAprobacionUrl ? (
-              <FontAwesomeIcon
-                key="pdf-icon"
-                icon={faFilePdf}
-                className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
-                title="PDF disponible"
-              />
-            ) : null,
+            order.signatureStatus === "sent" && order.signatureNotifiedAt ? <FontAwesomeIcon key="clock-icon" icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" /> : null,
+            order.pdfPreAprobacionUrl ? <FontAwesomeIcon key="pdf-icon" icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" /> : null,
           ].filter(Boolean);
 
           const badgesBottom = [
@@ -564,7 +550,7 @@ export const ManageOrdersPage: React.FC = () => {
               <span key={`subcategory-${index}`} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                 {subcategory}
               </span>
-            ))
+            )),
           ];
 
           return (
