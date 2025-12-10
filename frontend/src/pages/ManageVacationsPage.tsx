@@ -663,7 +663,7 @@ export const ManageVacationsPage: React.FC = () => {
                   <thead>
                     <tr>
                       <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th>
+                      {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
@@ -687,7 +687,7 @@ export const ManageVacationsPage: React.FC = () => {
                         <td className="py-3 px-4">
                           <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
                         </td>
-                        <td className="py-3 px-4">
+                        {/*                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-2">
                             {vacation.reglas.map((regla, index) => (
                               <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">
@@ -695,7 +695,7 @@ export const ManageVacationsPage: React.FC = () => {
                               </span>
                             ))}
                           </div>
-                        </td>
+                        </td> */}
                         <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
                         <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(vacation.solicitante)}</td>
                         <td className="py-3 px-4">
