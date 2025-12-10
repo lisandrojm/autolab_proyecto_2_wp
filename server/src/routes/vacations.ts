@@ -7,7 +7,7 @@ import { ActivityLog } from "../models/ActivityLog.js";
 import { Tenant } from "../models/Tenant.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
 import { authenticateToken } from "../middleware/auth.js";
-import { generatePdf, savePdfToStorage } from "../utils/pdfGenerator.js";
+import { generateVacationPDF } from "../utils/pdfGenerator.js";
 
 const router = express.Router();
 
@@ -156,29 +156,21 @@ router.put("/:id/pre-approve", async (req: any, res) => {
             const tenant = await Tenant.findById(tenantId);
             const tenantName = tenant?.name || tenant?.slug || "Organización";
 
-            const variables = {
-              tenant_name: tenantName,
-              user_name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email,
-              user_email: user.email || "",
-              user_position: user.positionId?.name || vacation.position || "",
-              vacation_number: vacation.vacationNumber,
-              start_date: new Date(vacation.startDate).toLocaleDateString("es-AR"),
-              end_date: new Date(vacation.endDate).toLocaleDateString("es-AR"),
-              days_requested: vacation.daysRequested.toString(),
-              request_date: new Date(vacation.createdAt).toLocaleDateString("es-AR"),
-              rule_name: firstRule.name || "",
-            };
-
-            const pdfBuffer = await generatePdf(template.htmlContent, variables);
-            const pdfUrl = await savePdfToStorage(
-              pdfBuffer,
+            const result = await generateVacationPDF(
+              vacation as any,
+              template,
+              user,
               tenantId.toString(),
-              "vacations",
-              `vacation_${vacation.vacationNumber}_${Date.now()}.pdf`
+              tenantName,
+              vacation.vacationNumber
             );
 
-            vacation.pdfPreAprobacionUrl = pdfUrl;
-            await vacation.save();
+            if (result.success && result.pdfUrl) {
+              vacation.pdfPreAprobacionUrl = result.pdfUrl;
+              await vacation.save();
+            } else {
+              console.error("Error generating PDF for vacation:", result.error);
+            }
           }
         } catch (pdfError) {
           console.error("Error generating PDF for vacation:", pdfError);
