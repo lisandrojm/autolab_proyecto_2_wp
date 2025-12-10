@@ -9,6 +9,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
 import { Modal } from "../components/ui/Modal";
 import { Card } from "../components/ui/Card";
+import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
 import { getFormattedOrderNumber } from "../utils/orderHelpers";
@@ -526,73 +527,79 @@ export const ManageOrdersPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredOrders.map((order) => {
           const avatarUrl = getUserAvatar(order.userId);
+          const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+          const docStatusType = mapDocumentStateToStatusType(futureAction);
+          const isInFinalState = isOrderInFinalState(order.status);
+
+          const badgesTop = [
+            <span key="order-number" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+              {getFormattedOrderNumber(order.orderNumber)}
+            </span>,
+            <StatusBadge key="status" type={mapOrderStatusToStatusType(order.status)} size="sm" />,
+            docStatusType ? <StatusBadge key="doc-status" type={docStatusType} size="sm" overrideStyle={isInFinalState} /> : null,
+            <StatusBadge key="signature" type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isInFinalState} />,
+            order.signatureStatus === "sent" && order.signatureNotifiedAt ? (
+              <FontAwesomeIcon
+                key="clock-icon"
+                icon={faClock}
+                className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
+                title="Esperando verificación de firma"
+              />
+            ) : null,
+            order.pdfPreAprobacionUrl ? (
+              <FontAwesomeIcon
+                key="pdf-icon"
+                icon={faFilePdf}
+                className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
+                title="PDF disponible"
+              />
+            ) : null,
+          ].filter(Boolean);
+
+          const badgesBottom = [
+            <span key="category" className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
+              {getCategoryName(order)}
+            </span>,
+            ...getSubcategoriesArray(order).map((subcategory, index) => (
+              <span key={`subcategory-${index}`} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                {subcategory}
+              </span>
+            ))
+          ];
+
           return (
-            <Card
+            <CardItemGeneric
               key={order._id}
-              header={{
-                title: getUserName(order.userId),
-                subtitle: getUserPosition(order.userId),
-                avatar: {
-                  src: avatarUrl ? `${import.meta.env.VITE_API_URL}${avatarUrl}` : undefined,
-                  fallback: getAvatarFallback(order.userId),
-                  alt: getUserName(order.userId),
-                },
-                badges: getCardBadges(order),
-                breadcrumbs: {
-                  content: (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
-                      {(() => {
-                        const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
-                        const docStatusType = mapDocumentStateToStatusType(futureAction);
-                        const isInFinalState = isOrderInFinalState(order.status);
-                        return docStatusType ? <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} /> : null;
-                      })()}
-                      <div className="flex items-center gap-1.5">
-                        <StatusBadge type={mapSignatureStateToStatusType(order)} size="sm" overrideStyle={isOrderInFinalState(order.status)} />
-                        {order.signatureStatus === "sent" && order.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" />}
-                        {order.pdfPreAprobacionUrl && <FontAwesomeIcon icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(order.status) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" />}
-                      </div>
-                    </div>
-                  ),
-                },
-              }}
-              footer={{
-                leftContent: (
-                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                    <FontAwesomeIcon icon={faCalendar} className="h-3 w-3" />
-                    <span>{formatDateShort(order.requestedAt)}</span>
-                  </div>
-                ),
-                actions: [
-                  {
-                    icon: faTrash,
-                    onClick: (e) => {
-                      e?.stopPropagation();
-                      handleDelete(order._id, order.orderNumber, e);
-                    },
-                    title: "Eliminar pedido",
-                    variant: "default",
+              title={getUserName(order.userId)}
+              subtitle={getUserPosition(order.userId)}
+              avatarUrl={avatarUrl}
+              avatarFallback={getAvatarFallback(order.userId)}
+              badgesTop={badgesTop}
+              badgesBottom={badgesBottom}
+              footerLeft={
+                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <FontAwesomeIcon icon={faCalendar} className="h-3 w-3" />
+                  <span>{formatDateShort(order.requestedAt)}</span>
+                </div>
+              }
+              footerActions={[
+                {
+                  icon: faTrash,
+                  onClick: (e) => {
+                    e?.stopPropagation();
+                    handleDelete(order._id, order.orderNumber, e);
                   },
-                ],
-              }}
+                  title: "Eliminar pedido",
+                  variant: "default",
+                },
+              ]}
               onClick={() => {
                 setSelectedOrder(order);
                 setShowDetailModal(true);
               }}
             >
-              <div className="space-y-3">
-                {/* Categoría y Subcategorías */}
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
-                  {getSubcategoriesArray(order).map((subcategory, index) => (
-                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
-                      {subcategory}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Card>
+              {null}
+            </CardItemGeneric>
           );
         })}
       </div>

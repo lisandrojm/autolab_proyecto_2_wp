@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, isVacationInFinalState } from "../utils/statusHelpers";
@@ -51,6 +52,58 @@ export const ManageVacationsPage: React.FC = () => {
   const [stats, setStats] = useState({ pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
   const [currentVacationIndex, setCurrentVacationIndex] = useState<number>(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const isNowXXL = window.innerWidth >= 1200;
+        setIsXXL(isNowXXL);
+
+        if (!isNowXXL) {
+          setViewMode("cards");
+        } else {
+          const saved = localStorage.getItem("vacationViewMode");
+          if (saved && (saved === "table" || saved === "cards")) {
+            setViewMode(saved as "table" | "cards");
+          } else {
+            setViewMode("table");
+          }
+        }
+      }, 150);
+    };
+
+    const isInitialXXL = window.innerWidth >= 1200;
+    setIsXXL(isInitialXXL);
+
+    if (isInitialXXL) {
+      const saved = localStorage.getItem("vacationViewMode");
+      if (saved && (saved === "table" || saved === "cards")) {
+        setViewMode(saved as "table" | "cards");
+      } else {
+        setViewMode("table");
+      }
+    } else {
+      setViewMode("cards");
+    }
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isXXL) {
+      localStorage.setItem("vacationViewMode", viewMode);
+    }
+  }, [viewMode, isXXL]);
 
   useEffect(() => {
     if (!hasLoadedOnce) {
@@ -105,6 +158,24 @@ export const ManageVacationsPage: React.FC = () => {
     if (!solicitante) return "-";
     if (typeof solicitante === "string") return "-";
     return solicitante.cargo || "-";
+  };
+
+  const formatDateShort = (date: string): string => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "short",
+    });
+  };
+
+  const getAvatarFallback = (solicitante: any): string => {
+    const name = getUserName(solicitante);
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const renderSignatureStatus = (vacation: VacationRequestMock): JSX.Element => {
@@ -432,6 +503,107 @@ export const ManageVacationsPage: React.FC = () => {
     return null;
   };
 
+  const renderCardsView = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredVacations.map((vacation) => {
+          const isInFinalState = isVacationInFinalState(vacation.estado);
+
+          const badgesTop = [
+            <span key="vacation-number" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+              {getFormattedVacationNumber(vacation.numeroPedido)}
+            </span>,
+            <StatusBadge key="status" type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />,
+            <StatusBadge
+              key="signature"
+              type={mapVacationSignatureStateToStatusType({
+                status: vacation.estado,
+                requiresSignature: vacation.requiresSignature || vacation.firmaEstado !== "not_required",
+                signatureStatus: vacation.firmaEstado,
+              })}
+              size="sm"
+              overrideStyle={isInFinalState}
+            />,
+            vacation.firmaEstado === "sent" && vacation.signatureNotifiedAt ? (
+              <FontAwesomeIcon
+                key="clock-icon"
+                icon={faClock}
+                className={`${["delivered", "rejected", "cancelled"].includes(vacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
+                title="Esperando verificación de firma"
+              />
+            ) : null,
+            vacation.pdfPreAprobacionUrl ? (
+              <FontAwesomeIcon
+                key="pdf-icon"
+                icon={faFilePdf}
+                className={`${["delivered", "rejected", "cancelled"].includes(vacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
+                title="PDF disponible"
+              />
+            ) : null,
+          ].filter(Boolean);
+
+          const badgesBottom = vacation.reglas.map((regla, index) => (
+            <span key={`regla-${index}`} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
+              {regla}
+            </span>
+          ));
+
+          return (
+            <CardItemGeneric
+              key={vacation.id}
+              title={getUserName(vacation.solicitante)}
+              subtitle={getUserPosition(vacation.solicitante)}
+              avatarUrl={null}
+              avatarFallback={getAvatarFallback(vacation.solicitante)}
+              badgesTop={badgesTop}
+              badgesBottom={badgesBottom}
+              footerLeft={
+                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <FontAwesomeIcon icon={faCalendar} className="h-3 w-3" />
+                  <span>{formatDateShort(vacation.fechaSolicitud)}</span>
+                </div>
+              }
+              footerActions={[
+                {
+                  icon: faTrash,
+                  onClick: (e) => {
+                    e?.stopPropagation();
+                    handleDelete(vacation.id, vacation.numeroPedido, e);
+                  },
+                  title: "Eliminar solicitud",
+                  variant: "default",
+                },
+              ]}
+              onClick={() => {
+                setSelectedVacation(vacation);
+                setShowDetailModal(true);
+              }}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Período:</span>
+                  <span className="font-medium text-gray-900 dark:text-white text-xs">
+                    {vacation.startDate && vacation.endDate ? (
+                      <>
+                        {new Date(vacation.startDate).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} - {new Date(vacation.endDate).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}
+                      </>
+                    ) : (
+                      "-"
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Días solicitados:</span>
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{vacation.diasSolicitados || 0}</span>
+                </div>
+              </div>
+            </CardItemGeneric>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <PageLayout
       title="Vacaciones"
@@ -448,6 +620,16 @@ export const ManageVacationsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
+          {isXXL && (
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button onClick={() => setViewMode("table")} className={`p-2 rounded transition-colors ${viewMode === "table" ? "bg-white dark:bg-gray-600 shadow-sm" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode("cards")} className={`p-2 rounded transition-colors ${viewMode === "cards" ? "bg-white dark:bg-gray-600 shadow-sm" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <button onClick={() => navigate("/hr/rules/vacations")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Configurar reglas de vacaciones" aria-label="Configurar reglas de vacaciones">
             <FontAwesomeIcon icon={faGear} />
           </button>
@@ -481,6 +663,8 @@ export const ManageVacationsPage: React.FC = () => {
             <div className="flex justify-center items-center py-12">
               <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-blue-600" />
             </div>
+          ) : viewMode === "cards" ? (
+            renderCardsView()
           ) : (
             <>
               <div className="overflow-x-auto rounded border dark:border-slate-800">
