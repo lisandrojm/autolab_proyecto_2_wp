@@ -492,10 +492,12 @@ export const ManageVacationsPage: React.FC = () => {
             </>
           )}
 
-          <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-            <FontAwesomeIcon icon={faTruck} />
-            Marcar como Entregado
-          </button>
+          {(!selectedVacation.requiresSignature || selectedVacation.firmaEstado === "signed") && (
+            <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              <FontAwesomeIcon icon={faTruck} />
+              Marcar como Entregado
+            </button>
+          )}
         </>
       );
     }
