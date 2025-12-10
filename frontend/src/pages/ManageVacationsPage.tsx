@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -606,38 +606,26 @@ export const ManageVacationsPage: React.FC = () => {
                 <div className="flex items-center gap-1.5">
                   {selectedVacation.firmaEstado !== "not_required" && (
                     <StatusBadge
-                      type={mapVacationSignatureStateToStatusType({
-                        status: selectedVacation.estado,
-                        requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
-                        signatureStatus: selectedVacation.firmaEstado
-                      })!}
+                      type={
+                        mapVacationSignatureStateToStatusType({
+                          status: selectedVacation.estado,
+                          requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
+                          signatureStatus: selectedVacation.firmaEstado,
+                        })!
+                      }
                       size="sm"
                       overrideStyle={isVacationInFinalState(selectedVacation.estado)}
                     />
                   )}
-                  {selectedVacation.firmaEstado === "sent" && selectedVacation.signatureNotifiedAt && (
-                    <FontAwesomeIcon
-                      icon={faClock}
-                      className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
-                      title="Esperando verificación de firma"
-                    />
-                  )}
-                  {selectedVacation.pdfPreAprobacionUrl && (
-                    <FontAwesomeIcon
-                      icon={faFilePdf}
-                      className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
-                      title="PDF disponible"
-                    />
-                  )}
+                  {selectedVacation.firmaEstado === "sent" && selectedVacation.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" />}
+                  {selectedVacation.pdfPreAprobacionUrl && <FontAwesomeIcon icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" />}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <div>
-                <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
-                  {getUserInitials(getUserName(selectedVacation.solicitante))}
-                </div>
+                <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
               </div>
               <div className="bg-slate-800">
                 <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedVacation.solicitante)}</p>
@@ -651,10 +639,7 @@ export const ManageVacationsPage: React.FC = () => {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Reglas aplicadas</p>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {selectedVacation.reglas.map((regla, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300"
-                      >
+                      <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
                         {regla}
                       </span>
                     ))}
@@ -664,12 +649,7 @@ export const ManageVacationsPage: React.FC = () => {
 
               {selectedVacation.pdfPreAprobacionUrl && (
                 <div className="border-slate-200 dark:border-slate-700">
-                  <a
-                    href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm"
-                  >
+                  <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm">
                     <FontAwesomeIcon icon={faDownload} />
                     Descargar PDF
                   </a>
@@ -691,7 +671,9 @@ export const ManageVacationsPage: React.FC = () => {
                 )}
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Días Solicitados</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">{selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">
+                    {selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? "s" : ""}
+                  </p>
                 </div>
               </div>
             </div>
@@ -708,12 +690,8 @@ export const ManageVacationsPage: React.FC = () => {
                       <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                       <div className="flex-1">
                         <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
-                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
-                          El usuario {getUserName(selectedVacation.solicitante)} indica que completó la firma del documento. Por favor verificá antes de confirmar.
-                        </p>
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          Notificado el: {new Date(selectedVacation.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </p>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">El usuario {getUserName(selectedVacation.solicitante)} indica que completó la firma del documento. Por favor verificá antes de confirmar.</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(selectedVacation.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                       </div>
                     </div>
                   </div>
