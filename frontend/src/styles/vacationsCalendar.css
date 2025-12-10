@@ -1,0 +1,182 @@
+.vacation-timeline {
+  width: 100%;
+  min-height: 600px;
+}
+
+.vacation-timeline .vis-timeline {
+  border: none;
+  font-family: inherit;
+}
+
+.vacation-timeline .vis-panel.vis-background {
+  background: transparent;
+}
+
+.vacation-timeline .vis-item {
+  border-radius: 6px;
+  border-width: 2px;
+  font-size: 13px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vacation-timeline .vis-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.vacation-timeline .vis-item.vis-selected {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.vacation-timeline .vis-item.vacation-pending {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.vacation-timeline .vis-item.vacation-pre_approved {
+  background-color: #ccfbf1;
+  border-color: #14b8a6;
+  color: #134e4a;
+}
+
+.vacation-timeline .vis-item.vacation-approved {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e3a8a;
+}
+
+.vacation-timeline .vis-item.vacation-delivered {
+  background-color: #dcfce7;
+  border-color: #22c55e;
+  color: #14532d;
+}
+
+.vacation-timeline .vis-item.vacation-rejected {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+  color: #7f1d1d;
+}
+
+.vacation-timeline .vis-item.vacation-cancelled {
+  background-color: #fed7aa;
+  border-color: #f97316;
+  color: #7c2d12;
+}
+
+.timeline-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timeline-item-name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.timeline-item-days {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.vacation-timeline .vis-time-axis .vis-text {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.vacation-timeline .vis-time-axis .vis-grid.vis-minor {
+  border-color: #e5e7eb;
+}
+
+.vacation-timeline .vis-time-axis .vis-grid.vis-major {
+  border-color: #d1d5db;
+}
+
+.vacation-timeline .vis-current-time {
+  background-color: #ef4444;
+  width: 2px;
+}
+
+.vacation-timeline .vis-labelset .vis-label {
+  color: #374151;
+  font-weight: 500;
+}
+
+.dark .vacation-timeline .vis-panel.vis-background {
+  background: transparent;
+}
+
+.dark .vacation-timeline .vis-time-axis .vis-text {
+  color: #9ca3af;
+}
+
+.dark .vacation-timeline .vis-time-axis .vis-grid.vis-minor {
+  border-color: #374151;
+}
+
+.dark .vacation-timeline .vis-time-axis .vis-grid.vis-major {
+  border-color: #4b5563;
+}
+
+.dark .vacation-timeline .vis-labelset .vis-label {
+  color: #d1d5db;
+}
+
+.dark .vacation-timeline .vis-item.vacation-pending {
+  background-color: rgba(254, 243, 199, 0.2);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+.dark .vacation-timeline .vis-item.vacation-pre_approved {
+  background-color: rgba(204, 251, 241, 0.2);
+  border-color: #14b8a6;
+  color: #5eead4;
+}
+
+.dark .vacation-timeline .vis-item.vacation-approved {
+  background-color: rgba(219, 234, 254, 0.2);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+.dark .vacation-timeline .vis-item.vacation-delivered {
+  background-color: rgba(220, 252, 231, 0.2);
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+.dark .vacation-timeline .vis-item.vacation-rejected {
+  background-color: rgba(254, 226, 226, 0.2);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.dark .vacation-timeline .vis-item.vacation-cancelled {
+  background-color: rgba(254, 215, 170, 0.2);
+  border-color: #f97316;
+  color: #fdba74;
+}
+
+@media (max-width: 768px) {
+  .vacation-timeline {
+    min-height: 400px;
+  }
+
+  .vacation-timeline .vis-item {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  .timeline-item-name {
+    font-size: 11px;
+  }
+
+  .timeline-item-days {
+    font-size: 10px;
+  }
+}
