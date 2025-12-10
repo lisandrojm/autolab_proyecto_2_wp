@@ -67,11 +67,7 @@ export const ManageVacationsPage: React.FC = () => {
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
         numeroPedido: item.vacationNumber || item._id,
-        reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds)
-          ? item.vacationRuleIds.map((rule: any) =>
-              typeof rule === 'object' && rule.name ? rule.name : ''
-            ).filter((name: string) => name !== '')
-          : [],
+        reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds) ? item.vacationRuleIds.map((rule: any) => (typeof rule === "object" && rule.name ? rule.name : "")).filter((name: string) => name !== "") : [],
         solicitante: {
           nombre: item.userName || "Usuario",
           cargo: item.position || "-",
@@ -115,7 +111,7 @@ export const ManageVacationsPage: React.FC = () => {
     const statusType = mapVacationSignatureStateToStatusType({
       status: vacation.estado,
       requiresSignature: vacation.requiresSignature || vacation.firmaEstado !== "not_required",
-      signatureStatus: vacation.firmaEstado
+      signatureStatus: vacation.firmaEstado,
     });
 
     const isInFinalState = isVacationInFinalState(vacation.estado);
@@ -133,22 +129,9 @@ export const ManageVacationsPage: React.FC = () => {
           <StatusBadge type={statusType} size="sm" overrideStyle={isInFinalState} />
         </div>
         <div className="flex gap-3">
-          {isWaitingVerification && (
-            <FontAwesomeIcon
-              icon={faClock}
-              className={`${isFinalStatus ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
-              title="Usuario notificó que completó la firma - Esperando verificación"
-            />
-          )}
+          {isWaitingVerification && <FontAwesomeIcon icon={faClock} className={`${isFinalStatus ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Usuario notificó que completó la firma - Esperando verificación" />}
           {vacation.pdfPreAprobacionUrl && (
-            <a
-              href={`${import.meta.env.VITE_API_URL}${vacation.pdfPreAprobacionUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${isFinalStatus ? "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300" : "text-violet-600 hover:text-violet-800 dark:text-violet-600 dark:hover:text-violet-300"} transition-colors`}
-              title="Descargar documento PDF"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <a href={`${import.meta.env.VITE_API_URL}${vacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className={`${isFinalStatus ? "text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300" : "text-violet-600 hover:text-violet-800 dark:text-violet-600 dark:hover:text-violet-300"} transition-colors`} title="Descargar documento PDF" onClick={(e) => e.stopPropagation()}>
               <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
             </a>
           )}
@@ -475,9 +458,7 @@ export const ManageVacationsPage: React.FC = () => {
                             <span className="text-gray-400 dark:text-gray-500">-</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
-                          {vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString() : '-'}
-                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString() : "-"}</td>
                         <td className="py-3 px-4 text-center">
                           <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
                             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
@@ -550,43 +531,23 @@ export const ManageVacationsPage: React.FC = () => {
                     <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} />
                     {selectedVacation.firmaEstado !== "not_required" && (
                       <div className="flex items-center gap-1.5">
-                        <StatusBadge type={mapVacationSignatureStateToStatusType({
-                          status: selectedVacation.estado,
-                          requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
-                          signatureStatus: selectedVacation.firmaEstado
-                        })!} size="sm" overrideStyle={isVacationInFinalState(selectedVacation.estado)} />
-                        {selectedVacation.firmaEstado === "sent" && selectedVacation.signatureNotifiedAt && (
-                          <FontAwesomeIcon
-                            icon={faClock}
-                            className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`}
-                            title="Esperando verificación de firma"
-                          />
-                        )}
-                        {selectedVacation.pdfPreAprobacionUrl && (
-                          <FontAwesomeIcon
-                            icon={faFilePdf}
-                            className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`}
-                            title="PDF disponible"
-                          />
-                        )}
+                        <StatusBadge
+                          type={
+                            mapVacationSignatureStateToStatusType({
+                              status: selectedVacation.estado,
+                              requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
+                              signatureStatus: selectedVacation.firmaEstado,
+                            })!
+                          }
+                          size="sm"
+                          overrideStyle={isVacationInFinalState(selectedVacation.estado)}
+                        />
+                        {selectedVacation.firmaEstado === "sent" && selectedVacation.signatureNotifiedAt && <FontAwesomeIcon icon={faClock} className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-amber-500 dark:text-amber-400"} text-sm`} title="Esperando verificación de firma" />}
+                        {selectedVacation.pdfPreAprobacionUrl && <FontAwesomeIcon icon={faFilePdf} className={`${["delivered", "rejected", "cancelled"].includes(selectedVacation.estado) ? "text-gray-600 dark:text-gray-400" : "text-violet-600 dark:text-violet-600"} text-sm`} title="PDF disponible" />}
                       </div>
                     )}
                   </div>
                 </div>
-
-                {selectedVacation.pdfPreAprobacionUrl && (
-                  <div className="flex justify-end">
-                    <a
-                      href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 py-2.5 rounded-lg bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 transition-colors flex items-center gap-2"
-                    >
-                      <FontAwesomeIcon icon={faDownload} />
-                      Descargar PDF
-                    </a>
-                  </div>
-                )}
 
                 <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                   <div className="flex-shrink-0">
@@ -612,19 +573,24 @@ export const ManageVacationsPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+                  {selectedVacation.pdfPreAprobacionUrl && (
+                    <div>
+                      <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
+                        <FontAwesomeIcon icon={faDownload} />
+                        Descargar
+                        <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
+                      </a>
+                    </div>
+                  )}
                   {selectedVacation.startDate && selectedVacation.endDate && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
                         <span className="text-gray-600 dark:text-slate-500">Desde</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          {new Date(selectedVacation.startDate).toLocaleDateString()}
-                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{new Date(selectedVacation.startDate).toLocaleDateString()}</span>
                       </div>
                       <div className="flex flex-col p-3 bg-white dark:bg-gray-800">
                         <span className="text-gray-600 dark:text-slate-500">Hasta</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          {new Date(selectedVacation.endDate).toLocaleDateString()}
-                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{new Date(selectedVacation.endDate).toLocaleDateString()}</span>
                       </div>
                     </div>
                   )}
@@ -657,12 +623,8 @@ export const ManageVacationsPage: React.FC = () => {
                           <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                           <div className="flex-1">
                             <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Usuario notificó firma completada</h4>
-                            <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
-                              El usuario {getUserName(selectedVacation.solicitante)} indica que completó la firma del documento. Por favor verificá antes de confirmar.
-                            </p>
-                            <p className="text-xs text-amber-600 dark:text-amber-400">
-                              Notificado el: {new Date(selectedVacation.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                            </p>
+                            <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">El usuario {getUserName(selectedVacation.solicitante)} indica que completó la firma del documento. Por favor verificá antes de confirmar.</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(selectedVacation.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                           </div>
                         </div>
                       </div>

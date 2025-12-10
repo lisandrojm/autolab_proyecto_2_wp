@@ -933,9 +933,10 @@ export const ManageOrdersPage: React.FC = () => {
               </div>
               {selectedOrder.pdfPreAprobacionUrl && (
                 <div className="border-slate-200 dark:border-slate-700">
-                  <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm">
+                  <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
                     <FontAwesomeIcon icon={faDownload} />
-                    Descargar PDF
+                    Descargar
+                    <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
                   </a>
                 </div>
               )}
