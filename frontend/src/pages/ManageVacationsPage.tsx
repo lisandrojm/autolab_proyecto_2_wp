@@ -433,6 +433,7 @@ export const ManageVacationsPage: React.FC = () => {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                     </tr>
                   </thead>
@@ -473,6 +474,9 @@ export const ManageVacationsPage: React.FC = () => {
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500">-</span>
                           )}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
+                          {vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString() : '-'}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
