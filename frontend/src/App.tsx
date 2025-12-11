@@ -33,7 +33,6 @@ import { ClientProfilePage } from "./pages/ClientProfilePage";
 import { ClientRequestsPage } from "./pages/ClientRequestsPage";
 import { ClientApprovalsPage } from "./pages/ClientApprovalsPage";
 import { ClientCampaignsPage } from "./pages/ClientCampaignsPage";
-import { CalendarPage } from "./pages/CalendarPage";
 import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
 import { AIAssistantModal } from "./components/AIAssistantModal";
@@ -48,14 +47,13 @@ import { ActivityPage } from "./pages/ActivityPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
-import { ManageCalendarEventsPage } from "./pages/ManageCalendarEventsPage";
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageOrdersCategoriesPage } from "./pages/ManageOrdersCategoriesPage";
 import { ManageVacationsPage } from "./pages/ManageVacationsPage";
 import { ManageVacationsRulesPage } from "./pages/ManageVacationsRulesPage";
-import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
+import { ManageVacationsCalendarPage } from "./pages/ManageVacationsCalendarPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
 import { ManageOrdersCategoriesTypesPage } from "./pages/ManageOrdersCategoriesTypesPage";
@@ -337,14 +335,6 @@ function App() {
                 }
               />
               <Route
-                path="/calendar"
-                element={
-                  <ProtectedRoute>
-                    <CalendarPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/assistant"
                 element={
                   <ProtectedRoute>
@@ -413,14 +403,6 @@ function App() {
                 }
               />
               <Route
-                path="/admin/personal/calendario"
-                element={
-                  <ProtectedRoute>
-                    <CalendarPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/admin/personal/notificaciones"
                 element={
                   <ProtectedRoute>
@@ -451,14 +433,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ManageActivityLogsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/hr/calendar-events"
-                element={
-                  <ProtectedRoute>
-                    <ManageCalendarEventsPage />
                   </ProtectedRoute>
                 }
               />
@@ -506,7 +480,7 @@ function App() {
                 path="/hr/vacation-requests/calendar"
                 element={
                   <ProtectedRoute>
-                    <VacationsCalendarPage />
+                    <ManageVacationsCalendarPage />
                   </ProtectedRoute>
                 }
               />

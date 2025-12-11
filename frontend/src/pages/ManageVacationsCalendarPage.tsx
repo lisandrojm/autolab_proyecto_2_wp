@@ -36,7 +36,7 @@ const STATUS_LABELS = {
   cancelled: "Cancelada",
 };
 
-export const VacationsCalendarPage: React.FC = () => {
+export const ManageVacationsCalendarPage: React.FC = () => {
   const navigate = useNavigate();
   const timelineRef = useRef<HTMLDivElement>(null);
   const timelineInstanceRef = useRef<Timeline | null>(null);
@@ -95,9 +95,7 @@ export const VacationsCalendarPage: React.FC = () => {
       }
     }
 
-    const filteredVacations = statusFilter === "all"
-      ? vacations
-      : vacations.filter(v => v.status === statusFilter);
+    const filteredVacations = statusFilter === "all" ? vacations : vacations.filter((v) => v.status === statusFilter);
 
     const items = filteredVacations.map((vacation): TimelineItem => {
       const color = getStatusColor(vacation.status);
@@ -203,16 +201,11 @@ export const VacationsCalendarPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Calendario de Vacaciones"
+      title="Calendario de Vacacionesss"
       subtitle="Vista temporal de todas las solicitudes de vacaciones"
       faIcon={{ icon: faClock }}
       headerActions={
-        <button
-          onClick={() => navigate("/hr/vacation-requests")}
-          className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-2 text-sm"
-          title="Volver a lista"
-          aria-label="Volver a lista"
-        >
+        <button onClick={() => navigate("/hr/vacation-requests")} className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-2 text-sm" title="Volver a lista" aria-label="Volver a lista">
           <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" />
         </button>
       }
@@ -221,11 +214,7 @@ export const VacationsCalendarPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
             <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            >
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
               <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="pre_approved">Pre-aprobadas</option>
@@ -237,24 +226,13 @@ export const VacationsCalendarPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handlePreviousMonth}
-              className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Período anterior"
-            >
+            <button onClick={handlePreviousMonth} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Período anterior">
               <FontAwesomeIcon icon={faChevronLeft} />
             </button>
-            <button
-              onClick={handleTodayClick}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
+            <button onClick={handleTodayClick} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
               Hoy
             </button>
-            <button
-              onClick={handleNextMonth}
-              className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Período siguiente"
-            >
+            <button onClick={handleNextMonth} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Período siguiente">
               <FontAwesomeIcon icon={faChevronRight} />
             </button>
           </div>
