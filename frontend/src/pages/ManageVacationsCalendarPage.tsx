@@ -191,40 +191,18 @@ export const ManageVacationsCalendarPage: React.FC = () => {
     }
   };
 
-  const stats = vacations.reduce(
+  /*   const stats = vacations.reduce(
     (acc, vacation) => {
       acc[vacation.status] = (acc[vacation.status] || 0) + 1;
       return acc;
     },
     { pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
-  );
+  ); */
 
   return (
-    <PageLayout
-      title="Calendario de Vacacionesss"
-      subtitle="Vista temporal de todas las solicitudes de vacaciones"
-      faIcon={{ icon: faClock }}
-      headerActions={
-        <button onClick={() => navigate("/hr/vacation-requests")} className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-2 text-sm" title="Volver a lista" aria-label="Volver a lista">
-          <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" />
-        </button>
-      }
-    >
+    <PageLayout title="Calendario de Vacaciones" subtitle="Vista temporal de todas las solicitudes de vacaciones" faIcon={{ icon: faClock }} onBack={() => navigate("/hr/vacation-requests")}>
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendientes</option>
-              <option value="pre_approved">Pre-aprobadas</option>
-              <option value="approved">Aprobadas</option>
-              <option value="delivered">Entregadas</option>
-              <option value="rejected">Rechazadas</option>
-              <option value="cancelled">Canceladas</option>
-            </select>
-          </div>
-
           <div className="flex items-center gap-2">
             <button onClick={handlePreviousMonth} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Período anterior">
               <FontAwesomeIcon icon={faChevronLeft} />
@@ -236,9 +214,21 @@ export const ManageVacationsCalendarPage: React.FC = () => {
               <FontAwesomeIcon icon={faChevronRight} />
             </button>
           </div>
+          <div className="flex items-center gap-2">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+              <option value="all">Todos los estados</option>
+              <option value="pending">Pendientes</option>
+              <option value="pre_approved">Pre-aprobadas</option>
+              <option value="approved">Aprobadas</option>
+              <option value="delivered">Entregadas</option>
+              <option value="rejected">Rechazadas</option>
+              <option value="cancelled">Canceladas</option>
+            </select>
+            <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {/*         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {[
             { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
             { label: "Pre-aprobadas", value: stats.pre_approved, icon: faCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
@@ -255,7 +245,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
 
         {loading ? (
           <div className="flex justify-center items-center py-12">
