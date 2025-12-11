@@ -43,6 +43,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showHelpInfo, setShowHelpInfo] = useState(false);
 
   useEffect(() => {
     loadVacations();
@@ -200,7 +201,26 @@ export const ManageVacationsCalendarPage: React.FC = () => {
   ); */
 
   return (
-    <PageLayout title="Calendario de Vacaciones" subtitle="Vista temporal de todas las solicitudes de vacaciones" faIcon={{ icon: faClock }} onBack={() => navigate("/hr/vacation-requests")}>
+    <PageLayout
+      title="Calendario de Vacaciones"
+      subtitle="Vista temporal de todas las solicitudes de vacaciones"
+      faIcon={{ icon: faClock }}
+      onBack={() => navigate("/hr/vacation-requests")}
+      infoModal={{
+        isOpen: showHelpInfo,
+        onOpen: () => setShowHelpInfo(true),
+        onClose: () => setShowHelpInfo(false),
+        title: "Instrucciones del Calendario de Vacaciones",
+        content: (
+          <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+            <p>• Arrastra el timeline para moverte en el tiempo</p>
+            <p>• Usa la rueda del mouse para hacer zoom</p>
+            <p>• Haz clic en un período de vacaciones para ver detalles</p>
+            <p>• Filtra por estado usando el selector arriba</p>
+          </div>
+        ),
+      }}
+    >
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
@@ -256,16 +276,6 @@ export const ManageVacationsCalendarPage: React.FC = () => {
             <div ref={timelineRef} className="vacation-timeline"></div>
           </div>
         )}
-
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Instrucciones</h3>
-          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-            <li>• Arrastra el timeline para moverte en el tiempo</li>
-            <li>• Usa la rueda del mouse para hacer zoom</li>
-            <li>• Haz clic en un período de vacaciones para ver detalles</li>
-            <li>• Filtra por estado usando el selector arriba</li>
-          </ul>
-        </div>
       </div>
     </PageLayout>
   );
