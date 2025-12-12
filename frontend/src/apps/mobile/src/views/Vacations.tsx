@@ -19,6 +19,63 @@ const MOCK_AREA_INFO = {
 
 const MOCK_OCCUPIED_DATES = ["2025-12-20", "2025-12-21", "2025-12-22", "2025-12-24", "2025-12-25", "2026-01-01"];
 
+const MOCK_REQUESTS = [
+  {
+    id: "VAC-001-2025",
+    status: "pending",
+    type: "Vacaciones",
+    dates: "20 Dic - 02 Ene",
+    days: "14 días",
+    requestDate: "12/12/2025",
+    tags: ["Vacaciones", "14 días", "Goce de sueldo"],
+  },
+  {
+    id: "VAC-002-2025",
+    status: "approved",
+    type: "Día de estudio",
+    dates: "15 Nov",
+    days: "1 día",
+    requestDate: "10/11/2025",
+    tags: ["Estudio", "1 día", "Certificado"],
+  },
+  {
+    id: "VAC-003-2025",
+    status: "rejected",
+    type: "Asuntos personales",
+    dates: "01 Oct - 03 Oct",
+    days: "3 días",
+    requestDate: "25/09/2025",
+    tags: ["Personal", "3 días", "Sin goce"],
+  },
+];
+
+const MOCK_VACATION_STATS: Record<number, { antiguedad: number; pendientes: number; gozados: number; beneficio: number; corridos: number; habiles: number }> = {
+  2024: {
+    antiguedad: 21,
+    pendientes: 0,
+    gozados: 21,
+    beneficio: 0,
+    corridos: 25,
+    habiles: 18,
+  },
+  2025: {
+    antiguedad: 24,
+    pendientes: 2,
+    gozados: 4,
+    beneficio: 2,
+    corridos: 14,
+    habiles: 10,
+  },
+  2026: {
+    antiguedad: 28,
+    pendientes: 0,
+    gozados: 0,
+    beneficio: 5,
+    corridos: 0,
+    habiles: 0,
+  },
+};
+
 export default function Vacations({ onNavigate }: VacationsProps) {
   const { vacations, availableDays, loading, createVacation } = useVacations();
   const [showForm, setShowForm] = useState(false);
@@ -27,9 +84,30 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Stats State
+  const [selectedYear, setSelectedYear] = useState(2025);
+
   // Calendar State
   const [calendarOpen, setCalendarOpen] = useState<"start" | "end" | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
+
+  const currentStats = MOCK_VACATION_STATS[selectedYear] || MOCK_VACATION_STATS[2025];
+
+  const handlePrevYear = () => {
+    const years = Object.keys(MOCK_VACATION_STATS).map(Number).sort();
+    const currentIndex = years.indexOf(selectedYear);
+    if (currentIndex > 0) {
+      setSelectedYear(years[currentIndex - 1]);
+    }
+  };
+
+  const handleNextYear = () => {
+    const years = Object.keys(MOCK_VACATION_STATS).map(Number).sort();
+    const currentIndex = years.indexOf(selectedYear);
+    if (currentIndex < years.length - 1) {
+      setSelectedYear(years[currentIndex + 1]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +134,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "approved":
-        return <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5 text-green-600 dark:text-green-400" />;
+        return <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />;
       case "pending":
-        return <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
+        return <FontAwesomeIcon icon={faClock} className="w-3 h-3" />;
       case "rejected":
-        return <FontAwesomeIcon icon={faTimesCircle} className="w-5 h-5 text-red-600 dark:text-red-400" />;
+        return <FontAwesomeIcon icon={faTimesCircle} className="w-3 h-3" />;
       default:
         return null;
     }
@@ -69,30 +147,28 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const getStatusText = (status: string) => {
     switch (status) {
       case "approved":
-        return "Aprobada";
+        return "Aprobado";
       case "pending":
         return "Pendiente";
       case "rejected":
-        return "Rechazada";
+        return "Rechazado";
       case "cancelled":
-        return "Cancelada";
+        return "Cancelado";
       default:
         return status;
     }
   };
 
-  const getStatusBg = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
-        return "bg-green-100 dark:bg-green-900/50";
+        return "text-blue-500 bg-blue-500/10 border-blue-500/20";
       case "pending":
-        return "bg-yellow-100 dark:bg-yellow-900/50";
+        return "text-yellow-500 bg-yellow-500/10 border-yellow-500/20";
       case "rejected":
-        return "bg-red-100 dark:bg-red-900/50";
-      case "cancelled":
-        return "bg-slate-100 dark:bg-slate-800";
+        return "text-red-500 bg-red-500/10 border-red-500/20";
       default:
-        return "bg-slate-100 dark:bg-slate-800";
+        return "text-slate-500 bg-slate-500/10 border-slate-500/20";
     }
   };
 
@@ -192,7 +268,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
       <div className="px-4 pt-4 space-y-4">
         {/* Area Info Card */}
-        <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
+        <div className="flex flex-col space-y-2 bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -215,12 +291,42 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           </div>
         </div>
 
-        {/* Available Days Card */}
+        {/* Vacation Stats Card */}
         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Días disponibles</p>
-              {loading ? <div className="h-9 w-16 bg-slate-200 dark:bg-slate-700 rounded mt-1" /> : <p className="text-3xl font-bold text-primary">{availableDays?.available || 0}</p>}
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={handlePrevYear} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors disabled:opacity-30" disabled={selectedYear <= Math.min(...Object.keys(MOCK_VACATION_STATS).map(Number))}>
+              <FontAwesomeIcon icon={faChevronLeft} className="text-slate-500 dark:text-slate-400" />
+            </button>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Año {selectedYear}</h2>
+            <button onClick={handleNextYear} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors disabled:opacity-30" disabled={selectedYear >= Math.max(...Object.keys(MOCK_VACATION_STATS).map(Number))}>
+              <FontAwesomeIcon icon={faChevronRight} className="text-slate-500 dark:text-slate-400" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+            <div className="text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 leading-tight">Antigüedad</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{currentStats.antiguedad}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 leading-tight">Pendientes</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{currentStats.pendientes}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 leading-tight">Gozados</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{currentStats.gozados}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 leading-tight">Beneficio</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{currentStats.beneficio}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 leading-tight">Corridos</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{currentStats.corridos}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 leading-tight">Hábiles</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{currentStats.habiles}</p>
             </div>
           </div>
         </div>
@@ -259,58 +365,29 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
         <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Mis Solicitudes</h3>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
-                <div className="h-5 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
-                <div className="h-4 w-48 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
-                <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : vacations.length > 0 ? (
-          <div className="space-y-3">
-            {vacations.map((request) => (
-              <div key={request._id} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{request.reason}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {new Date(request.startDate).toLocaleDateString("es-ES", {
-                        day: "numeric",
-                        month: "short",
-                      })}{" "}
-                      -{" "}
-                      {new Date(request.endDate).toLocaleDateString("es-ES", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}{" "}
-                      ({request.daysRequested} días)
-                    </p>
-                  </div>
-                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getStatusBg(request.status)}`}>
-                    {getStatusIcon(request.status)}
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{getStatusText(request.status)}</span>
-                  </div>
+        <div className="space-y-3">
+          {MOCK_REQUESTS.map((request) => (
+            <div key={request.id} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-500 dark:text-slate-400">{request.id}</span>
+                <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${getStatusColor(request.status)}`}>
+                  {getStatusIcon(request.status)}
+                  <span className="text-xs font-bold">{getStatusText(request.status)}</span>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Solicitado el{" "}
-                  {new Date(request.createdAt).toLocaleDateString("es-ES", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-8 dark:border-slate-700 dark:bg-slate-800/50">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No tienes solicitudes de vacaciones</p>
-          </div>
-        )}
+
+              <div className="flex flex-wrap gap-2 mb-3">
+                {request.tags.map((tag, idx) => (
+                  <span key={idx} className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <p className="text-xs text-slate-400 dark:text-slate-500">{request.requestDate}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Calendar Modal */}
