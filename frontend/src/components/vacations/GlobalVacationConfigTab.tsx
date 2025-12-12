@@ -125,8 +125,8 @@ export const GlobalVacationConfigTab: React.FC = () => {
                 <input type="number" value={config.diasAnuales} onChange={(e) => updateConfig("diasAnuales", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" required />
               </div>
               <div className="w-full">
-                <div className="flex items-center gap-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Días de beneficio adicional</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Días de beneficio adicional</label>
                   <button type="button" onClick={() => setShowDiasBeneficioInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
@@ -310,7 +310,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
           </div>
         </form>
       </div>
-      // GlobalVacationConfigTab.tsx updates // ...
+      {/*  GlobalVacationConfigTab.tsx updates */}
       <InfoModal isOpen={showAntiguedadInfo} onClose={() => setShowAntiguedadInfo(false)} title="Días por antigüedad">
         Define cuántos días de vacaciones corresponden según los años de antigüedad del empleado en la empresa. Por ejemplo: de 0 a 5 años = 18 días, de 6 a 10 años = 21 días.
       </InfoModal>

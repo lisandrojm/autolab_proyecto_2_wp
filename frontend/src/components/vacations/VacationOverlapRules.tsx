@@ -274,8 +274,8 @@ export const VacationOverlapRules: React.FC = () => {
               {!loadingUsers && areaUsers.length > 0 && (
                 <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                   {areaUsers.map((user) => (
-                    <div key={user._id} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center gap-3 mb-3">
+                    <div key={user._id} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs">
                           {user.firstName?.charAt(0)}
                           {user.lastName?.charAt(0)}
