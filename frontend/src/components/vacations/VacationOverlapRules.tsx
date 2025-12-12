@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faBan, faLayerGroup, faSpinner, faToggleOn, faToggleOff, faUserTie, faGraduationCap } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBan, faLayerGroup, faSpinner, faToggleOn, faToggleOff, faUserTie, faGraduationCap, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { vacationOverlapsAPI, VacationOverlap } from "../../api/vacationOverlaps";
 import { areasAPI, Area } from "../../api/areas";
 import { usersAPI, User } from "../../api/users";
@@ -25,6 +25,7 @@ type OverlapFormData = z.infer<typeof overlapSchema>;
 export const VacationOverlapRules: React.FC = () => {
   const [rules, setRules] = useState<VacationOverlap[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [userCounts, setUserCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<VacationOverlap | null>(null);
@@ -53,9 +54,19 @@ export const VacationOverlapRules: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [rulesData, areasData] = await Promise.all([vacationOverlapsAPI.list(), areasAPI.list({ limit: 100 })]);
+      const [rulesData, areasData, usersData] = await Promise.all([vacationOverlapsAPI.list(), areasAPI.list({ limit: 100 }), usersAPI.list({ limit: 1000, isActive: true })]);
       setRules(rulesData);
       setAreas(areasData.areas);
+
+      // Calculate user counts per area
+      const counts: Record<string, number> = {};
+      usersData.users.forEach((u) => {
+        const aId = typeof u.areaId === "object" ? u.areaId?._id : u.areaId;
+        if (aId) {
+          counts[aId] = (counts[aId] || 0) + 1;
+        }
+      });
+      setUserCounts(counts);
     } catch (error) {
       console.error(error);
       sweetAlert.error("Error", "No se pudieron cargar los datos");
@@ -192,13 +203,25 @@ export const VacationOverlapRules: React.FC = () => {
               {rules.map((rule) => (
                 <tr key={rule._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                    <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faLayerGroup} className="text-blue-500" />
-                      {typeof rule.areaId === "object" ? rule.areaId.name : rule.areaId}
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
+                        <FontAwesomeIcon icon={faLayerGroup} />
+                      </div>
+                      <div>
+                        <div className="font-semibold">{typeof rule.areaId === "object" ? rule.areaId.name : rule.areaId}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">{userCounts[typeof rule.areaId === "object" ? rule.areaId._id : rule.areaId] || 0} usuarios activos</div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{rule.maxSimultaneousUsers} usuarios</span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{rule.maxSimultaneousUsers} usuarios</span>
+                      {rule.maxSimultaneousUsers > (userCounts[typeof rule.areaId === "object" ? rule.areaId._id : rule.areaId] || 0) && (
+                        <div className="text-amber-500" title={`El límite (${rule.maxSimultaneousUsers}) es mayor que la cantidad de usuarios activos (${userCounts[typeof rule.areaId === "object" ? rule.areaId._id : rule.areaId] || 0})`}>
+                          <FontAwesomeIcon icon={faTriangleExclamation} />
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate">{rule.description || "—"}</td>
                   <td className="px-6 py-4">
