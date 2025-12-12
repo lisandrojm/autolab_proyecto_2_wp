@@ -331,36 +331,50 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           </div>
         </div>
 
-        <button onClick={() => setShowForm(!showForm)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
-          {showForm ? "Cancelar" : "Nueva Solicitud"}
+        <button onClick={() => setShowForm(true)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 text-white text-sm font-medium leading-normal shadow-sm hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
+          Nueva Solicitud
         </button>
 
         {showForm && (
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de inicio</label>
-                <div onClick={() => setCalendarOpen("start")} className="relative cursor-pointer">
-                  <input type="text" value={startDate} readOnly placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer" />
-                  <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-xl shadow-xl overflow-hidden">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nueva Solicitud</h3>
+                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de inicio</label>
+                  <div onClick={() => setCalendarOpen("start")} className="relative cursor-pointer">
+                    <input type="text" value={startDate} readOnly placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer" />
+                    <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de fin</label>
-                <div onClick={() => setCalendarOpen("end")} className="relative cursor-pointer">
-                  <input type="text" value={endDate} readOnly placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer" />
-                  <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de fin</label>
+                  <div onClick={() => setCalendarOpen("end")} className="relative cursor-pointer">
+                    <input type="text" value={endDate} readOnly placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer" />
+                    <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario</label>
-                <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe el comentario de tu solicitud..." />
-              </div>
-              <button type="submit" disabled={submitting} className="w-full flex items-center justify-center rounded-lg h-10 bg-blue-500 text-white disabled:opacity-50 gap-1">
-                {submitting ? "Enviando..." : "Enviar Solicitud"}
-              </button>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario</label>
+                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe el comentario de tu solicitud..." />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="submit" disabled={submitting} className="flex-1 rounded-lg h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
+                    {submitting ? "Enviando..." : "Enviar"}
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
+          </div>
         )}
 
         <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Mis Solicitudes</h3>
