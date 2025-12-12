@@ -447,7 +447,7 @@ export const UsersPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center">
+              <div>
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Cargo</h4>
                 <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.positionId === "object" && viewUser.positionId?.name ? viewUser.positionId.name : "Sin cargo"}</p>
               </div>
