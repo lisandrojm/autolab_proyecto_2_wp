@@ -190,13 +190,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       const errorMessage = err.response?.data?.error || "Error al crear pedido";
       const isRetryable = errorMessage.includes("número de pedido único") || errorMessage.includes("duplicate key");
 
-      const result = await sweetAlert.error(
-        "Error al crear pedido",
-        isRetryable
-          ? "Hubo un problema generando el número de pedido. ¿Deseas intentar nuevamente?"
-          : errorMessage,
-        isRetryable ? "Reintentar" : undefined
-      );
+      const result = await sweetAlert.error("Error al crear pedido", isRetryable ? "Hubo un problema generando el número de pedido. ¿Deseas intentar nuevamente?" : errorMessage, isRetryable ? "Reintentar" : undefined);
 
       if (isRetryable && result.isConfirmed) {
         return handleSubmit(e);
@@ -238,7 +232,6 @@ export default function Orders({ onNavigate }: OrdersProps) {
               </div>
             </div>
           </div>
-          <span className="px-2 py-1 rounded-full text-[9px] font-bold bg-red-500 text-white uppercase">Nuevo</span>
         </div>
       </div>
 

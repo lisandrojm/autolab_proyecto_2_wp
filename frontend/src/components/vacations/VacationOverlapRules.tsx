@@ -176,7 +176,7 @@ export const VacationOverlapRules: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Reglas de Solapamiento</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Reglas de Solapamiento por Área</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Define cuántas personas por área pueden estar de vacaciones simultáneamente.</p>
         </div>
         <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">

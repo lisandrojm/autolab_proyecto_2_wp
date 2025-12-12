@@ -173,7 +173,7 @@ const helpResources = {
 
       "vacationsRules.title": "Configuración de Vacaciones",
       "vacationsRules.description": "Define las reglas y políticas globales que rigen el cálculo y gestión de vacaciones en la empresa.",
-      "vacationsRules.items": ["**Días Anuales Base**: Cantidad estándar de días de vacaciones por año.", "**Antigüedad**: Configura tramos para otorgar días adicionales según los años de servicio.", "**Límites**: Establece topes para días gozados, corridos y hábiles.", "**Beneficios**: Días extra a discreción de la empresa.", "**Arrastre**: Reglas para permitir o restringir el traslado de días no usados al año siguiente.", "**Opciones**: Configuración de firma digital y plantillas de documentos."],
+      "vacationsRules.items": ["***Configuración Global***", "**Días Base**: Define la cantidad estándar de días de vacaciones y beneficios adicionales.", "**Antigüedad**: Crea tablas para otorgar días extra automáticos según años de servicio.", "**Límites**: Establece topes de días por año, duración máxima por solicitud y días de anticipación.", "**Arrastre**: Configura si los días no usados se pierden o se acumulan para el siguiente periodo.", "***Solapamiento***", "**Control por Área**: Restringe cuántos colaboradores de un mismo equipo pueden estar ausentes al mismo tiempo.", "**Cupos Dinámicos**: Define un número máximo de personas de vacaciones simultáneas para asegurar la operatividad."],
     },
     // Agregar dentro de helpResources.es.help
 
