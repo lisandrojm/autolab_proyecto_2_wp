@@ -437,7 +437,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="ABM Pedidos | Tipos"
+      title="Pedidos | Configuración"
       subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
       faIcon={{ icon: faGear }}
       onBack={() => navigate("/hr/orders")}

@@ -18,8 +18,7 @@ router.use(authenticateToken);
 router.get("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const vacations = await Vacation.find({ tenantId })
-      .sort({ createdAt: -1 });
+    const vacations = await Vacation.find({ tenantId }).sort({ createdAt: -1 });
     res.json(vacations);
   } catch (error: any) {
     console.error("Error fetching vacations:", error);
@@ -174,14 +173,7 @@ router.put("/:id/pre-approve", async (req: any, res) => {
           const tenant = await Tenant.findById(tenantId);
           const tenantName = tenant?.name || tenant?.slug || "Organización";
 
-          const result = await generateVacationPDF(
-            vacation as any,
-            template,
-            user,
-            tenantId.toString(),
-            tenantName,
-            vacation.vacationNumber
-          );
+          const result = await generateVacationPDF(vacation as any, template, user, tenantId.toString(), tenantName, vacation.vacationNumber);
 
           if (result.success && result.pdfUrl) {
             vacation.pdfPreAprobacionUrl = result.pdfUrl;
@@ -252,7 +244,7 @@ router.put("/:id/approve", async (req: any, res) => {
         type: "vacation",
         title: "Documento enviado para firma",
         message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada. Revisá tu casilla de email para firmar el documento.`,
-        linkUrl: `/hr/vacation-requests`,
+        linkUrl: `/hr/vacations`,
       });
     } else {
       await Notification.create({
@@ -261,7 +253,7 @@ router.put("/:id/approve", async (req: any, res) => {
         type: "vacation",
         title: "Solicitud de vacaciones aprobada",
         message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada.`,
-        linkUrl: `/hr/vacation-requests`,
+        linkUrl: `/hr/vacations`,
       });
     }
 
@@ -308,7 +300,7 @@ router.put("/:id/reject", async (req: any, res) => {
       type: "vacation",
       title: "Solicitud de Vacaciones Rechazada",
       message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido rechazada.`,
-      linkUrl: `/hr/vacation-requests`,
+      linkUrl: `/hr/vacations`,
     });
 
     res.json(vacation);
@@ -355,7 +347,7 @@ router.put("/:id/deliver", async (req: any, res) => {
       type: "vacation",
       title: "Vacaciones Confirmadas",
       message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido confirmada y entregada.`,
-      linkUrl: `/hr/vacation-requests`,
+      linkUrl: `/hr/vacations`,
     });
 
     res.json(vacation);
@@ -402,7 +394,7 @@ router.put("/:id/send-signature", async (req: any, res) => {
       type: "vacation",
       title: "Documento enviado para firma",
       message: `El documento de tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido enviado para firma.`,
-      linkUrl: `/hr/vacation-requests`,
+      linkUrl: `/hr/vacations`,
     });
 
     res.json(vacation);
@@ -451,7 +443,7 @@ router.put("/:id/mark-signed", async (req: any, res) => {
       type: "vacation",
       title: "Documento firmado confirmado",
       message: `La firma de tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido confirmada.`,
-      linkUrl: `/hr/vacation-requests`,
+      linkUrl: `/hr/vacations`,
     });
 
     res.json(vacation);

@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules";
 
 export type HelpEntry = {
   title: string;
@@ -170,6 +170,10 @@ const helpResources = {
       "vacations.title": "Gestión de Vacaciones",
       "vacations.description": "Sistema integral para solicitar, gestionar y aprobar solicitudes de vacaciones del personal.",
       "vacations.items": ["**Solicitudes**: Los colaboradores pueden crear solicitudes especificando fecha de inicio, fecha de fin y motivo opcional.", "**Estados**: Las solicitudes pasan por tres estados: *Pendiente* (esperando aprobación), *Aprobada* (autorizada por el superior) y *Rechazada* (no autorizada con comentarios opcionales).", "**Balance de días**: El sistema muestra los días disponibles, utilizados y el saldo actual para cada colaborador.", "**Edición limitada**: Solo las solicitudes en estado *Pendiente* pueden ser editadas o eliminadas por el solicitante.", "**Estadísticas**: Vista resumida con total de solicitudes, aprobadas, rechazadas y días totales solicitados.", "**Restricciones**: El sistema valida que no se soliciten más días de los disponibles y que las fechas sean coherentes.", "**Historial**: Registro completo de todas las solicitudes con fechas, estados y resultados."],
+
+      "vacationsRules.title": "Configuración de Vacaciones",
+      "vacationsRules.description": "Define las reglas y políticas globales que rigen el cálculo y gestión de vacaciones en la empresa.",
+      "vacationsRules.items": ["**Días Anuales Base**: Cantidad estándar de días de vacaciones por año.", "**Antigüedad**: Configura tramos para otorgar días adicionales según los años de servicio.", "**Límites**: Establece topes para días gozados, corridos y hábiles.", "**Beneficios**: Días extra a discreción de la empresa.", "**Arrastre**: Reglas para permitir o restringir el traslado de días no usados al año siguiente.", "**Opciones**: Configuración de firma digital y plantillas de documentos."],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -340,6 +344,11 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     title: "Gestión de Vacaciones",
     size: "sm",
     content: buildHelpContent("vacations"),
+  },
+  vacationsRules: {
+    title: "Configuración de Vacaciones",
+    size: "sm",
+    content: buildHelpContent("vacationsRules"),
   },
 };
 

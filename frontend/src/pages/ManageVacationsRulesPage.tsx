@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faSpinner, faPlus, faTimes, faCircleInfo, faSave } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faSpinner, faPlus, faTimes, faCircleInfo, faSave, faGear } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -9,7 +9,7 @@ import { InfoModal } from "../components/ui/InfoModal";
 import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
 import { globalVacationConfigAPI, GlobalVacationConfig } from "../api/globalVacationConfig";
 
-const HELP_KEY = "vacations" as const;
+const HELP_KEY = "vacationsRules" as const;
 
 interface AntiguedadTranche {
   desde: number;
@@ -21,6 +21,7 @@ export function ManageVacationsRulesPage() {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
 
+  const [openInfo, setOpenInfo] = useState(false);
   const [config, setConfig] = useState<GlobalVacationConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -105,7 +106,7 @@ export function ManageVacationsRulesPage() {
 
   if (loading) {
     return (
-      <PageLayout title="Configuración Global de Vacaciones" icon={faCalendar} backTo="/manage">
+      <PageLayout title="Vacaciones | Configuración" faIcon={{ icon: faGear }}>
         <div className="flex items-center justify-center py-12">
           <FontAwesomeIcon icon={faSpinner} className="h-8 w-8 text-blue-600 animate-spin" />
         </div>
@@ -115,7 +116,7 @@ export function ManageVacationsRulesPage() {
 
   if (!config) {
     return (
-      <PageLayout title="Configuración Global de Vacaciones" icon={faCalendar} backTo="/manage">
+      <PageLayout title="Vacaciones | Configuración" faIcon={{ icon: faGear }} onBack={() => navigate("/hr/vacations")}>
         <div className="text-center py-12">
           <p className="text-gray-600 dark:text-gray-400">No se pudo cargar la configuración</p>
         </div>
@@ -124,21 +125,33 @@ export function ManageVacationsRulesPage() {
   }
 
   return (
-    <PageLayout title="Configuración Global de Vacaciones" icon={faCalendar} backTo="/manage" helpKey={HELP_KEY}>
-      <div className="max-w-4xl mx-auto">
+    <PageLayout
+      title="Vacaciones | Configuración"
+      faIcon={{ icon: faGear }}
+      onBack={() => navigate("/hr/vacations")}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry.title,
+        size: helpEntry.size,
+        content: helpEntry.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+    >
+      <div className="mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Días de vacaciones anuales</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Días anuales base</label>
+              <div className="flex md:flex-row flex-col gap-4 items-end">
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Días anuales base</label>
                   <input type="number" value={config.diasAnuales} onChange={(e) => updateConfig("diasAnuales", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" required />
                 </div>
-
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Días de beneficio adicional</label>
+                <div className="w-full">
+                  <div className="flex items-center gap-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Días de beneficio adicional</label>
                     <button type="button" onClick={() => setShowDiasBeneficioInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                       <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                     </button>
@@ -315,7 +328,7 @@ export function ManageVacationsRulesPage() {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => navigate("/manage")} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <button type="button" onClick={() => navigate("/hr/vacations")} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 Cancelar
               </button>
               <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">

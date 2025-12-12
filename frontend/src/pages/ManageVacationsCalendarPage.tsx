@@ -205,7 +205,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
       title="Calendario de Vacaciones"
       subtitle="Vista temporal de todas las solicitudes de vacaciones"
       faIcon={{ icon: faClock }}
-      onBack={() => navigate("/hr/vacation-requests")}
+      onBack={() => navigate("/hr/vacations")}
       infoModal={{
         isOpen: showHelpInfo,
         onOpen: () => setShowHelpInfo(true),

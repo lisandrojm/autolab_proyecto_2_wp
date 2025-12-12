@@ -469,7 +469,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/vacation-requests"
+                path="/hr/vacations"
                 element={
                   <ProtectedRoute>
                     <ManageVacationsPage />
@@ -477,7 +477,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/vacation-requests/calendar"
+                path="/hr/vacations/calendar"
                 element={
                   <ProtectedRoute>
                     <ManageVacationsCalendarPage />
@@ -485,7 +485,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/rules/vacations"
+                path="/hr/vacations-rules"
                 element={
                   <ProtectedRoute>
                     <ManageVacationsRulesPage />

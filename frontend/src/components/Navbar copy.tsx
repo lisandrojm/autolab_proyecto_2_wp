@@ -257,7 +257,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:view")) base.push({ path: "/levels", icon: faBriefcase, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faBox, label: "Pedidos", scope: "global", badge: "New", badgeColor: "bg-red-500" });
-      if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "Next", badgeColor: "bg-orange-400" });
+      if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "Next", badgeColor: "bg-orange-400" });
       if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
       if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", icon: faUsers, label: "Perfiles de Empleados", scope: "global" });

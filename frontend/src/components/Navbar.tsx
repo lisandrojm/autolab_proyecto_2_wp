@@ -278,13 +278,14 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faShoppingCart, label: "Pedidos", scope: "global", badge: "Finish", badgeColor: "bg-blue-500" });
-      if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacation-requests", disabled: false, icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "New", badgeColor: "bg-red-500" });
+      if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacations", disabled: false, icon: faUmbrellaBeach, label: "Vacaciones", scope: "global", badge: "New", badgeColor: "bg-red-500" });
       if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: true, icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
       if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
-      if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faList, label: "ABM Pedidos", scope: "global", dividerTop: true });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faShoppingCart, label: "Pedidos", scope: "global", dividerTop: true });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/pdf-templates", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
 
       if (hasPermission("creative:view")) {
@@ -390,9 +391,9 @@ export const MobileNavbar: React.FC = () => {
     // Partición de items: Admin Usuarios, Admin General y Configuración
     const userAdminItems = adminItems.filter((item) => ["/roles", "/positions", "/levels", "/users"].includes(item.path));
 
-    const generalAdminItems = adminItems.filter((item) => ["/hr/orders", "/hr/vacation-requests", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
+    const generalAdminItems = adminItems.filter((item) => ["/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules"].includes(item.path));
 
     const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item) && !configItems.includes(item));
 
