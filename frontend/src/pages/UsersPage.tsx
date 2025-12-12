@@ -210,18 +210,8 @@ export const UsersPage: React.FC = () => {
     if (showModal && modalMode === "edit") {
       if (formData.positionId) {
         fetchLevels(formData.positionId);
-        const currentLevelValid = levels.some((l) => l._id === formData.levelId);
-        if (formData.levelId && !currentLevelValid) {
-          setFormData((prev) => ({ ...prev, levelId: undefined }));
-        }
       } else {
         fetchLevels();
-        if (formData.levelId) {
-          const isGeneralLevel = levels.find((l) => l._id === formData.levelId && l.type === "general");
-          if (!isGeneralLevel) {
-            setFormData((prev) => ({ ...prev, levelId: undefined }));
-          }
-        }
       }
     }
   }, [formData.positionId, showModal, modalMode]);
@@ -854,31 +844,40 @@ export const UsersPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Cargo y Nivel */}
-              <div className="mb-3">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">
-                  <div className="flex gap-2">
-                    <span className="flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Cargo
-                    </span>
-                    <span>|</span>
-                    <span className="flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-graykj-400" />
-                      Nivel
-                    </span>
-                  </div>
-                </label>
-                {!(typeof user.positionId === "object" && user.positionId?.name) && !(typeof user.levelId === "object" && user.levelId?.name) ? (
-                  <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo ni nivel asignado</span>
-                ) : (
-                  <div className="flex flex-wrap gap-1 items-center">
-                    {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : null}
-                    {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-blue-900 text-cyan-800 dark:text-blue-300">{user.levelId.name}</span> : typeof user.positionId === "object" && user.positionId?.name ? <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span> : null}
-                  </div>
-                )}
-              </div>
+              <div className="flex flex-wrap gap-3">
+                {/* Área */}
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                    Área
+                  </label>
+                  {typeof user.areaId === "object" && user.areaId?.name ? (
+                    <div className="flex flex-wrap gap-1">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500 dark:text-gray-500">Sin área asignada</span>
+                  )}
+                </div>
 
+                {/* Cargo - Separado e independiente */}
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                    Cargo
+                  </label>
+                  {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>}
+                </div>
+
+                {/* Nivel - Separado e independiente */}
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                    Nivel
+                  </label>
+                  {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-blue-900 text-cyan-800 dark:text-cyan-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
+                </div>
+              </div>
               {/* Clientes asignados (si los hay) */}
               {user.clientIds && user.clientIds.length > 0 && (
                 <div>

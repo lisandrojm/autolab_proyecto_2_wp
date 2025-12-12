@@ -56,6 +56,7 @@ import { levelRoutes } from "./routes/levels.js";
 import { pdfTemplateRoutes } from "./routes/pdfTemplates.js";
 import { globalVacationConfigRoutes } from "./routes/globalVacationConfig.js";
 import { vacationsRoutes } from "./routes/vacations.js";
+import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -166,7 +167,9 @@ app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/areas", areaRoutes);
 app.use("/api/v1/levels", levelRoutes);
 app.use("/api/v1/pdf-templates", pdfTemplateRoutes);
+
 app.use("/api/v1/global-vacation-config", globalVacationConfigRoutes);
+app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────

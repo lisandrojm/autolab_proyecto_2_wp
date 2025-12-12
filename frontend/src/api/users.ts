@@ -183,6 +183,7 @@ class UsersAPI {
       limit?: number;
       email?: string;
       isActive?: boolean;
+      areaId?: string;
     } = {}
   ): Promise<UsersListResponse> {
     const searchParams = new URLSearchParams();
@@ -191,6 +192,7 @@ class UsersAPI {
     if (params.limit) searchParams.append("limit", params.limit.toString());
     if (params.email) searchParams.append("email", params.email);
     if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
+    if (params.areaId) searchParams.append("areaId", params.areaId);
 
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
 
@@ -246,6 +248,14 @@ class UsersAPI {
   async remove(id: string): Promise<void> {
     await axios.delete(`/users/${id}`, { headers: this.getHeaders() });
     emitUsersChanged("delete", id);
+  }
+
+  async getByArea(areaId: string): Promise<User[]> {
+    const { data } = await axios.get(`/users/by-area/${areaId}`, { headers: this.getHeaders() });
+    // Normalize logic is expecting full object, but our endpoint returns subsets.
+    // However, normalizeUser is robust enough to handle missing fields.
+    // Let's use it to ensure consistent types.
+    return Array.isArray(data) ? data.map(normalizeUser) : [];
   }
 }
 

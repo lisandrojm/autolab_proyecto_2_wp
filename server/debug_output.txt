@@ -1,0 +1,4 @@
+Starting Debug V3
+Total Users in DB: 8
+Total Areas in DB: 0
+Sample User Tenant: 6925c5b920794be15242a9a4
