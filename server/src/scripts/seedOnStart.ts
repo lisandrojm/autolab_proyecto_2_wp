@@ -15,6 +15,7 @@ import { RequestType } from "../models/RequestType.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
+import { Area } from "../models/Area.js";
 import { Level } from "../models/Level.js";
 import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
@@ -107,8 +108,8 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
   return role;
 }
 
-async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId }) {
-  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId } = params;
+async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId; areaId?: Types.ObjectId }) {
+  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId, areaId } = params;
 
   let user = await User.findOne({ tenantId, email });
   let wantedRole: any = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${roleName}$`, "i") } });
@@ -130,6 +131,7 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
       isActive,
       positionId,
       levelId,
+      areaId,
     });
     await user.save();
 
@@ -148,6 +150,7 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
     if (typeof isActive === "boolean" && user.isActive !== isActive) updates.isActive = isActive;
     if (positionId && String(user.positionId) !== String(positionId)) updates.positionId = positionId;
     if (levelId && String(user.levelId) !== String(levelId)) updates.levelId = levelId;
+    if (areaId && String(user.areaId) !== String(areaId)) updates.areaId = areaId;
     if (Object.keys(updates).length) {
       await User.updateOne({ _id: user._id }, { $set: updates });
       console.log(`♻️ ensureUser: updated ${email}`);
@@ -526,6 +529,26 @@ export async function seedOnStart() {
 
     console.log(`📊 Levels Summary: 4 General + 9 Position-Specific (3 per position) = 13 total`);
 
+    // ---- AREAS ----
+    console.log("🏢 Seeding Areas...");
+    const areaNames = ["Editores", "Libertador", "Técnica", "Peinado y maquillaje", "Vestuario"];
+    const areaMap: Record<string, Types.ObjectId> = {};
+
+    for (const name of areaNames) {
+      let area = await Area.findOne({ tenantId, name });
+      if (!area) {
+        area = await Area.create({
+          tenantId,
+          name,
+          description: `Area de ${name}`,
+        });
+        console.log(`✅ Created Area: ${name} (ID: ${area._id})`);
+      } else {
+        console.log(`✔️ Area exists: ${name} (ID: ${area._id})`);
+      }
+      areaMap[name] = area._id as Types.ObjectId;
+    }
+
     // ---- USUARIOS BASE ----
     const adminUser = await ensureUser({
       tenantId,
@@ -537,9 +560,10 @@ export async function seedOnStart() {
       isActive: true,
       positionId: positionDirector._id as Types.ObjectId,
       levelId: levelDirectorNacional._id as Types.ObjectId,
+      areaId: areaMap["Libertador"],
     });
     const adminId = String(adminUser._id);
-    console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelDirectorNacional.name} (Position-Specific)`);
+    console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelDirectorNacional.name}, Area=Libertador`);
 
     // Colaborador móvil
     const collab = await ensureUser({
@@ -552,8 +576,9 @@ export async function seedOnStart() {
       isActive: true,
       positionId: positionEditor._id as Types.ObjectId,
       levelId: levelEditorJunior._id as Types.ObjectId,
+      areaId: areaMap["Editores"],
     });
-    console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name} (Position-Specific)`);
+    console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
 
     // Coordinador móvil
     const coord = await ensureUser({
@@ -566,8 +591,9 @@ export async function seedOnStart() {
       isActive: true,
       positionId: positionProductor._id as Types.ObjectId,
       levelId: levelProductorSenior._id as Types.ObjectId,
+      areaId: areaMap["Técnica"],
     });
-    console.log(`👤 Coordinador assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name} (Position-Specific)`);
+    console.log(`👤 Coordinador assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Técnica`);
 
     /* ============ SEED: MODELOS DEL NAVBAR (HR / MODELOS) ============ */
     console.log("👥 Seeding HR/Models demo data...");

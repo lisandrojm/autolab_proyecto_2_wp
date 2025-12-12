@@ -31,16 +31,27 @@ export interface User {
   /** ← ahora viaja como OBJETO (no tenantId string) */
   tenant?: TenantRef;
   tenantId?: string;
-  positionId?: string | {
-    _id: string;
-    name: string;
-    description?: string;
-  };
-  levelId?: string | {
-    _id: string;
-    name: string;
-    description?: string;
-  };
+  positionId?:
+    | string
+    | {
+        _id: string;
+        name: string;
+        description?: string;
+      };
+  levelId?:
+    | string
+    | {
+        _id: string;
+        name: string;
+        description?: string;
+      };
+  areaId?:
+    | string
+    | {
+        _id: string;
+        name: string;
+        description?: string;
+      };
   isActive: boolean;
   lastLoginAt?: string;
   createdAt: string;
@@ -77,29 +88,43 @@ function normalizeUser(raw: any): User {
   const lastName = raw?.lastName && String(raw.lastName).trim() !== "" ? String(raw.lastName) : undefined;
 
   // Normalizar positionId
-  let positionId: User['positionId'] = undefined;
+  let positionId: User["positionId"] = undefined;
   if (raw?.positionId) {
-    if (typeof raw.positionId === 'string') {
+    if (typeof raw.positionId === "string") {
       positionId = raw.positionId;
-    } else if (typeof raw.positionId === 'object' && raw.positionId._id) {
+    } else if (typeof raw.positionId === "object" && raw.positionId._id) {
       positionId = {
         _id: String(raw.positionId._id),
-        name: String(raw.positionId.name ?? ''),
+        name: String(raw.positionId.name ?? ""),
         description: raw.positionId.description ?? undefined,
       };
     }
   }
 
   // Normalizar levelId
-  let levelId: User['levelId'] = undefined;
+  let levelId: User["levelId"] = undefined;
   if (raw?.levelId) {
-    if (typeof raw.levelId === 'string') {
+    if (typeof raw.levelId === "string") {
       levelId = raw.levelId;
-    } else if (typeof raw.levelId === 'object' && raw.levelId._id) {
+    } else if (typeof raw.levelId === "object" && raw.levelId._id) {
       levelId = {
         _id: String(raw.levelId._id),
-        name: String(raw.levelId.name ?? ''),
+        name: String(raw.levelId.name ?? ""),
         description: raw.levelId.description ?? undefined,
+      };
+    }
+  }
+
+  // Normalizar areaId
+  let areaId: User["areaId"] = undefined;
+  if (raw?.areaId) {
+    if (typeof raw.areaId === "string") {
+      areaId = raw.areaId;
+    } else if (typeof raw.areaId === "object" && raw.areaId._id) {
+      areaId = {
+        _id: String(raw.areaId._id),
+        name: String(raw.areaId.name ?? ""),
+        description: raw.areaId.description ?? undefined,
       };
     }
   }
@@ -129,6 +154,7 @@ function normalizeUser(raw: any): User {
     tenantId: raw?.tenantId ?? undefined,
     positionId,
     levelId,
+    areaId,
     isActive: Boolean(raw?.isActive),
     lastLoginAt: raw?.lastLoginAt ? String(raw.lastLoginAt) : undefined,
     createdAt: String(raw?.createdAt ?? ""),
@@ -187,7 +213,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -204,6 +230,7 @@ class UsersAPI {
       roles?: string[];
       positionId?: string | null;
       levelId?: string | null;
+      areaId?: string | null;
     }
   ): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}`, data, { headers: this.getHeaders() });

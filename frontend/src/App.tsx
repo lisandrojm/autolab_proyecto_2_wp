@@ -13,6 +13,7 @@ import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { RolesPage } from "./pages/RolesPage";
 import { PositionsPage } from "./pages/ManagePositionsPage";
 import { LevelsPage } from "./pages/ManageLevelsPage";
+import { ManageAreasPage } from "./pages/ManageAreasPage";
 import { UsersPage } from "./pages/UsersPage";
 import { TenantsPage } from "./pages/TenantsPage";
 import { ClientDetailPage } from "./pages/ClientDetailPage";
@@ -323,6 +324,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <LevelsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/areas"
+                element={
+                  <ProtectedRoute>
+                    <ManageAreasPage />
                   </ProtectedRoute>
                 }
               />

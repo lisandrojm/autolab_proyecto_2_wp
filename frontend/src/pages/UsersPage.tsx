@@ -4,6 +4,7 @@ import { usersAPI, User } from "../api/users";
 import { rolesAPI, Role } from "../api/roles";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
+import { areasAPI, Area } from "../api/areas";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -11,7 +12,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -26,6 +27,7 @@ interface UserFormData {
   roles: string[];
   positionId?: string;
   levelId?: string;
+  areaId?: string;
 }
 
 type ModalMode = "edit" | "password";
@@ -39,6 +41,7 @@ export const UsersPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
 
@@ -63,6 +66,7 @@ export const UsersPage: React.FC = () => {
     roles: [],
     positionId: undefined,
     levelId: undefined,
+    areaId: undefined,
   });
 
   // password modal fields (cuando modalMode === "password")
@@ -90,7 +94,7 @@ export const UsersPage: React.FC = () => {
     const init = async () => {
       try {
         setInitialLoading(true);
-        await Promise.all([fetchUsers({ silent: true }), fetchRoles(), fetchPositions(), fetchLevels()]);
+        await Promise.all([fetchUsers({ silent: true }), fetchRoles(), fetchPositions(), fetchLevels(), fetchAreas()]);
       } finally {
         setInitialLoading(false);
       }
@@ -169,6 +173,15 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  const fetchAreas = async () => {
+    try {
+      const response = await areasAPI.list({ limit: 100 });
+      setAreas(response.areas);
+    } catch (error) {
+      console.error("Error fetching areas:", error);
+    }
+  };
+
   // Abrir modales
   const openCreate = () => {
     setEditingUser(null);
@@ -187,6 +200,7 @@ export const UsersPage: React.FC = () => {
       roles: defaultRoles,
       positionId: undefined,
       levelId: undefined,
+      areaId: undefined,
     });
     setShowPassword(false);
     setShowModal(true);
@@ -220,7 +234,11 @@ export const UsersPage: React.FC = () => {
     const positionId = typeof user.positionId === "string" ? user.positionId : typeof user.positionId === "object" && user.positionId?._id ? user.positionId._id : undefined;
 
     // Extraer levelId correctamente (puede ser string u objeto)
+    // Extraer levelId correctamente (puede ser string u objeto)
     const levelId = typeof user.levelId === "string" ? user.levelId : typeof user.levelId === "object" && user.levelId?._id ? user.levelId._id : undefined;
+
+    // Extraer areaId correctamente
+    const areaId = typeof user.areaId === "string" ? user.areaId : typeof user.areaId === "object" && user.areaId?._id ? user.areaId._id : undefined;
 
     setFormData({
       email: user.email,
@@ -231,6 +249,7 @@ export const UsersPage: React.FC = () => {
       roles: user.roles.map((r) => r._id),
       positionId,
       levelId,
+      areaId,
     });
     setShowPassword(false);
     setShowModal(true);
@@ -363,6 +382,10 @@ export const UsersPage: React.FC = () => {
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
           </button>
+          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="hidden lg:block">Areas</span>
+          </button>
         </div>
       }
       // Igual que RolesPage: SearchAndFilters directo (sin botón Buscar)
@@ -450,6 +473,10 @@ export const UsersPage: React.FC = () => {
               <div>
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Cargo</h4>
                 <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.positionId === "object" && viewUser.positionId?.name ? viewUser.positionId.name : "Sin cargo"}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Area</h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.areaId === "object" && viewUser.areaId?.name ? viewUser.areaId.name : "Sin area"}</p>
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Nivel</h4>
@@ -580,6 +607,38 @@ export const UsersPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* AREA (antes de cargo) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Area</label>
+
+                    {areas.length === 0 ? (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        No has creado ninguna area aún.{" "}
+                        <a href="/areas" className="text-primary-600 dark:text-primary-400 hover:underline">
+                          Crear area →
+                        </a>
+                      </p>
+                    ) : (
+                      <select
+                        value={formData.areaId || ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            areaId: e.target.value || undefined,
+                          }))
+                        }
+                        className="input-field"
+                      >
+                        <option value="">Sin area</option>
+                        {areas.map((area) => (
+                          <option key={area._id} value={area._id}>
+                            {area.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
                   {/* CARGO */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>

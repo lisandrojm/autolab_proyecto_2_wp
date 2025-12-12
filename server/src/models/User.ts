@@ -11,6 +11,7 @@ export interface IUser extends Document {
   lastName?: string;
   positionId?: Types.ObjectId;
   levelId?: Types.ObjectId;
+  areaId?: Types.ObjectId;
   isActive: boolean;
   lastLoginAt?: Date;
   createdAt: Date;
@@ -37,6 +38,7 @@ const userSchema = new Schema<IUser>(
     },
     positionId: { type: Schema.Types.ObjectId, ref: "Position" },
     levelId: { type: Schema.Types.ObjectId, ref: "Level" },
+    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
   },

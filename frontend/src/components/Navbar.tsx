@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie, faShoppingCart, faFilePdf, faUsersGear } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -54,6 +54,7 @@ interface AdminCounts {
   tenants: number;
   roles: number;
   users: number;
+  areas: number;
   positions: number;
   levels: number;
 }
@@ -110,7 +111,7 @@ export const MobileNavbar: React.FC = () => {
     if (newVal) localStorage.setItem("adminOpenSection", newVal);
     else localStorage.removeItem("adminOpenSection");
   };
-  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, positions: 0, levels: 0 });
+  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0 });
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -158,6 +159,9 @@ export const MobileNavbar: React.FC = () => {
         if (hasPermission("roles:view")) promises.push(axios.get("/roles/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
+        if (hasPermission("users:view")) promises.push(axios.get("/areas/count").catch(() => ({ data: { count: 0 } })));
+        else promises.push(Promise.resolve({ data: { count: 0 } }));
+
         if (hasPermission("users:view")) promises.push(axios.get("/positions/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
@@ -200,12 +204,13 @@ export const MobileNavbar: React.FC = () => {
           usersCount = await tryFetchClientUsers();
         }
 
-        const [clientsRes, tenantsRes, rolesRes, positionsRes, levelsRes, usersRes] = await Promise.all(promises);
+        const [clientsRes, tenantsRes, rolesRes, areasRes, positionsRes, levelsRes, usersRes] = await Promise.all(promises);
 
         setAdminCounts({
           clients: clientsRes?.data?.count || 0,
           tenants: tenantsRes?.data?.count || 0,
           roles: rolesRes?.data?.count || 0,
+          areas: areasRes?.data?.count || 0,
           positions: positionsRes?.data?.count || 0,
           levels: levelsRes?.data?.count || 0,
           users: hasPermission("users:view") ? usersRes?.data?.count || 0 : usersCount,
@@ -274,6 +279,7 @@ export const MobileNavbar: React.FC = () => {
       base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
     } else {
       if (hasPermission("roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles, badge: "Finish", badgeColor: "bg-blue-500" });
+      if (hasPermission("users:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("users:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("users:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels, badge: "Finish", badgeColor: "bg-blue-500" });
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users, badge: "Finish", badgeColor: "bg-blue-500" });
@@ -389,7 +395,7 @@ export const MobileNavbar: React.FC = () => {
     const creativeSuiteItem = menuItems.find((item) => item.isCreativeSuite);
 
     // Partición de items: Admin Usuarios, Admin General y Configuración
-    const userAdminItems = adminItems.filter((item) => ["/roles", "/positions", "/levels", "/users"].includes(item.path));
+    const userAdminItems = adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users"].includes(item.path));
 
     const generalAdminItems = adminItems.filter((item) => ["/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
