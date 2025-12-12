@@ -198,7 +198,7 @@ export const VacationOverlapRules: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                    <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">{rule.maxSimultaneousUsers} usuarios</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{rule.maxSimultaneousUsers} usuarios</span>
                   </td>
                   <td className="px-6 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate">{rule.description || "—"}</td>
                   <td className="px-6 py-4">
