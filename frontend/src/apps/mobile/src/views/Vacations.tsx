@@ -337,7 +337,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
         {showForm && (
           <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-xl shadow-xl overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-xl shadow-xl overflow-hidden">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nueva Solicitud</h3>
                 <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">

@@ -236,85 +236,101 @@ export default function Orders({ onNavigate }: OrdersProps) {
       </div>
 
       <div className="px-4 pt-4">
-        <button onClick={() => setShowForm(!showForm)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 hover:bg-blue-500/90 text-white text-sm font-medium mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
-          {showForm ? "Cancelar" : "Nuevo Pedido"}
+        <button onClick={() => setShowForm(true)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 hover:bg-blue-500/90 text-white text-sm font-medium mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
+          Nuevo Pedido
         </button>
 
         {showForm && (
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tipo de pedido</label>
-
-                {loadingCategories ? (
-                  <div className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-500 dark:text-slate-400">Cargando categorías...</div>
-                ) : categories.length > 0 ? (
-                  <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2">
-                    {categories.map((cat) => (
-                      <option key={cat._id} value={cat._id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="w-full rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
-                )}
-
-                <div className="pt-3">
-                  <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} />
-                </div>
+          <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nuevo Pedido</h3>
+                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Comentario (Opcional)</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border bg-white dark:border-slate-700 dark:bg-slate-800 px-4 py-2 resize-none" placeholder="Escribí tu comentario..." />
-              </div>
+              <form onSubmit={handleSubmit} className="overflow-y-auto p-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tipo de pedido</label>
 
-              {/* Bloque REQUIERE FIRMA con Info Modal */}
-              {selectedCategory?.requiresSignature && (
-                <button className="w-full" type="button" onClick={() => setShowSignatureInfo(true)}>
-                  <div className="rounded-lg bg-blue-50 dark:bg-yellow-900/30 border border-blue-200 dark:border-yellow-700 text-blue-800 dark:text-yellow-500 p-3 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">Requiere FIRMA</span>
-                      <FontAwesomeIcon icon={faCircleInfo} className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
+                    {loadingCategories ? (
+                      <div className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-500 dark:text-slate-400">Cargando categorías...</div>
+                    ) : categories.length > 0 ? (
+                      <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2">
+                        {categories.map((cat) => (
+                          <option key={cat._id} value={cat._id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="w-full rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
+                    )}
+
+                    <div className="pt-3">
+                      <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} />
                     </div>
                   </div>
-                </button>
-              )}
 
-              {(selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros") && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Foto (opcional)</label>
-                  {photoPreview ? (
-                    <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
-                      <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
-                      <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white">
-                        <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
-                      <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-4 px-3">
-                        <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-slate-400" />
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
-                      </button>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Comentario (Opcional)</label>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border bg-white dark:border-slate-700 dark:bg-slate-800 px-4 py-2 resize-none" placeholder="Escribí tu comentario..." />
+                  </div>
 
-                      <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                      <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-4 px-3">
-                        <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Imagen</span>
-                      </button>
+                  {/* Bloque REQUIERE FIRMA con Info Modal */}
+                  {selectedCategory?.requiresSignature && (
+                    <button className="w-full" type="button" onClick={() => setShowSignatureInfo(true)}>
+                      <div className="rounded-lg bg-blue-50 dark:bg-yellow-900/30 border border-blue-200 dark:border-yellow-700 text-blue-800 dark:text-yellow-500 p-3 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">Requiere FIRMA</span>
+                          <FontAwesomeIcon icon={faCircleInfo} className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {(selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros") && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Foto (opcional)</label>
+                      {photoPreview ? (
+                        <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                          <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
+                          <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white">
+                            <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+                          <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-4 px-3">
+                            <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-slate-400" />
+                            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
+                          </button>
+
+                          <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                          <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-4 px-3">
+                            <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
+                            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Imagen</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              <button type="submit" disabled={submitting} className="w-full flex items-center justify-center rounded-lg h-10 bg-blue-500 text-white disabled:opacity-50 gap-1">
-                {submitting ? "Enviando..." : "Enviar Pedido"}
-              </button>
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={submitting} className="flex-1 rounded-lg h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
+                      {submitting ? "Enviando..." : "Enviar Pedido"}
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
-          </form>
+          </div>
         )}
 
         <h3 className="text-lg font-bold mb-4">Historial de Pedidos</h3>
