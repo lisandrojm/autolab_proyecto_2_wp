@@ -853,7 +853,7 @@ export const UsersPage: React.FC = () => {
                   </label>
                   {typeof user.areaId === "object" && user.areaId?.name ? (
                     <div className="flex flex-wrap gap-1">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg--100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
                     </div>
                   ) : (
                     <span className="text-xs text-gray-500 dark:text-gray-500">Sin área asignada</span>
@@ -875,7 +875,7 @@ export const UsersPage: React.FC = () => {
                     <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
                     Nivel
                   </label>
-                  {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-blue-900 text-cyan-800 dark:text-cyan-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
+                  {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
                 </div>
               </div>
               {/* Clientes asignados (si los hay) */}

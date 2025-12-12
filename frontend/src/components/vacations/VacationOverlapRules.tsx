@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faBan, faLayerGroup, faSpinner, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBan, faLayerGroup, faSpinner, faToggleOn, faToggleOff, faUserTie, faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 import { vacationOverlapsAPI, VacationOverlap } from "../../api/vacationOverlaps";
 import { areasAPI, Area } from "../../api/areas";
 import { usersAPI, User } from "../../api/users";
@@ -258,7 +258,14 @@ export const VacationOverlapRules: React.FC = () => {
           {selectedAreaId && (
             <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-semibold text-gray-700 dark:text-gray-300">Usuarios en el área ({loadingUsers ? "..." : areaUsers.length})</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-300">Usuarios en el área</h4>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                    <FontAwesomeIcon icon={faLayerGroup} />
+                    {areas.find((a) => a._id === selectedAreaId)?.name}
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400 font-semibold">({loadingUsers ? "..." : areaUsers.length})</span>
+                </div>
                 {loadingUsers && <FontAwesomeIcon icon={faSpinner} spin className="text-blue-500" />}
               </div>
 
@@ -267,14 +274,29 @@ export const VacationOverlapRules: React.FC = () => {
               {!loadingUsers && areaUsers.length > 0 && (
                 <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                   {areaUsers.map((user) => (
-                    <div key={user._id} className="flex justify-between items-start bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {user.firstName} {user.lastName}
+                    <div key={user._id} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs">
+                          {user.firstName?.charAt(0)}
+                          {user.lastName?.charAt(0)}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{typeof user.positionId === "object" ? user.positionId?.name : "Sin cargo"}</div>
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-white text-sm">
+                            {user.firstName} {user.lastName}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">{typeof user.levelId === "object" ? user.levelId?.name : "Sin nivel"}</div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          <FontAwesomeIcon icon={faUserTie} />
+                          {typeof user.positionId === "object" ? user.positionId?.name : "Sin cargo"}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          <FontAwesomeIcon icon={faGraduationCap} />
+                          {typeof user.levelId === "object" ? user.levelId?.name : "Sin nivel"}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
