@@ -17,7 +17,7 @@ const pdfTemplateSchema = new Schema<IPdfTemplate>(
     code: {
       type: String,
       required: true,
-      enum: ["dinero", "fechaRango", "fechaUnica"],
+      enum: ["dinero", "fechaRango", "fechaUnica", "vacaciones"],
       trim: true,
       index: true,
     },

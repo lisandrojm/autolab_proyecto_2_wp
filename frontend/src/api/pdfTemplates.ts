@@ -3,7 +3,7 @@ import axios from "./axiosConfig";
 export interface PdfTemplate {
   _id: string;
   tenantId: string;
-  code: "dinero" | "fechaRango" | "fechaUnica";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones";
   name: string;
   content: string;
   variablesHint?: string;
@@ -13,7 +13,7 @@ export interface PdfTemplate {
 }
 
 export interface PdfTemplateInput {
-  code: "dinero" | "fechaRango" | "fechaUnica";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones";
   name: string;
   content: string;
   variablesHint?: string;
@@ -50,12 +50,14 @@ export const codeOptions = [
   { value: "dinero", label: "Dinero" },
   { value: "fechaRango", label: "Fecha - Rango" },
   { value: "fechaUnica", label: "Fecha - Única" },
+  { value: "vacaciones", label: "Vacaciones" },
 ] as const;
 
 export const variablesByCode: Record<string, string[]> = {
   dinero: ["{{categoria}}", "{{subcategoria}}", "{{monto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   fechaRango: ["{{categoria}}", "{{subcategoria}}", "{{dias}}", "{{fechaDesde}}", "{{fechaHasta}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   fechaUnica: ["{{categoria}}", "{{subcategoria}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
+  vacaciones: ["{{dias}}", "{{anio}}", "{{fechaInicio}}", "{{fechaFin}}", "{{fechaReintegro}}", "{{nombreUsuario}}"],
 };
 
 export const systemVariables = [

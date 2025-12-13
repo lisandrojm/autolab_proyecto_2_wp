@@ -54,6 +54,8 @@ import { positionRoutes } from "./routes/positions.js";
 import { areaRoutes } from "./routes/areas.js";
 import { levelRoutes } from "./routes/levels.js";
 import { pdfTemplateRoutes } from "./routes/pdfTemplates.js";
+import { pdfGlobalConfigRoutes } from "./routes/pdfGlobalConfig.js";
+import { pdfTemplatePreviewRoutes } from "./routes/pdfPreview.js";
 import { globalVacationConfigRoutes } from "./routes/globalVacationConfig.js";
 import { vacationsRoutes } from "./routes/vacations.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
@@ -167,6 +169,8 @@ app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/areas", areaRoutes);
 app.use("/api/v1/levels", levelRoutes);
 app.use("/api/v1/pdf-templates", pdfTemplateRoutes);
+app.use("/api/v1/pdf-global-config", pdfGlobalConfigRoutes);
+app.use("/api/v1/pdf-preview", pdfTemplatePreviewRoutes);
 
 app.use("/api/v1/global-vacation-config", globalVacationConfigRoutes);
 app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);

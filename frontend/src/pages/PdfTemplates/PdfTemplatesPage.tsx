@@ -6,13 +6,15 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye } from "@fortawesome/free-solid-svg-icons";
 
-import { pdfTemplatesAPI, PdfTemplate, PdfTemplateInput, codeOptions, variablesByCode, systemVariables } from "../../api/pdfTemplates";
+import { pdfTemplatesAPI, PdfTemplate, PdfTemplateInput, codeOptions, variablesByCode } from "../../api/pdfTemplates";
+import { pdfPreviewAPI } from "../../api/pdfPreview";
 
 import Swal from "sweetalert2";
 import { getHelp, hasHelp } from "../../data/help/helpContent";
 import { Modal } from "../../components/ui/Modal";
+import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab"; // Import added
 
 const HELP_KEY = "pdfTemplates" as const;
 
@@ -46,6 +48,20 @@ export function PdfTemplatesPage() {
   const showHelp = hasHelp(HELP_KEY);
   const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: "Ayuda", size: "md" as const, content: <div /> };
 
+  // tabs
+  const [activeTab, setActiveTab] = useState<"global" | "orders" | "vacations">("global");
+
+  const handlePreview = async () => {
+    try {
+      const blob = await pdfPreviewAPI.preview(formData.content, formData.code);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+    }
+  };
+
   useEffect(() => {
     loadTemplates();
   }, []);
@@ -64,6 +80,13 @@ export function PdfTemplatesPage() {
 
   // filtering
   const filteredTemplates = templates.filter((t) => {
+    // Tab filter
+    if (activeTab === "orders") {
+      if (t.code === "vacaciones") return false;
+    } else {
+      if (t.code !== "vacaciones") return false;
+    }
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const match = t.name.toLowerCase().includes(term) || t.content.toLowerCase().includes(term);
@@ -78,13 +101,35 @@ export function PdfTemplatesPage() {
 
   const openCreate = () => {
     setEditingTemplate(null);
-    setFormData({
-      code: "dinero",
-      name: "",
-      content: "",
-      variablesHint: "",
-      isActive: true,
-    });
+
+    if (activeTab === "vacations") {
+      setFormData({
+        code: "vacaciones",
+        name: "Plantilla de Vacaciones",
+        content: `Notificación de Descanso Anual
+Artículo 164 - Ley Contrato de Trabajo, Nro. 20744
+Por la presente informo que haré uso de {{dias}} días corridos correspondientes a
+las vacaciones del año {{anio}}.
+Las mismas las gozaré desde el día {{fechaInicio}} hasta el día {{fechaFin}}
+(inclusive). Reintegrándome a mis tareas habituales el día {{fechaReintegro}}.
+
+FIRMA: ____________________
+ACLARACIÓN: _________________
+
+AUTORIZACIÓN DE RECURSOS HUMANOS:`,
+        variablesHint: "",
+        isActive: true,
+      });
+    } else {
+      setFormData({
+        code: "dinero",
+        name: "",
+        content: "",
+        variablesHint: "",
+        isActive: true,
+      });
+    }
+
     setErrors({});
     setShowModal(true);
   };
@@ -177,7 +222,7 @@ export function PdfTemplatesPage() {
   return (
     <PageLayout
       title="Plantillas PDF"
-      subtitle="Crea y gestiona plantillas PDF para pedidos"
+      subtitle="Crea y gestiona plantillas PDF para pedidos y vacaciones"
       faIcon={{ icon: faFileContract }}
       infoModal={{
         isOpen: openInfo,
@@ -189,95 +234,118 @@ export function PdfTemplatesPage() {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
-          <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-        </button>
+        activeTab !== "global" ? (
+          <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+            <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+          </button>
+        ) : null
       }
       searchAndFilters={
-        <SearchAndFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar por nombre o contenido..."
-          filters={[
-            {
-              value: filterActive,
-              onChange: (v) => setFilterActive(v as any),
-              options: [
-                { value: "all", label: "Todas" },
-                { value: "active", label: "Activas" },
-                { value: "inactive", label: "Inactivas" },
-              ],
-            },
-          ]}
-        />
+        <div className="flex flex-col gap-4">
+          {/* TABS */}
+          <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
+            <button onClick={() => setActiveTab("global")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "global" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Configuración Global
+            </button>
+            <button onClick={() => setActiveTab("orders")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "orders" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Plantilla Pedidos
+            </button>
+            <button onClick={() => setActiveTab("vacations")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "vacations" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Plantilla Vacaciones
+            </button>
+          </div>
+
+          {activeTab !== "global" && (
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar por nombre o contenido..."
+              filters={[
+                {
+                  value: filterActive,
+                  onChange: (v) => setFilterActive(v as any),
+                  options: [
+                    { value: "all", label: "Todas" },
+                    { value: "active", label: "Activas" },
+                    { value: "inactive", label: "Inactivas" },
+                  ],
+                },
+              ]}
+            />
+          )}
+        </div>
       }
     >
-      {/* GRID */}
-      <div className="relative">
-        {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Filtrando…</div>}
+      {activeTab === "global" ? (
+        <PdfGlobalConfigTab />
+      ) : (
+        <>
+          <div className="relative">
+            {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Filtrando…</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-          {filteredTemplates.map((template) => (
-            <Card
-              key={template._id}
-              onClick={() => openEdit(template)}
-              className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
-              header={{
-                icon: faFileContract,
-                title: template.name,
-                subtitle: codeOptions.find((c) => c.value === template.code)?.label || template.code,
-                badges: [getBadge(template)],
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+              {filteredTemplates.map((template) => (
+                <Card
+                  key={template._id}
+                  onClick={() => openEdit(template)}
+                  className="cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200"
+                  header={{
+                    icon: faFileContract,
+                    title: template.name,
+                    subtitle: codeOptions.find((c) => c.value === template.code)?.label || template.code,
+                    badges: [getBadge(template)],
+                  }}
+                  footer={{
+                    leftContent: null,
+                    actions: [
+                      {
+                        icon: faEdit,
+                        title: "Editar",
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          openEdit(template);
+                        },
+                      },
+                      {
+                        icon: faTrash,
+                        title: "Eliminar",
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          handleDelete(template);
+                        },
+                      },
+                    ],
+                  }}
+                >
+                  {/* YA NO HAY preview ni variables */}
+                </Card>
+              ))}
+
+              {/* CREATE CARD */}
+              <Card
+                variant="create"
+                onClick={openCreate}
+                header={{
+                  icon: faFileContract,
+                  title: "Nueva Plantilla",
+                  subtitle: activeTab === "orders" ? "Crear nueva plantilla para pedidos" : "Crear nueva plantilla para vacaciones",
+                }}
+              />
+            </div>
+          </div>
+          {filteredTemplates.length === 0 && !isFetching && (
+            <EmptyState
+              icon={faFileContract}
+              title="No hay plantillas"
+              description={`No hay plantillas de ${activeTab === "orders" ? "pedidos" : "vacaciones"} definidas.`}
+              action={{
+                label: "Nueva Plantilla",
+                onClick: openCreate,
+                icon: faPlus,
               }}
-              footer={{
-                leftContent: null,
-                actions: [
-                  {
-                    icon: faEdit,
-                    title: "Editar",
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      openEdit(template);
-                    },
-                  },
-                  {
-                    icon: faTrash,
-                    title: "Eliminar",
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      handleDelete(template);
-                    },
-                  },
-                ],
-              }}
-            >
-              {/* YA NO HAY preview ni variables */}
-            </Card>
-          ))}
-
-          {/* CREATE CARD */}
-          <Card
-            variant="create"
-            onClick={openCreate}
-            header={{
-              icon: faFileContract,
-              title: "Nueva Plantilla",
-              subtitle: "Crear nueva plantilla PDF",
-            }}
-          />
-        </div>
-      </div>
-
-      {filteredTemplates.length === 0 && !isFetching && (
-        <EmptyState
-          icon={faFileContract}
-          title="No hay plantillas"
-          description="Crea una plantilla PDF para comenzar."
-          action={{
-            label: "Nueva Plantilla",
-            onClick: openCreate,
-            icon: faPlus,
-          }}
-        />
+            />
+          )}
+        </>
       )}
 
       {/* MODAL */}
@@ -289,24 +357,29 @@ export function PdfTemplatesPage() {
         }}
         title={editingTemplate ? "Editar Plantilla" : "Nueva Plantilla"}
         size="xl"
-        actions={[
-          {
-            label: editingTemplate ? "Actualizar" : "Crear",
-            variant: "primary",
-            onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#template-form");
-              form?.requestSubmit();
-            },
-          },
-          {
-            label: "Cancelar",
-            variant: "ghost",
-            onClick: () => {
-              setShowModal(false);
-              setEditingTemplate(null);
-            },
-          },
-        ]}
+        footer={
+          <div className="flex justify-between w-full">
+            <button type="button" className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700" onClick={handlePreview}>
+              <FontAwesomeIcon icon={faEye} className="mr-2" />
+              Previsualizar
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                onClick={() => {
+                  setShowModal(false);
+                  setEditingTemplate(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button type="submit" form="template-form" disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                {saving ? "Guardando..." : editingTemplate ? "Actualizar" : "Crear"}
+              </button>
+            </div>
+          </div>
+        }
       >
         <form id="template-form" onSubmit={handleSubmitForm}>
           <div className="space-y-6">
@@ -329,12 +402,15 @@ export function PdfTemplatesPage() {
                     })
                   }
                   className="input-field"
+                  disabled={activeTab === "vacations"} // Bloquear si es tab vacaciones
                 >
-                  {codeOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
+                  {codeOptions
+                    .filter((opt) => (activeTab === "vacations" ? opt.value === "vacaciones" : opt.value !== "vacaciones")) // Filtrar opciones según tab
+                    .map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>
@@ -353,20 +429,9 @@ export function PdfTemplatesPage() {
               Plantilla activa
             </label>
 
-            {/* variables del sistema */}
-            <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Variables del sistema</h4>
-
-              {systemVariables.map((v) => (
-                <div key={v.variable} className="text-sm text-slate-600 dark:text-slate-300">
-                  <code className="bg-white dark:bg-slate-900 px-2 py-0.5 rounded">{v.variable}</code> - {v.description}
-                </div>
-              ))}
-            </div>
-
             {/* variables del pedido */}
             <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Variables del pedido</h4>
+              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">{activeTab === "vacations" ? "Variables de vacaciones" : "Variables del pedido"}</h4>
 
               <div className="flex flex-wrap gap-1">
                 {(variablesByCode[formData.code] || []).map((v) => (
