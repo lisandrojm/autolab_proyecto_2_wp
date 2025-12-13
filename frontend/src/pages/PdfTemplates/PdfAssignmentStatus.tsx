@@ -8,11 +8,12 @@ interface PdfAssignmentStatusProps {
 
 export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
   const codesToCheck = [
-    { code: "dinero", label: "Dinero", description: "Para pedidos monetarios (viáticos, reembolsos)" },
-    { code: "fechaRango", label: "Fecha - Rango", description: "Para licencias, permisos (días múltiples)" },
-    { code: "fechaUnica", label: "Fecha - Única", description: "Para fechas puntuales" },
-    { code: "objeto", label: "Objeto", description: "Para solicitudes de equipamiento y materiales" },
-    { code: "otros", label: "Otros", description: "Para solicitudes genéricas y otros tipos" },
+    { section: "Pedidos", code: "dinero", label: "Dinero", description: "Para pedidos monetarios (viáticos, reembolsos)" },
+    { section: "Pedidos", code: "fechaRango", label: "Fecha - Rango", description: "Para licencias, permisos (días múltiples)" },
+    { section: "Pedidos", code: "fechaUnica", label: "Fecha - Única", description: "Para fechas puntuales" },
+    { section: "Pedidos", code: "objeto", label: "Objeto", description: "Para solicitudes de equipamiento y materiales" },
+    { section: "Pedidos", code: "otros", label: "Otros", description: "Para solicitudes genéricas y otros tipos" },
+    { section: "Vacaciones", code: "vacaciones", label: "Vacaciones", description: "Para solicitudes de vacaciones" },
   ] as const;
 
   return (
@@ -25,6 +26,7 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sección</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de Código</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
@@ -38,6 +40,9 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
 
               return (
                 <tr key={item.code} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.section === "Vacaciones" ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"}`}>{item.section}</span>
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                     {item.label}
                     <div className="text-xs text-gray-400 font-mono mt-0.5">{item.code}</div>

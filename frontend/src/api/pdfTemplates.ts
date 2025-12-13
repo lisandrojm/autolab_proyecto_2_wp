@@ -47,11 +47,11 @@ export const pdfTemplatesAPI = {
 };
 
 export const codeOptions = [
-  { value: "dinero", label: "Dinero" },
-  { value: "fechaRango", label: "Fecha - Rango" },
-  { value: "fechaUnica", label: "Fecha - Única" },
-  { value: "objeto", label: "Objeto" },
-  { value: "otros", label: "Otros" },
+  { value: "dinero", label: "Pedidos | Dinero" },
+  { value: "fechaRango", label: "Pedidos | Fecha - Rango" },
+  { value: "fechaUnica", label: "Pedidos | Fecha - Única" },
+  { value: "objeto", label: "Pedidos | Objeto" },
+  { value: "otros", label: "Pedidos | Otros" },
   { value: "vacaciones", label: "Vacaciones" },
 ] as const;
 

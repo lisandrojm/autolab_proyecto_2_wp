@@ -51,7 +51,7 @@ export function PdfTemplatesPage() {
   const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: "Ayuda", size: "md" as const, content: <div /> };
 
   // tabs
-  const [activeTab, setActiveTab] = useState<"global" | "orders" | "vacations">("global");
+  const [activeTab, setActiveTab] = useState<"global" | "templates">("global");
 
   const handlePreview = async () => {
     try {
@@ -82,13 +82,6 @@ export function PdfTemplatesPage() {
 
   // filtering
   const filteredTemplates = templates.filter((t) => {
-    // Tab filter
-    if (activeTab === "orders") {
-      if (t.code === "vacaciones") return false;
-    } else {
-      if (t.code !== "vacaciones") return false;
-    }
-
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const match = t.name.toLowerCase().includes(term) || t.content.toLowerCase().includes(term);
@@ -104,33 +97,13 @@ export function PdfTemplatesPage() {
   const openCreate = () => {
     setEditingTemplate(null);
 
-    if (activeTab === "vacations") {
-      setFormData({
-        code: "vacaciones",
-        name: "Plantilla de Vacaciones",
-        content: `Notificación de Descanso Anual
-Artículo 164 - Ley Contrato de Trabajo, Nro. 20744
-Por la presente informo que haré uso de {{dias}} días corridos correspondientes a
-las vacaciones del año {{anio}}.
-Las mismas las gozaré desde el día {{fechaInicio}} hasta el día {{fechaFin}}
-(inclusive). Reintegrándome a mis tareas habituales el día {{fechaReintegro}}.
-
-FIRMA: ____________________
-ACLARACIÓN: _________________
-
-AUTORIZACIÓN DE RECURSOS HUMANOS:`,
-        variablesHint: "",
-        isActive: true,
-      });
-    } else {
-      setFormData({
-        code: "dinero",
-        name: "",
-        content: "",
-        variablesHint: "",
-        isActive: true,
-      });
-    }
+    setFormData({
+      code: "dinero",
+      name: "",
+      content: "",
+      variablesHint: "",
+      isActive: true,
+    });
 
     setErrors({});
     setShowModal(true);
@@ -241,7 +214,7 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
             <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
             </button>
-            {activeTab === "orders" && (
+            {activeTab === "templates" && (
               <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
                 <FontAwesomeIcon icon={faList} className="h-4 w-4" />
                 <span>Estado de asignación</span>
@@ -257,11 +230,8 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
             <button onClick={() => setActiveTab("global")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "global" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Configuración Global
             </button>
-            <button onClick={() => setActiveTab("orders")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "orders" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Plantilla Pedidos
-            </button>
-            <button onClick={() => setActiveTab("vacations")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "vacations" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Plantilla Vacaciones
+            <button onClick={() => setActiveTab("templates")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "templates" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Plantillas
             </button>
           </div>
 
@@ -338,7 +308,7 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
                 header={{
                   icon: faFileContract,
                   title: "Nueva Plantilla",
-                  subtitle: activeTab === "orders" ? "Crear nueva plantilla para pedidos" : "Crear nueva plantilla para vacaciones",
+                  subtitle: "Crear nueva plantilla",
                 }}
               />
             </div>
@@ -347,7 +317,7 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
             <EmptyState
               icon={faFileContract}
               title="No hay plantillas"
-              description={`No hay plantillas de ${activeTab === "orders" ? "pedidos" : "vacaciones"} definidas.`}
+              description="No hay plantillas definidas."
               action={{
                 label: "Nueva Plantilla",
                 onClick: openCreate,
@@ -412,15 +382,12 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
                     })
                   }
                   className="input-field"
-                  disabled={activeTab === "vacations"} // Bloquear si es tab vacaciones
                 >
-                  {codeOptions
-                    .filter((opt) => (activeTab === "vacations" ? opt.value === "vacaciones" : opt.value !== "vacaciones")) // Filtrar opciones según tab
-                    .map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
+                  {codeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -441,7 +408,7 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
 
             {/* variables del pedido */}
             <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">{activeTab === "vacations" ? "Variables de vacaciones" : "Variables del pedido"}</h4>
+              <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">{formData.code === "vacaciones" ? "Variables de vacaciones" : "Variables del pedido"}</h4>
 
               <div className="flex flex-wrap gap-1">
                 {(variablesByCode[formData.code] || []).map((v) => (
