@@ -180,9 +180,9 @@ export function PdfGlobalConfigTab() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <FontAwesomeIcon icon={faImage} /> Logo de la Empresa
             </label>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
               {logoPreview ? (
-                <div className="mb-3 relative group">
+                <div className="mb-3 relative group h-full flex items-center justify-center">
                   <img src={getImageUrl(logoPreview)} alt="Logo Preview" className="h-32 mx-auto object-contain" />
                 </div>
               ) : (
@@ -191,21 +191,22 @@ export function PdfGlobalConfigTab() {
                   <p className="text-xs mt-1">Sin logo cargado</p>
                 </div>
               )}
-
-              <input
-                type="file"
-                accept="image/png, image/jpeg, image/jpg"
-                {...register("logo")}
-                onChange={handleLogoChange}
-                className="block w-full text-sm text-gray-500
+              <div>
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg"
+                  {...register("logo")}
+                  onChange={handleLogoChange}
+                  className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
                     file:rounded-full file:border-0
                     file:text-sm file:font-semibold
                     file:bg-blue-50 file:text-blue-700
                     hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300
                  "
-              />
-              <p className="text-xs text-gray-500 mt-2">Formatos: PNG, JPG. Máx 5MB.</p>
+                />
+                <p className="text-xs text-gray-500 mt-2">Formatos: PNG, JPG. Máx 5MB.</p>
+              </div>
             </div>
           </div>
 
@@ -214,9 +215,9 @@ export function PdfGlobalConfigTab() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <FontAwesomeIcon icon={faSignature} /> Firma por Defecto
             </label>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
               {signaturePreview ? (
-                <div className="mb-3 relative group">
+                <div className="mb-3 relative group h-full flex items-center justify-center">
                   <img src={getImageUrl(signaturePreview)} alt="Signature Preview" className="h-24 mx-auto object-contain" />
                 </div>
               ) : (
@@ -225,21 +226,22 @@ export function PdfGlobalConfigTab() {
                   <p className="text-xs mt-1">Sin firma cargada</p>
                 </div>
               )}
-
-              <input
-                type="file"
-                accept="image/png, image/jpeg, image/jpg"
-                {...register("signature")}
-                onChange={handleSignatureChange}
-                className="block w-full text-sm text-gray-500
+              <div>
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg"
+                  {...register("signature")}
+                  onChange={handleSignatureChange}
+                  className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
                     file:rounded-full file:border-0
                     file:text-sm file:font-semibold
                     file:bg-blue-50 file:text-blue-700
                     hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300
                  "
-              />
-              <p className="text-xs text-gray-500 mt-2">Formatos: PNG, JPG. Máx 5MB.</p>
+                />
+                <p className="text-xs text-gray-500 mt-2">Formatos: PNG, JPG. Máx 5MB.</p>
+              </div>
             </div>
           </div>
         </div>
