@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faShoppingCart } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
-import { pdfTemplatesAPI } from "../api/pdfTemplates";
+import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -21,9 +21,10 @@ interface SortableRowProps {
   onEdit: (category: OrderCategory) => void;
   onDelete: (category: OrderCategory) => void;
   onToggleActive: (category: OrderCategory) => void;
+  onEnableReorder: () => void;
 }
 
-const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMode, onEdit, onDelete, onToggleActive }) => {
+const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMode, onEdit, onDelete, onToggleActive, onEnableReorder }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category._id, disabled: !isReorderMode });
 
   const style = {
@@ -34,8 +35,18 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
 
   return (
     <tr ref={setNodeRef} style={style} {...(isReorderMode ? { ...attributes, ...listeners } : {})} className={`border-b border-gray-100 dark:border-gray-700 ${isReorderMode ? "bg-blue-50 dark:bg-blue-900/20 cursor-grab active:cursor-grabbing" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}>
-      <td className="bg- py-3 px-4">
-        <div className={`flex items-center justify-center ${isReorderMode ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-600"}`}>
+      <td
+        className={`py-3 px-4 ${!isReorderMode ? "cursor-pointer" : ""}`}
+        onClick={(e) => {
+          if (!isReorderMode) {
+            e.preventDefault();
+            e.stopPropagation();
+            onEnableReorder();
+          }
+        }}
+        title={!isReorderMode ? "Clic para activar modo ordenar" : ""}
+      >
+        <div className={`flex items-center justify-center ${isReorderMode ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-600 hover:text-blue-500"}`}>
           <FontAwesomeIcon icon={faGripVertical} className="h-5 w-5" />
         </div>
       </td>
@@ -77,13 +88,6 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
 };
 
 const HELP_KEY = "orderCategories";
-
-interface PdfTemplate {
-  _id: string;
-  name: string;
-  code: string;
-  isActive: boolean;
-}
 
 export const ManageOrdersCategoriesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -466,6 +470,10 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
               <button onClick={openCreateModal} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faPlus} />
               </button>
+              <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+                <FontAwesomeIcon icon={faFileContract} />
+                <span className="hidden lg:block">Plantillas PDF</span>
+              </button>
               <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                 <FontAwesomeIcon icon={faGripVertical} />
                 <span className="hidden lg:block">Ordenar</span>
@@ -514,7 +522,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
                     <SortableContext items={(isReorderMode ? tempCategories : categories).map((c) => c._id)} strategy={verticalListSortingStrategy}>
                       <tbody>
                         {(isReorderMode ? tempCategories : categories).map((category, index) => (
-                          <SortableRow key={category._id} category={category} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} />
+                          <SortableRow key={category._id} category={category} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} />
                         ))}
                       </tbody>
                     </SortableContext>

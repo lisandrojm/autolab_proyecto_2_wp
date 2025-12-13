@@ -3,7 +3,7 @@ import axios from "./axiosConfig";
 export interface PdfTemplate {
   _id: string;
   tenantId: string;
-  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
   name: string;
   content: string;
   variablesHint?: string;
@@ -13,7 +13,7 @@ export interface PdfTemplate {
 }
 
 export interface PdfTemplateInput {
-  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
   name: string;
   content: string;
   variablesHint?: string;
@@ -50,6 +50,8 @@ export const codeOptions = [
   { value: "dinero", label: "Dinero" },
   { value: "fechaRango", label: "Fecha - Rango" },
   { value: "fechaUnica", label: "Fecha - Única" },
+  { value: "objeto", label: "Objeto" },
+  { value: "otros", label: "Otros" },
   { value: "vacaciones", label: "Vacaciones" },
 ] as const;
 
@@ -57,6 +59,8 @@ export const variablesByCode: Record<string, string[]> = {
   dinero: ["{{categoria}}", "{{subcategoria}}", "{{monto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   fechaRango: ["{{categoria}}", "{{subcategoria}}", "{{dias}}", "{{fechaDesde}}", "{{fechaHasta}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   fechaUnica: ["{{categoria}}", "{{subcategoria}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
+  objeto: ["{{categoria}}", "{{subcategoria}}", "{{objeto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
+  otros: ["{{categoria}}", "{{subcategoria}}", "{{detalle}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   vacaciones: ["{{dias}}", "{{anio}}", "{{fechaInicio}}", "{{fechaFin}}", "{{fechaReintegro}}", "{{nombreUsuario}}"],
 };
 

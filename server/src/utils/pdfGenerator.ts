@@ -10,72 +10,56 @@ import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
 import { PdfGlobalConfig } from "../models/PdfGlobalConfig.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables } from "./pdfVariableReplacer.js";
 
-export async function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview: boolean = false): Promise<Buffer> {
-  try {
-    // 1. Get Global Config
-    const config = (await PdfGlobalConfig.findOne({ tenantId })) || {};
+// Helper function to build the full HTML with layout
+async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}): Promise<string> {
+  const config = (await PdfGlobalConfig.findOne({ tenantId })) || {};
+  const systemVars = getSystemVariables(config);
+  const allVars = { ...additionalVars, ...systemVars };
 
-    // 2. Prepare Variables
-    const dummyVars = getDummyVariables(code);
-    const systemVars = getSystemVariables(config);
-    const allVars = { ...dummyVars, ...systemVars };
+  // Replace variables in the content (body)
+  const processedBodyContent = replacePdfVariables(bodyContent, allVars as any);
 
-    // 3. Replace content variables (if not global preview mode which might have empty content)
-    let bodyContent = isGlobalPreview ? "<div style='text-align: center; color: #666; margin-top: 50px;'>Vista previa del membrete y firma.<br>El contenido de la plantilla iría aquí.</div>" : replacePdfVariables(content, allVars as any);
-
-    // 4. Construct HTML Layout
-    const logoHtml = systemVars.logoUrl ? `<img src="http://localhost:8080${systemVars.logoUrl}" style="max-height: 80px; max-width: 200px;" />` : config.razonSocial ? `<h2>${config.razonSocial}</h2>` : "";
-
-    // Note: localhost:8080 is hardcoded, ideally use env var but for PDF generation locally/vps it refers to itself mostly or needs absolute path.
-    // If running in docker/vps, might be tricky. Using file path often better for html-pdf-node if local.
-    // Let's assume relative path works if base is set or data URI.
-    // Actually `config.logoUrl` starts with `/storage/...`.
-    // Let's try to read file and convert to base64 to avoid network/path issues in PDF generation.
-    // Or just use the URL if the PDF generator can access it (it usually can if it's http/https).
-    // `html-pdf-node` uses puppeteer. It needs reachable URL or valid path.
-    // If I use process.cwd() + config.logoUrl (since it starts with /storage), it should work as file://
-
-    const logoUrl = (config as any).logoUrl;
-    let logoImgTag = "";
-    if (logoUrl) {
-      try {
-        const absolutePath = path.join(process.cwd(), logoUrl);
-        if (fs.existsSync(absolutePath)) {
-          const bitmap = fs.readFileSync(absolutePath);
-          const base64 = bitmap.toString("base64");
-          const ext = path.extname(absolutePath).substring(1).toLowerCase();
-          const mime = ext === "jpg" ? "jpeg" : ext;
-          logoImgTag = `<img src="data:image/${mime};base64,${base64}" style="max-height: 80px;" />`;
-        }
-      } catch (e) {
-        console.error("Error loading logo for PDF:", e);
+  const logoUrl = (config as any).logoUrl;
+  let logoImgTag = "";
+  if (logoUrl) {
+    try {
+      const absolutePath = path.join(process.cwd(), logoUrl);
+      if (fs.existsSync(absolutePath)) {
+        const bitmap = fs.readFileSync(absolutePath);
+        const base64 = bitmap.toString("base64");
+        const ext = path.extname(absolutePath).substring(1).toLowerCase();
+        const mime = ext === "jpg" ? "jpeg" : ext;
+        logoImgTag = `<img src="data:image/${mime};base64,${base64}" style="max-height: 80px;" />`;
       }
+    } catch (e) {
+      console.error("Error loading logo for PDF:", e);
     }
-    if (!logoImgTag) {
-      logoImgTag = `<div style="font-size: 24px; font-weight: bold; color: #333;">${systemVars.razonSocial}</div>`;
-    }
+  }
+  if (!logoImgTag) {
+    logoImgTag = `<div style="font-size: 24px; font-weight: bold; color: #333;">${systemVars.razonSocial}</div>`;
+  }
 
-    const signatureUrl = (config as any).signatureUrl;
-    let signatureImgTag = "";
-    if (signatureUrl) {
-      try {
-        const absolutePath = path.join(process.cwd(), signatureUrl);
-        if (fs.existsSync(absolutePath)) {
-          const bitmap = fs.readFileSync(absolutePath);
-          const base64 = bitmap.toString("base64");
-          const ext = path.extname(absolutePath).substring(1).toLowerCase();
-          const mime = ext === "jpg" ? "jpeg" : ext;
-          signatureImgTag = `<img src="data:image/${mime};base64,${base64}" style="max-height: 100px;" />`;
-        }
-      } catch (e) {
-        console.error("Error loading signature for PDF:", e);
+  const signatureUrl = (config as any).signatureUrl;
+  let signatureImgTag = "";
+  if (signatureUrl) {
+    try {
+      const absolutePath = path.join(process.cwd(), signatureUrl);
+      if (fs.existsSync(absolutePath)) {
+        const bitmap = fs.readFileSync(absolutePath);
+        const base64 = bitmap.toString("base64");
+        const ext = path.extname(absolutePath).substring(1).toLowerCase();
+        const mime = ext === "jpg" ? "jpeg" : ext;
+        signatureImgTag = `<img src="data:image/${mime};base64,${base64}" style="max-height: 100px;" />`;
       }
+    } catch (e) {
+      console.error("Error loading signature for PDF:", e);
     }
-    if (!signatureImgTag) {
-      signatureImgTag = `<div style="border-top: 1px solid #000; display: inline-block; padding-top: 5px; min-width: 200px;">Firma</div>`;
-    }
+  }
+  if (!signatureImgTag) {
+    signatureImgTag = `<div style="border-top: 1px solid #000; display: inline-block; padding-top: 5px; min-width: 200px;">Firma</div>`;
+  }
 
-    const html = `
+  const html = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -101,7 +85,7 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
         </div>
 
         <div class="content">
-          ${bodyContent}
+          ${processedBodyContent}
         </div>
 
         <div class="footer">
@@ -110,6 +94,22 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
       </body>
       </html>
     `;
+  return html;
+}
+
+export async function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview: boolean = false): Promise<Buffer> {
+  try {
+    let dummyVars = {};
+    if (!isGlobalPreview) {
+      dummyVars = getDummyVariables(code);
+    }
+
+    let bodyContent = content;
+    if (isGlobalPreview) {
+      bodyContent = "<div style='text-align: center; color: #666; margin-top: 50px;'>Vista previa del membrete y firma.<br>El contenido de la plantilla iría aquí.</div>";
+    }
+
+    const html = await buildPdfHtml(tenantId, bodyContent, dummyVars as Record<string, string>);
 
     const options = {
       format: "A4",
@@ -142,8 +142,9 @@ export async function generateOrderPDF(order: IOrder, category: IOrderCategory, 
     const variables = prepareVariables(order, category, user, tenantName);
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
-    const htmlContent = replacePdfVariables(template.content, variables);
-    console.log("[PDF GENERATOR] HTML content generated, length:", htmlContent.length, "characters");
+    // Use buildPdfHtml to generate HTML with global layout
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>);
+    console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {
       format: "A4",
@@ -218,8 +219,9 @@ export async function generateVacationPDF(vacation: IVacationRequest, template: 
     const variables = prepareVacationVariables(vacation, user, tenantName, vacationNumber);
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
-    const htmlContent = replacePdfVariables(template.content, variables);
-    console.log("[PDF GENERATOR] HTML content generated, length:", htmlContent.length, "characters");
+    // Use buildPdfHtml to generate HTML with global layout
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>);
+    console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {
       format: "A4",

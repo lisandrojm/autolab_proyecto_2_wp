@@ -17,6 +17,7 @@ interface PdfVariables {
   fechaAprobacion: string;
   tenantName: string;
   descripcion: string;
+  [key: string]: string;
 }
 
 function sanitizeHtml(str: string): string {
@@ -69,27 +70,88 @@ function calculateDays(fechaDesde: Date | string | undefined, fechaHasta: Date |
   }
 }
 
-export function prepareVariables(order: IOrder, category: IOrderCategory, user: IUser, tenantName: string): PdfVariables {
+export function prepareVariables(order: IOrder, category: IOrderCategory, user: IUser, tenantName: string): Record<string, string> {
   const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario";
 
-  const categoria = sanitizeHtml(category.name || "-");
+  const categoryName = category.name || "-";
+  const categoria = sanitizeHtml(categoryName);
 
   const subcategoria = order.subcategories && order.subcategories.length > 0 ? sanitizeHtml(order.subcategories.join(", ")) : "-";
 
-  const monto = category.categoryType === "dinero" ? formatCurrency(order.amount) : "-";
+  const monto = order.amount !== undefined && order.amount !== null ? formatCurrency(order.amount) : "-";
 
   let fechaDesde = "-";
   let fechaHasta = "-";
   let fechaUnica = "-";
   let dias = "-";
 
-  if (category.categoryType === "fecha") {
-    if (category.dateMode === "range" && order.dynamicValue) {
-      fechaDesde = formatDate(order.dynamicValue.fechaDesde);
-      fechaHasta = formatDate(order.dynamicValue.fechaHasta);
-      dias = calculateDays(order.dynamicValue.fechaDesde, order.dynamicValue.fechaHasta);
-    } else if (category.dateMode === "single" && order.dynamicValue) {
-      fechaUnica = formatDate(order.dynamicValue.fechaUnica);
+  const dynamicVars: Record<string, string> = {};
+
+  if (order.dynamicValue && typeof order.dynamicValue === "object") {
+    const normalize = (str: string) =>
+      str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "");
+
+    const findKey = (candidates: string[]) =>
+      Object.keys(order.dynamicValue).find((k) => {
+        const normalizedKey = normalize(k);
+        return candidates.some((c) => normalize(c) === normalizedKey);
+      });
+
+    Object.entries(order.dynamicValue).forEach(([key, value]) => {
+      if (value === null || value === undefined) return;
+
+      if (typeof value === "string") {
+        if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+          dynamicVars[key] = formatDate(value);
+        } else {
+          dynamicVars[key] = sanitizeHtml(value);
+        }
+      } else if (typeof value === "number") {
+        dynamicVars[key] = value.toString();
+      } else if (typeof value === "boolean") {
+        dynamicVars[key] = value ? "Sí" : "No";
+      }
+    });
+
+    const fechaUnicaKey = findKey(["fechaunica", "fecha", "date", "unique_date", "fechasolicitada", "fechaparaelpedido"]);
+    if (fechaUnicaKey && order.dynamicValue[fechaUnicaKey]) {
+      fechaUnica = formatDate(order.dynamicValue[fechaUnicaKey]);
+    }
+
+    const fechaDesdeKey = findKey(["fechadesde", "startdate", "start", "desde", "fechainicio"]);
+    if (fechaDesdeKey && order.dynamicValue[fechaDesdeKey]) {
+      fechaDesde = formatDate(order.dynamicValue[fechaDesdeKey]);
+    }
+
+    const fechaHastaKey = findKey(["fechahasta", "enddate", "end", "hasta", "fechafin"]);
+    if (fechaHastaKey && order.dynamicValue[fechaHastaKey]) {
+      fechaHasta = formatDate(order.dynamicValue[fechaHastaKey]);
+    }
+
+    const diasKey = findKey(["dias", "days", "cantidad_dias", "cantidaddias"]);
+    if (diasKey && order.dynamicValue[diasKey]) {
+      dias = order.dynamicValue[diasKey].toString();
+    }
+
+    if (dias === "-" && fechaDesde !== "-" && fechaHasta !== "-") {
+      const valDesde = fechaDesdeKey ? order.dynamicValue[fechaDesdeKey] : null;
+      const valHasta = fechaHastaKey ? order.dynamicValue[fechaHastaKey] : null;
+      if (valDesde && valHasta) {
+        dias = calculateDays(valDesde, valHasta);
+      }
+    }
+  } else if (order.dynamicValue && typeof order.dynamicValue === "string") {
+    if (category.categoryType === "fecha" && category.dateMode === "single") {
+      fechaUnica = formatDate(order.dynamicValue);
+      dynamicVars["fecha"] = fechaUnica;
+      dynamicVars["fechaUnica"] = fechaUnica;
+      dynamicVars["value"] = fechaUnica;
+    } else {
+      dynamicVars["value"] = sanitizeHtml(order.dynamicValue);
     }
   }
 
@@ -99,6 +161,7 @@ export function prepareVariables(order: IOrder, category: IOrderCategory, user: 
   const descripcion = sanitizeHtml(order.description || "-");
 
   return {
+    ...dynamicVars,
     categoria,
     subcategoria,
     monto,
@@ -209,6 +272,20 @@ export function getDummyVariables(code: string): Record<string, string> {
         fechaInicio: "01/01/2024",
         fechaFin: "14/01/2024",
         fechaReintegro: "15/01/2024",
+      };
+    case "objeto":
+      return {
+        ...defaults,
+        categoria: "Electrónica",
+        subcategoria: "Computadoras",
+        objeto: "Notebook Dell Latitude",
+      };
+    case "otros":
+      return {
+        ...defaults,
+        categoria: "General",
+        subcategoria: "Varios",
+        detalle: "Solicitud de prueba genérica",
       };
     default:
       return defaults;

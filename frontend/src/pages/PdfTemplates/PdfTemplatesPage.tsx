@@ -6,7 +6,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList } from "@fortawesome/free-solid-svg-icons";
 
 import { pdfTemplatesAPI, PdfTemplate, PdfTemplateInput, codeOptions, variablesByCode } from "../../api/pdfTemplates";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
@@ -14,7 +14,8 @@ import { pdfPreviewAPI } from "../../api/pdfPreview";
 import Swal from "sweetalert2";
 import { getHelp, hasHelp } from "../../data/help/helpContent";
 import { Modal } from "../../components/ui/Modal";
-import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab"; // Import added
+import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab";
+import { PdfAssignmentStatus } from "./PdfAssignmentStatus"; // Import added
 
 const HELP_KEY = "pdfTemplates" as const;
 
@@ -32,6 +33,7 @@ export function PdfTemplatesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<PdfTemplate | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   // form
   const [formData, setFormData] = useState<PdfTemplateInput>({
@@ -235,9 +237,17 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         activeTab !== "global" ? (
-          <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
-            <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-          </button>
+          <div className="flex gap-2">
+            <button onClick={openCreate} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+            </button>
+            {activeTab === "orders" && (
+              <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
+                <FontAwesomeIcon icon={faList} className="h-4 w-4" />
+                <span>Estado de asignación</span>
+              </button>
+            )}
+          </div>
         ) : null
       }
       searchAndFilters={
@@ -450,6 +460,10 @@ AUTORIZACIÓN DE RECURSOS HUMANOS:`,
             </div>
           </div>
         </form>
+      </Modal>
+      {/* Status Modal */}
+      <Modal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)} title="Estado de Asignación de Plantillas" size="xl">
+        <PdfAssignmentStatus templates={templates} />
       </Modal>
     </PageLayout>
   );

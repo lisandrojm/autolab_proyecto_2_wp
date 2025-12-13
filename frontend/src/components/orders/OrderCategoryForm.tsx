@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleInfo, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
+import { faCircleInfo, faToggleOn, faToggleOff, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import Swal from "sweetalert2";
+import { pdfPreviewAPI } from "../../api/pdfPreview";
 
 import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderCategories";
 import { InfoModal } from "../ui/InfoModal";
@@ -10,6 +13,8 @@ interface PdfTemplate {
   _id: string;
   name: string;
   code: string;
+  content: string;
+  isActive: boolean;
 }
 
 interface OrderCategoryFormProps {
@@ -47,6 +52,52 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   const [showActionTypeInfo, setShowActionTypeInfo] = useState(false);
   const [showActionTextInfo, setShowActionTextInfo] = useState(false);
   const [showInformacionInfo, setShowInformacionInfo] = useState(false);
+
+  const getExpectedTemplateCode = (): string | null => {
+    const { categoryType, dateMode } = formData;
+    if (categoryType === "fecha") {
+      return dateMode === "range" ? "fechaRango" : "fechaUnica";
+    }
+    if (categoryType === "dinero") return "dinero";
+    if (categoryType === "objeto") return "objeto";
+    if (categoryType === "otros") return "otros";
+    return null;
+  };
+
+  const handlePreview = async (code: any, content: string) => {
+    try {
+      const blob = await pdfPreviewAPI.preview(content, code);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+    }
+  };
+
+  useEffect(() => {
+    if (formData.requiresSignature === false) {
+      if (formData.pdfTemplateId) {
+        setFormData((prev: any) => ({ ...prev, pdfTemplateId: undefined }));
+      }
+      return;
+    }
+
+    const expectedCode = getExpectedTemplateCode();
+    if (!expectedCode) return;
+
+    const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
+
+    if (matchingTemplate) {
+      if (formData.pdfTemplateId !== matchingTemplate._id) {
+        setFormData((prev: any) => ({ ...prev, pdfTemplateId: matchingTemplate._id }));
+      }
+    } else {
+      if (formData.pdfTemplateId) {
+        setFormData((prev: any) => ({ ...prev, pdfTemplateId: undefined }));
+      }
+    }
+  }, [formData.categoryType, formData.dateMode, formData.requiresSignature, pdfTemplates]);
 
   const DEFAULT_ACTION_TEXTS: Record<TipoAccionFutura, string> = {
     documento: "Me comprometo a presentar la documentación o comprobantes solicitados.",
@@ -312,11 +363,13 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               type="checkbox"
               id="requiresSignature"
               checked={formData.requiresSignature ?? true}
-              onChange={(e) => setFormData({
-                ...formData,
-                requiresSignature: e.target.checked,
-                pdfTemplateId: e.target.checked ? formData.pdfTemplateId : undefined
-              })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  requiresSignature: e.target.checked,
+                  pdfTemplateId: e.target.checked ? formData.pdfTemplateId : undefined,
+                })
+              }
               className="w-4 h-4 text-blue-600"
             />
             <label htmlFor="requiresSignature" className="text-sm text-gray-700 dark:text-gray-300">
@@ -330,33 +383,43 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
               {/* Plantilla PDF */}
               <div className="mt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Plantilla PDF (opcional)
-                  </label>
-                  <button
-                    type="button"
-                    title="Selecciona una plantilla PDF que se generará automáticamente cuando se preapruebe un pedido de este tipo"
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                  >
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
-                </div>
-                <select
-                  value={formData.pdfTemplateId || ""}
-                  onChange={(e) => setFormData({ ...formData, pdfTemplateId: e.target.value || undefined })}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Sin plantilla PDF</option>
-                  {pdfTemplates.map((template) => (
-                    <option key={template._id} value={template._id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  El PDF se generará automáticamente al preaprobarse el pedido
-                </p>
+                {(() => {
+                  const expectedCode = getExpectedTemplateCode();
+                  const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
+
+                  if (!expectedCode) return null;
+
+                  if (matchingTemplate) {
+                    return (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
+                        </div>
+                        <button type="button" onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)} className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 font-medium flex items-center gap-1" title="Previsualizar plantilla">
+                          <FontAwesomeIcon icon={faEye} /> Visualizar
+                        </button>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Sin plantilla asignada</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                              No existe una plantilla activa para este tipo de pedido (Código esperado: <strong>{expectedCode}</strong>). El PDF no se generará.
+                            </p>
+                            <Link to="/hr/pdf-templates" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
+                              Crear plantilla en Configuración &rarr;
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
             </>
           )}
