@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
+import { User } from "../models/User.js";
+import { Area } from "../models/Area.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -11,13 +13,15 @@ router.use(requireTenant, authenticateToken);
 
 const updateProfileSchema = z.object({
   phone: z.string().optional(),
-  address: z.object({
-    street: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    country: z.string().optional(),
-    zip: z.string().optional(),
-  }).optional(),
+  address: z
+    .object({
+      street: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      country: z.string().optional(),
+      zip: z.string().optional(),
+    })
+    .optional(),
 });
 
 const updatePhotoSchema = z.object({
@@ -28,7 +32,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
 
-    let profile = await EmployeeProfile.findOne({
+    let profile: any = await EmployeeProfile.findOne({
       tenantId: req.tenantObjectId,
       userId,
     }).lean();
@@ -48,7 +52,25 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       profile = (await newProfile.save()).toObject();
     }
 
-    res.json(profile);
+    // Fetch user for Area info
+    const user = await User.findById(userId);
+    let areaName = profile.department;
+    let areaMembers = 0;
+
+    if (user && user.areaId) {
+      const area = await Area.findById(user.areaId);
+      if (area) {
+        areaName = area.name;
+        // Count members in this area
+        areaMembers = await User.countDocuments({
+          tenantId: req.tenantObjectId,
+          areaId: user.areaId,
+          isActive: true,
+        });
+      }
+    }
+
+    res.json({ ...profile, areaName, areaMembers });
   } catch (error) {
     console.error("Get profile error:", error);
     res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
@@ -60,11 +82,7 @@ router.put("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const data = updateProfileSchema.parse(req.body);
 
-    const profile = await EmployeeProfile.findOneAndUpdate(
-      { tenantId: req.tenantObjectId, userId },
-      { $set: data },
-      { new: true, upsert: false }
-    );
+    const profile = await EmployeeProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: data }, { new: true, upsert: false });
 
     if (!profile) {
       res.status(404).json({ error: "Profile not found" });
@@ -87,11 +105,7 @@ router.put("/photo", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const { profilePhotoUrl } = updatePhotoSchema.parse(req.body);
 
-    const profile = await EmployeeProfile.findOneAndUpdate(
-      { tenantId: req.tenantObjectId, userId },
-      { $set: { profilePhotoUrl } },
-      { new: true }
-    );
+    const profile = await EmployeeProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: { profilePhotoUrl } }, { new: true });
 
     if (!profile) {
       res.status(404).json({ error: "Profile not found" });
@@ -130,9 +144,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       return;
     }
 
-    const daysWorked = profile.hireDate
-      ? Math.floor((Date.now() - new Date(profile.hireDate).getTime()) / (1000 * 60 * 60 * 24))
-      : 0;
+    const daysWorked = profile.hireDate ? Math.floor((Date.now() - new Date(profile.hireDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
     const currentYear = new Date().getFullYear();
     const yearStart = new Date(currentYear, 0, 1);

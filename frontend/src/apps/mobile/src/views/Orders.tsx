@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo, faShoppingCart, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo, faShoppingCart, faPaperPlane, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
@@ -217,31 +217,31 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
   return (
     <div className="flex-1 pb-24">
-      <div className="sticky top-0 z-10 p-4 pb-2 order-t border-b border-slate-800 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-3">
+      <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
+        <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800">
-              <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
+            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+              <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
             <div className="flex items-center gap-2">
               <div className="flex items-center">
-                <FontAwesomeIcon icon={faShoppingCart} className="w-6 h-6 text-slate-900 dark:text-slate-100" />
+                <FontAwesomeIcon icon={faShoppingCart} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Pedidos</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Pedidos</h1>
               </div>
             </div>
           </div>
+          <button onClick={() => setShowForm(true)} disabled={loading} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 shadow-lg shadow-blue-500/20">
+            <FontAwesomeIcon icon={faPlus} />
+            <span className="hidden sm:inline">Nuevo Pedido</span>
+          </button>
         </div>
       </div>
 
       <div className="px-4 pt-4">
-        <button onClick={() => setShowForm(true)} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-lg h-12 px-4 bg-blue-500 hover:bg-blue-500/90 text-white text-sm font-medium mb-6 disabled:opacity-50 disabled:cursor-not-allowed">
-          Nuevo Pedido
-        </button>
-
         {showForm && (
-          <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nuevo Pedido</h3>

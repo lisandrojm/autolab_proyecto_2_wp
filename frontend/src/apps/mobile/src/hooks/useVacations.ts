@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { personnelAPI, VacationRequest } from '../../../../api/personnel';
+import { useState, useEffect } from "react";
+import { personnelAPI } from "../../../../api/personnel";
+import { vacationsAPI, VacationRequest } from "../../../../api/vacations";
 
 export const useVacations = () => {
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -11,15 +12,12 @@ export const useVacations = () => {
     try {
       setLoading(true);
       setError(null);
-      const [vacationsData, availableData] = await Promise.all([
-        personnelAPI.getVacations(),
-        personnelAPI.getVacationAvailable(),
-      ]);
+      const [vacationsData, profileStats] = await Promise.all([vacationsAPI.getAll(), personnelAPI.getProfileStats()]);
       setVacations(vacationsData);
-      setAvailableDays(availableData);
+      setAvailableDays(profileStats.vacations);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al cargar vacaciones');
-      console.error('Error fetching vacations:', err);
+      setError(err.response?.data?.error || "Error al cargar vacaciones");
+      console.error("Error fetching vacations:", err);
     } finally {
       setLoading(false);
     }
@@ -28,12 +26,11 @@ export const useVacations = () => {
   const createVacation = async (vacationData: { startDate: string; endDate: string; reason: string }) => {
     try {
       setError(null);
-      const newVacation = await personnelAPI.createVacation(vacationData);
-      setVacations([newVacation, ...vacations]);
+      const newVacation = await vacationsAPI.create(vacationData);
       await fetchVacations();
       return newVacation;
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al crear solicitud de vacaciones');
+      setError(err.response?.data?.error || "Error al crear solicitud de vacaciones");
       throw err;
     }
   };
@@ -41,11 +38,10 @@ export const useVacations = () => {
   const deleteVacation = async (id: string) => {
     try {
       setError(null);
-      await personnelAPI.deleteVacation(id);
-      setVacations(vacations.filter(vacation => vacation._id !== id));
+      await vacationsAPI.delete(id);
       await fetchVacations();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al eliminar solicitud');
+      setError(err.response?.data?.error || "Error al eliminar solicitud");
       throw err;
     }
   };

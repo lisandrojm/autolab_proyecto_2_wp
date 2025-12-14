@@ -19,7 +19,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
   return (
     <nav>
       <div className="fixed bottom-0 left-0 z-30 w-full flex justify-center">
-        <div className="z-10 w-full xl:w-1/2 backdrop-blur-sm border-t border-slate-800 py-1">
+        <div className="z-10 w-full xl:w-1/2 border-t border-slate-800 py-1 sticky top-0 border-b bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm">
           <div className="mx-auto grid h-16 max-w-md grid-cols-5 px-2">
             {navItems.map(({ id, icon, label, disabled, notifications }) => {
               const isActive = currentView === id;

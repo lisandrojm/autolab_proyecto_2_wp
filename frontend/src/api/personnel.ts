@@ -17,6 +17,8 @@ export interface ProfileData {
   };
   position?: string;
   department?: string;
+  areaName?: string;
+  areaMembers?: number;
   hireDate?: string;
   birthDate?: string;
   profilePhotoUrl?: string;

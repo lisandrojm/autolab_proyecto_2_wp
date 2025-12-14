@@ -41,9 +41,7 @@ export function mapOrderStatusToStatusTypeForMobile(status: string): StatusType 
   return statusMap[status] || "pendiente";
 }
 
-export function mapDocumentStateToStatusType(
-  futureAction: FutureAction | null | undefined
-): StatusType | null {
+export function mapDocumentStateToStatusType(futureAction: FutureAction | null | undefined): StatusType | null {
   if (!futureAction || futureAction.tipoAccionFutura !== "documento") {
     return null;
   }
@@ -53,12 +51,7 @@ export function mapDocumentStateToStatusType(
   }
 
   if (futureAction.estadoAccion === "pendiente_documento") {
-    const daysRemaining = futureAction.fechaLimite
-      ? Math.ceil(
-          (new Date(futureAction.fechaLimite).getTime() - Date.now()) /
-            (24 * 60 * 60 * 1000)
-        )
-      : null;
+    const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
     if (daysRemaining !== null && daysRemaining < 0) {
       return "doc_vencido";
@@ -70,13 +63,10 @@ export function mapDocumentStateToStatusType(
   return null;
 }
 
-export function mapSignatureStateToStatusType(
-  order: OrderWithCategory | null | undefined
-): StatusType | null {
+export function mapSignatureStateToStatusType(order: OrderWithCategory | null | undefined): StatusType | null {
   if (!order) return null;
 
-  const categoryData =
-    typeof order.categoryId === "object" ? order.categoryId : null;
+  const categoryData = typeof order.categoryId === "object" ? order.categoryId : null;
   const requiresSignature = categoryData?.requiresSignature ?? false;
 
   if (!requiresSignature) {
@@ -118,9 +108,20 @@ export function mapVacationStatusToStatusType(status: string): StatusType {
   return statusMap[status] || "vacaciones_pendiente";
 }
 
-export function mapVacationSignatureStateToStatusType(
-  vacation: VacationRequest | null | undefined
-): StatusType | null {
+export function mapVacationStatusToStatusTypeForMobile(status: string): StatusType {
+  const statusMap: Record<string, StatusType> = {
+    pending: "vacaciones_pendiente",
+    pre_approved: "vacaciones_pendiente",
+    approved: "vacaciones_aprobada",
+    rejected: "vacaciones_rechazada",
+    delivered: "vacaciones_entregada",
+    cancelled: "vacaciones_cancelada",
+  };
+
+  return statusMap[status] || "vacaciones_pendiente";
+}
+
+export function mapVacationSignatureStateToStatusType(vacation: VacationRequest | null | undefined): StatusType | null {
   if (!vacation || !vacation.requiresSignature) {
     return null;
   }
