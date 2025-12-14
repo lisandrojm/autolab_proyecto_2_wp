@@ -55,7 +55,17 @@ export function PdfTemplatesPage() {
 
   const handlePreview = async () => {
     try {
+      Swal.fire({
+        title: "Generando previsualización...",
+        text: "Por favor espere",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       const blob = await pdfPreviewAPI.preview(formData.content, formData.code);
+      Swal.close();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
     } catch (error) {

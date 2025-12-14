@@ -66,7 +66,17 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
   const handlePreview = async (code: any, content: string) => {
     try {
+      Swal.fire({
+        title: "Generando previsualización...",
+        text: "Por favor espere",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       const blob = await pdfPreviewAPI.preview(content, code);
+      Swal.close();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
     } catch (error) {
