@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract, faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
 import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -471,7 +471,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
                 <FontAwesomeIcon icon={faPlus} />
               </button>
               <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
-                <FontAwesomeIcon icon={faFileContract} />
+                <FontAwesomeIcon icon={faFilePdf} />
                 <span className="hidden lg:block">Plantillas PDF</span>
               </button>
               <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">

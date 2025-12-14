@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { faGear } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGear, faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { GlobalVacationConfigTab } from "../components/vacations/GlobalVacationConfigTab";
@@ -45,6 +46,15 @@ export function ManageVacationsRulesPage() {
             {activeTab === "global" && <GlobalVacationConfigTab />}
             {activeTab === "overlap" && <VacationOverlapRules />}
           </div>
+        </div>
+      }
+      //headerActions={}
+      headerActions={
+        <div>
+          <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faFilePdf} />
+            <span className="hidden lg:block">Plantillas PDF</span>
+          </button>
         </div>
       }
       children={undefined}

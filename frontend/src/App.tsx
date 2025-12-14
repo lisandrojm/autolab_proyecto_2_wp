@@ -57,7 +57,6 @@ import { ManageVacationsRulesPage } from "./pages/ManageVacationsRulesPage";
 import { ManageVacationsCalendarPage } from "./pages/ManageVacationsCalendarPage";
 import { RequestsListPage } from "./pages/Requests/RequestsListPage";
 import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
-import { ManageOrdersCategoriesTypesPage } from "./pages/ManageOrdersCategoriesTypesPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplates/PdfTemplatesPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
@@ -392,14 +391,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RequestDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/request-types"
-                element={
-                  <ProtectedRoute>
-                    <ManageOrdersCategoriesTypesPage />
                   </ProtectedRoute>
                 }
               />
