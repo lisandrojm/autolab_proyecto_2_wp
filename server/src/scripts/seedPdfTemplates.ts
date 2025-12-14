@@ -28,6 +28,15 @@ Esta aprobación es válida únicamente para la fecha indicada y se encuentra su
     variablesHint: "Variables: categoria, subcategoria, fechaUnica, nombreUsuario, numeroOrden",
     isActive: true,
   },
+  {
+    code: "vacaciones" as const,
+    name: "Solicitud de Vacaciones",
+    content: `Por la presente notifico que hemos aprobado su solicitud de vacaciones por {{dias}} día(s), desde el {{fechaDesde}} hasta el {{fechaHasta}}.
+
+Esta autorización se encuentra sujeta a las políticas internas de la empresa y deberá ser coordinada con su supervisor directo.`,
+    variablesHint: "Variables: dias, fechaDesde, fechaHasta, nombreUsuario",
+    isActive: true,
+  },
 ];
 
 export async function seedPdfTemplates(tenantId: mongoose.Types.ObjectId) {

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPlus, faTimes, faCircleInfo, faSave } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faPlus, faTimes, faCircleInfo, faSave, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import Swal from "sweetalert2";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { InfoModal } from "../ui/InfoModal";
 import { pdfTemplatesAPI, PdfTemplate } from "../../api/pdfTemplates";
+import { pdfPreviewAPI } from "../../api/pdfPreview";
 import { globalVacationConfigAPI, GlobalVacationConfig } from "../../api/globalVacationConfig";
 
 interface AntiguedadTranche {
@@ -35,6 +38,38 @@ export const GlobalVacationConfigTab: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handlePreview = async (code: any, content: string) => {
+    try {
+      Swal.fire({
+        title: "Generando previsualización...",
+        text: "Por favor espere",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      const blob = await pdfPreviewAPI.preview(content, code);
+      Swal.close();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
+    }
+  };
+
+  useEffect(() => {
+    if (!config || !pdfTemplates.length) return;
+
+    const vacationTemplate = pdfTemplates.find((t) => t.code === "vacaciones");
+    if (vacationTemplate) {
+      if (config.pdfTemplateId !== vacationTemplate._id) {
+        setConfig((prev) => (prev ? { ...prev, pdfTemplateId: vacationTemplate._id } : null));
+      }
+    }
+  }, [config?.pdfTemplateId, pdfTemplates]);
 
   const loadData = async () => {
     setLoading(true);
@@ -290,14 +325,42 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <select value={config.pdfTemplateId || ""} onChange={(e) => updateConfig("pdfTemplateId", e.target.value || undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                  <option value="">Ninguna</option>
-                  {pdfTemplates.map((template) => (
-                    <option key={template._id} value={template._id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-2">
+                  {(() => {
+                    const matchingTemplate = pdfTemplates?.find((t) => t.code === "vacaciones");
+
+                    if (matchingTemplate) {
+                      return (
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
+                          </div>
+                          <button type="button" onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)} className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 font-medium flex items-center gap-1" title="Previsualizar plantilla">
+                            <FontAwesomeIcon icon={faEye} /> Visualizar
+                          </button>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Sin plantilla asignada</p>
+                              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                No existe una plantilla activa para vacaciones (Código esperado: <strong>vacaciones</strong>). El PDF no se generará correctamente.
+                              </p>
+                              <Link to="/hr/pdf-templates" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
+                                Crear plantilla en Configuración &rarr;
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
               </div>
             </div>
           </div>
