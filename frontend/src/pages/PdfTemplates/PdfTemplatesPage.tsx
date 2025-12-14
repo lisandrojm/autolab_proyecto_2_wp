@@ -225,7 +225,7 @@ export function PdfTemplatesPage() {
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
             </button>
             {activeTab === "templates" && (
-              <button onClick={() => setShowStatusModal(true)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
+              <button onClick={() => setShowStatusModal(true)} className="px-4 py- text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors" title="Ver estado de asignación">
                 <FontAwesomeIcon icon={faList} className="h-4 w-4" />
                 <span>Estado de asignación</span>
               </button>
