@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faCalendar, faUmbrellaBeach, faChevronLeft, faChevronRight, faBuilding, faTimes, faPlus, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowLeft,
+  faCalendar,
+  faUmbrellaBeach,
+  faChevronLeft,
+  faChevronRight,
+  faBuilding,
+  faLayerGroup,
+  faTimes,
+  faPlus,
+  faInfoCircle, // Ícono de información agregado
+} from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
@@ -32,11 +43,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   // Modal State
   const [selectedVacation, setSelectedVacation] = useState<VacationRequest | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  // Nuevo estado para el modal de información/ayuda
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   // Stats State (Current Year only)
   const currentYear = new Date().getFullYear();
-  // We can simulate year selection but data comes from backend as 'current state'.
-  // For UI consistency with the mock, we can show the current year.
   const selectedYear = currentYear;
 
   const loading = vacationsLoading || profileLoading;
@@ -151,20 +162,16 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
   return (
     <div className="flex-1 pb-24">
-      {/* HEADER */}
+      {/* HEADER: Fijo y con el botón principal */}
       <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
               <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                <FontAwesomeIcon icon={faUmbrellaBeach} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Vacaciones</h1>
-              </div>
+              <FontAwesomeIcon icon={faUmbrellaBeach} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Vacaciones</h1>
             </div>
           </div>
           <button onClick={() => setShowForm(true)} disabled={loading} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 shadow-lg shadow-blue-500/20">
@@ -174,62 +181,69 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         </div>
       </div>
 
-      <div className="px-4 pt-4 flex flex-col gap-2">
-        {/* AREA INFO CARD */}
-        <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-200 dark:hover:border-blue-800 transition-colors relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div>
-                  <FontAwesomeIcon icon={faLayerGroup} className="text-blue-200 text-xl" />
-                </div>
-                <div>
-                  <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Área</p>
-                  <h2 className="text-lg font-bold">{profile?.areaName || profile?.department || "Sin Área"}</h2>
-                </div>
+      <div className="px-4 pt-4 flex flex-col gap-4">
+        {/* NUEVA TARJETA DE RESUMEN COMPACTA E INTEGRADA */}
+        <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 border border-slate-200 dark:border-slate-700 relative overflow-hidden">
+          {/* Encabezado Integrado: Año, Área y Botón de Información */}
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">Año {selectedYear}</h3>
+                {/* Botón de Ayuda */}
+                <button onClick={() => setShowInfoModal(true)} className="text-slate-400 hover:text-blue-500 transition-colors p-1">
+                  <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
+                </button>
               </div>
-              <div>{profile?.areaMembers !== undefined && <p className="text-blue-200/80 text-xs mt-0.5">{profile.areaMembers} Miembros</p>}</div>
+              {/* Área y Miembros (Información Secundaria) */}
+              <p className="text-xs text-slate-500 dark:text-slate-400 flex gap-2">
+                <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
+                <span className="font-semibold uppercase">Área: </span>
+                {profile?.areaName || profile?.department || "Sin Área"}
+                {profile?.areaMembers !== undefined && <span className="ml-1">| {profile.areaMembers} Miembro(s)</span>}
+              </p>
+            </div>
+            {/* Controles de Año (opcionales) */}
+            <div className="flex items-center text-slate-500 dark:text-slate-400">
+              <button className="p-1 cursor-not-allowed opacity-50">
+                <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4" />
+              </button>
+              <button className="p-1 cursor-not-allowed opacity-50">
+                <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* STATS CARD with Year Selector (Simple Display) */}
-        <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-200 dark:hover:border-blue-800 transition-colors relative overflow-hidden">
-          <div className="flex items-center justify-between mb-6">
-            <button className="p-1 text-slate-500 cursor-not-allowed">
-              <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4" />
-            </button>
-            <h3 className="font-bold text-lg">Año {selectedYear}</h3>
-            <button className="p-1 text-slate-500 cursor-not-allowed">
-              <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-y-6 gap-x-2 text-center">
+          {/* Cifras Clave (Mejor Terminología) */}
+          <div className="grid grid-cols-3 gap-y-4 gap-x-2 text-center pb-2">
+            {/* Fila 1 */}
             <div>
               <p className="text-xs text-slate-400 mb-1">Antigüedad</p>
               <p className="text-xl font-bold">{calculateAntiguedad()}</p>
             </div>
             <div>
+              <p className="text-xs text-slate-400 mb-1">Beneficio Total</p>
+              <p className="text-xl font-bold text-green-500">{availableDays?.total || 0}</p>
+            </div>
+            <div className="flex flex-col justify-end">
               <p className="text-xs text-slate-400 mb-1">Pendientes</p>
-              <p className="text-xl font-bold">{vacations.filter((v) => v.status === "pending").length}</p>
+              <p className="text-xl font-bold text-yellow-500">{vacations.filter((v) => v.status === "pending").length}</p>
             </div>
-            <div>
+
+            {/* Separador Visual para jerarquía */}
+            <div className="col-span-3 border-t border-slate-200 dark:border-slate-800 pt-3"></div>
+
+            {/* Fila 2 (Enfocándose en el saldo) */}
+            <div className="text-center">
               <p className="text-xs text-slate-400 mb-1">Gozados</p>
-              <p className="text-xl font-bold">{availableDays?.used || 0}</p>
+              <p className="text-2xl font-bold">{availableDays?.used || 0}</p>
             </div>
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Beneficio</p>
-              <p className="text-xl font-bold">{availableDays?.total || 0}</p>
-            </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-slate-400 mb-1">Corridos</p>
-              <p className="text-xl font-bold text-blue-400">{availableDays?.available || 0}</p>
+              <p className="text-2xl font-bold text-blue-500">{availableDays?.available || 0}</p>
             </div>
-            <div>
+            <div className="text-center">
               <p className="text-xs text-slate-400 mb-1">Hábiles</p>
-              {/* Not available in API, show placeholder */}
-              <p className="text-xl font-bold text-slate-500">-</p>
+              <p className="text-2xl font-bold text-slate-500">-</p>
             </div>
           </div>
         </div>
@@ -428,6 +442,36 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   Confirmar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE INFORMACIÓN/AYUDA (Explicación de Términos) */}
+      {showInfoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">Explicación de Términos</h3>
+              <button onClick={() => setShowInfoModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4 text-slate-700 dark:text-slate-300">
+              <p>Aquí se detallan los conceptos clave de tus días de vacaciones:</p>
+              <ul className="list-disc list-inside space-y-2">
+                <li>**Antigüedad (Años):** Años de servicio en la compañía desde tu fecha de contratación.</li>
+                <li>**Beneficio Total:** El total de días de vacaciones asignados para el año actual.</li>
+                <li>**Pendientes:** Solicitudes de vacaciones que están en estado de aprobación.</li>
+                <li>**Gozados:** Días de vacaciones que ya has tomado de tu beneficio total.</li>
+                <li>**Corridos:** Días de vacaciones que tienes disponibles para solicitar.</li>
+                <li>**Hábiles:** Días disponibles para solicitar calculados excluyendo fines de semana y días festivos. (Dato Pendiente)</li>
+              </ul>
+            </div>
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end bg-slate-50 dark:bg-slate-800/50">
+              <button onClick={() => setShowInfoModal(false)} className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors">
+                Entendido
+              </button>
             </div>
           </div>
         </div>
