@@ -233,7 +233,7 @@ export const MobileNavbar: React.FC = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    if (["/hr/order-categories", "/hr/pdf-templates"].includes(path)) {
+    if (["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules"].includes(path)) {
       setOpenAdminSection("config");
     }
   }, [location.pathname]);
@@ -290,7 +290,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
-      if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faShoppingCart, label: "Pedidos", scope: "global", dividerTop: true });
+      if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/pdf-templates", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
 
