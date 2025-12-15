@@ -8,7 +8,7 @@ import { Logo } from "../components/ui/Logo";
 import { useAuthStore } from "../stores/authStore";
 import { useThemeStore } from "../stores/themeStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faRightToBracket, faGlobe, faMoon, faSun, faMagicWandSparkles, faCheckCircle, faTimesCircle, faEye, faEyeSlash, faBuilding } from "@fortawesome/free-solid-svg-icons";
+import { faMoon, faSun, faMagicWandSparkles, faCheckCircle, faTimesCircle, faEye, faEyeSlash, faBuilding, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 
 // ===== Validación =====
 const loginWithClientSchema = z.object({
@@ -45,6 +45,10 @@ interface DemoUser {
     _id: string;
     name: string;
     slug: string;
+  };
+  area?: {
+    _id: string;
+    name: string;
   };
 }
 
@@ -235,8 +239,10 @@ export const LoginPage: React.FC = () => {
       "manager@example.com": "manager123",
       "user@example.com": "user123",
       "cliente@example.com": "changeme",
-      "coordinador@mobile.com": "coordinador123",
+      "coordinador@mobile.com": "coordinador-123",
       "colaborador@mobile.com": "colaborador123",
+      "coordinador2@mobile.com": "coordinador-123",
+      "colaborador2@mobile.com": "colaborador123",
     };
     const password = demoPasswords[user.email] || "tenant123";
     setValue("password", password, { shouldValidate: true });
@@ -382,6 +388,12 @@ export const LoginPage: React.FC = () => {
                         <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">Email: {user.email}</div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">Roles: {user.roles.map((r) => r.name).join(", ") || "Sin roles"}</div>
+                        {user.area && (
+                          <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
+                            Area: {user.area.name}
+                          </div>
+                        )}
                         <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
                           Estado:
                           {user.isActive ? <FontAwesomeIcon icon={faCheckCircle} className="text-blue-500" /> : <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />}

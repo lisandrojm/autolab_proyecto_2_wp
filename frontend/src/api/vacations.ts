@@ -61,8 +61,8 @@ export interface VacationRequest {
 
 // VACATION REQUESTS API
 export const vacationsAPI = {
-  getAll: async (): Promise<VacationRequest[]> => {
-    const response = await axios.get("/vacations");
+  getAll: async (params?: { mine?: boolean }): Promise<VacationRequest[]> => {
+    const response = await axios.get("/vacations", { params });
     return response.data;
   },
 

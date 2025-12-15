@@ -13,10 +13,11 @@ export const useVacations = () => {
     try {
       setLoading(true);
       setError(null);
-      const [vacationsData, profileStats, availabilityData] = await Promise.all([vacationsAPI.getAll(), personnelAPI.getProfileStats(), vacationsAPI.getAvailability()]);
+      const [vacationsData, profileStats, availabilityData] = await Promise.all([vacationsAPI.getAll({ mine: true }), personnelAPI.getProfileStats(), vacationsAPI.getAvailability()]);
       setVacations(vacationsData);
       setAvailableDays(profileStats.vacations);
       setOccupiedDates(availabilityData);
+      console.log("Occupied Dates received:", availabilityData);
     } catch (err: any) {
       setError(err.response?.data?.error || "Error al cargar vacaciones");
       console.error("Error fetching vacations:", err);

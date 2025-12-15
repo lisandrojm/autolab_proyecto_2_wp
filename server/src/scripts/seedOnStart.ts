@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { connectDB, disconnectDB } from "../config/db.js";
 import { env } from "../config/env.js";
+import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
@@ -20,7 +21,9 @@ import { Area } from "../models/Area.js";
 import { Level } from "../models/Level.js";
 import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
+import { Vacation } from "../models/Vacation.js";
 import { VacationCounter } from "../models/VacationCounter.js";
+import { VacationOverlap } from "../models/VacationOverlap.js";
 import { Types } from "mongoose";
 import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
 import { migrateOrderCategoryImprovements } from "./migrateOrderCategoryImprovements.js";
@@ -142,18 +145,49 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
     });
 
     console.log(`✅ ensureUser: created ${email} [${roleName}]`);
+    console.log(`✅ ensureUser: created ${email} [${roleName}]`);
   } else {
-    const updates: any = {};
+    let isModified = false;
     const userRoles = user.roles.map((r) => r.toString());
-    if (!userRoles.includes(String(wantedRole._id))) updates.roles = [wantedRole._id];
-    if (user.firstName !== firstName) updates.firstName = firstName;
-    if (user.lastName !== lastName) updates.lastName = lastName;
-    if (typeof isActive === "boolean" && user.isActive !== isActive) updates.isActive = isActive;
-    if (positionId && String(user.positionId) !== String(positionId)) updates.positionId = positionId;
-    if (levelId && String(user.levelId) !== String(levelId)) updates.levelId = levelId;
-    if (areaId && String(user.areaId) !== String(areaId)) updates.areaId = areaId;
-    if (Object.keys(updates).length) {
-      await User.updateOne({ _id: user._id }, { $set: updates });
+
+    if (!userRoles.includes(String(wantedRole._id))) {
+      user.roles = [wantedRole._id];
+      isModified = true;
+    }
+    if (user.firstName !== firstName) {
+      user.firstName = firstName;
+      isModified = true;
+    }
+    if (user.lastName !== lastName) {
+      user.lastName = lastName;
+      isModified = true;
+    }
+    if (typeof isActive === "boolean" && user.isActive !== isActive) {
+      user.isActive = isActive;
+      isModified = true;
+    }
+    if (positionId && String(user.positionId) !== String(positionId)) {
+      user.positionId = positionId;
+      isModified = true;
+    }
+    if (levelId && String(user.levelId) !== String(levelId)) {
+      user.levelId = levelId;
+      isModified = true;
+    }
+    if (areaId && String(user.areaId) !== String(areaId)) {
+      user.areaId = areaId;
+      isModified = true;
+    }
+
+    // Check password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      user.password = password; // Will be hashed by pre-save hook
+      isModified = true;
+    }
+
+    if (isModified) {
+      await user.save();
       console.log(`♻️ ensureUser: updated ${email}`);
     } else {
       console.log(`✔️ ensureUser: exists ${email}`);
@@ -561,6 +595,36 @@ export async function seedOnStart() {
       areaMap[name] = area._id as Types.ObjectId;
     }
 
+    // ---- VACATION OVERLAP RULES ----
+    console.log("🛡️ Seeding Vacation Overlap Rules...");
+    for (const name of areaNames) {
+      const areaId = areaMap[name];
+      let rule = await VacationOverlap.findOne({ tenantId, areaId });
+
+      // Default limit: 1 for Editores (strict testing), 2 for others
+      const limit = name === "Editores" ? 1 : 2;
+
+      if (!rule) {
+        rule = await VacationOverlap.create({
+          tenantId,
+          areaId,
+          maxSimultaneousUsers: limit,
+          description: `Regla de superposición para ${name}`,
+          isActive: true,
+        });
+        console.log(`✅ Created Overlap Rule for ${name}: Max ${limit} users`);
+      } else {
+        // Ensure limit is updated for testing if needed
+        if (name === "Editores" && rule.maxSimultaneousUsers !== 1) {
+          rule.maxSimultaneousUsers = 1;
+          await rule.save();
+          console.log(`♻️ Updated Overlap Rule for ${name}: Max set to 1`);
+        } else {
+          console.log(`✔️ Overlap Rule exists for ${name}`);
+        }
+      }
+    }
+
     // ---- USUARIOS BASE ----
     const adminUser = await ensureUser({
       tenantId,
@@ -596,7 +660,7 @@ export async function seedOnStart() {
     const coord = await ensureUser({
       tenantId,
       email: "coordinador@mobile.com",
-      password: "coordinador123",
+      password: "coordinador-123",
       roleName: "Mobile-Coordinador",
       firstName: "María",
       lastName: "Coordinadora",
@@ -606,6 +670,36 @@ export async function seedOnStart() {
       areaId: areaMap["Técnica"],
     });
     console.log(`👤 Coordinador assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Técnica`);
+
+    // Nuevo Colaborador (mismo área que Juan para testing)
+    const collab2 = await ensureUser({
+      tenantId,
+      email: "colaborador2@mobile.com",
+      password: "colaborador123",
+      roleName: "Mobile-Colaborador",
+      firstName: "Pedro",
+      lastName: "Colaborador",
+      isActive: true,
+      positionId: positionEditor._id as Types.ObjectId,
+      levelId: levelEditorJunior._id as Types.ObjectId,
+      areaId: areaMap["Editores"],
+    });
+    console.log(`👤 Colaborador 2 assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
+
+    // Nuevo Coordinador (mismo área que Juan y Pedro para testing)
+    const coord2 = await ensureUser({
+      tenantId,
+      email: "coordinador2@mobile.com",
+      password: "coordinador-123",
+      roleName: "Mobile-Coordinador",
+      firstName: "Ana",
+      lastName: "Coordinadora",
+      isActive: true,
+      positionId: positionProductor._id as Types.ObjectId,
+      levelId: levelProductorSenior._id as Types.ObjectId,
+      areaId: areaMap["Editores"], // Intentionally in Editores for overlap testing
+    });
+    console.log(`👤 Coordinador 2 assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Editores`);
 
     /* ============ SEED: MODELOS DEL NAVBAR (HR / MODELOS) ============ */
     console.log("👥 Seeding HR/Models demo data...");
@@ -636,7 +730,7 @@ export async function seedOnStart() {
           email: "colaborador@mobile.com",
           phone: "+54-11-5555-0001",
           position: "Asistente Operativo",
-          department: "Mobile",
+          department: "Editores",
           hireDate: new Date(2023, 5, 1),
           address: { street: "Av. Demo 100", city: "CABA", state: "BA", country: "AR", zip: "1000" },
           vacationPolicy: { annualDays: 20, carryOverDays: 0 },
@@ -650,16 +744,118 @@ export async function seedOnStart() {
           email: "coordinador@mobile.com",
           phone: "+54-11-5555-0002",
           position: "Coordinadora de Equipo",
-          department: "Mobile",
+          department: "Técnica",
           hireDate: new Date(2022, 8, 10),
           address: { street: "Calle Proyecto 200", city: "CABA", state: "BA", country: "AR", zip: "1001" },
           vacationPolicy: { annualDays: 22, carryOverDays: 3 },
           isActive: true,
         },
+        {
+          tenantId,
+          userId: collab2._id,
+          firstName: "Pedro",
+          lastName: "Colaborador",
+          email: "colaborador2@mobile.com",
+          phone: "+54-11-5555-0003",
+          position: "Editor Junior",
+          department: "Editores",
+          hireDate: new Date(2023, 6, 1),
+          address: { street: "Calle Test 1", city: "CABA", state: "BA", country: "AR", zip: "1002" },
+          vacationPolicy: { annualDays: 20, carryOverDays: 0 },
+          isActive: true,
+        },
+        {
+          tenantId,
+          userId: coord2._id,
+          firstName: "Ana",
+          lastName: "Coordinadora",
+          email: "coordinador2@mobile.com",
+          phone: "+54-11-5555-0004",
+          position: "Productor Senior",
+          department: "Editores",
+          hireDate: new Date(2022, 9, 15),
+          address: { street: "Calle Test 2", city: "CABA", state: "BA", country: "AR", zip: "1003" },
+          vacationPolicy: { annualDays: 22, carryOverDays: 2 },
+          isActive: true,
+        },
       ]);
       console.log("✅ EmployeeProfile seeded");
     } else {
-      console.log("✔️ EmployeeProfile already present");
+      console.log("✔️ EmployeeProfile already present (skipping bulk creation)");
+    }
+
+    // Ensure specific demo profiles are up to date (or created if missing)
+    const demoProfiles = [
+      {
+        userId: adminUser._id,
+        firstName: "Admin",
+        lastName: "User",
+        email: adminEmail,
+        phone: "+1-555-0101",
+        position: "Platform Administrator",
+        department: "IT",
+        hireDate: new Date(2023, 0, 15),
+        address: { street: "123 Tech Street", city: "San Francisco", state: "CA", country: "USA", zip: "94102" },
+        vacationPolicy: { annualDays: 25, carryOverDays: 5 },
+        isActive: true,
+      },
+      {
+        userId: collab._id,
+        firstName: "Juan",
+        lastName: "Colaborador",
+        email: "colaborador@mobile.com",
+        phone: "+54-11-5555-0001",
+        position: "Asistente Operativo",
+        department: "Editores",
+        hireDate: new Date(2023, 5, 1),
+        address: { street: "Av. Demo 100", city: "CABA", state: "BA", country: "AR", zip: "1000" },
+        vacationPolicy: { annualDays: 20, carryOverDays: 0 },
+        isActive: true,
+      },
+      {
+        userId: coord._id,
+        firstName: "María",
+        lastName: "Coordinadora",
+        email: "coordinador@mobile.com",
+        phone: "+54-11-5555-0002",
+        position: "Coordinadora de Equipo",
+        department: "Técnica",
+        hireDate: new Date(2022, 8, 10),
+        address: { street: "Calle Proyecto 200", city: "CABA", state: "BA", country: "AR", zip: "1001" },
+        vacationPolicy: { annualDays: 22, carryOverDays: 3 },
+        isActive: true,
+      },
+      {
+        userId: collab2._id,
+        firstName: "Pedro",
+        lastName: "Colaborador",
+        email: "colaborador2@mobile.com",
+        phone: "+54-11-5555-0003",
+        position: "Editor Junior",
+        department: "Editores",
+        hireDate: new Date(2023, 6, 1),
+        address: { street: "Calle Test 1", city: "CABA", state: "BA", country: "AR", zip: "1002" },
+        vacationPolicy: { annualDays: 20, carryOverDays: 0 },
+        isActive: true,
+      },
+      {
+        userId: coord2._id,
+        firstName: "Ana",
+        lastName: "Coordinadora",
+        email: "coordinador2@mobile.com",
+        phone: "+54-11-5555-0004",
+        position: "Productor Senior",
+        department: "Editores",
+        hireDate: new Date(2022, 9, 15),
+        address: { street: "Calle Test 2", city: "CABA", state: "BA", country: "AR", zip: "1003" },
+        vacationPolicy: { annualDays: 22, carryOverDays: 2 },
+        isActive: true,
+      },
+    ];
+
+    for (const p of demoProfiles) {
+      await EmployeeProfile.findOneAndUpdate({ tenantId, userId: p.userId }, { ...p, tenantId }, { upsert: true, new: true });
+      console.log(`✅ Ensure Profile: ${p.email} (${p.department})`);
     }
 
     // ---- VacationRequest ----
@@ -1602,7 +1798,7 @@ export async function seedOnStart() {
     console.log("🎉 Seed completed successfully!");
     console.log(`👤 Admin: ${adminEmail} / ${adminPassword}`);
     console.log("📱 Mobile Colaborador: colaborador@mobile.com / colaborador123");
-    console.log("📱 Mobile Coordinador: coordinador@mobile.com / coordinador123");
+    console.log("📱 Mobile Coordinador: coordinador@mobile.com / coordinador-123");
     console.log("🔐 Roles: admin, Mobile-Coordinador (mobile:access + mobile:coordinator), Mobile-Colaborador (mobile:access + mobile:collaborator)");
   } catch (error) {
     console.error("❌ Seed error:", error);

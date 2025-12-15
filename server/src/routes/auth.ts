@@ -240,10 +240,11 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
 router.get("/demo-users", async (req, res) => {
   try {
     // Traer usuarios de todos los tenants
-    const users = await User.find({ isActive: true }).select("email firstName lastName role isActive tenantId").populate("roles", "name description").populate("tenantId", "name slug").sort({ "tenantId.name": 1, email: 1 }).limit(200);
+    const users = await User.find({ isActive: true }).select("email firstName lastName role isActive tenantId areaId").populate("roles", "name description").populate("tenantId", "name slug").populate("areaId", "name").sort({ "tenantId.name": 1, email: 1 }).limit(200);
 
     const demoUsers = users.map((user) => {
       const tenant = user.tenantId as any;
+      const area = user.areaId as any;
       return {
         _id: user._id,
         email: user.email,
@@ -256,6 +257,7 @@ router.get("/demo-users", async (req, res) => {
           name: tenant?.name || "Unknown",
           slug: tenant?.slug || "",
         },
+        area: area ? { _id: area._id, name: area.name } : undefined,
       };
     });
 

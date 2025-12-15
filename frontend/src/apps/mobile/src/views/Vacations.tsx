@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -54,6 +54,13 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   // Nuevo estado para el modal de información/ayuda
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showSignatureInfoModal, setShowSignatureInfoModal] = useState(false);
+
+  // Refetch data when form opens to ensure availability is up to date
+  useEffect(() => {
+    if (showForm) {
+      refetch();
+    }
+  }, [showForm]);
 
   // Stats State (Current Year only)
   const currentYear = new Date().getFullYear();
@@ -115,7 +122,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   };
 
   const isOccupied = (day: Date) => {
-    return occupiedDates.includes(format(day, "yyyy-MM-dd"));
+    const formatted = format(day, "yyyy-MM-dd");
+    return occupiedDates.includes(formatted);
   };
 
   const checkOverlap = (start: string, end: string) => {
@@ -380,8 +388,16 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400  tracking-wider mb-0.5">
+                  <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                  <span className="text-slate-500 dark:text-slate-400 uppercase">Área</span>
+                  <span className="text">{profile?.areaName || profile?.department || "Área"}</span>
+                </div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
+              </div>
               <div className="flex items-center gap-2">
+                {import.meta.env.DEV && <span className="text-[10px] text-red-500 font-mono bg-red-100 px-1 rounded">Blocked: {occupiedDates.length}</span>}
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
                   <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <FontAwesomeIcon icon={faChevronLeft} className="text-slate-600 dark:text-slate-400 w-4 h-4" />

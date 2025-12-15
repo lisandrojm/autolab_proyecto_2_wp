@@ -13,6 +13,7 @@ import { VacationOverlap } from "../models/VacationOverlap.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { Level } from "../models/Level.js";
 import { Position } from "../models/Position.js";
+import { Area } from "../models/Area.js";
 
 const router = express.Router();
 
@@ -26,13 +27,26 @@ router.get("/availability", async (req, res) => {
     const userId = req.user!.userId;
     const user = await User.findById(userId);
 
-    if (!user || !user.areaId) {
-      return res.json([]); // No area, no restrictions (or maybe return all? usually none)
+    let userAreaId = user.areaId;
+
+    // Fallback: If user has no areaId, try to find it via EmployeeProfile department
+    if (!userAreaId) {
+      const profile = await EmployeeProfile.findOne({ userId, tenantId });
+      if (profile && profile.department) {
+        const area = await Area.findOne({ tenantId, name: profile.department });
+        if (area) {
+          userAreaId = area._id as any;
+        }
+      }
+    }
+
+    if (!userAreaId) {
+      return res.json([]); // No area, no restrictions
     }
 
     const overlapRule = await VacationOverlap.findOne({
       tenantId,
-      areaId: user.areaId,
+      areaId: userAreaId,
       isActive: true,
     });
 
@@ -43,16 +57,33 @@ router.get("/availability", async (req, res) => {
 
     // Optimización: Search vacations overlapping with next 18 months
     const searchStart = new Date();
+    searchStart.setDate(1); // Start from the 1st of the current month
     searchStart.setHours(0, 0, 0, 0);
     const searchEnd = new Date();
     searchEnd.setMonth(searchEnd.getMonth() + 18);
 
-    const usersInArea = await User.find({ areaId: user.areaId, tenantId }).select("_id");
+    const usersInArea = await User.find({ areaId: userAreaId, tenantId }).select("_id");
     const userIdsInArea = usersInArea.map((u) => u._id);
+
+    // Also include users who might have this area resolved via Profile (if we want to be thorough),
+    // but for now let's assume if we found the area, other users might have it set or we miss them.
+    // Ideally we should find all users where (areaId == userAreaId OR profile.department == area.name).
+    // But that's expensive. Let's stick to areaId for now, assuming if we fix one we fix others or they are set.
+    // Wait, if THIS user didn't have areaId, others might not either.
+    // We should find users by Profile Department too if we want to be correct.
+
+    const areaName = (await Area.findById(userAreaId))?.name;
+    let extraUserIds: any[] = [];
+    if (areaName) {
+      const profilesInDept = await EmployeeProfile.find({ tenantId, department: areaName }).select("userId");
+      extraUserIds = profilesInDept.map((p) => p.userId);
+    }
+
+    const allUserIdsInArea = [...new Set([...userIdsInArea.map((id) => id.toString()), ...extraUserIds.map((id) => id.toString())])];
 
     const areaVacations = await Vacation.find({
       tenantId,
-      userId: { $in: userIdsInArea }, // All users in area
+      userId: { $in: allUserIdsInArea }, // All users in area
       status: { $nin: ["rejected", "cancelled"] },
       endDate: { $gte: searchStart },
       startDate: { $lte: searchEnd },
@@ -77,6 +108,9 @@ router.get("/availability", async (req, res) => {
       .filter(([_, count]) => count >= overlapRule.maxSimultaneousUsers)
       .map(([date]) => date);
 
+    console.log(`[Availability] User: ${userId}, Area: ${areaName}, Rule Max: ${overlapRule.maxSimultaneousUsers}`);
+    console.log(`[Availability] Found ${areaVacations.length} vacations. Blocked Dates: ${blockedDates.length}`);
+
     res.json(blockedDates);
   } catch (error: any) {
     console.error("Error fetching availability:", error);
@@ -88,7 +122,16 @@ router.get("/availability", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const vacations = await Vacation.find({ tenantId }).sort({ createdAt: -1 });
+    const { mine } = req.query;
+
+    const query: any = { tenantId };
+
+    // If 'mine' param is present, filter by current user
+    if (mine === "true") {
+      query.userId = req.user!.userId;
+    }
+
+    const vacations = await Vacation.find(query).sort({ createdAt: -1 });
     res.json(vacations);
   } catch (error: any) {
     console.error("Error fetching vacations:", error);
@@ -153,10 +196,35 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Fechas requeridas" });
     }
 
-    if (user.areaId) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Check for user's own overlapping vacations
+    const existingVacation = await Vacation.findOne({
+      tenantId,
+      userId,
+      status: { $nin: ["rejected", "cancelled"] },
+      $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
+    });
+
+    if (existingVacation) {
+      return res.status(400).json({ error: "Ya tienes una solicitud de vacaciones activa en este rango de fechas." });
+    }
+
+    let userAreaId = user.areaId;
+    if (!userAreaId) {
+      if (profile && profile.department) {
+        const area = await Area.findOne({ tenantId, name: profile.department });
+        if (area) {
+          userAreaId = area._id as any;
+        }
+      }
+    }
+
+    if (userAreaId) {
       const overlapRule = await VacationOverlap.findOne({
         tenantId,
-        areaId: user.areaId,
+        areaId: userAreaId,
         isActive: true,
       });
 
@@ -164,19 +232,27 @@ router.post("/", async (req, res) => {
         const start = new Date(startDate);
         const end = new Date(endDate);
 
-        const usersInArea = await User.find({ areaId: user.areaId, tenantId }).select("_id");
+        const usersInArea = await User.find({ areaId: userAreaId, tenantId }).select("_id");
         const userIdsInArea = usersInArea.map((u) => u._id);
+
+        const areaName = (await Area.findById(userAreaId))?.name;
+        let extraUserIds: any[] = [];
+        if (areaName) {
+          const profilesInDept = await EmployeeProfile.find({ tenantId, department: areaName }).select("userId");
+          extraUserIds = profilesInDept.map((p) => p.userId);
+        }
+        const allUserIdsInArea = [...new Set([...userIdsInArea.map((id) => id.toString()), ...extraUserIds.map((id) => id.toString())])];
 
         const concurrentUsers = await Vacation.find({
           tenantId,
-          userId: { $in: userIdsInArea, $ne: userId },
+          userId: { $in: allUserIdsInArea, $ne: userId },
           status: { $nin: ["rejected", "cancelled"] },
           $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
         }).distinct("userId");
 
         if (concurrentUsers.length >= overlapRule.maxSimultaneousUsers) {
           return res.status(400).json({
-            error: `No es posible agendar vacaciones en estas fechas. El límite de personas simultáneas en tu área es de ${overlapRule.maxSimultaneousUsers}.`,
+            error: `No es posible agendar vacaciones. Hay ${concurrentUsers.length} personas de tu área con vacaciones en ese periodo (Límite: ${overlapRule.maxSimultaneousUsers}). Fechas ocupadas: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`,
           });
         }
       }
@@ -189,8 +265,8 @@ router.post("/", async (req, res) => {
     }
 
     // CONSTANTS CALCULATION
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // const start = new Date(startDate); // Already defined above
+    // const end = new Date(endDate); // Already defined above
     const timeDiff = Math.abs(end.getTime() - start.getTime());
     const daysRequested = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // Inclusive days
 
