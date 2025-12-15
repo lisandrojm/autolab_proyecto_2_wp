@@ -92,7 +92,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       setEndDate("");
       setReason("");
     } catch (error: any) {
-      // Error handled in hook or globally
+      console.error("Error creating vacation:", error);
+      const errorMessage = error.response?.data?.error || "No se pudo crear la solicitud. Intenta nuevamente.";
+      await sweetAlert.error("Error", errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -177,6 +179,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
     }
   };
 
+  const hasActiveRequest = vacations.some((v) => ["pending", "pre_approved", "approved"].includes(v.status));
+
   return (
     <div className="flex-1 pb-24">
       {/* HEADER: Fijo y con el botón principal (SIN CAMBIOS) */}
@@ -191,7 +195,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Vacaciones</h1>
             </div>
           </div>
-          <button onClick={() => setShowForm(true)} disabled={loading} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 shadow-lg shadow-blue-500/20">
+          <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20" title={hasActiveRequest ? "Ya tienes una solicitud en curso" : "Nueva Solicitud"}>
             <FontAwesomeIcon icon={faPlus} />
             <span className="hidden sm:inline">Nueva Solicitud</span>
           </button>
@@ -397,7 +401,6 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
               </div>
               <div className="flex items-center gap-2">
-                {import.meta.env.DEV && <span className="text-[10px] text-red-500 font-mono bg-red-100 px-1 rounded">Blocked: {occupiedDates.length}</span>}
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
                   <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <FontAwesomeIcon icon={faChevronLeft} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
@@ -414,8 +417,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
             <div className="p-4">
               <div className="grid grid-cols-7 mb-2 text-center">
-                {["L", "M", "M", "J", "V", "S", "D"].map((day) => (
-                  <div key={day} className="text-xs font-bold text-slate-400">
+                {["L", "M", "M", "J", "V", "S", "D"].map((day, index) => (
+                  <div key={index} className="text-xs font-bold text-slate-400">
                     {day}
                   </div>
                 ))}
