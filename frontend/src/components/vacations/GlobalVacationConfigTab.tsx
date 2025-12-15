@@ -157,7 +157,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
             <div className="flex md:flex-row flex-col gap-4 items-end">
               <div className="w-full">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Días anuales base</label>
-                <input type="number" value={config.diasAnuales} onChange={(e) => updateConfig("diasAnuales", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" required />
+                <input type="number" value={config.diasAnuales === 0 ? "" : config.diasAnuales} onChange={(e) => updateConfig("diasAnuales", e.target.value === "" ? 0 : parseInt(e.target.value))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" required placeholder="0" />
               </div>
               <div className="w-full">
                 <div className="flex items-center gap-2 mb-2">
@@ -166,7 +166,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" value={config.diasBeneficio || ""} onChange={(e) => updateConfig("diasBeneficio", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                <input type="number" disabled={true} value={config.diasBeneficio || ""} onChange={(e) => updateConfig("diasBeneficio", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
               </div>
             </div>
           </div>
@@ -180,29 +180,31 @@ export const GlobalVacationConfigTab: React.FC = () => {
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Define cuántos días de vacaciones corresponden según la antigüedad del empleado en la empresa.</p>
             <div className="space-y-3">
-              {(config.antiguedadTramos || []).map((tramo, index) => (
-                <div key={index} className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Desde (años)</label>
-                    <input type="number" value={tramo.desde} onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+              <div className="opacity-50 pointer-events-none">
+                {(config.antiguedadTramos || []).map((tramo, index) => (
+                  <div key={index} className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Desde (años)</label>
+                      <input disabled type="number" value={tramo.desde} onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Hasta (años)</label>
+                      <input disabled type="number" value={tramo.hasta} onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Días</label>
+                      <input disabled type="number" value={tramo.dias} onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
+                    </div>
+                    <button disabled type="button" onClick={() => removeAntiguedadTramo(index)} className="px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                      <FontAwesomeIcon icon={faTimes} />
+                    </button>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Hasta (años)</label>
-                    <input type="number" value={tramo.hasta} onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Días</label>
-                    <input type="number" value={tramo.dias} onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
-                  </div>
-                  <button type="button" onClick={() => removeAntiguedadTramo(index)} className="px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-                    <FontAwesomeIcon icon={faTimes} />
-                  </button>
-                </div>
-              ))}
-              <button type="button" onClick={addAntiguedadTramo} className="px-3 py-2 text-sm border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full">
-                <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                Agregar tramo
-              </button>
+                ))}
+                <button disabled type="button" onClick={addAntiguedadTramo} className="px-3 py-2 text-sm border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full">
+                  <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                  Agregar tramo
+                </button>
+              </div>
             </div>
           </div>
 
@@ -216,7 +218,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" value={config.maxDiasGozados || ""} onChange={(e) => updateConfig("maxDiasGozados", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                <input type="number" disabled={true} value={config.maxDiasGozados || ""} onChange={(e) => updateConfig("maxDiasGozados", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
               </div>
 
               <div>
@@ -226,7 +228,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" value={config.minDiasPorSolicitud || ""} onChange={(e) => updateConfig("minDiasPorSolicitud", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                <input type="number" disabled={true} value={config.minDiasPorSolicitud || ""} onChange={(e) => updateConfig("minDiasPorSolicitud", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
               </div>
 
               <div>
@@ -246,7 +248,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" value={config.maxDiasHabiles || ""} onChange={(e) => updateConfig("maxDiasHabiles", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                <input type="number" disabled={true} value={config.maxDiasHabiles || ""} onChange={(e) => updateConfig("maxDiasHabiles", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
               </div>
 
               <div>

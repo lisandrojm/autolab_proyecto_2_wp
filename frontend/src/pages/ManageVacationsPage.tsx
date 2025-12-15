@@ -162,7 +162,11 @@ export const ManageVacationsPage: React.FC = () => {
 
   const formatDateShort = (date: string): string => {
     if (!date) return "-";
-    return new Date(date).toLocaleDateString("es-ES", {
+    // Parse YYYY-MM-DD manually to create Local Date without timezone shift
+    const datePart = date.toString().split("T")[0];
+    const [year, month, day] = datePart.split("-").map(Number);
+    // Use local Date constructor
+    return new Date(year, month - 1, day).toLocaleDateString("es-ES", {
       day: "2-digit",
       month: "short",
     });
@@ -227,21 +231,24 @@ export const ManageVacationsPage: React.FC = () => {
       e.stopPropagation();
     }
 
-    const result = await sweetAlert.confirm("¿Eliminar esta solicitud?", `La solicitud ${getFormattedVacationNumber(numeroPedido)} será eliminada permanentemente. Esta acción no se puede deshacer.`, "Sí, Eliminar", "Cancelar");
+    const result = await sweetAlert.confirm("¿Cancelar esta solicitud?", `La solicitud ${getFormattedVacationNumber(numeroPedido)} será cancelada. Permanecerá en el historial con estado 'Cancelada'.`, "Sí, Cancelar", "No hacer nada");
 
     if (!result.isConfirmed) return;
 
     try {
-      setMockVacations((prev) => prev.filter((v) => v.id !== vacationId));
+      await vacationsAPI.cancel(vacationId);
+
+      setMockVacations((prev) => prev.map((v) => (v.id === vacationId ? { ...v, estado: "cancelled" } : v)));
 
       if (selectedVacation && selectedVacation.id === vacationId) {
-        setSelectedVacation(null);
-        setShowDetailModal(false);
+        setSelectedVacation({ ...selectedVacation, estado: "cancelled" });
+        // Don't close modal, just update state
       }
 
-      await sweetAlert.success("Eliminada", "La solicitud ha sido eliminada correctamente");
+      await sweetAlert.success("Cancelada", "La solicitud ha sido cancelada correctamente");
+      await loadRecords(); // Refresh to be sure
     } catch (error: any) {
-      await sweetAlert.error("Error", "No se pudo eliminar la solicitud");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo cancelar la solicitud");
     }
   };
 
@@ -253,15 +260,33 @@ export const ManageVacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      const updatedVacation = await vacationsAPI.preApprove(selectedVacation.id);
-      await loadRecords();
-      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
-      if (refreshed) {
-        setSelectedVacation(refreshed);
-      }
-      await sweetAlert.success("Preaprobada", updatedVacation.pdfPreAprobacionUrl ? "La solicitud ha sido preaprobada y se ha generado el PDF" : "La solicitud ha sido preaprobada correctamente");
+      const updatedVacationRaw = await vacationsAPI.preApprove(selectedVacation.id);
+
+      // Update local selectedVacation state immediately with new status and PDF url
+      setSelectedVacation((prev) =>
+        prev
+          ? {
+              ...prev,
+              estado: "pre_approved", // We know it's pre_approved now
+              pdfPreAprobacionUrl: updatedVacationRaw.pdfPreAprobacionUrl,
+              requiresSignature: updatedVacationRaw.requiresSignature,
+              signatureNotifiedAt: updatedVacationRaw.signatureNotifiedAt, // though pre-approve usually doesn't notify signature yet
+            }
+          : null
+      );
+
+      await loadRecords(); // Refresh list in background
+
+      await sweetAlert.success("Preaprobada", updatedVacationRaw.pdfPreAprobacionUrl ? "La solicitud ha sido preaprobada y se ha generado el PDF" : "La solicitud ha sido preaprobada correctamente");
     } catch (error: any) {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo pre-aprobar la solicitud");
+      // If error (e.g. already pre-approved), allow loadRecords to refresh the UI to correct state
+      await loadRecords();
+      // Close modal if there's a serious sync error or let user see updated state?
+      // Let's close it if we can't recover context, but refreshing list might be enough if we re-select?
+      // Actually if we errored, selectedVacation is still "pending" in UI.
+      // We should close modal or refresh selectedVacation from server.
+      setShowDetailModal(false);
     } finally {
       setUpdating(false);
     }
@@ -279,15 +304,24 @@ export const ManageVacationsPage: React.FC = () => {
     setUpdating(true);
     try {
       await vacationsAPI.approve(selectedVacation.id);
+
+      setSelectedVacation((prev) =>
+        prev
+          ? {
+              ...prev,
+              estado: "approved",
+            }
+          : null
+      );
+
       await loadRecords();
-      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
-      if (refreshed) {
-        setSelectedVacation(refreshed);
-      }
+
       const successMessage = requiresSignature ? "Se ha notificado al usuario que debe firmar el documento por email" : "La solicitud ha sido aprobada correctamente";
       await sweetAlert.success("Aprobada", successMessage);
     } catch (error: any) {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo aprobar la solicitud");
+      await loadRecords();
+      setShowDetailModal(false);
     } finally {
       setUpdating(false);
     }
@@ -302,14 +336,23 @@ export const ManageVacationsPage: React.FC = () => {
     setUpdating(true);
     try {
       await vacationsAPI.reject(selectedVacation.id);
+
+      setSelectedVacation((prev) =>
+        prev
+          ? {
+              ...prev,
+              estado: "rejected",
+            }
+          : null
+      );
+
       await loadRecords();
-      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
-      if (refreshed) {
-        setSelectedVacation(refreshed);
-      }
+
       await sweetAlert.success("Rechazada", "La solicitud ha sido rechazada");
     } catch (error: any) {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo rechazar la solicitud");
+      await loadRecords();
+      setShowDetailModal(false);
     } finally {
       setUpdating(false);
     }
@@ -324,14 +367,23 @@ export const ManageVacationsPage: React.FC = () => {
     setUpdating(true);
     try {
       await vacationsAPI.deliver(selectedVacation.id);
+
+      setSelectedVacation((prev) =>
+        prev
+          ? {
+              ...prev,
+              estado: "delivered",
+            }
+          : null
+      );
+
       await loadRecords();
-      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
-      if (refreshed) {
-        setSelectedVacation(refreshed);
-      }
+
       await sweetAlert.success("Entregado", "La solicitud ha sido marcada como entregada");
     } catch (error: any) {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
+      await loadRecords();
+      setShowDetailModal(false);
     } finally {
       setUpdating(false);
     }
@@ -484,9 +536,9 @@ export const ManageVacationsPage: React.FC = () => {
                 </button>
               )}
               {selectedVacation.firmaEstado === "sent" && (
-                <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   <FontAwesomeIcon icon={faCheckCircle} />
-                  Marcar como Firmado
+                  Firmado
                 </button>
               )}
             </>
@@ -551,17 +603,22 @@ export const ManageVacationsPage: React.FC = () => {
                   <span>{formatDateShort(vacation.fechaSolicitud)}</span>
                 </div>
               }
-              footerActions={[
-                {
-                  icon: faTrash,
-                  onClick: (e) => {
-                    e?.stopPropagation();
-                    handleDelete(vacation.id, vacation.numeroPedido, e);
-                  },
-                  title: "Eliminar solicitud",
-                  variant: "default",
-                },
-              ]}
+              footerActions={
+                [
+                  !["delivered", "rejected", "cancelled"].includes(vacation.estado)
+                    ? {
+                        icon: faTrash,
+                        onClick: (e: any) => {
+                          e?.stopPropagation();
+                          // @ts-ignore
+                          handleDelete(vacation.id, vacation.numeroPedido, e);
+                        },
+                        title: "Cancelar solicitud",
+                        variant: "default",
+                      }
+                    : null,
+                ].filter(Boolean) as any
+              }
               onClick={() => {
                 setSelectedVacation(vacation);
                 setShowDetailModal(true);
@@ -573,7 +630,7 @@ export const ManageVacationsPage: React.FC = () => {
                   <span className="font-medium text-gray-900 dark:text-white text-xs">
                     {vacation.startDate && vacation.endDate ? (
                       <>
-                        {new Date(vacation.startDate).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} - {new Date(vacation.endDate).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}
+                        {formatDateShort(vacation.startDate)} - {formatDateShort(vacation.endDate)}
                       </>
                     ) : (
                       "-"
@@ -705,7 +762,7 @@ export const ManageVacationsPage: React.FC = () => {
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
                           {vacation.startDate && vacation.endDate ? (
                             <>
-                              {new Date(vacation.startDate).toLocaleDateString()} - {new Date(vacation.endDate).toLocaleDateString()}
+                              {formatDateShort(vacation.startDate)} - {formatDateShort(vacation.endDate)}
                             </>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500">-</span>
@@ -713,9 +770,11 @@ export const ManageVacationsPage: React.FC = () => {
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString() : "-"}</td>
                         <td className="py-3 px-4 text-center">
-                          <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </button>
+                          {!["delivered", "rejected", "cancelled"].includes(vacation.estado) && (
+                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cancelar solicitud" aria-label="Cancelar solicitud">
+                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -835,13 +894,13 @@ export const ManageVacationsPage: React.FC = () => {
                 {selectedVacation.startDate && (
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
-                    <p className="font-medium text-slate-800 dark:text-slate-100">{new Date(selectedVacation.startDate).toLocaleDateString()}</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedVacation.startDate)}</p>
                   </div>
                 )}
                 {selectedVacation.endDate && (
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Fin</p>
-                    <p className="font-medium text-slate-800 dark:text-slate-100">{new Date(selectedVacation.endDate).toLocaleDateString()}</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(selectedVacation.endDate)}</p>
                   </div>
                 )}
                 <div>
@@ -891,7 +950,7 @@ export const ManageVacationsPage: React.FC = () => {
               { label: "Pendientes", value: stats.pending, icon: faClock, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
               { label: "Preaprobadas", value: stats.pre_approved, icon: faCheck, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400" },
               { label: "Aprobadas", value: stats.approved, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
-              { label: "Entregadas", value: stats.delivered, icon: faCheckCircle, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
+              { label: "Entregadas", value: stats.delivered, icon: faCheckCircle, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
               { label: "Rechazadas", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
               { label: "Canceladas", value: stats.cancelled, icon: faBan, color: "bg-orange-50 dark:bg-orange-600/20 text-orange-600 dark:text-orange-400" },
             ].map((stat, index) => (

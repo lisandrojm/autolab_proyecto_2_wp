@@ -8,11 +8,81 @@ import { Tenant } from "../models/Tenant.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { generateVacationPDF } from "../utils/pdfGenerator.js";
+import { User } from "../models/User.js";
+import { VacationOverlap } from "../models/VacationOverlap.js";
+import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { Level } from "../models/Level.js";
+import { Position } from "../models/Position.js";
 
 const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
+
+// GET /api/vacations/availability - Get dates that are fully booked for user's area
+router.get("/availability", async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const userId = req.user!.userId;
+    const user = await User.findById(userId);
+
+    if (!user || !user.areaId) {
+      return res.json([]); // No area, no restrictions (or maybe return all? usually none)
+    }
+
+    const overlapRule = await VacationOverlap.findOne({
+      tenantId,
+      areaId: user.areaId,
+      isActive: true,
+    });
+
+    // If no rule exists, no dates are blocked by overlap
+    if (!overlapRule) {
+      return res.json([]);
+    }
+
+    // Optimización: Search vacations overlapping with next 18 months
+    const searchStart = new Date();
+    searchStart.setHours(0, 0, 0, 0);
+    const searchEnd = new Date();
+    searchEnd.setMonth(searchEnd.getMonth() + 18);
+
+    const usersInArea = await User.find({ areaId: user.areaId, tenantId }).select("_id");
+    const userIdsInArea = usersInArea.map((u) => u._id);
+
+    const areaVacations = await Vacation.find({
+      tenantId,
+      userId: { $in: userIdsInArea }, // All users in area
+      status: { $nin: ["rejected", "cancelled"] },
+      endDate: { $gte: searchStart },
+      startDate: { $lte: searchEnd },
+    }).lean();
+
+    // Calculate daily occupancy
+    const occupancyMap: Record<string, number> = {};
+
+    for (const v of areaVacations) {
+      let current = new Date(v.startDate < searchStart ? searchStart : v.startDate);
+      const end = new Date(v.endDate > searchEnd ? searchEnd : v.endDate);
+
+      while (current <= end) {
+        const dateStr = current.toISOString().split("T")[0];
+        occupancyMap[dateStr] = (occupancyMap[dateStr] || 0) + 1;
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    // Filter dates where occupancy >= limit
+    const blockedDates = Object.entries(occupancyMap)
+      .filter(([_, count]) => count >= overlapRule.maxSimultaneousUsers)
+      .map(([date]) => date);
+
+    res.json(blockedDates);
+  } catch (error: any) {
+    console.error("Error fetching availability:", error);
+    res.status(500).json({ error: "Error al obtener disponibilidad de vacaciones" });
+  }
+});
 
 // GET /api/vacations - Get all vacation requests
 router.get("/", async (req, res) => {
@@ -49,6 +119,68 @@ router.get("/:id", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
+    const userId = req.user!.userId;
+
+    // 0. Fetch User & Profile Data
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const profile = await EmployeeProfile.findOne({ userId, tenantId });
+
+    // Fetch Position Name
+    let positionName = "Sin Cargo";
+    if (user.positionId) {
+      const pos = await Position.findById(user.positionId);
+      if (pos) positionName = pos.name;
+    } else if (profile?.position) {
+      positionName = profile.position;
+    }
+
+    // Fetch Level Name
+    let levelName = "Sin Nivel";
+    if (user.levelId) {
+      const lvl = await Level.findById(user.levelId);
+      if (lvl) levelName = lvl.name;
+    }
+
+    const userName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : profile ? `${profile.firstName} ${profile.lastName}` : "Usuario";
+
+    // Check Overlap Rules
+    const { startDate, endDate, reason } = req.body;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "Fechas requeridas" });
+    }
+
+    if (user.areaId) {
+      const overlapRule = await VacationOverlap.findOne({
+        tenantId,
+        areaId: user.areaId,
+        isActive: true,
+      });
+
+      if (overlapRule) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const usersInArea = await User.find({ areaId: user.areaId, tenantId }).select("_id");
+        const userIdsInArea = usersInArea.map((u) => u._id);
+
+        const concurrentUsers = await Vacation.find({
+          tenantId,
+          userId: { $in: userIdsInArea, $ne: userId },
+          status: { $nin: ["rejected", "cancelled"] },
+          $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
+        }).distinct("userId");
+
+        if (concurrentUsers.length >= overlapRule.maxSimultaneousUsers) {
+          return res.status(400).json({
+            error: `No es posible agendar vacaciones en estas fechas. El límite de personas simultáneas en tu área es de ${overlapRule.maxSimultaneousUsers}.`,
+          });
+        }
+      }
+    }
 
     const globalConfig = await GlobalVacationConfig.findOne({ tenantId });
 
@@ -56,9 +188,60 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "No se encontró configuración global de vacaciones para este tenant" });
     }
 
+    // CONSTANTS CALCULATION
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const timeDiff = Math.abs(end.getTime() - start.getTime());
+    const daysRequested = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // Inclusive days
+
+    // BALANCE CALCULATION
+    // Base = globalConfig.diasAnuales
+    // Used = Gozados (Delivered/Signed)
+    // Pending = Active (Pending/PreApproved/Approved)
+
+    const activeVacations = await Vacation.find({
+      tenantId,
+      userId,
+      status: { $nin: ["rejected", "cancelled"] },
+    }).lean();
+
+    let daysUsed = 0;
+    let daysPending = 0;
+
+    for (const v of activeVacations) {
+      const isSigned = v.signatureStatus === "signed";
+      const isDelivered = v.status === "delivered";
+      const isNotRequired = v.signatureStatus === "not_required";
+      const isApproved = v.status === "approved";
+
+      if (isDelivered || isSigned || (isApproved && isNotRequired)) {
+        daysUsed += v.daysRequested;
+      } else {
+        daysPending += v.daysRequested;
+      }
+    }
+
+    // Balance available BEFORE this request
+    const currentAvailable = globalConfig.diasAnuales - daysUsed - daysPending;
+
+    // New Balance (Remaining)
+    // The 'balance' field in Vacation model typically stores the snapshot of balance AFTER or AT THE TIME of request?
+    // Usually "Balance Available".
+    // Let's store the balance REMAINING after this request.
+    const newBalance = currentAvailable - daysRequested;
+
     const vacationData = {
       ...req.body,
       tenantId,
+      userId,
+      userName,
+      position: positionName,
+      level: levelName,
+      daysRequested,
+      diasDeVacacionesAnuales: globalConfig.diasAnuales,
+      balance: newBalance,
+      comments: reason, // Map 'reason' from body to 'comments' in db
+      requiresSignature: globalConfig.requiereFirma,
       rules: {
         diasAnuales: globalConfig.diasAnuales,
         diasBeneficio: globalConfig.diasBeneficio,
@@ -103,6 +286,42 @@ router.patch("/:id", async (req, res) => {
   } catch (error: any) {
     console.error("Error updating vacation:", error);
     res.status(500).json({ error: "Error al actualizar la solicitud de vacaciones" });
+  }
+});
+
+// PUT /api/vacations/:id/cancel - Cancel a vacation request
+router.put("/:id/cancel", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+
+    const vacation = await Vacation.findOne({ _id: id, tenantId });
+
+    if (!vacation) {
+      return res.status(404).json({ error: "Solicitud no encontrada" });
+    }
+
+    // Allow cancellation of pending, pre_approved, approved
+    if (!["pending", "pre_approved", "approved"].includes(vacation.status)) {
+      return res.status(400).json({ error: "No se puede cancelar una solicitud en este estado" });
+    }
+
+    vacation.status = "cancelled";
+    await vacation.save();
+
+    await ActivityLog.create({
+      tenantId,
+      userId: vacation.userId,
+      action: "vacation_cancelled",
+      description: `Solicitud de vacaciones cancelada`,
+      entityType: "Vacation",
+      entityId: vacation._id,
+    });
+
+    res.json(vacation);
+  } catch (error: any) {
+    console.error("Error cancelling vacation:", error);
+    res.status(500).json({ error: "Error al cancelar la solicitud de vacaciones" });
   }
 });
 
@@ -159,11 +378,21 @@ router.put("/:id/pre-approve", async (req: any, res) => {
       entityId: vacation._id,
     });
 
-    // Generate PDF if rules has template
-    if (vacation.rules?.pdfTemplateId) {
+    // Generate PDF
+    let templateId = vacation.rules?.pdfTemplateId;
+
+    // Fallback: Try to find default template if not specified in rules
+    if (!templateId) {
+      const defaultTemplate = await PdfTemplate.findOne({ tenantId, code: "vacaciones", isActive: true });
+      if (defaultTemplate) {
+        templateId = defaultTemplate._id.toString();
+      }
+    }
+
+    if (templateId) {
       try {
         const template = await PdfTemplate.findOne({
-          _id: vacation.rules.pdfTemplateId,
+          _id: templateId,
           tenantId,
           isActive: true,
         });
@@ -404,6 +633,57 @@ router.put("/:id/send-signature", async (req: any, res) => {
   }
 });
 
+// PUT /api/vacations/:id/notify-signature - User notifies they have signed
+router.put("/:id/notify-signature", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantId;
+
+    const vacation = await Vacation.findOne({
+      _id: req.params.id,
+      tenantId,
+    });
+
+    if (!vacation) {
+      return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
+    }
+
+    if (vacation.signatureStatus !== "sent") {
+      // Allow re-notifying? Or fail? Better fail if not in sent state.
+      return res.status(400).json({ error: "Solo las solicitudes enviadas para firma pueden ser notificadas" });
+    }
+
+    vacation.signatureNotifiedAt = new Date();
+    await vacation.save();
+
+    await ActivityLog.create({
+      tenantId,
+      userId: vacation.userId,
+      action: "vacation_signature_notified",
+      description: `Usuario notificó firma completada`,
+      entityType: "Vacation",
+      entityId: vacation._id,
+    });
+
+    // Notify the approver (Supervisor/Admin)
+    const approverId = vacation.approvedBy; // Assuming approvedBy is the admin/manager
+    if (approverId) {
+      await Notification.create({
+        tenantId,
+        userId: approverId,
+        type: "vacation",
+        title: "Firma completada por usuario",
+        message: `El usuario ha notificado que completó la firma de la solicitud N°: ${vacation.vacationNumber}. Por favor verificá.`,
+        linkUrl: `/hr/vacations?id=${vacation._id}`,
+      });
+    }
+
+    res.json(vacation);
+  } catch (error: any) {
+    console.error("Notify signature error:", error);
+    res.status(500).json({ error: "Error al notificar la firma" });
+  }
+});
+
 // PUT /api/vacations/:id/mark-signed - Mark vacation as signed
 router.put("/:id/mark-signed", async (req: any, res) => {
   try {
@@ -437,14 +717,17 @@ router.put("/:id/mark-signed", async (req: any, res) => {
       entityId: vacation._id,
     });
 
-    await Notification.create({
-      tenantId,
-      userId: vacation.userId,
-      type: "vacation",
-      title: "Documento firmado confirmado",
-      message: `La firma de tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido confirmada.`,
-      linkUrl: `/hr/vacations`,
-    });
+    // Notify the approver (Supervisor/Admin)
+    if (vacation.approvedBy) {
+      await Notification.create({
+        tenantId,
+        userId: vacation.approvedBy,
+        type: "vacation",
+        title: "Documento firmado por colaborador",
+        message: `El colaborador ha confirmado la firma de la solicitud N°: ${vacation.vacationNumber}. Verifique el documento.`,
+        linkUrl: `/hr/vacations/${vacation._id}`,
+      });
+    }
 
     res.json(vacation);
   } catch (error: any) {

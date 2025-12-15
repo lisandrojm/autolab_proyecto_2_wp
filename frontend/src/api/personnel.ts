@@ -37,6 +37,7 @@ export interface ProfileStats {
     total: number;
     used: number;
     available: number;
+    pending?: number;
   };
 }
 

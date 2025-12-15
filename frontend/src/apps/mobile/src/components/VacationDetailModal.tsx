@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faTimes, faFileArrowUp, faBell, faFilePdf, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faTimes, faFileArrowUp, faBell, faFilePdf, faDownload, faClock, faCheckCircle, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { VacationRequest, vacationsAPI } from "../../../../api/vacations";
 import { ProfileData } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
@@ -33,7 +33,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
 
     try {
       setNotifyingSignature(true);
-      await vacationsAPI.markSigned(vacation._id);
+      await vacationsAPI.notifySignature(vacation._id);
 
       setNotifyingSignature(false);
       await sweetAlert.success("Notificación enviada", "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.");
@@ -59,7 +59,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
 
     try {
       setCancelling(true);
-      await vacationsAPI.delete(vacation._id);
+      await vacationsAPI.cancel(vacation._id);
       setCancelling(false);
       await sweetAlert.success("Solicitud cancelada", "La solicitud ha sido cancelada correctamente");
       if (onRefresh) {
@@ -225,6 +225,33 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
             }
             if (isFinalState) return null;
 
+            if (isFinalState) return null;
+
+            // State: Waiting Verification (User notified)
+            if (vacation.signatureNotifiedAt) {
+              return (
+                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg">
+                  <div className="flex items-start gap-3 mb-3">
+                    <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-amber-500 mb-1">Esperando Verificación</h4>
+                      <p className="text-sm text-amber-500/80 mb-2">Ya notificaste al supervisor que completaste la firma. Estamos esperando que verifique el documento.</p>
+
+                      <p className="text-xs text-amber-500/60 font-medium">
+                        Notificado el: {formatDateShort(vacation.signatureNotifiedAt)}
+                        {/* If we had time, we could format time too, e.g. ", 02:10 a. m." */}
+                      </p>
+                    </div>
+                  </div>
+                  <button disabled className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-amber-900/40 text-amber-500 text-sm font-medium leading-normal shadow-sm transition-colors cursor-not-allowed border border-amber-500/20">
+                    <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
+                    <span>Ya Notificado</span>
+                  </button>
+                </div>
+              );
+            }
+
+            // State: Document Sent (Needs signature)
             return (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">

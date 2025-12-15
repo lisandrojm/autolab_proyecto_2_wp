@@ -4,7 +4,8 @@ import { vacationsAPI, VacationRequest } from "../../../../api/vacations";
 
 export const useVacations = () => {
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
-  const [availableDays, setAvailableDays] = useState<{ total: number; used: number; available: number } | null>(null);
+  const [availableDays, setAvailableDays] = useState<{ total: number; used: number; available: number; pending?: number } | null>(null);
+  const [occupiedDates, setOccupiedDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -12,9 +13,10 @@ export const useVacations = () => {
     try {
       setLoading(true);
       setError(null);
-      const [vacationsData, profileStats] = await Promise.all([vacationsAPI.getAll(), personnelAPI.getProfileStats()]);
+      const [vacationsData, profileStats, availabilityData] = await Promise.all([vacationsAPI.getAll(), personnelAPI.getProfileStats(), vacationsAPI.getAvailability()]);
       setVacations(vacationsData);
       setAvailableDays(profileStats.vacations);
+      setOccupiedDates(availabilityData);
     } catch (err: any) {
       setError(err.response?.data?.error || "Error al cargar vacaciones");
       console.error("Error fetching vacations:", err);
@@ -53,6 +55,7 @@ export const useVacations = () => {
   return {
     vacations,
     availableDays,
+    occupiedDates,
     loading,
     error,
     refetch: fetchVacations,

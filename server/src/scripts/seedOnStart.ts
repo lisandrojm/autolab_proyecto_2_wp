@@ -6,6 +6,7 @@ import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
+import { PdfTemplate } from "../models/PdfTemplate.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
@@ -288,6 +289,17 @@ export async function seedOnStart() {
     });
     const tenantId = new Types.ObjectId(tenant._id as any);
     console.log(`🏢 Tenant ready - Slug: ${tenantSlug}, ObjectId: ${String(tenantId)}`);
+
+    // I1: Limpieza datos prueba - Eliminar solicitudes de vacaciones de María y Juan para empezar de cero
+    // Primero obtenemos sus IDs (si existen) para borrar sus datos
+    const userEmails = ["colaborador@mobile.com", "coordinador@mobile.com"];
+    const targetUsers = await User.find({ email: { $in: userEmails }, tenantId });
+    const targetUserIds = targetUsers.map((u) => u._id);
+
+    if (targetUserIds.length > 0) {
+      console.log(`🧹 Cleaning vacations for test users: ${userEmails.join(", ")}`);
+      await Vacation.deleteMany({ tenantId, userId: { $in: targetUserIds } });
+    }
 
     console.log("🧹 Cleaning vacation counters for fresh seed...");
     await VacationCounter.deleteMany({ tenantId });
@@ -710,15 +722,18 @@ export async function seedOnStart() {
     let globalConfig = await GlobalVacationConfig.findOne({ tenantId });
 
     if (!globalConfig) {
+      const vacationTemplate = await PdfTemplate.findOne({ tenantId, code: "vacaciones" });
+
       globalConfig = await GlobalVacationConfig.create({
         tenantId,
         diasAnuales: 18,
         diasBeneficio: 0,
         permiteArrastre: false,
-        permiteFraccionadas: true,
+        permiteFraccionadas: false,
         requiereFirma: true,
         antiguedadTramos: [],
         maxDiasGozados: 30,
+        pdfTemplateId: vacationTemplate?._id,
       });
       console.log("✅ Global vacation config created");
     } else {
@@ -745,91 +760,7 @@ export async function seedOnStart() {
         pdfTemplateId: globalConfig.pdfTemplateId,
       };
 
-      await Vacation.create([
-        {
-          tenantId,
-          userId: coord._id,
-          userName: "María Coordinadora",
-          position: "Productor",
-          level: "Senior",
-          rules: rulesSnapshot,
-          startDate: new Date("2025-03-10"),
-          endDate: new Date("2025-03-15"),
-          daysRequested: 5,
-          status: "approved",
-          diasDeVacacionesAnuales: 18,
-          balance: 13,
-          comments: null,
-          approvedBy: adminId,
-          approvedAt: new Date(2025, 2, 1),
-          requiresSignature: true,
-          signatureStatus: "sent",
-          pdfPreAprobacionUrl: "/storage/vacations/vacation_pre_approval_001.pdf",
-          signatureSentAt: new Date(2025, 2, 1),
-          signatureNotifiedAt: new Date(2025, 2, 5),
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          userName: "Juan Colaborador",
-          position: "Editor",
-          level: "Junior",
-          rules: rulesSnapshot,
-          startDate: new Date("2025-02-01"),
-          endDate: new Date("2025-02-03"),
-          daysRequested: 2,
-          status: "pending",
-          diasDeVacacionesAnuales: 18,
-          balance: 16,
-          comments: null,
-          requiresSignature: false,
-          signatureStatus: "not_required",
-        },
-        {
-          tenantId,
-          userId: coord._id,
-          userName: "María Coordinadora",
-          position: "Productor",
-          level: "Senior",
-          rules: rulesSnapshot,
-          startDate: new Date("2024-12-20"),
-          endDate: new Date("2024-12-31"),
-          daysRequested: 10,
-          status: "delivered",
-          diasDeVacacionesAnuales: 18,
-          balance: 8,
-          comments: null,
-          approvedBy: adminId,
-          approvedAt: new Date(2024, 11, 10),
-          deliveredAt: new Date(2024, 11, 19),
-          requiresSignature: true,
-          signatureStatus: "signed",
-          pdfPreAprobacionUrl: "/storage/vacations/vacation_pre_approval_002.pdf",
-          signatureSentAt: new Date(2024, 11, 10),
-          signedAt: new Date(2024, 11, 15),
-          signedBy: coord._id,
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          userName: "Juan Colaborador",
-          position: "Editor",
-          level: "Junior",
-          rules: rulesSnapshot,
-          startDate: new Date("2025-04-15"),
-          endDate: new Date("2025-04-20"),
-          daysRequested: 5,
-          status: "pre_approved",
-          diasDeVacacionesAnuales: 18,
-          balance: 13,
-          comments: null,
-          preApprovedBy: adminId,
-          preApprovedAt: new Date(2025, 3, 1),
-          requiresSignature: true,
-          signatureStatus: "pending",
-          pdfPreAprobacionUrl: "/storage/vacations/vacation_pre_approval_003.pdf",
-        },
-      ]);
+      /* Requests disabled for clean start */
       console.log("✅ Vacation requests (4 requests with diverse signature states) seeded");
     } else {
       console.log("✔️ Vacation requests already present");

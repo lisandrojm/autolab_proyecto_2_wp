@@ -24,22 +24,15 @@ import VacationDetailModal from "../components/VacationDetailModal";
 import { VacationRequest } from "../../../../api/vacations";
 import { InfoModal } from "../../../../components/ui/InfoModal";
 
-// Helper to parse date string as local date (ignoring time/timezone)
-const getLocalDate = (dateString: string) => {
-  if (!dateString) return new Date();
-  const datePart = dateString.toString().split("T")[0];
-  return parseISO(datePart);
-};
-
 interface VacationsProps {
   onNavigate: (view: ViewType) => void;
 }
 
 // Keeping this mock for calendar validation demo purposes only, as we don't have team calendar API hooked up here yet
-// const MOCK_OCCUPIED_DATES = ["2025-12-20", "2025-12-21", "2025-12-22", "2025-12-24", "2025-12-25", "2026-01-01"];
+const MOCK_OCCUPIED_DATES = ["2025-12-20", "2025-12-21", "2025-12-22", "2025-12-24", "2025-12-25", "2026-01-01"];
 
 export default function Vacations({ onNavigate }: VacationsProps) {
-  const { vacations, availableDays, occupiedDates, loading: vacationsLoading, createVacation, refetch } = useVacations();
+  const { vacations, availableDays, loading: vacationsLoading, createVacation, refetch } = useVacations();
   const { profile, loading: profileLoading } = useProfile();
 
   const [showForm, setShowForm] = useState(false);
@@ -53,7 +46,6 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   // Nuevo estado para el modal de información/ayuda
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [showSignatureInfoModal, setShowSignatureInfoModal] = useState(false);
 
   // Stats State (Current Year only)
   const currentYear = new Date().getFullYear();
@@ -67,8 +59,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!startDate || !endDate) {
-      sweetAlert.error("Error", "Por favor selecciona fecha de inicio y fin");
+    if (!startDate || !endDate || !reason) {
+      sweetAlert.error("Error", "Por favor completa todos los campos");
       return;
     }
 
@@ -115,14 +107,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   };
 
   const isOccupied = (day: Date) => {
-    return occupiedDates.includes(format(day, "yyyy-MM-dd"));
+    return MOCK_OCCUPIED_DATES.includes(format(day, "yyyy-MM-dd"));
   };
 
   const checkOverlap = (start: string, end: string) => {
     if (!start || !end) return false;
     const s = parseISO(start);
     const e = parseISO(end);
-    return occupiedDates.some((occupiedDate) => {
+    return MOCK_OCCUPIED_DATES.some((occupiedDate) => {
       const occ = parseISO(occupiedDate);
       return isWithinInterval(occ, { start: s, end: e });
     });
@@ -231,7 +223,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             {/* NUEVA FILA DE SALDO PRINCIPAL: Corridos vs. Hábiles */}
             <div className="flex flex-col justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200 mr-2">Días Disponibles (Corridos)</h4>
+                <h4 className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200 mr-2">Días Disponibles</h4>
                 {/* Botón de Ayuda movido aquí */}
                 <button onClick={() => setShowInfoModal(true)} className="text-slate-400 hover:text-blue-500 transition-colors p-1">
                   <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
@@ -240,18 +232,18 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <div className="flex items-baseline gap-4k w-full justify-around">
                 {/* Días Corridos (Saldo Contable, el más grande) */}
                 <div className="text-center">
-                  <p className="text-xs text-slate-400">Total Anual</p>
-                  <p className="text-3xl font-extrabold text-blue-500">{availableDays?.total || 15}</p>
-                </div>
-                {/* Disponibles */}
-                <div className="text-center">
-                  <p className="text-xs text-slate-400 mb-1">Disponibles</p>
-                  <p className="text-2xl font-bold text-blue-500">{availableDays?.available ?? "-"}</p>
+                  <p className="text-xs text-slate-400">Corridos</p>
+                  <p className="text-3xl font-extrabold text-blue-500">{availableDays?.available || 0}</p>
                 </div>
                 {/* Pendientes */}
                 <div className="text-center">
                   <p className="text-xs text-slate-400 mb-1">Pendientes</p>
-                  <p className="text-2xl font-bold text-yellow-500">{availableDays?.pending ?? "-"}</p>
+                  <p className="text-2xl font-bold text-yellow-500">{vacations.filter((v) => v.status === "pending").length}</p>
+                </div>
+                {/* Días Hábiles (Días de Uso Real) */}
+                <div className="text-center">
+                  <p className="text-xs text-slate-400">Hábiles</p>
+                  <p className="text-3xl font-extrabold text-slate-500">-</p>
                 </div>
               </div>
             </div>
@@ -266,12 +258,12 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               {/* Acumulados (Períodos Anteriores) */}
               <div>
                 <p className="text-xs text-slate-400 mb-1">Acumulados</p>
-                <p className="text-lg font-bold">0</p>
+                <p className="text-lg font-bold">{availableDays?.accumulated || 0}</p>
               </div>
               {/* Beneficio Extra */}
               <div>
                 <p className="text-xs text-slate-400 mb-1">Beneficio Extra</p>
-                <p className="text-lg font-bold text-blue-500">0</p>
+                <p className="text-lg font-bold text-green-500">{availableDays?.total || 0}</p>
               </div>
             </div>
           </div>
@@ -307,13 +299,6 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario</label>
                   <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe el comentario de tu solicitud..." />
                 </div>
-
-                {/* Requiere Firma Info Box */}
-                <div onClick={() => setShowSignatureInfoModal(true)} className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-colors">
-                  <span className="font-bold text-sm">Requiere FIRMA</span>
-                  <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
-                </div>
-
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                     Cancelar
@@ -356,7 +341,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                         <div className="flex items-center w-full">
                           <div className="flex flex-wrap gap-1.5">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 dark:bg-gray-600/50">
-                              {format(getLocalDate(vacation.startDate), "d MMM", { locale: es })} - {format(getLocalDate(vacation.endDate), "d MMM", { locale: es })}
+                              {format(parseISO(vacation.startDate), "d MMM", { locale: es })} - {format(parseISO(vacation.endDate), "d MMM", { locale: es })}
                             </span>
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm bg-gray-50 dark:bg-gray-600/20 text-slate-700 dark:text-slate-300">{vacation.daysRequested} días</span>
                           </div>
@@ -525,25 +510,6 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <strong>Antigüedad (Años):</strong> Años de servicio en la compañía.
             </li>
           </ul>
-        </div>
-      </InfoModal>
-
-      {/* MODAL DE INFORMACIÓN DE FIRMA */}
-      <InfoModal
-        isOpen={showSignatureInfoModal}
-        onClose={() => setShowSignatureInfoModal(false)}
-        title="Firma de la solicitud"
-        size="sm"
-        actions={[
-          {
-            label: "Entendido",
-            onClick: () => setShowSignatureInfoModal(false),
-            variant: "primary",
-          },
-        ]}
-      >
-        <div className="text-slate-700 dark:text-slate-300">
-          <p>Si la solicitud es aprobada, recibirás un email con un enlace para firmar digitalmente la aprobación. Podrás revisarlo desde cualquier dispositivo y ver el estado de la firma.</p>
         </div>
       </InfoModal>
 

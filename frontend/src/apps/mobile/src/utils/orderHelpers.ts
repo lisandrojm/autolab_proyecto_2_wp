@@ -32,13 +32,17 @@ export const getUserAvatar = (user: any): string | null => {
 
 export const formatDateShort = (dateString: string | undefined): string => {
   if (!dateString) return "-";
-  return new Date(dateString).toLocaleDateString("es-ES", {
+  // Parse YYYY-MM-DD manually to create Local Date without timezone shift
+  const datePart = dateString.toString().split("T")[0];
+  const [year, month, day] = datePart.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("es-ES", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
 };
-
 
 export const getCategoryName = (order: OrderData): string => {
   if (!order.categoryId) return order.category || "Sin categoría";
@@ -68,4 +72,3 @@ export const getSubcategoriesArray = (order: OrderData): string[] => {
 
   return labels;
 };
-

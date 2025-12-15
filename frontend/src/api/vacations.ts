@@ -59,7 +59,6 @@ export interface VacationRequest {
   updatedAt: string;
 }
 
-
 // VACATION REQUESTS API
 export const vacationsAPI = {
   getAll: async (): Promise<VacationRequest[]> => {
@@ -84,6 +83,11 @@ export const vacationsAPI = {
 
   delete: async (id: string): Promise<void> => {
     await axios.delete(`/vacations/${id}`);
+  },
+
+  cancel: async (id: string): Promise<VacationRequest> => {
+    const response = await axios.put(`/vacations/${id}/cancel`);
+    return response.data;
   },
 
   preApprove: async (id: string): Promise<VacationRequest> => {
@@ -113,6 +117,16 @@ export const vacationsAPI = {
 
   markSigned: async (id: string): Promise<VacationRequest> => {
     const response = await axios.put(`/vacations/${id}/mark-signed`);
+    return response.data;
+  },
+
+  notifySignature: async (id: string): Promise<VacationRequest> => {
+    const response = await axios.put(`/vacations/${id}/notify-signature`);
+    return response.data;
+  },
+
+  getAvailability: async (): Promise<string[]> => {
+    const response = await axios.get("/vacations/availability");
     return response.data;
   },
 };

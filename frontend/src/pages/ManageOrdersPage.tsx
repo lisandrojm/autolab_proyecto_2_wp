@@ -653,7 +653,7 @@ export const ManageOrdersPage: React.FC = () => {
               {selectedOrder.signatureStatus === "sent" && (
                 <button onClick={handleMarkSigned} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   <FontAwesomeIcon icon={faCheckCircle} />
-                  Marcar como Firmado
+                  Firmado
                 </button>
               )}
             </>

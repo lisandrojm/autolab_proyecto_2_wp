@@ -42,6 +42,23 @@ function formatDate(date: Date | string | undefined): string {
   }
 }
 
+function formatDateOnly(date: Date | string | undefined): string {
+  if (!date) return "-";
+
+  try {
+    const d = typeof date === "string" ? new Date(date) : date;
+    if (isNaN(d.getTime())) return "-";
+
+    const day = d.getUTCDate().toString().padStart(2, "0");
+    const month = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+    const year = d.getUTCFullYear();
+
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "-";
+  }
+}
+
 function formatCurrency(amount: number | undefined): string {
   if (amount === undefined || amount === null) return "-";
 
@@ -181,14 +198,14 @@ export function prepareVariables(order: IOrder, category: IOrderCategory, user: 
 export function prepareVacationVariables(vacation: IVacationRequest, user: IUser, tenantName: string, vacationNumber: string): PdfVariables {
   const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario";
 
-  const fechaDesde = formatDate(vacation.startDate);
-  const fechaHasta = formatDate(vacation.endDate);
+  const fechaDesde = formatDateOnly(vacation.startDate);
+  const fechaHasta = formatDateOnly(vacation.endDate);
   const dias = vacation.daysRequested.toString();
 
   const numeroPedido = sanitizeHtml(vacationNumber || "-");
   const fechaSolicitud = formatDate(vacation.createdAt);
   const fechaAprobacion = formatDate(vacation.preApprovedAt);
-  const descripcion = sanitizeHtml(vacation.reason || "-");
+  const descripcion = sanitizeHtml(vacation.reason || (vacation as any).comments || "-");
 
   return {
     categoria: "Vacaciones",

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo, faShoppingCart, faPaperPlane, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo, faShoppingCart, faPaperPlane, faPlus, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
@@ -12,6 +12,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import OrderDetailModal from "../components/OrderDetailModal";
 import { OrderData } from "../../../../api/personnel";
 import { getOrderNumber, getCategoryName, getSubcategoriesArray } from "../utils/orderHelpers";
+import { InfoModal } from "../../../../components/ui/InfoModal";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -281,14 +282,10 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
                   {/* Bloque REQUIERE FIRMA con Info Modal */}
                   {selectedCategory?.requiresSignature && (
-                    <button className="w-full" type="button" onClick={() => setShowSignatureInfo(true)}>
-                      <div className="rounded-lg bg-blue-50 dark:bg-yellow-900/30 border border-blue-200 dark:border-yellow-700 text-blue-800 dark:text-yellow-500 p-3 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold">Requiere FIRMA</span>
-                          <FontAwesomeIcon icon={faCircleInfo} className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
-                        </div>
-                      </div>
-                    </button>
+                    <div onClick={() => setShowSignatureInfo(true)} className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-colors">
+                      <span className="font-bold text-sm">Requiere FIRMA</span>
+                      <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
+                    </div>
                   )}
 
                   {(selectedCategory?.categoryType === "objeto" || selectedCategory?.categoryType === "otros") && (
@@ -397,30 +394,24 @@ export default function Orders({ onNavigate }: OrdersProps) {
       </div>
 
       {/* 👉 Info Modal NUEVO */}
-      {showSignatureInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowSignatureInfo(false)}>
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-xl shadow-lg p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 text-blue-600 dark:text-yellow-500" />
-                <h2 className="text-sm font-semibold">Firma del pedido</h2>
-              </div>
-
-              <button type="button" onClick={() => setShowSignatureInfo(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
-                <FontAwesomeIcon icon={faTimes} className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-              </button>
-            </div>
-
-            <p className="text-sm text-slate-600 dark:text-slate-300">Si el pedido es aprobado, recibirás un email con un enlace para firmar digitalmente la aprobación. Podrás revisarlo desde cualquier dispositivo y ver el estado de la firma.</p>
-
-            <div className="mt-4 flex justify-end">
-              <button type="button" onClick={() => setShowSignatureInfo(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500 text-white hover:bg-blue-500/90">
-                Entendido
-              </button>
-            </div>
-          </div>
+      {/* 👉 Info Modal NUEVO */}
+      <InfoModal
+        isOpen={showSignatureInfo}
+        onClose={() => setShowSignatureInfo(false)}
+        title="Firma del pedido"
+        size="sm"
+        actions={[
+          {
+            label: "Entendido",
+            onClick: () => setShowSignatureInfo(false),
+            variant: "primary",
+          },
+        ]}
+      >
+        <div className="text-slate-700 dark:text-slate-300">
+          <p>Si el pedido es aprobado, recibirás un email con un enlace para firmar digitalmente la aprobación. Podrás revisarlo desde cualquier dispositivo y ver el estado de la firma.</p>
         </div>
-      )}
+      </InfoModal>
 
       <OrderDetailModal
         order={selectedOrder}
