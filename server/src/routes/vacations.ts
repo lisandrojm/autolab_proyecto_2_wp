@@ -56,11 +56,9 @@ router.get("/availability", async (req, res) => {
     }
 
     // Optimización: Search vacations overlapping with next 18 months
-    const searchStart = new Date();
-    searchStart.setDate(1); // Start from the 1st of the current month
-    searchStart.setHours(0, 0, 0, 0);
-    const searchEnd = new Date();
-    searchEnd.setMonth(searchEnd.getMonth() + 18);
+    const now = new Date();
+    const searchStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+    const searchEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 18, 1));
 
     const usersInArea = await User.find({ areaId: userAreaId, tenantId }).select("_id");
     const userIdsInArea = usersInArea.map((u) => u._id);

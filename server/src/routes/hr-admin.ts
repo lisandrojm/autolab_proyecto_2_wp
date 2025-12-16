@@ -404,9 +404,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
       if (template) {
         console.log("[PRE-APPROVE] Generating PDF for vacation:", vacation._id);
 
-        const user = typeof vacation.userId === 'object' && 'firstName' in vacation.userId
-          ? vacation.userId as any
-          : await User.findById(vacation.userId);
+        const user = typeof vacation.userId === "object" && "firstName" in vacation.userId ? (vacation.userId as any) : await User.findById(vacation.userId);
 
         if (!user) {
           res.status(404).json({ error: "User not found" });
@@ -415,14 +413,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
 
         const vacationNumber = `VAC-${vacation._id.toString().slice(-6).toUpperCase()}`;
 
-        const pdfResult = await generateVacationPDF(
-          vacation,
-          template,
-          user,
-          req.tenantObjectId.toString(),
-          tenant.name,
-          vacationNumber
-        );
+        const pdfResult = await generateVacationPDF(vacation, template, user, req.tenantObjectId.toString(), tenant.name, vacationNumber);
 
         if (pdfResult.success) {
           vacation.pdfPreAprobacionUrl = pdfResult.pdfUrl;
@@ -527,9 +518,7 @@ router.put("/vacations/:id/send-signature", async (req: AuthenticatedRequest & T
       linkUrl: `/vacations/${vacation._id}`,
     });
 
-    const finalVacation = await VacationRequest.findById(vacation._id)
-      .populate("userId", "firstName lastName email")
-      .populate("approvedBy", "firstName lastName email");
+    const finalVacation = await VacationRequest.findById(vacation._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email");
 
     res.json(finalVacation);
   } catch (error) {
@@ -577,10 +566,7 @@ router.put("/vacations/:id/mark-signed", async (req: AuthenticatedRequest & Tena
       linkUrl: `/vacations/${vacation._id}`,
     });
 
-    const finalVacation = await VacationRequest.findById(vacation._id)
-      .populate("userId", "firstName lastName email")
-      .populate("approvedBy", "firstName lastName email")
-      .populate("signedBy", "firstName lastName email");
+    const finalVacation = await VacationRequest.findById(vacation._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email").populate("signedBy", "firstName lastName email");
 
     res.json(finalVacation);
   } catch (error) {
@@ -613,7 +599,9 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate("userId").populate("categoryId");
+    })
+      .populate("userId")
+      .populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -658,14 +646,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
           const tenant = await Tenant.findById(req.tenantObjectId);
           const tenantName = tenant?.name || tenant?.slug || "Organización";
 
-          const pdfResult = await generateOrderPDF(
-            order,
-            category,
-            template,
-            user,
-            req.tenantObjectId.toString(),
-            tenantName
-          );
+          const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
 
           if (pdfResult.success) {
             order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
@@ -710,7 +691,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate('categoryId');
+    }).populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -826,7 +807,9 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate("userId").populate("categoryId");
+    })
+      .populate("userId")
+      .populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -855,14 +838,7 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
     const tenant = await Tenant.findById(req.tenantObjectId);
     const tenantName = tenant?.name || tenant?.slug || "Organización";
 
-    const pdfResult = await generateOrderPDF(
-      order,
-      category,
-      template,
-      user,
-      req.tenantObjectId.toString(),
-      tenantName
-    );
+    const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
 
     if (!pdfResult.success) {
       res.status(500).json({ error: `Error al generar PDF: ${pdfResult.error}` });
@@ -893,7 +869,7 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
     res.json({
       success: true,
       message: "PDF regenerado exitosamente",
-      pdfUrl: pdfResult.pdfUrl
+      pdfUrl: pdfResult.pdfUrl,
     });
   } catch (error) {
     console.error("Regenerate PDF error:", error);

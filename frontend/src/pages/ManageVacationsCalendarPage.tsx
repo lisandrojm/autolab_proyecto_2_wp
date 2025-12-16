@@ -111,7 +111,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
           </div>
         `,
         start: vacation.startDate,
-        end: vacation.endDate,
+        end: new Date(new Date(vacation.endDate).getTime() + 24 * 60 * 60 * 1000).toISOString(),
         className: `vacation-item vacation-${vacation.status}`,
         title: `${vacation.userName || "Usuario"}\n${statusLabel}\nPeríodo: ${new Date(vacation.startDate).toLocaleDateString("es-ES")} - ${new Date(vacation.endDate).toLocaleDateString("es-ES")}\nDías: ${vacation.daysRequested}`,
       };
