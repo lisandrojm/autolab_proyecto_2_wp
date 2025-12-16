@@ -257,7 +257,9 @@ export function getDummyVariables(code: string): Record<string, string> {
     numeroOrden: "ORD-12345",
   };
 
-  switch (code) {
+  const normalizedCode = code.toLowerCase();
+
+  switch (normalizedCode) {
     case "dinero":
       return {
         ...defaults,
@@ -265,7 +267,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         subcategoria: "Almuerzo",
         monto: "$ 15.000,00",
       };
-    case "fechaRango":
+    case "fecharango":
       return {
         ...defaults,
         categoria: "Licencia",
@@ -274,7 +276,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         fechaHasta: "05/03/2024",
         dias: "5",
       };
-    case "fechaUnica":
+    case "fechaunica":
       return {
         ...defaults,
         categoria: "Compensatorio",
@@ -289,6 +291,8 @@ export function getDummyVariables(code: string): Record<string, string> {
         fechaInicio: "01/01/2024",
         fechaFin: "14/01/2024",
         fechaReintegro: "15/01/2024",
+        fechaDesde: "01/01/2024",
+        fechaHasta: "14/01/2024",
       };
     case "objeto":
       return {

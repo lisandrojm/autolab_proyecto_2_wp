@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -296,7 +296,7 @@ export const ManageVacationsPage: React.FC = () => {
     if (!selectedVacation || updating) return;
 
     const requiresSignature = selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required";
-    const message = requiresSignature ? "El usuario recibirá una notificación para firmar el documento por email" : "El usuario será notificado";
+    const message = requiresSignature ? "Al aprobarse la solicitud, se enviará una notificación para informar que el documento ya se encuentra cargado en la plataforma y listo para su firma." : "El usuario será notificado";
 
     const result = await sweetAlert.confirm("¿Aprobar esta solicitud?", message, "Sí, Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
@@ -911,6 +911,19 @@ export const ManageVacationsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {selectedVacation.estado === "approved" && selectedVacation.requiresSignature && selectedVacation.firmaEstado === "sent" && !selectedVacation.signatureNotifiedAt && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <FontAwesomeIcon icon={faFileSignature} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Enviado para Firma</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">Se le ha enviado un email con el documento para firmar.</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 opacity-90">Una vez que haya completado la firma, podrá avisar que firmó. Si no llega el aviso igualmente revisar en la plataforma de Firmas si esta fue realizada.</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {(() => {
               if (selectedVacation.estado === "delivered") return null;

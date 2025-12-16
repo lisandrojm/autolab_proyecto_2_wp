@@ -597,12 +597,12 @@ export async function seedOnStart() {
 
     // ---- VACATION OVERLAP RULES ----
     console.log("🛡️ Seeding Vacation Overlap Rules...");
-    for (const name of areaNames) {
+    const overlapRuleAreas = ["Editores"];
+    for (const name of overlapRuleAreas) {
       const areaId = areaMap[name];
       let rule = await VacationOverlap.findOne({ tenantId, areaId });
 
-      // Default limit: 1 for Editores (strict testing), 2 for others
-      const limit = name === "Editores" ? 1 : 2;
+      const limit = 1;
 
       if (!rule) {
         rule = await VacationOverlap.create({
@@ -615,10 +615,10 @@ export async function seedOnStart() {
         console.log(`✅ Created Overlap Rule for ${name}: Max ${limit} users`);
       } else {
         // Ensure limit is updated for testing if needed
-        if (name === "Editores" && rule.maxSimultaneousUsers !== 1) {
-          rule.maxSimultaneousUsers = 1;
+        if (rule.maxSimultaneousUsers !== limit) {
+          rule.maxSimultaneousUsers = limit;
           await rule.save();
-          console.log(`♻️ Updated Overlap Rule for ${name}: Max set to 1`);
+          console.log(`♻️ Updated Overlap Rule for ${name}: Max set to ${limit}`);
         } else {
           console.log(`✔️ Overlap Rule exists for ${name}`);
         }

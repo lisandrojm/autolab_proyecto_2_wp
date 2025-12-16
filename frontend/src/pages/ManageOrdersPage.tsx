@@ -185,7 +185,8 @@ export const ManageOrdersPage: React.FC = () => {
   const handleApprove = async () => {
     if (!selectedOrder) return;
 
-    const confirmMessage = selectedOrder.requiresSignature ? "El pedido será aprobado y el usuario recibirá una notificación para firmar el documento por email." : "El pedido será aprobado y el usuario será notificado.";
+    const requiresSignature = selectedOrder.requiresSignature || (selectedOrder.signatureStatus && selectedOrder.signatureStatus !== "not_required");
+    const confirmMessage = requiresSignature ? "Al aprobarse este pedido, se enviará una notificación para informar que el documento ya se encuentra cargado en la plataforma y listo para su firma." : "El pedido será aprobado y el usuario será notificado.";
 
     const result = await sweetAlert.confirm("¿Aprobar este pedido?", confirmMessage, "Sí, Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
