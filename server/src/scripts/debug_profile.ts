@@ -18,31 +18,36 @@ async function run() {
 
     for (const tenant of tenants) {
       console.log(`Checking tenant: ${tenant.name} (${tenant._id})`);
-      const users = await User.find({ tenantId: tenant._id });
-      console.log(`Found ${users.length} users in tenant ${tenant.name}.`);
 
-      for (const user of users) {
-        // console.log(`Checking user: ${user.email} (${user._id})`);
+      // Find a "seed" user (assuming early creation date or specific email pattern if known, or just take the first one)
+      const seedUser = await User.findOne({ tenantId: tenant._id }).sort({ createdAt: 1 });
+      // Find the "new" user
+      const newUser = await User.findOne({ tenantId: tenant._id, email: "colaborador-frame@correo.com" });
 
-        if (user.areaId) {
-          const areaIdStr = String(user.areaId);
-          const isValid = mongoose.Types.ObjectId.isValid(areaIdStr);
-          if (!isValid) {
-            console.error(`INVALID AREA ID for user ${user.email}: ${areaIdStr}`);
-          }
-
-          try {
-            // console.log("Counting members...");
-            const count = await User.countDocuments({
-              tenantId: tenant._id,
-              areaId: user.areaId,
-              isActive: true,
-            });
-            // console.log("Member count:", count);
-          } catch (e) {
-            console.error(`Error counting members for user ${user.email} with areaId ${user.areaId}:`, e);
-          }
+      if (seedUser) {
+        console.log(`SEED User: ${seedUser.email} (${seedUser._id})`);
+        console.log(`SEED Area ID: ${seedUser.areaId} (Type: ${typeof seedUser.areaId})`);
+        if (seedUser.areaId) {
+          console.log(`SEED Constructor: ${seedUser.areaId.constructor.name}`);
         }
+      } else {
+        console.log("No SEED user found.");
+      }
+
+      if (newUser) {
+        console.log(`NEW User: ${newUser.email} (${newUser._id})`);
+        console.log(`NEW Area ID: ${newUser.areaId} (Type: ${typeof newUser.areaId})`);
+        if (newUser.areaId) {
+          console.log(`NEW Constructor: ${newUser.areaId.constructor.name}`);
+        }
+      } else {
+        console.log("No NEW user found.");
+      }
+
+      if (newUser && newUser.areaId) {
+        const Area = (await import("../models/Area.js")).Area;
+        const area = await Area.findById(newUser.areaId);
+        console.log(`NEW User Area found in DB: ${area ? area.name : "NO"}`);
       }
     }
   } catch (error) {
