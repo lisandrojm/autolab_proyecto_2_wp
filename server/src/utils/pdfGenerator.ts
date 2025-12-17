@@ -135,6 +135,7 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
     const options = {
       format: "A4",
       margin: { top: "20mm", right: "20mm", bottom: "20mm", left: "20mm" },
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     };
 
     const file = { content: html };
@@ -143,10 +144,14 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
     console.log("[PDF PREVIEW] PDF generated successfully. Buffer size:", pdfBuffer.length);
 
     return pdfBuffer;
-  } catch (error) {
+  } catch (error: any) {
     console.error("[PDF PREVIEW ERROR] Preview generation error:", error);
     if (error instanceof Error) {
       console.error("[PDF PREVIEW ERROR] Stack:", error.stack);
+      if (error.message.includes("error while loading shared libraries")) {
+        console.error("POTENTIAL FIX: You are missing required shared libraries for Puppeteer/Chromium on this Linux server.");
+        console.error("Try installing them with: sudo apt-get install -y ca-certificates fonts-liberation libappindicator3-1 libasound2 libatk-bridge2.0-0 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgbm1 libgcc1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 lsb-release wget xdg-utils");
+      }
     }
     throw error;
   }
