@@ -59,8 +59,7 @@ router.put(
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-      // Parse body data
-      const { razonSocial, cuit, ciudad } = req.body;
+      const { razonSocial, cuit, ciudad, logoUrl, signatureUrl } = req.body;
 
       let config = await PdfGlobalConfig.findOne({ tenantId: req.tenantObjectId });
       if (!config) {
@@ -70,6 +69,8 @@ router.put(
       if (razonSocial !== undefined) config.razonSocial = razonSocial;
       if (cuit !== undefined) config.cuit = cuit;
       if (ciudad !== undefined) config.ciudad = ciudad;
+      if (logoUrl !== undefined) config.logoUrl = logoUrl;
+      if (signatureUrl !== undefined) config.signatureUrl = signatureUrl;
 
       const tenantIdStr = req.tenantObjectId.toString();
 

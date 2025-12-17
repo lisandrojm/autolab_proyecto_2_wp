@@ -7,6 +7,9 @@ import { faSave, faBuilding, faSignature, faImage, faEye } from "@fortawesome/fr
 import Swal from "sweetalert2";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 
+import { clientAssetsAPI } from "../../api/clientAssets";
+import { useAuthStore } from "../../stores/authStore";
+
 export function PdfGlobalConfigTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,11 +63,28 @@ export function PdfGlobalConfigTab() {
       formData.append("cuit", data.cuit);
       formData.append("ciudad", data.ciudad);
 
+      const clientId = useAuthStore.getState().user?.clientId || useAuthStore.getState().tenantId || "system";
+
       if (data.logo && data.logo[0]) {
-        formData.append("logo", data.logo[0]);
+        try {
+          const uploadRes = await clientAssetsAPI.upload("brandkit", data.logo[0], clientId);
+          formData.append("logoUrl", uploadRes.url);
+        } catch (error) {
+          console.error("Error uploading logo:", error);
+          Swal.fire("Error", "Error al subir el logo", "error");
+          return;
+        }
       }
+
       if (data.signature && data.signature[0]) {
-        formData.append("signature", data.signature[0]);
+        try {
+          const uploadRes = await clientAssetsAPI.upload("brandkit", data.signature[0], clientId);
+          formData.append("signatureUrl", uploadRes.url);
+        } catch (error) {
+          console.error("Error uploading signature:", error);
+          Swal.fire("Error", "Error al subir la firma", "error");
+          return;
+        }
       }
 
       const updated = await pdfGlobalConfigAPI.update(formData);
@@ -109,7 +129,7 @@ export function PdfGlobalConfigTab() {
   const getImageUrl = (url: string) => {
     if (!url) return "";
     if (url.startsWith("blob:") || url.startsWith("http")) return url;
-    return `http://localhost:8080${url}`;
+    return `${import.meta.env.VITE_API_URL}${url}`;
   };
 
   const handlePreview = async () => {
