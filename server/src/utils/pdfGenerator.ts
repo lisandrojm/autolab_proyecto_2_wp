@@ -23,7 +23,11 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
   let logoImgTag = "";
   if (logoUrl) {
     try {
-      const absolutePath = path.join(process.cwd(), logoUrl);
+      let absolutePath = logoUrl;
+      if (logoUrl.startsWith("/")) {
+        absolutePath = path.join(process.cwd(), logoUrl);
+      }
+
       if (fs.existsSync(absolutePath)) {
         const bitmap = fs.readFileSync(absolutePath);
         const base64 = bitmap.toString("base64");
@@ -43,7 +47,11 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
   let signatureImgTag = "";
   if (signatureUrl) {
     try {
-      const absolutePath = path.join(process.cwd(), signatureUrl);
+      let absolutePath = signatureUrl;
+      if (signatureUrl.startsWith("/")) {
+        absolutePath = path.join(process.cwd(), signatureUrl);
+      }
+
       if (fs.existsSync(absolutePath)) {
         const bitmap = fs.readFileSync(absolutePath);
         const base64 = bitmap.toString("base64");
