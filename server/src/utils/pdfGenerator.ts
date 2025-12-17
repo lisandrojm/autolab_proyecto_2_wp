@@ -115,6 +115,9 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
 
 export async function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview: boolean = false): Promise<Buffer> {
   try {
+    console.log("[PDF PREVIEW] Starting generation...");
+    console.log("[PDF PREVIEW] CWD:", process.cwd());
+
     let dummyVars = {};
     if (!isGlobalPreview) {
       dummyVars = getDummyVariables(code);
@@ -125,7 +128,9 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
       bodyContent = "<div style='text-align: center; color: #666; margin-top: 50px;'>Vista previa del membrete y firma.<br>El contenido de la plantilla iría aquí.</div>";
     }
 
+    console.log("[PDF PREVIEW] Building HTML...");
     const html = await buildPdfHtml(tenantId, bodyContent, dummyVars as Record<string, string>);
+    console.log("[PDF PREVIEW] HTML built successfully. Length:", html.length);
 
     const options = {
       format: "A4",
@@ -133,10 +138,16 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
     };
 
     const file = { content: html };
+    console.log("[PDF PREVIEW] Generating PDF with html-pdf-node...");
     const pdfBuffer = await htmlPdf.generatePdf(file, options);
+    console.log("[PDF PREVIEW] PDF generated successfully. Buffer size:", pdfBuffer.length);
+
     return pdfBuffer;
   } catch (error) {
-    console.error("Preview generation error:", error);
+    console.error("[PDF PREVIEW ERROR] Preview generation error:", error);
+    if (error instanceof Error) {
+      console.error("[PDF PREVIEW ERROR] Stack:", error.stack);
+    }
     throw error;
   }
 }
