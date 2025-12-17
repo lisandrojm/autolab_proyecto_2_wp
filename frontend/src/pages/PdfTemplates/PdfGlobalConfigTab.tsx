@@ -68,7 +68,7 @@ export function PdfGlobalConfigTab() {
       if (data.logo && data.logo[0]) {
         try {
           const uploadRes = await clientAssetsAPI.upload("brandkit", data.logo[0], clientId);
-          formData.append("logoUrl", uploadRes.url);
+          formData.append("logoUrl", uploadRes.path);
         } catch (error) {
           console.error("Error uploading logo:", error);
           Swal.fire("Error", "Error al subir el logo", "error");
@@ -79,7 +79,7 @@ export function PdfGlobalConfigTab() {
       if (data.signature && data.signature[0]) {
         try {
           const uploadRes = await clientAssetsAPI.upload("brandkit", data.signature[0], clientId);
-          formData.append("signatureUrl", uploadRes.url);
+          formData.append("signatureUrl", uploadRes.path);
         } catch (error) {
           console.error("Error uploading signature:", error);
           Swal.fire("Error", "Error al subir la firma", "error");

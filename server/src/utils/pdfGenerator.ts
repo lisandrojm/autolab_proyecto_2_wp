@@ -24,7 +24,11 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
   if (logoUrl) {
     try {
       let absolutePath = logoUrl;
-      if (logoUrl.startsWith("/")) {
+      // Robustly handle URLs or paths containing /storage/
+      if (logoUrl.includes("/storage/")) {
+        const relativePath = logoUrl.substring(logoUrl.indexOf("/storage/"));
+        absolutePath = path.join(process.cwd(), relativePath);
+      } else if (logoUrl.startsWith("/")) {
         absolutePath = path.join(process.cwd(), logoUrl);
       }
 
@@ -48,7 +52,11 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
   if (signatureUrl) {
     try {
       let absolutePath = signatureUrl;
-      if (signatureUrl.startsWith("/")) {
+      // Robustly handle URLs or paths containing /storage/
+      if (signatureUrl.includes("/storage/")) {
+        const relativePath = signatureUrl.substring(signatureUrl.indexOf("/storage/"));
+        absolutePath = path.join(process.cwd(), relativePath);
+      } else if (signatureUrl.startsWith("/")) {
         absolutePath = path.join(process.cwd(), signatureUrl);
       }
 
