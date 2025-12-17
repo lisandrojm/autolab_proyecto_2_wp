@@ -197,35 +197,47 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
           )}
 
           {/* PDF Pre-aprobacion */}
-          {vacation.pdfPreAprobacionUrl && (!vacation.requiresSignature || vacation.signatureStatus !== "sent") && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
-              <div className="flex items-start gap-3 mb-3">
-                <FontAwesomeIcon icon={faFilePdf} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                <div className="flex-1">
-                  <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Solicitud PDF</h4>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">Documento de solicitud de vacaciones.</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setViewingFile(`${import.meta.env.VITE_API_URL}${vacation.pdfPreAprobacionUrl}`)} className="flex-1 flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors">
-                  <FontAwesomeIcon icon={faFileArrowUp} className="w-4 h-4" />
-                  <span>Ver Documento</span>
-                </button>
-                <a href={`${import.meta.env.VITE_API_URL}${vacation.pdfPreAprobacionUrl}`} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
-                  <FontAwesomeIcon icon={faDownload} className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-          )}
 
           {/* Signature Notification Section */}
           {(() => {
-            if (!vacation.requiresSignature || vacation.signatureStatus !== "sent") {
+            // State: Delivered
+            if (vacation.status === "delivered") {
+              return (
+                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-green-500 mb-1">Solicitud Entregada</h4>
+                      <p className="text-sm text-green-500/80">Su solicitud ha sido entregada exitosamente.</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (!vacation.requiresSignature) {
               return null;
             }
             if (isFinalState) return null;
 
-            if (isFinalState) return null;
+            // State: Signed (Verified by Admin)
+            if (vacation.signatureStatus === "signed") {
+              return (
+                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
+                  <div className="flex items-start gap-3 mb-3">
+                    <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-green-500 mb-1">Firma Verificada</h4>
+                      <p className="text-sm text-green-500/80 mb-2">Documentación firmada exitosamente. En espera de entrega.</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (vacation.signatureStatus !== "sent") {
+              return null;
+            }
 
             // State: Waiting Verification (User notified)
             if (vacation.signatureNotifiedAt) {

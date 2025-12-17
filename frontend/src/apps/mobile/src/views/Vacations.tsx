@@ -16,7 +16,7 @@ import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
 import { sweetAlert } from "../utils/sweetAlert";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, differenceInYears } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, differenceInYears, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapVacationStatusToStatusTypeForMobile, mapVacationSignatureStateToStatusType, isVacationInFinalState } from "../../../../utils/statusHelpers";
@@ -71,6 +71,23 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   // Calendar State for Form
   const [calendarOpen, setCalendarOpen] = useState<"start" | "end" | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
+
+  const hasNoDays = (availableDays?.available || 0) <= 0;
+
+  const handleCalendarConfirm = async () => {
+    if (startDate && endDate) {
+      const start = parseISO(startDate);
+      const end = parseISO(endDate);
+      const daysRequested = differenceInDays(end, start) + 1;
+      const available = availableDays?.available || 0;
+
+      if (daysRequested > available) {
+        await sweetAlert.warning("Límite excedido", `Estás solicitando ${daysRequested} días, pero solo tienes ${available} días disponibles.`);
+        return;
+      }
+    }
+    setCalendarOpen(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,23 +318,32 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               </div>
 
               <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                {hasNoDays && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
+                    <FontAwesomeIcon icon={faInfoCircle} className="text-red-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-red-700 dark:text-red-400 text-sm">Sin días disponibles</h4>
+                      <p className="text-sm text-red-600 dark:text-red-300 mt-1">Usted no tiene más días disponibles de vacaciones en este período.</p>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de inicio</label>
-                  <div onClick={() => setCalendarOpen("start")} className="relative cursor-pointer">
-                    <input type="text" value={startDate} readOnly placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer" />
+                  <div onClick={() => !hasNoDays && setCalendarOpen("start")} className={`relative ${hasNoDays ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                    <input type="text" value={startDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
                     <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de fin</label>
-                  <div onClick={() => setCalendarOpen("end")} className="relative cursor-pointer">
-                    <input type="text" value={endDate} readOnly placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer" />
+                  <div onClick={() => !hasNoDays && setCalendarOpen("end")} className={`relative ${hasNoDays ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                    <input type="text" value={endDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
                     <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario</label>
-                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe el comentario de tu solicitud..." />
+                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} disabled={hasNoDays} rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed" placeholder="Describe el comentario de tu solicitud..." />
                 </div>
 
                 {/* Requiere Firma Info Box */}
@@ -330,7 +356,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                     Cancelar
                   </button>
-                  <button type="submit" disabled={submitting} className="flex-1 rounded-lg h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
+                  <button type="submit" disabled={submitting || hasNoDays} className="flex-1 rounded-lg h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {submitting ? "Enviando..." : "Enviar"}
                   </button>
                 </div>
@@ -493,7 +519,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 <button onClick={() => setCalendarOpen(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                   Cancelar
                 </button>
-                <button onClick={() => setCalendarOpen(null)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                <button onClick={handleCalendarConfirm} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                   Confirmar
                 </button>
               </div>

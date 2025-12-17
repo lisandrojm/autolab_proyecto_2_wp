@@ -197,6 +197,14 @@ router.post("/", async (req, res) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ error: "Fechas inválidas" });
+    }
+
+    if (start > end) {
+      return res.status(400).json({ error: "La fecha de inicio no puede ser posterior a la fecha de fin" });
+    }
+
     // Check for user's own overlapping vacations
     const existingVacation = await Vacation.findOne({
       tenantId,
@@ -227,13 +235,18 @@ router.post("/", async (req, res) => {
       });
 
       if (overlapRule) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        // Safe check for area name
+        let areaName: string | undefined;
+        try {
+          const area = await Area.findById(userAreaId);
+          areaName = area?.name;
+        } catch (err) {
+          console.warn("Could not find area for overlap check", err);
+        }
 
         const usersInArea = await User.find({ areaId: userAreaId, tenantId }).select("_id");
         const userIdsInArea = usersInArea.map((u) => u._id);
 
-        const areaName = (await Area.findById(userAreaId))?.name;
         let extraUserIds: any[] = [];
         if (areaName) {
           const profilesInDept = await EmployeeProfile.find({ tenantId, department: areaName }).select("userId");
@@ -263,8 +276,6 @@ router.post("/", async (req, res) => {
     }
 
     // CONSTANTS CALCULATION
-    // const start = new Date(startDate); // Already defined above
-    // const end = new Date(endDate); // Already defined above
     const timeDiff = Math.abs(end.getTime() - start.getTime());
     const daysRequested = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // Inclusive days
 
@@ -299,9 +310,6 @@ router.post("/", async (req, res) => {
     const currentAvailable = globalConfig.diasAnuales - daysUsed - daysPending;
 
     // New Balance (Remaining)
-    // The 'balance' field in Vacation model typically stores the snapshot of balance AFTER or AT THE TIME of request?
-    // Usually "Balance Available".
-    // Let's store the balance REMAINING after this request.
     const newBalance = currentAvailable - daysRequested;
 
     const vacationData = {
@@ -340,7 +348,10 @@ router.post("/", async (req, res) => {
     res.status(201).json(newVacation);
   } catch (error: any) {
     console.error("Error creating vacation:", error);
-    res.status(500).json({ error: "Error al crear la solicitud de vacaciones" });
+    if (error.message === "Tenant not found") {
+      return res.status(404).json({ error: "Tenant no encontrado" });
+    }
+    res.status(500).json({ error: "Error al crear la solicitud de vacaciones", details: error.message });
   }
 });
 

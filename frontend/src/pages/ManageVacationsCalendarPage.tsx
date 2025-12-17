@@ -72,7 +72,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
     try {
       setLoading(true);
       const data = await vacationsAPI.getAll();
-      setVacations(data);
+      setVacations(data.filter((v) => v.status !== "cancelled"));
     } catch (error) {
       console.error("Error loading vacations:", error);
     } finally {
@@ -96,7 +96,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
       }
     }
 
-    const filteredVacations = statusFilter === "all" ? vacations : vacations.filter((v) => v.status === statusFilter);
+    const filteredVacations = (statusFilter === "all" ? vacations : vacations.filter((v) => v.status === statusFilter)).filter((v) => v.status !== "cancelled");
 
     const items = filteredVacations.map((vacation): TimelineItem => {
       const color = getStatusColor(vacation.status);
@@ -242,7 +242,6 @@ export const ManageVacationsCalendarPage: React.FC = () => {
               <option value="approved">Aprobadas</option>
               <option value="delivered">Entregadas</option>
               <option value="rejected">Rechazadas</option>
-              <option value="cancelled">Canceladas</option>
             </select>
             <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
           </div>

@@ -310,6 +310,7 @@ export const ManageVacationsPage: React.FC = () => {
           ? {
               ...prev,
               estado: "approved",
+              firmaEstado: requiresSignature ? "sent" : prev.firmaEstado,
             }
           : null
       );
@@ -420,11 +421,18 @@ export const ManageVacationsPage: React.FC = () => {
     setUpdating(true);
     try {
       await vacationsAPI.markSigned(selectedVacation.id);
+
+      setSelectedVacation((prev) =>
+        prev
+          ? {
+              ...prev,
+              firmaEstado: "signed",
+            }
+          : null
+      );
+
       await loadRecords();
-      const refreshed = mockVacations.find((v) => v.id === selectedVacation.id);
-      if (refreshed) {
-        setSelectedVacation(refreshed);
-      }
+
       await sweetAlert.success("Firma confirmada", "El documento ha sido marcado como firmado. El usuario será notificado.");
     } catch (error: any) {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo confirmar la firma");
@@ -883,10 +891,15 @@ export const ManageVacationsPage: React.FC = () => {
 
               {selectedVacation.pdfPreAprobacionUrl && (
                 <div className="border-slate-200 dark:border-slate-700">
-                  <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm">
+                  <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
                     <FontAwesomeIcon icon={faDownload} />
                     Descargar PDF
+                    <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
                   </a>
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheckCircle} />
+                    Su pdf fue generado.
+                  </p>
                 </div>
               )}
 

@@ -934,6 +934,10 @@ export const ManageOrdersPage: React.FC = () => {
                     Descargar
                     <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
                   </a>
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCheckCircle} />
+                    Su pdf fue generado.
+                  </p>
                 </div>
               )}
               <div className="flex gap-10">
