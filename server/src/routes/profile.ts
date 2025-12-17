@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { z } from "zod";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
