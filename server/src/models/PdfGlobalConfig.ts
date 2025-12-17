@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IPdfGlobalConfig extends Document {
   tenantId: mongoose.Types.ObjectId;
@@ -9,6 +9,10 @@ export interface IPdfGlobalConfig extends Document {
   signatureUrl?: string; // stored relative path or full URL
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface IPdfGlobalConfigModel extends Model<IPdfGlobalConfig> {
+  getOrCreateDefault(tenantId: mongoose.Types.ObjectId): Promise<IPdfGlobalConfig>;
 }
 
 const PdfGlobalConfigSchema = new Schema<IPdfGlobalConfig>(
@@ -47,4 +51,4 @@ PdfGlobalConfigSchema.statics.getOrCreateDefault = async function (tenantId: mon
   return config;
 };
 
-export const PdfGlobalConfig = mongoose.model<IPdfGlobalConfig>("PdfGlobalConfig", PdfGlobalConfigSchema);
+export const PdfGlobalConfig = mongoose.model<IPdfGlobalConfig, IPdfGlobalConfigModel>("PdfGlobalConfig", PdfGlobalConfigSchema);

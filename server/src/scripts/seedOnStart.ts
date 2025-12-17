@@ -21,7 +21,7 @@ import { Area } from "../models/Area.js";
 import { Level } from "../models/Level.js";
 import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
-import { Vacation } from "../models/Vacation.js";
+
 import { VacationCounter } from "../models/VacationCounter.js";
 import { VacationOverlap } from "../models/VacationOverlap.js";
 import { Types } from "mongoose";
