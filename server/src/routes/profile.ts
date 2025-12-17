@@ -53,26 +53,46 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     }
 
     // Fetch user for Area info
-    const user = await User.findById(userId);
-    let areaName = profile.department;
+    // Fetch user for Area info
+    let user;
+    try {
+      user = await User.findById(userId);
+    } catch (e) {
+      console.error(`Error fetching user ${userId} for profile stats:`, e);
+    }
+
+    let areaName = profile.department || "";
     let areaMembers = 0;
 
     if (user && user.areaId) {
-      const area = await Area.findById(user.areaId);
-      if (area) {
-        areaName = area.name;
-        // Count members in this area
-        areaMembers = await User.countDocuments({
-          tenantId: req.tenantObjectId,
-          areaId: user.areaId,
-          isActive: true,
-        });
+      try {
+        // Validate if areaId is a valid ObjectId before querying
+        if (mongoose.Types.ObjectId.isValid(user.areaId.toString())) {
+          const area = await Area.findById(user.areaId);
+          if (area) {
+            areaName = area.name;
+            // Count members in this area
+            areaMembers = await User.countDocuments({
+              tenantId: req.tenantObjectId,
+              areaId: user.areaId,
+              isActive: true,
+            });
+          }
+        } else {
+          console.warn(`Invalid areaId for user ${userId}: ${user.areaId}`);
+        }
+      } catch (areaError) {
+        console.error("Error fetching area info:", areaError);
+        // Continue without area info instead of failing the whole request
       }
     }
 
     res.json({ ...profile, areaName, areaMembers });
   } catch (error) {
     console.error("Get profile error:", error);
+    if (error instanceof Error) {
+      console.error("Stack:", error.stack);
+    }
     res.status(500).json({ error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" });
   }
 });
