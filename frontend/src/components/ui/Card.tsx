@@ -14,7 +14,7 @@ interface CardAction {
 
 interface CardBadge {
   text: string;
-  variant?: "default" | "success" | "warning" | "blue" | "info" | "green" | "social" | "cyan";
+  variant?: "default" | "success" | "warning" | "blue" | "info" | "green" | "social" | "cyan" | "destructive";
   icon?: IconDefinition;
   className?: string;
 }
@@ -45,6 +45,7 @@ interface CardHeaderProps {
   icon?: IconDefinition;
   avatar?: CardAvatar;
   badges?: CardBadge[];
+  badgesPosition?: "top" | "header-right";
   breadcrumbs?: BreadcrumbsProps;
   favorite?: boolean;
   onToggleFavorite?: () => void;
@@ -92,6 +93,8 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
       case "cyan":
         return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300";
+      case "destructive":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
@@ -153,36 +156,44 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
     );
   };
 
+  const renderBadges = () => {
+    if (!header?.badges?.length) return null;
+    return (
+      <div className="flex flex-wrap gap-2 w-full justify-between">
+        {header.badges.map((badge, index) => (
+          <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
+            {badge.icon && <FontAwesomeIcon icon={badge.icon} className="h-3 w-3" />}
+            <span className="text-nowrap">{badge.text}</span>
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className={`dark:bg-gray-800 rounded-xl transition-all duration-200 overflow-hidden min-h-[25svh] ${getVariantClasses()} ${onClick ? "cursor-pointer hover:scale-[1.01] hover:shadow-lg" : ""} ${className} h-full flex flex-col`} onClick={onClick}>
       <div className="p-4 flex-1 flex flex-col gap-3">
         <div className="flex flex-col gap-2 h-full">
           {header && (
             <div className="h-full flex flex-col">
-              {/* Badges */}
-              <div className="flex items-center space-x-2">
-                <div className="flex flex-wrap gap-2 w-full justify-between">
-                  {header.badges?.map((badge, index) => (
-                    <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
-                      {badge.icon && <FontAwesomeIcon icon={badge.icon} className="h-3 w-3" />}
-                      <span className="text-nowrap">{badge.text}</span>
-                    </span>
-                  ))}
+              {/* Badges (Top Position) */}
+              {(!header.badgesPosition || header.badgesPosition === "top") && (
+                <div className="flex items-center space-x-2">
+                  {renderBadges()}
+                  {header.onToggleFavorite && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        header.onToggleFavorite?.();
+                      }}
+                      className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      title={header.favorite ? "Desanclar" : "Anclar"}
+                    >
+                      <FontAwesomeIcon icon={header.favorite ? faThumbtack : faThumbtackSlash} className={`h-4 w-4 ${header.favorite ? "text-blue-600 rotate-45" : "text-gray-400"}`} />
+                    </button>
+                  )}
                 </div>
-
-                {header.onToggleFavorite && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      header.onToggleFavorite?.();
-                    }}
-                    className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title={header.favorite ? "Desanclar" : "Anclar"}
-                  >
-                    <FontAwesomeIcon icon={header.favorite ? faThumbtack : faThumbtackSlash} className={`h-4 w-4 ${header.favorite ? "text-blue-600 rotate-45" : "text-gray-400"}`} />
-                  </button>
-                )}
-              </div>
+              )}
 
               {/* Breadcrumbs */}
               {renderBreadcrumbs()}
@@ -206,9 +217,13 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                   </div>
                 )}
 
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{header.title}</h3>
-                  {header.subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{header.subtitle}</p>}
+                <div className="min-w-0 flex-1 flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{header.title}</h3>
+                    {header.subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{header.subtitle}</p>}
+                  </div>
+                  {/* Badges (Header Right Position) */}
+                  {header.badgesPosition === "header-right" && <div className="ml-2 flex-shrink-0">{renderBadges()}</div>}
                 </div>
               </div>
             </div>

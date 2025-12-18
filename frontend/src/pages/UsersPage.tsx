@@ -12,7 +12,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -763,24 +763,13 @@ export const UsersPage: React.FC = () => {
                   )}
                 </div>
 
-                <div>
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <div className="relative">
-                      <input type="checkbox" className="sr-only" checked={formData.isActive} onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))} />
-                      <div className={`block w-14 h-8 rounded-full transition-colors ${formData.isActive ? "bg-emerald-500" : "bg-gray-600"}`}></div>
-                      <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${formData.isActive ? "transform translate-x-6" : ""}`}></div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.isActive ? "Activo" : "Inactivo"}</span>
-                  </label>
-                </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Ingreso *</label>
                     <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Días Extra Individuales</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vacaciones (Días Extra Individuales)</label>
                     <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" placeholder="0" />
                   </div>
                 </div>
@@ -812,6 +801,13 @@ export const UsersPage: React.FC = () => {
                       ))}
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
+                  <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
+                    <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
+                    {formData.isActive ? "Activo" : "Inactivo"}
+                  </button>
+                </div>
               </div>
             </form>
           ),
@@ -832,12 +828,13 @@ export const UsersPage: React.FC = () => {
                 title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0],
                 subtitle: user.email,
                 icon: faUser,
-                /*                 badges: [
+                badges: [
                   {
                     text: user.isActive ? "Activo" : "Inactivo",
-                    variant: user.isActive ? "success" : "blue",
+                    variant: user.isActive ? "green" : "destructive",
                   },
-                ], */
+                ],
+                badgesPosition: "header-right",
               }}
               footer={
                 canManage
