@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPlus, faTimes, faCircleInfo, faSave, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCircleInfo, faSave, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { InfoModal } from "../ui/InfoModal";
 import { pdfTemplatesAPI, PdfTemplate } from "../../api/pdfTemplates";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 import { globalVacationConfigAPI, GlobalVacationConfig } from "../../api/globalVacationConfig";
-
-interface AntiguedadTranche {
-  desde: number;
-  hasta: number;
-  dias: number;
-}
 
 export const GlobalVacationConfigTab: React.FC = () => {
   const [config, setConfig] = useState<GlobalVacationConfig | null>(null);
@@ -30,7 +24,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
   const [showVencimientoInfo, setShowVencimientoInfo] = useState(false);
   const [showMinDiasInfo, setShowMinDiasInfo] = useState(false);
   const [showMaxDiasCorridosInfo, setShowMaxDiasCorridosInfo] = useState(false);
-  const [showMaxDiasHabilesInfo, setShowMaxDiasHabilesInfo] = useState(false);
+
   const [showAnticipacionInfo, setShowAnticipacionInfo] = useState(false);
   const [showFraccionadasInfo, setShowFraccionadasInfo] = useState(false);
   const [showPdfTemplateInfo, setShowPdfTemplateInfo] = useState(false);
@@ -107,30 +101,6 @@ export const GlobalVacationConfigTab: React.FC = () => {
     setConfig({ ...config, [field]: value });
   };
 
-  const addAntiguedadTramo = () => {
-    if (!config) return;
-    const antiguedadTramos = config.antiguedadTramos || [];
-    setConfig({
-      ...config,
-      antiguedadTramos: [...antiguedadTramos, { desde: 0, hasta: 0, dias: 0 }],
-    });
-  };
-
-  const updateAntiguedadTramo = (index: number, field: keyof AntiguedadTranche, value: number) => {
-    if (!config || !config.antiguedadTramos) return;
-    const updated = [...config.antiguedadTramos];
-    updated[index] = { ...updated[index], [field]: value };
-    setConfig({ ...config, antiguedadTramos: updated });
-  };
-
-  const removeAntiguedadTramo = (index: number) => {
-    if (!config || !config.antiguedadTramos) return;
-    setConfig({
-      ...config,
-      antiguedadTramos: config.antiguedadTramos.filter((_, i) => i !== index),
-    });
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -153,58 +123,67 @@ export const GlobalVacationConfigTab: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* ...Form fields... */}
           <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Días de vacaciones anuales</h3>
-            <div className="flex md:flex-row flex-col gap-4 items-end">
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Días anuales base</label>
-                <input type="number" value={config.diasAnuales === 0 ? "" : config.diasAnuales} onChange={(e) => updateConfig("diasAnuales", e.target.value === "" ? 0 : parseInt(e.target.value))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" required placeholder="0" />
-              </div>
-              <div className="w-full">
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Días de beneficio adicional</label>
-                  <button type="button" onClick={() => setShowDiasBeneficioInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
-                </div>
-                <input type="number" disabled={true} value={config.diasBeneficio || ""} onChange={(e) => updateConfig("diasBeneficio", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
-              </div>
-            </div>
-          </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Escala Legal (LCT N° 20.744)</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">El cálculo de días base se ajusta estrictamente a la Ley de Contrato de Trabajo de Argentina.</p>
 
-          <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Días de vacaciones según años de antigüedad</h3>
-              <button type="button" onClick={() => setShowAntiguedadInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
-                <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-              </button>
+            <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Antigüedad
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Días Corridos
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Menos de 6 meses</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">1 día cada 20 trabajados</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">6 meses a 5 años</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">14 días</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">5 a 10 años</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">21 días</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">10 a 20 años</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">28 días</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Más de 20 años</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">35 días</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Define cuántos días de vacaciones corresponden según la antigüedad del empleado en la empresa.</p>
-            <div className="space-y-3">
-              <div className="opacity-50 pointer-events-none">
-                {(config.antiguedadTramos || []).map((tramo, index) => (
-                  <div key={index} className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Desde (años)</label>
-                      <input disabled type="number" value={tramo.desde} onChange={(e) => updateAntiguedadTramo(index, "desde", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Hasta (años)</label>
-                      <input disabled type="number" value={tramo.hasta} onChange={(e) => updateAntiguedadTramo(index, "hasta", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Días</label>
-                      <input disabled type="number" value={tramo.dias} onChange={(e) => updateAntiguedadTramo(index, "dias", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" />
-                    </div>
-                    <button disabled type="button" onClick={() => removeAntiguedadTramo(index)} className="px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-                      <FontAwesomeIcon icon={faTimes} />
-                    </button>
-                  </div>
-                ))}
-                <button disabled type="button" onClick={addAntiguedadTramo} className="px-3 py-2 text-sm border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-full">
-                  <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                  Agregar tramo
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-700 dark:text-blue-300 text-sm">Regla de Fraccionamiento Mínimo</h4>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                    La licencia puede fraccionarse, pero <strong>ningún tramo puede ser menor a 7 días corridos</strong>, según lo establecido por la ley.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-w-md">
+              <div className="flex items-center gap-2 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Días de Beneficio Extra (Empresa)</label>
+                <button type="button" onClick={() => setShowDiasBeneficioInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                 </button>
               </div>
+              <input type="number" value={config.diasBeneficio || 0} onChange={(e) => updateConfig("diasBeneficio", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="0" />
+              <p className="text-xs text-gray-500 mt-1">Días adicionales que la empresa otorga por encima de la ley.</p>
             </div>
           </div>
 
@@ -218,7 +197,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" disabled={true} value={config.maxDiasGozados || ""} onChange={(e) => updateConfig("maxDiasGozados", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
+                <input type="number" value={config.maxDiasGozados || ""} onChange={(e) => updateConfig("maxDiasGozados", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
               </div>
 
               <div>
@@ -228,7 +207,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" disabled={true} value={config.minDiasPorSolicitud || ""} onChange={(e) => updateConfig("minDiasPorSolicitud", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
+                <input type="number" value={config.minDiasPorSolicitud || ""} onChange={(e) => updateConfig("minDiasPorSolicitud", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
               </div>
 
               <div>
@@ -239,16 +218,6 @@ export const GlobalVacationConfigTab: React.FC = () => {
                   </button>
                 </div>
                 <input type="number" value={config.maxDiasCorridos || ""} onChange={(e) => updateConfig("maxDiasCorridos", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo de días hábiles</label>
-                  <button type="button" onClick={() => setShowMaxDiasHabilesInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
-                </div>
-                <input type="number" disabled={true} value={config.maxDiasHabiles || ""} onChange={(e) => updateConfig("maxDiasHabiles", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white opacity-60 cursor-not-allowed" min="0" placeholder="Deshabilitado MVP" />
               </div>
 
               <div>
@@ -400,9 +369,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
       <InfoModal isOpen={showMaxDiasCorridosInfo} onClose={() => setShowMaxDiasCorridosInfo(false)} title="Máximo de días corridos">
         Límite de días consecutivos (incluyendo fines de semana) que pueden tomarse en una sola solicitud.
       </InfoModal>
-      <InfoModal isOpen={showMaxDiasHabilesInfo} onClose={() => setShowMaxDiasHabilesInfo(false)} title="Máximo de días hábiles">
-        Límite de días laborables consecutivos que pueden tomarse en una sola solicitud, sin contar fines de semana.
-      </InfoModal>
+
       <InfoModal isOpen={showAnticipacionInfo} onClose={() => setShowAnticipacionInfo(false)} title="Anticipación mínima">
         Cantidad mínima de días de anticipación con los que el empleado debe solicitar sus vacaciones antes de la fecha de inicio.
       </InfoModal>

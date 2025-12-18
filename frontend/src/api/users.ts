@@ -54,6 +54,14 @@ export interface User {
       };
   isActive: boolean;
   lastLoginAt?: string;
+  hireDate?: string;
+  extraVacationDays?: number;
+  seniorityAtEndOfYear?: number;
+  vacationDays?: {
+    lawDays: number;
+    extraDays: number;
+    totalDays: number;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -157,6 +165,16 @@ function normalizeUser(raw: any): User {
     areaId,
     isActive: Boolean(raw?.isActive),
     lastLoginAt: raw?.lastLoginAt ? String(raw.lastLoginAt) : undefined,
+    hireDate: raw?.hireDate ? String(raw.hireDate) : undefined,
+    extraVacationDays: typeof raw?.extraVacationDays === "number" ? raw.extraVacationDays : 0,
+    seniorityAtEndOfYear: typeof raw?.seniorityAtEndOfYear === "number" ? raw.seniorityAtEndOfYear : undefined,
+    vacationDays: raw?.vacationDays
+      ? {
+          lawDays: Number(raw.vacationDays.lawDays || 0),
+          extraDays: Number(raw.vacationDays.extraDays || 0),
+          totalDays: Number(raw.vacationDays.totalDays || 0),
+        }
+      : undefined,
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: String(raw?.updatedAt ?? ""),
   };
@@ -215,7 +233,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null; hireDate?: string; extraVacationDays?: number }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -233,6 +251,8 @@ class UsersAPI {
       positionId?: string | null;
       levelId?: string | null;
       areaId?: string | null;
+      hireDate?: string;
+      extraVacationDays?: number;
     }
   ): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}`, data, { headers: this.getHeaders() });

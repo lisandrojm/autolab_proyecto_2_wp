@@ -12,7 +12,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -28,6 +28,8 @@ interface UserFormData {
   positionId?: string;
   levelId?: string;
   areaId?: string;
+  hireDate: string;
+  extraVacationDays: number;
 }
 
 type ModalMode = "edit" | "password";
@@ -67,6 +69,8 @@ export const UsersPage: React.FC = () => {
     positionId: undefined,
     levelId: undefined,
     areaId: undefined,
+    hireDate: new Date().toISOString().split("T")[0],
+    extraVacationDays: 0,
   });
 
   // password modal fields (cuando modalMode === "password")
@@ -201,6 +205,8 @@ export const UsersPage: React.FC = () => {
       positionId: undefined,
       levelId: undefined,
       areaId: undefined,
+      hireDate: new Date().toISOString().split("T")[0],
+      extraVacationDays: 0,
     });
     setShowPassword(false);
     setShowModal(true);
@@ -240,6 +246,8 @@ export const UsersPage: React.FC = () => {
       positionId,
       levelId,
       areaId,
+      hireDate: user.hireDate ? new Date(user.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      extraVacationDays: user.extraVacationDays || 0,
     });
     setShowPassword(false);
     setShowModal(true);
@@ -442,13 +450,13 @@ export const UsersPage: React.FC = () => {
           },
         ],
         content: viewUser ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
+          <div className="space-y-6">
+            <div className="flex justify-end items-center gap-2">
               <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewUser.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" : "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
-              {viewUser.primaryRole && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg白/10 dark:text-gray-200 uppercase">{viewUser.primaryRole}</span>}
+              {viewUser.primaryRole && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 uppercase">{viewUser.primaryRole}</span>}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Nombre</h4>
                 <p className="text-sm text-gray-700 dark:text-gray-300">{viewUser.firstName || "—"}</p>
@@ -459,25 +467,51 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Cargo</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.positionId === "object" && viewUser.positionId?.name ? viewUser.positionId.name : "Sin cargo"}</p>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faUserTie} className="text-gray-400" />
+                  Cargo
+                </h4>
+                {typeof viewUser.positionId === "object" && viewUser.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.positionId.name}</span> : <p className="text-sm text-gray-500">Sin cargo</p>}
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Area</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.areaId === "object" && viewUser.areaId?.name ? viewUser.areaId.name : "Sin area"}</p>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400" />
+                  Area
+                </h4>
+                {typeof viewUser.areaId === "object" && viewUser.areaId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.areaId.name}</span> : <p className="text-sm text-gray-500">Sin area</p>}
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Nivel</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{typeof viewUser.levelId === "object" && viewUser.levelId?.name ? viewUser.levelId.name : "Sin nivel"}</p>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faUserGraduate} className="text-gray-400" />
+                  Nivel
+                </h4>
+                {typeof viewUser.levelId === "object" && viewUser.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.levelId.name}</span> : <p className="text-sm text-gray-500">Sin nivel</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                  Fecha de Ingreso
+                </h4>
+                {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <p className="text-sm text-gray-500">—</p>}
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faHourglassHalf} className="text-gray-400" />
+                  Antigüedad
+                </h4>
+                {viewUser.seniorityAtEndOfYear !== undefined ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.seniorityAtEndOfYear} años</span> : <p className="text-sm text-gray-500">—</p>}
               </div>
             </div>
 
             {viewUser.clientIds && viewUser.clientIds.length > 0 && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Clientes asignados</h4>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-2">
                   {viewUser.clientIds.map((client) => (
                     <span key={client._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
                       {client.name}
@@ -488,7 +522,10 @@ export const UsersPage: React.FC = () => {
             )}
 
             <div>
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Roles ({viewUser.roles.filter((r) => r.name.toLowerCase() !== "superadmin").length})</h4>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                <FontAwesomeIcon icon={faUserShield} className="text-gray-400" />
+                Roles ({viewUser.roles.filter((r) => r.name.toLowerCase() !== "superadmin").length})
+              </h4>
               {viewUser.roles.filter((r) => r.name.toLowerCase() !== "superadmin").length === 0 ? (
                 <p className="text-sm text-gray-500">Sin roles</p>
               ) : (
@@ -496,7 +533,7 @@ export const UsersPage: React.FC = () => {
                   {viewUser.roles
                     .filter((role) => role.name.toLowerCase() !== "superadmin")
                     .map((role) => (
-                      <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">
+                      <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
                         {role.name}
                       </span>
                     ))}
@@ -726,12 +763,27 @@ export const UsersPage: React.FC = () => {
                   )}
                 </div>
 
-                {/*                 <div>
-                  <label className="flex items-center space-x-2">
-                    <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))} className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Usuario activo</span>
+                <div>
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <div className="relative">
+                      <input type="checkbox" className="sr-only" checked={formData.isActive} onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))} />
+                      <div className={`block w-14 h-8 rounded-full transition-colors ${formData.isActive ? "bg-emerald-500" : "bg-gray-600"}`}></div>
+                      <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${formData.isActive ? "transform translate-x-6" : ""}`}></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{formData.isActive ? "Activo" : "Inactivo"}</span>
                   </label>
-                </div> */}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Ingreso *</label>
+                    <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Días Extra Individuales</label>
+                    <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" placeholder="0" />
+                  </div>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
@@ -790,7 +842,12 @@ export const UsersPage: React.FC = () => {
               footer={
                 canManage
                   ? {
-                      leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : "Nunca"}</span>,
+                      /*                       leftContent: (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-gray-500 dark:text-gray-500">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : "Nunca"}</span>
+                          {user.seniorityAtEndOfYear !== undefined && <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded w-fit">{user.seniorityAtEndOfYear} años</span>}
+                        </div>
+                      ), */
                       actions: [
                         {
                           icon: faEdit,
@@ -876,6 +933,24 @@ export const UsersPage: React.FC = () => {
                     Nivel
                   </label>
                   {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {/* Fecha de ingreso */}
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faCalendar} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                    Ingreso
+                  </label>
+                  {user.hireDate !== undefined && <span className="w-fit inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{new Date(user.hireDate).toLocaleDateString()}</span>}
+                </div>
+                {/* Antigüedad */}
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faHourglassHalf} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                    Antigüedad
+                  </label>
+                  {user.seniorityAtEndOfYear !== undefined && <span className="w-fit inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.seniorityAtEndOfYear} años</span>}
                 </div>
               </div>
               {/* Clientes asignados (si los hay) */}

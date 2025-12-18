@@ -22,6 +22,11 @@ const createUserSchema = z
     positionId: z.string().nullable().optional(),
     levelId: z.string().nullable().optional(),
     areaId: z.string().nullable().optional(),
+    hireDate: z
+      .string()
+      .or(z.date())
+      .transform((val) => new Date(val)),
+    extraVacationDays: z.number().default(0),
   })
   .refine(
     (data) => {
@@ -47,6 +52,12 @@ const updateUserSchema = z
     positionId: z.string().nullable().optional(),
     levelId: z.string().nullable().optional(),
     areaId: z.string().nullable().optional(),
+    hireDate: z
+      .string()
+      .or(z.date())
+      .transform((val) => new Date(val))
+      .optional(),
+    extraVacationDays: z.number().optional(),
   })
   .refine(
     (data) => {

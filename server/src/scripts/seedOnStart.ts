@@ -112,8 +112,8 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
   return role;
 }
 
-async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId; areaId?: Types.ObjectId }) {
-  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId, areaId } = params;
+async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId; areaId?: Types.ObjectId; hireDate?: Date; extraVacationDays?: number }) {
+  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0 } = params;
 
   let user = await User.findOne({ tenantId, email });
   let wantedRole: any = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${roleName}$`, "i") } });
@@ -136,6 +136,8 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
       positionId,
       levelId,
       areaId,
+      hireDate,
+      extraVacationDays,
     });
     await user.save();
 
@@ -176,6 +178,14 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
     }
     if (areaId && String(user.areaId) !== String(areaId)) {
       user.areaId = areaId;
+      isModified = true;
+    }
+    if (hireDate && (!user.hireDate || user.hireDate.getTime() !== hireDate.getTime())) {
+      user.hireDate = hireDate;
+      isModified = true;
+    }
+    if (extraVacationDays !== undefined && user.extraVacationDays !== extraVacationDays) {
+      user.extraVacationDays = extraVacationDays;
       isModified = true;
     }
 
@@ -637,6 +647,8 @@ export async function seedOnStart() {
       positionId: positionDirector._id as Types.ObjectId,
       levelId: levelDirectorNacional._id as Types.ObjectId,
       areaId: areaMap["Libertador"],
+      hireDate: new Date("2019-01-01"),
+      extraVacationDays: 5,
     });
     const adminId = String(adminUser._id);
     console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelDirectorNacional.name}, Area=Libertador`);
@@ -653,6 +665,8 @@ export async function seedOnStart() {
       positionId: positionEditor._id as Types.ObjectId,
       levelId: levelEditorJunior._id as Types.ObjectId,
       areaId: areaMap["Editores"],
+      hireDate: new Date("2023-05-01"),
+      extraVacationDays: 0,
     });
     console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
 
@@ -668,6 +682,8 @@ export async function seedOnStart() {
       positionId: positionProductor._id as Types.ObjectId,
       levelId: levelProductorSenior._id as Types.ObjectId,
       areaId: areaMap["Técnica"],
+      hireDate: new Date("2020-03-15"),
+      extraVacationDays: 2,
     });
     console.log(`👤 Coordinador assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Técnica`);
 
@@ -683,6 +699,8 @@ export async function seedOnStart() {
       positionId: positionEditor._id as Types.ObjectId,
       levelId: levelEditorJunior._id as Types.ObjectId,
       areaId: areaMap["Editores"],
+      hireDate: new Date("2024-01-10"),
+      extraVacationDays: 0,
     });
     console.log(`👤 Colaborador 2 assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
 
@@ -698,6 +716,8 @@ export async function seedOnStart() {
       positionId: positionProductor._id as Types.ObjectId,
       levelId: levelProductorSenior._id as Types.ObjectId,
       areaId: areaMap["Editores"], // Intentionally in Editores for overlap testing
+      hireDate: new Date("2021-08-20"),
+      extraVacationDays: 1,
     });
     console.log(`👤 Coordinador 2 assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Editores`);
 

@@ -20,6 +20,8 @@ export interface ProfileData {
   areaName?: string;
   areaMembers?: number;
   hireDate?: string;
+  extraVacationDays?: number;
+  seniorityYears?: number;
   birthDate?: string;
   profilePhotoUrl?: string;
   vacationPolicy: {

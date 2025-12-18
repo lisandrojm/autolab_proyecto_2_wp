@@ -23,6 +23,8 @@ import { mapVacationStatusToStatusTypeForMobile, mapVacationSignatureStateToStat
 import VacationDetailModal from "../components/VacationDetailModal";
 import { VacationRequest } from "../../../../api/vacations";
 import { InfoModal } from "../../../../components/ui/InfoModal";
+import { calculateLCTVacationDays } from "../../../../utils/vacationLCT";
+import { globalVacationConfigAPI, GlobalVacationConfig } from "../../../../api/globalVacationConfig";
 
 // Helper to parse date string as local date (ignoring time/timezone)
 const getLocalDate = (dateString: string) => {
@@ -54,6 +56,19 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   // Nuevo estado para el modal de información/ayuda
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showSignatureInfoModal, setShowSignatureInfoModal] = useState(false);
+  const [globalConfig, setGlobalConfig] = useState<GlobalVacationConfig | null>(null);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await globalVacationConfigAPI.getConfig();
+        setGlobalConfig(config);
+      } catch (error) {
+        console.error("Error fetching global config:", error);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // Refetch data when form opens to ensure availability is up to date
   useEffect(() => {
@@ -80,6 +95,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       const end = parseISO(endDate);
       const daysRequested = differenceInDays(end, start) + 1;
       const available = availableDays?.available || 0;
+
+      if (daysRequested < 7) {
+        await sweetAlert.warning("Fraccionamiento Mínimo", "La licencia no puede ser menor a 7 días corridos, según la Ley de Contrato de Trabajo (LCT).");
+        return;
+      }
 
       if (daysRequested > available) {
         await sweetAlert.warning("Límite excedido", `Estás solicitando ${daysRequested} días, pero solo tienes ${available} días disponibles.`);
@@ -260,7 +280,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             {/* NUEVA FILA DE SALDO PRINCIPAL: Corridos vs. Hábiles */}
             <div className="flex flex-col justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200 mr-2">Días Disponibles (Corridos)</h4>
+                <h4 className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200 mr-2">Días Disponibles</h4>
                 {/* Botón de Ayuda movido aquí */}
                 <button onClick={() => setShowInfoModal(true)} className="text-slate-400 hover:text-blue-500 transition-colors p-1">
                   <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
@@ -270,12 +290,12 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 {/* Días Corridos (Saldo Contable, el más grande) */}
                 <div className="text-center">
                   <p className="text-xs text-slate-400">Total Anual</p>
-                  <p className="text-3xl font-extrabold text-blue-500">{availableDays?.total || 15}</p>
+                  <p className="text-3xl font-extrabold text-blue-500">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) : availableDays?.total || 0}</p>
                 </div>
                 {/* Disponibles */}
                 <div className="text-center">
                   <p className="text-xs text-slate-400 mb-1">Disponibles</p>
-                  <p className="text-2xl font-bold text-blue-500">{availableDays?.available ?? "-"}</p>
+                  <p className="text-2xl font-bold text-blue-500">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) - (availableDays?.used || 0) : (availableDays?.available ?? "-")}</p>
                 </div>
                 {/* Pendientes */}
                 <div className="text-center">
@@ -286,21 +306,22 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             </div>
 
             {/* BALANCE DE DÍAS (Fila única 3x2) - BALANCE Contable y Uso */}
+            {/* BALANCE DE DÍAS (Fila única 3x2) - BALANCE Contable y Uso */}
             <div className="grid grid-cols-3 gap-y-4 gap-x-2 text-center">
+              {/* LCT */}
+              <div>
+                <p className="text-xs text-slate-400 mb-1">Por Ley (LCT)</p>
+                <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) : "-"}</p>
+              </div>
+              {/* Extra Empresa */}
+              <div>
+                <p className="text-xs text-slate-400 mb-1">Extra Empresa</p>
+                <p className="text-lg font-bold text-blue-500">{(globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0)}</p>
+              </div>
               {/* Gozados */}
               <div>
                 <p className="text-xs text-slate-400 mb-1">Gozados</p>
                 <p className="text-lg font-bold">{availableDays?.used || 0}</p>
-              </div>
-              {/* Acumulados (Períodos Anteriores) */}
-              <div>
-                <p className="text-xs text-slate-400 mb-1">Acumulados</p>
-                <p className="text-lg font-bold">0</p>
-              </div>
-              {/* Beneficio Extra */}
-              <div>
-                <p className="text-xs text-slate-400 mb-1">Beneficio Extra</p>
-                <p className="text-lg font-bold text-blue-500">0</p>
               </div>
             </div>
           </div>
@@ -543,13 +564,10 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         ]}
       >
         <div className="space-y-4 text-slate-700 dark:text-slate-300">
-          <p className="font-semibold">La disponibilidad de vacaciones se presenta en dos formatos:</p>
+          <p className="font-semibold">Información sobre tu saldo:</p>
           <ul className="list-disc list-inside space-y-2 pl-2">
             <li>
-              <strong>Días Disponibles (Corridos):</strong> Es tu <strong>saldo total</strong> de días en la "bolsa de tiempo" de la empresa. Este valor se usa para el balance contable (<code>Acumulados + Beneficio Extra - Gozados</code>). Incluye días no laborables (fines de semana, festivos).
-            </li>
-            <li>
-              <strong>Días Hábiles:</strong> Es el saldo de días que tienes para solicitar <strong>excluyendo los días no laborables</strong>. Es el valor que usarás al planificar tu período de descanso. Este número siempre es menor que los Días Corridos.
+              <strong>Días Disponibles:</strong> Es tu saldo total de días de vacaciones. Según la Ley de Contrato de Trabajo (LCT), estos días son <strong>corridos</strong>, lo que significa que incluyen fines de semana y feriados si caen dentro del período solicitado.
             </li>
           </ul>
           <p className="font-semibold mt-4">Otras Métricas:</p>
