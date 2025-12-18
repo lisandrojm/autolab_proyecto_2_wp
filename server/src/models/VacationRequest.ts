@@ -14,8 +14,7 @@ interface VacationRules {
   permiteArrastre: boolean;
   maxDiasArrastre?: number;
   vencimientoArrastreDias?: number;
-  minDiasPorSolicitud?: number;
-  maxDiasCorridos?: number;
+
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
@@ -87,11 +86,13 @@ const vacationRequestSchema = new Schema<IVacationRequest>(
         diasAnuales: { type: Number, required: true },
         diasBeneficio: { type: Number, required: false },
         antiguedadTramos: {
-          type: [{
-            desde: { type: Number, required: true },
-            hasta: { type: Number, required: true },
-            dias: { type: Number, required: true },
-          }],
+          type: [
+            {
+              desde: { type: Number, required: true },
+              hasta: { type: Number, required: true },
+              dias: { type: Number, required: true },
+            },
+          ],
           required: false,
           default: [],
         },
@@ -99,8 +100,7 @@ const vacationRequestSchema = new Schema<IVacationRequest>(
         permiteArrastre: { type: Boolean, required: true },
         maxDiasArrastre: { type: Number, required: false },
         vencimientoArrastreDias: { type: Number, required: false },
-        minDiasPorSolicitud: { type: Number, required: false },
-        maxDiasCorridos: { type: Number, required: false },
+
         maxDiasHabiles: { type: Number, required: false },
         anticipacionMinimaDias: { type: Number, required: false },
         permiteFraccionadas: { type: Boolean, required: true },

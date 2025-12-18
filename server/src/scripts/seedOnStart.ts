@@ -967,8 +967,7 @@ export async function seedOnStart() {
         permiteArrastre: globalConfig.permiteArrastre,
         maxDiasArrastre: globalConfig.maxDiasArrastre,
         vencimientoArrastreDias: globalConfig.vencimientoArrastreDias,
-        minDiasPorSolicitud: globalConfig.minDiasPorSolicitud,
-        maxDiasCorridos: globalConfig.maxDiasCorridos,
+
         maxDiasHabiles: globalConfig.maxDiasHabiles,
         anticipacionMinimaDias: globalConfig.anticipacionMinimaDias,
         permiteFraccionadas: globalConfig.permiteFraccionadas,

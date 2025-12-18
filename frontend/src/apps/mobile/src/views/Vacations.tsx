@@ -16,7 +16,7 @@ import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
 import { useProfile } from "../hooks/useProfile";
 import { sweetAlert } from "../utils/sweetAlert";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, differenceInYears, differenceInDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, isFriday, isSaturday, differenceInYears, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapVacationStatusToStatusTypeForMobile, mapVacationSignatureStateToStatusType, isVacationInFinalState } from "../../../../utils/statusHelpers";
@@ -97,7 +97,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       const available = availableDays?.available || 0;
 
       if (daysRequested < 7) {
-        await sweetAlert.warning("Fraccionamiento Mínimo", "La licencia no puede ser menor a 7 días corridos, según la Ley de Contrato de Trabajo (LCT).");
+        await sweetAlert.warning("Fraccionamiento Mínimo", "El período de vacaciones no puede ser menor a 7 días corridos, según la Ley de Contrato de Trabajo (LCT).");
         return;
       }
 
@@ -192,7 +192,34 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         newEnd = "";
       }
     } else if (calendarOpen === "end") {
-      newEnd = formattedDate;
+      // Logic for Friday/Saturday
+      if (isFriday(day)) {
+        const saturday = addDays(day, 1);
+        const sunday = addDays(day, 2);
+
+        // Verificar si los días agregados están ocupados
+        if (isOccupied(saturday) || isOccupied(sunday)) {
+          await sweetAlert.error("Error", "No se pueden agregar automáticamente el sábado y domingo porque uno de esos días está ocupado por otro miembro del equipo.");
+          return;
+        }
+
+        await sweetAlert.info("Días Corridos", "Al finalizar las vacaciones un viernes, se computan automáticamente el sábado y domingo como días corridos.");
+        newEnd = format(sunday, "yyyy-MM-dd");
+      } else if (isSaturday(day)) {
+        const sunday = addDays(day, 1);
+
+        // Verificar si el día agregado está ocupado
+        if (isOccupied(sunday)) {
+          await sweetAlert.error("Error", "No se puede agregar automáticamente el domingo porque está ocupado por otro miembro del equipo.");
+          return;
+        }
+
+        await sweetAlert.info("Días Corridos", "Al finalizar las vacaciones un sábado, se computa automáticamente el domingo como día corrido.");
+        newEnd = format(sunday, "yyyy-MM-dd");
+      } else {
+        newEnd = formattedDate;
+      }
+
       if (startDate && isBefore(day, parseISO(startDate))) {
         newStart = "";
       }

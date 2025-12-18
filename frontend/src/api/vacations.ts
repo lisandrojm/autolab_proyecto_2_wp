@@ -15,8 +15,7 @@ interface VacationRules {
   permiteArrastre: boolean;
   maxDiasArrastre?: number;
   vencimientoArrastreDias?: number;
-  minDiasPorSolicitud?: number;
-  maxDiasCorridos?: number;
+
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;

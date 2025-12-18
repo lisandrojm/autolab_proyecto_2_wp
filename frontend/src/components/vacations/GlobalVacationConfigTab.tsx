@@ -22,8 +22,6 @@ export const GlobalVacationConfigTab: React.FC = () => {
   const [showArrastreInfo, setShowArrastreInfo] = useState(false);
   const [showMaxDiasArrastreInfo, setShowMaxDiasArrastreInfo] = useState(false);
   const [showVencimientoInfo, setShowVencimientoInfo] = useState(false);
-  const [showMinDiasInfo, setShowMinDiasInfo] = useState(false);
-  const [showMaxDiasCorridosInfo, setShowMaxDiasCorridosInfo] = useState(false);
 
   const [showAnticipacionInfo, setShowAnticipacionInfo] = useState(false);
   const [showFraccionadasInfo, setShowFraccionadasInfo] = useState(false);
@@ -202,26 +200,6 @@ export const GlobalVacationConfigTab: React.FC = () => {
 
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mínimo de días por solicitud</label>
-                  <button type="button" onClick={() => setShowMinDiasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
-                </div>
-                <input type="number" value={config.minDiasPorSolicitud || ""} onChange={(e) => updateConfig("minDiasPorSolicitud", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Máximo de días corridos</label>
-                  <button type="button" onClick={() => setShowMaxDiasCorridosInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
-                </div>
-                <input type="number" value={config.maxDiasCorridos || ""} onChange={(e) => updateConfig("maxDiasCorridos", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Anticipación mínima (días)</label>
                   <button type="button" onClick={() => setShowAnticipacionInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
@@ -362,12 +340,6 @@ export const GlobalVacationConfigTab: React.FC = () => {
       </InfoModal>
       <InfoModal isOpen={showVencimientoInfo} onClose={() => setShowVencimientoInfo(false)} title="Vencimiento del arrastre">
         Plazo en días desde el inicio del año para utilizar los días arrastrados del año anterior. Después de este plazo, los días no utilizados se pierden.
-      </InfoModal>
-      <InfoModal isOpen={showMinDiasInfo} onClose={() => setShowMinDiasInfo(false)} title="Mínimo de días por solicitud">
-        Cantidad mínima de días consecutivos que debe solicitarse en cada petición de vacaciones.
-      </InfoModal>
-      <InfoModal isOpen={showMaxDiasCorridosInfo} onClose={() => setShowMaxDiasCorridosInfo(false)} title="Máximo de días corridos">
-        Límite de días consecutivos (incluyendo fines de semana) que pueden tomarse en una sola solicitud.
       </InfoModal>
 
       <InfoModal isOpen={showAnticipacionInfo} onClose={() => setShowAnticipacionInfo(false)} title="Anticipación mínima">

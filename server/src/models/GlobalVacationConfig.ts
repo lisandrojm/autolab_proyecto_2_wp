@@ -15,8 +15,7 @@ export interface IGlobalVacationConfig extends Document {
   permiteArrastre: boolean;
   maxDiasArrastre?: number;
   vencimientoArrastreDias?: number;
-  minDiasPorSolicitud?: number;
-  maxDiasCorridos?: number;
+
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
@@ -47,11 +46,13 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
       min: 0,
     },
     antiguedadTramos: {
-      type: [{
-        desde: { type: Number, required: true },
-        hasta: { type: Number, required: true },
-        dias: { type: Number, required: true },
-      }],
+      type: [
+        {
+          desde: { type: Number, required: true },
+          hasta: { type: Number, required: true },
+          dias: { type: Number, required: true },
+        },
+      ],
       required: false,
       default: [],
     },
@@ -75,16 +76,7 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
       required: false,
       min: 0,
     },
-    minDiasPorSolicitud: {
-      type: Number,
-      required: false,
-      min: 0,
-    },
-    maxDiasCorridos: {
-      type: Number,
-      required: false,
-      min: 0,
-    },
+
     maxDiasHabiles: {
       type: Number,
       required: false,
@@ -116,7 +108,7 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
   }
 );
 
-GlobalVacationConfigSchema.statics.getOrCreateDefault = async function(tenantId: mongoose.Types.ObjectId) {
+GlobalVacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {
   let config = await this.findOne({ tenantId });
 
   if (!config) {
@@ -133,7 +125,4 @@ GlobalVacationConfigSchema.statics.getOrCreateDefault = async function(tenantId:
   return config;
 };
 
-export const GlobalVacationConfig = mongoose.model<IGlobalVacationConfig>(
-  "GlobalVacationConfig",
-  GlobalVacationConfigSchema
-);
+export const GlobalVacationConfig = mongoose.model<IGlobalVacationConfig>("GlobalVacationConfig", GlobalVacationConfigSchema);
