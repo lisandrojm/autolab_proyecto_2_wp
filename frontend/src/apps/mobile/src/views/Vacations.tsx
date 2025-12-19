@@ -340,9 +340,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 <p className="text-xs text-slate-400 mb-1">Por Ley (LCT)</p>
                 <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) : "-"}</p>
               </div>
-              {/* Extra Empresa */}
+              {/* Beneficio */}
               <div>
-                <p className="text-xs text-slate-400 mb-1">Extra Empresa</p>
+                <p className="text-xs text-slate-400 mb-1">Beneficio</p>
                 <p className="text-lg font-bold text-blue-500">{(globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0)}</p>
               </div>
               {/* Gozados */}
@@ -390,7 +390,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario (Opcional)</label>
                   <textarea value={reason} onChange={(e) => setReason(e.target.value)} disabled={hasNoDays} rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed" placeholder="Describe el comentario de tu solicitud..." />
                 </div>
 

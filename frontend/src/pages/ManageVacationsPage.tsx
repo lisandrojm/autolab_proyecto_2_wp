@@ -380,7 +380,7 @@ export const ManageVacationsPage: React.FC = () => {
 
       await loadRecords();
 
-      await sweetAlert.success("Entregado", "La solicitud ha sido marcada como entregada");
+      await sweetAlert.success("Solicitud Entregada", "Su solicitud ha sido entregada exitosamente.");
     } catch (error: any) {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo marcar como entregado");
       await loadRecords();
@@ -924,6 +924,18 @@ export const ManageVacationsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {selectedVacation.estado === "delivered" && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-800 dark:text-green-400 mb-1">Solicitud Entregada</h4>
+                    <p className="text-sm text-green-700 dark:text-green-300">Su solicitud ha sido entregada exitosamente.</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {selectedVacation.estado === "approved" && selectedVacation.requiresSignature && selectedVacation.firmaEstado === "sent" && !selectedVacation.signatureNotifiedAt && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
