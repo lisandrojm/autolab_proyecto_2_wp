@@ -58,6 +58,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
         firstName,
         lastName,
         email: user?.email || req.user!.email,
+        hireDate: user?.hireDate,
         vacationPolicy: {
           annualDays: 20,
           carryOverDays: 0,
@@ -86,6 +87,11 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       } catch (areaError) {
         console.error("Error fetching area info:", areaError);
       }
+    }
+
+    // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
+    if (!profile.hireDate && user?.hireDate) {
+      profile.hireDate = user.hireDate;
     }
 
     res.json({ ...profile, areaName, areaMembers });
@@ -149,26 +155,19 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const tenantId = req.tenantObjectId;
 
-    // 1. Get Profile for other stats (daysWorked) if needed, mostly we need hireDate
+    // 1. Get User for Vacation Days (calculated virtual) & Hire Date
+    const User = (await import("../models/User.js")).User;
+    const user = await User.findById(userId);
+
+    // 2. Get Profile for other stats (daysWorked) if needed
     const profile = await EmployeeProfile.findOne({
       tenantId,
       userId,
     }).lean();
 
-    if (!profile) {
-      // Fallback default
-      res.json({
-        daysWorked: 0,
-        vacations: { total: 0, used: 0, available: 0 },
-      });
-      return;
-    }
+    const hireDate = profile?.hireDate || user?.hireDate;
+    const daysWorked = hireDate ? Math.floor((Date.now() - new Date(hireDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    const daysWorked = profile.hireDate ? Math.floor((Date.now() - new Date(profile.hireDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
-    // 2. Get User for Vacation Days (calculated virtual)
-    const User = (await import("../models/User.js")).User;
-    const user = await User.findById(userId);
     const annualDays = user?.vacationDays?.totalDays || 14; // Default fallback to 14 (min law)
 
     // 3. Calculate Used and Pending from Vacation model
