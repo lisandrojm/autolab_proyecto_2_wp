@@ -942,12 +942,10 @@ export async function seedOnStart() {
 
       globalConfig = await GlobalVacationConfig.create({
         tenantId,
-        diasAnuales: 18,
         diasBeneficio: 0,
         permiteArrastre: false,
         permiteFraccionadas: false,
         requiereFirma: true,
-        antiguedadTramos: [],
         maxDiasGozados: 30,
         pdfTemplateId: vacationTemplate?._id,
       });
@@ -960,9 +958,7 @@ export async function seedOnStart() {
     const vacationRequestsCount = await Vacation.countDocuments({ tenantId });
     if (vacationRequestsCount === 0) {
       const rulesSnapshot = {
-        diasAnuales: globalConfig.diasAnuales,
         diasBeneficio: globalConfig.diasBeneficio,
-        antiguedadTramos: globalConfig.antiguedadTramos,
         maxDiasGozados: globalConfig.maxDiasGozados,
         permiteArrastre: globalConfig.permiteArrastre,
         maxDiasArrastre: globalConfig.maxDiasArrastre,

@@ -166,10 +166,10 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const daysWorked = profile.hireDate ? Math.floor((Date.now() - new Date(profile.hireDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    // 2. Get Global Config (Base days)
-    const GlobalVacationConfig = (await import("../models/GlobalVacationConfig.js")).GlobalVacationConfig;
-    const globalConfig = await GlobalVacationConfig.findOne({ tenantId });
-    const annualDays = globalConfig?.diasAnuales || 15; // Default 15 if not configured, or 0? Prompt says "Días anuales base" is sole source.
+    // 2. Get User for Vacation Days (calculated virtual)
+    const User = (await import("../models/User.js")).User;
+    const user = await User.findById(userId);
+    const annualDays = user?.vacationDays?.totalDays || 14; // Default fallback to 14 (min law)
 
     // 3. Calculate Used and Pending from Vacation model
     const Vacation = (await import("../models/Vacation.js")).Vacation;

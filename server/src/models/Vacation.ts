@@ -1,16 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { VacationCounter } from "./VacationCounter.js";
 
-interface AntiguedadTramo {
-  desde: number;
-  hasta: number;
-  dias: number;
-}
-
 interface VacationRules {
-  diasAnuales: number;
   diasBeneficio?: number;
-  antiguedadTramos?: AntiguedadTramo[];
   maxDiasGozados?: number;
   permiteArrastre: boolean;
   maxDiasArrastre?: number;
@@ -89,19 +81,7 @@ const VacationSchema = new Schema<IVacation>(
     },
     rules: {
       type: {
-        diasAnuales: { type: Number, required: true },
         diasBeneficio: { type: Number, required: false },
-        antiguedadTramos: {
-          type: [
-            {
-              desde: { type: Number, required: true },
-              hasta: { type: Number, required: true },
-              dias: { type: Number, required: true },
-            },
-          ],
-          required: false,
-          default: [],
-        },
         maxDiasGozados: { type: Number, required: false },
         permiteArrastre: { type: Boolean, required: true },
         maxDiasArrastre: { type: Number, required: false },

@@ -1,16 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface AntiguedadTramo {
-  desde: number;
-  hasta: number;
-  dias: number;
-}
-
-export interface IGlobalVacationConfig extends Document {
+interface IGlobalVacationConfig extends Document {
   tenantId: mongoose.Types.ObjectId;
-  diasAnuales: number;
   diasBeneficio?: number;
-  antiguedadTramos?: AntiguedadTramo[];
   maxDiasGozados?: number;
   permiteArrastre: boolean;
   maxDiasArrastre?: number;
@@ -34,27 +26,10 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
       unique: true,
       index: true,
     },
-    diasAnuales: {
-      type: Number,
-      required: true,
-      default: 18,
-      min: 0,
-    },
     diasBeneficio: {
       type: Number,
       required: false,
       min: 0,
-    },
-    antiguedadTramos: {
-      type: [
-        {
-          desde: { type: Number, required: true },
-          hasta: { type: Number, required: true },
-          dias: { type: Number, required: true },
-        },
-      ],
-      required: false,
-      default: [],
     },
     maxDiasGozados: {
       type: Number,
@@ -114,11 +89,9 @@ GlobalVacationConfigSchema.statics.getOrCreateDefault = async function (tenantId
   if (!config) {
     config = await this.create({
       tenantId,
-      diasAnuales: 18,
       permiteArrastre: false,
       permiteFraccionadas: true,
       requiereFirma: true,
-      antiguedadTramos: [],
     });
   }
 

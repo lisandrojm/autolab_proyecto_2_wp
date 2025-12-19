@@ -307,7 +307,8 @@ router.post("/", async (req, res) => {
     }
 
     // Balance available BEFORE this request
-    const currentAvailable = globalConfig.diasAnuales - daysUsed - daysPending;
+    const totalAnnualDays = user.vacationDays?.totalDays || 0;
+    const currentAvailable = totalAnnualDays - daysUsed - daysPending;
 
     // New Balance (Remaining)
     const newBalance = currentAvailable - daysRequested;
@@ -320,14 +321,12 @@ router.post("/", async (req, res) => {
       position: positionName,
       level: levelName,
       daysRequested,
-      diasDeVacacionesAnuales: globalConfig.diasAnuales,
+      diasDeVacacionesAnuales: totalAnnualDays,
       balance: newBalance,
       comments: reason, // Map 'reason' from body to 'comments' in db
       requiresSignature: globalConfig.requiereFirma,
       rules: {
-        diasAnuales: globalConfig.diasAnuales,
         diasBeneficio: globalConfig.diasBeneficio,
-        antiguedadTramos: globalConfig.antiguedadTramos,
         maxDiasGozados: globalConfig.maxDiasGozados,
         permiteArrastre: globalConfig.permiteArrastre,
         maxDiasArrastre: globalConfig.maxDiasArrastre,
