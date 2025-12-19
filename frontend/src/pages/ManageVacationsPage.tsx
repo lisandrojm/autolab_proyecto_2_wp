@@ -896,10 +896,12 @@ export const ManageVacationsPage: React.FC = () => {
                     Descargar PDF
                     <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
                   </a>
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faCheckCircle} />
-                    Su pdf fue generado.
-                  </p>
+                  {selectedVacation.estado === "pre_approved" && (
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheckCircle} />
+                      Su pdf fue generado.
+                    </p>
+                  )}
                 </div>
               )}
 

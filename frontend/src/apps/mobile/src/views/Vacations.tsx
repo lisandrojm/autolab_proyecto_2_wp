@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -97,12 +98,32 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       const available = availableDays?.available || 0;
 
       if (daysRequested < 7) {
-        await sweetAlert.warning("Fraccionamiento Mínimo", "El período de vacaciones no puede ser menor a 7 días corridos, según la Ley de Contrato de Trabajo (LCT).");
+        await Swal.fire({
+          icon: "warning",
+          title: "Fraccionamiento Mínimo",
+          text: "El período de vacaciones no puede ser menor a 7 días corridos, según la Ley de Contrato de Trabajo (LCT).",
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#3b82f6",
+          customClass: {
+            popup: "mobile-swal-popup",
+            title: "mobile-swal-title",
+          },
+        });
         return;
       }
 
       if (daysRequested > available) {
-        await sweetAlert.warning("Límite excedido", `Estás solicitando ${daysRequested} días, pero solo tienes ${available} días disponibles.`);
+        await Swal.fire({
+          icon: "warning",
+          title: "Límite excedido",
+          text: `Estás solicitando ${daysRequested} días, pero solo tienes ${available} días disponibles.`,
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#3b82f6",
+          customClass: {
+            popup: "mobile-swal-popup",
+            title: "mobile-swal-title",
+          },
+        });
         return;
       }
     }
@@ -123,7 +144,17 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         endDate,
         reason,
       });
-      await sweetAlert.success("Solicitud enviada", "Tu solicitud de vacaciones ha sido creada correctamente");
+      await Swal.fire({
+        icon: "success",
+        title: "Solicitud enviada",
+        text: "Tu solicitud de vacaciones ha sido creada correctamente",
+        confirmButtonText: "Aceptar",
+        confirmButtonColor: "#3b82f6",
+        customClass: {
+          popup: "mobile-swal-popup",
+          title: "mobile-swal-title",
+        },
+      });
       setShowForm(false);
       setStartDate("");
       setEndDate("");
@@ -203,7 +234,17 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           return;
         }
 
-        await sweetAlert.info("Días Corridos", "Al finalizar las vacaciones un viernes, se computan automáticamente el sábado y domingo como días corridos.");
+        await Swal.fire({
+          icon: "info",
+          title: "Días Corridos",
+          text: "Al finalizar las vacaciones un viernes, se computan automáticamente el sábado y domingo como días corridos.",
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#3b82f6",
+          customClass: {
+            popup: "mobile-swal-popup",
+            title: "mobile-swal-title",
+          },
+        });
         newEnd = format(sunday, "yyyy-MM-dd");
       } else if (isSaturday(day)) {
         const sunday = addDays(day, 1);
@@ -214,7 +255,17 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           return;
         }
 
-        await sweetAlert.info("Días Corridos", "Al finalizar las vacaciones un sábado, se computa automáticamente el domingo como día corrido.");
+        await Swal.fire({
+          icon: "info",
+          title: "Días Corridos",
+          text: "Al finalizar las vacaciones un sábado, se computa automáticamente el domingo como día corrido.",
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#3b82f6",
+          customClass: {
+            popup: "mobile-swal-popup",
+            title: "mobile-swal-title",
+          },
+        });
         newEnd = format(sunday, "yyyy-MM-dd");
       } else {
         newEnd = formattedDate;
@@ -322,7 +373,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 {/* Disponibles */}
                 <div className="text-center">
                   <p className="text-xs text-slate-400 mb-1">Disponibles</p>
-                  <p className="text-2xl font-bold text-blue-500">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) - (availableDays?.used || 0) : (availableDays?.available ?? "-")}</p>
+                  <p className="text-2xl font-bold text-blue-500">{profile?.hireDate ? Math.max(0, calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) - (availableDays?.used || 0) - (availableDays?.pending || 0)) : (availableDays?.available ?? "-")}</p>
                 </div>
                 {/* Pendientes */}
                 <div className="text-center">
