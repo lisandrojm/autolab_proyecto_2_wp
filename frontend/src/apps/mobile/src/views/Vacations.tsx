@@ -117,6 +117,25 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       const limit = Math.max(0, calculatedAvailable);
       const minDays = globalConfig?.minDiasFraccion || 7;
 
+      // VALIDACIÓN DE VACACIONES FRACCIONADAS
+      // Si la configuración impide fraccionar, el usuario debe solicitar TODO su saldo disponible
+      if (globalConfig && !globalConfig.permiteFraccionadas) {
+        if (daysRequested < limit) {
+          await Swal.fire({
+            icon: "warning",
+            title: "Período Inválido",
+            text: `La configuración actual no permite fraccionar las vacaciones. Debes solicitar el total de tus días disponibles (${limit} días), no puedes solicitar un período menor.`,
+            confirmButtonText: "Entendido",
+            confirmButtonColor: "#3b82f6",
+            customClass: {
+              popup: "mobile-swal-popup",
+              title: "mobile-swal-title",
+            },
+          });
+          return;
+        }
+      }
+
       if (daysRequested < minDays) {
         await Swal.fire({
           icon: "warning",
