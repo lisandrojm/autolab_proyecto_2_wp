@@ -49,7 +49,7 @@ export default function Home({ onNavigate }: HomeProps) {
       description: "Gestiona tus pedidos",
       view: "orders" as ViewType,
       roles: ["coordinator", "collaborator"],
-      badge: "Finish",
+      /*       badge: "Finish", */
       badgeBg: "bg-blue-500",
       badgeText: "text-white",
     },
@@ -60,7 +60,7 @@ export default function Home({ onNavigate }: HomeProps) {
       view: "vacations" as ViewType,
       roles: ["coordinator", "collaborator"],
       disabled: false,
-      badge: "New",
+      /*       badge: "New", */
       badgeBg: "bg-red-500",
       badgeText: "text-white",
     },
