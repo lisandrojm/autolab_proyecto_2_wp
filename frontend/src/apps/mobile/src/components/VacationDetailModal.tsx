@@ -53,7 +53,11 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
   const handleCancelVacation = async () => {
     if (!vacation) return;
 
-    const result = await sweetAlert.confirm("¿Cancelar solicitud?", `¿Estás seguro de cancelar esta solicitud de vacaciones?`, "Sí, cancelar", "No cancelar");
+    const isDelivered = vacation.status === "delivered";
+    const title = isDelivered ? "¿Cancelar solicitud entregada?" : "¿Cancelar solicitud?";
+    const text = isDelivered ? "Se cancelará la solicitud entregada y se restaurarán los días de vacaciones." : "¿Estás seguro de cancelar esta solicitud de vacaciones?";
+
+    const result = await sweetAlert.confirm(title, text, "Sí, cancelar", "No cancelar");
 
     if (!result.isConfirmed) return;
 
@@ -84,6 +88,24 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
     }
 
     if (vacation.status === "pending") {
+      return (
+        <button onClick={handleCancelVacation} disabled={cancelling} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          Cancelar Solicitud
+        </button>
+      );
+    }
+
+    if (vacation.status === "delivered") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(vacation.startDate);
+      start.setHours(0, 0, 0, 0);
+
+      // If today is strictly after start date, do not show cancel button
+      if (today > start) {
+        return null;
+      }
+
       return (
         <button onClick={handleCancelVacation} disabled={cancelling} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           Cancelar Solicitud
@@ -202,13 +224,29 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
           {(() => {
             // State: Delivered
             if (vacation.status === "delivered") {
+              const startDateFormatted = formatDateShort(vacation.startDate);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const start = new Date(vacation.startDate);
+              start.setHours(0, 0, 0, 0);
+              const diffTime = start.getTime() - today.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              const daysRemaining = diffDays > 0 ? ` (Faltan ${diffDays} días)` : "";
+
               return (
                 <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
                   <div className="flex items-start gap-3">
                     <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-500 mt-0.5" />
                     <div className="flex-1">
                       <h4 className="font-semibold text-green-500 mb-1">Solicitud Entregada</h4>
-                      <p className="text-sm text-green-500/80">Su solicitud ha sido entregada exitosamente.</p>
+                      <p className="text-sm text-green-500/80 mb-2">Su solicitud ha sido entregada exitosamente.</p>
+                      <p className="text-xs text-green-500/80 font-medium bg-green-500/10 p-2 rounded flex items-start gap-2">
+                        <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5" />
+                        <span>
+                          La fecha límite para cancelar la solicitud es el primer día solicitado: {startDateFormatted}
+                          {daysRemaining}
+                        </span>
+                      </p>
                     </div>
                   </div>
                 </div>

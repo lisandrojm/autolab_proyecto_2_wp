@@ -254,6 +254,28 @@ export const ManageOrdersPage: React.FC = () => {
     }
   };
 
+  const handleCancel = async () => {
+    if (!selectedOrder) return;
+
+    const result = await sweetAlert.confirm("¿Cancelar pedido entregado?", "El pedido pasará a estado Cancelado.", "Sí, Cancelar", "No hacer nada");
+    if (!result.isConfirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      await hrManagementAPI.orders.update(selectedOrder._id, { status: "cancelled" });
+      const updatedOrders = await loadOrders();
+      const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
+      if (refreshedOrder) {
+        setSelectedOrder(refreshedOrder);
+      }
+      setUpdatingStatus(false);
+      await sweetAlert.success("Cancelado", "El pedido ha sido cancelado");
+    } catch (error: any) {
+      setUpdatingStatus(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo cancelar el pedido");
+    }
+  };
+
   const handleDelete = async (orderId: string, orderNumber: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
@@ -667,6 +689,15 @@ export const ManageOrdersPage: React.FC = () => {
             </button>
           )}
         </>
+      );
+    }
+
+    if (selectedOrder.status === "delivered") {
+      return (
+        <button onClick={handleCancel} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <FontAwesomeIcon icon={faBan} className="text-lg" />
+          Cancelar Pedido
+        </button>
       );
     }
 

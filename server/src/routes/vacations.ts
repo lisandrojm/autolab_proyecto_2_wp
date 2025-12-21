@@ -372,42 +372,6 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// PUT /api/vacations/:id/cancel - Cancel a vacation request
-router.put("/:id/cancel", async (req: any, res) => {
-  try {
-    const tenantId = req.tenantId;
-    const { id } = req.params;
-
-    const vacation = await Vacation.findOne({ _id: id, tenantId });
-
-    if (!vacation) {
-      return res.status(404).json({ error: "Solicitud no encontrada" });
-    }
-
-    // Allow cancellation of pending, pre_approved, approved
-    if (!["pending", "pre_approved", "approved"].includes(vacation.status)) {
-      return res.status(400).json({ error: "No se puede cancelar una solicitud en este estado" });
-    }
-
-    vacation.status = "cancelled";
-    await vacation.save();
-
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_cancelled",
-      description: `Solicitud de vacaciones cancelada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
-
-    res.json(vacation);
-  } catch (error: any) {
-    console.error("Error cancelling vacation:", error);
-    res.status(500).json({ error: "Error al cancelar la solicitud de vacaciones" });
-  }
-});
-
 // DELETE /api/vacations/:id - Delete a vacation request
 router.delete("/:id", async (req, res) => {
   try {
@@ -619,6 +583,44 @@ router.put("/:id/reject", async (req: any, res) => {
   } catch (error: any) {
     console.error("Reject vacation error:", error);
     res.status(500).json({ error: "Error al rechazar la solicitud de vacaciones" });
+  }
+});
+
+// PUT /api/vacations/:id/cancel - Cancel vacation request
+router.put("/:id/cancel", async (req: any, res) => {
+  try {
+    const tenantId = req.tenantId;
+
+    const vacation = await Vacation.findOne({
+      _id: req.params.id,
+      tenantId,
+    });
+
+    if (!vacation) {
+      return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
+    }
+
+    if (!["pending", "pre_approved", "approved", "delivered"].includes(vacation.status)) {
+      return res.status(400).json({ error: "Esta solicitud no puede ser cancelada" });
+    }
+
+    vacation.status = "cancelled";
+    vacation.cancelledAt = new Date();
+    await vacation.save();
+
+    await ActivityLog.create({
+      tenantId,
+      userId: vacation.userId,
+      action: "vacation_cancelled",
+      description: `Solicitud de vacaciones cancelada`,
+      entityType: "Vacation",
+      entityId: vacation._id,
+    });
+
+    res.json(vacation);
+  } catch (error: any) {
+    console.error("Cancel vacation error:", error);
+    res.status(500).json({ error: "Error al cancelar la solicitud de vacaciones" });
   }
 });
 

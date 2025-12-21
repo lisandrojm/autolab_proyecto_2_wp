@@ -168,9 +168,20 @@ VacationSchema.pre("validate", async function (next) {
     }
 
     const prefix = tenant.slug.toUpperCase().slice(0, 3);
-    const sequence = await VacationCounter.getNextSequence(this.tenantId);
-    const paddedNumber = sequence.toString().padStart(6, "0");
-    this.vacationNumber = `${prefix}-VAC-${paddedNumber}`;
+
+    let sequence = await VacationCounter.getNextSequence(this.tenantId);
+    let paddedNumber = sequence.toString().padStart(6, "0");
+    let candidateNumber = `${prefix}-VAC-${paddedNumber}`;
+
+    // Fix for duplicate key error: Check if generated number exists, if so, keep incrementing
+    // This handles cases where manual inserts or deletions caused the counter to desync
+    while (await mongoose.model("Vacation").exists({ tenantId: this.tenantId, vacationNumber: candidateNumber })) {
+      sequence = await VacationCounter.getNextSequence(this.tenantId);
+      paddedNumber = sequence.toString().padStart(6, "0");
+      candidateNumber = `${prefix}-VAC-${paddedNumber}`;
+    }
+
+    this.vacationNumber = candidateNumber;
 
     next();
   } catch (error) {

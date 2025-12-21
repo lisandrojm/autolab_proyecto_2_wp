@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -226,12 +226,20 @@ export const ManageVacationsPage: React.FC = () => {
     setStats(newStats);
   };
 
-  const handleDelete = async (vacationId: string, numeroPedido: string, e?: React.MouseEvent) => {
+  const handleDelete = async (vacationId: string, numeroPedido: string, status: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
 
-    const result = await sweetAlert.confirm("¿Cancelar esta solicitud?", `La solicitud ${getFormattedVacationNumber(numeroPedido)} será cancelada. Permanecerá en el historial con estado 'Cancelada'.`, "Sí, Cancelar", "No hacer nada");
+    let title = "¿Cancelar esta solicitud?";
+    let text = `La solicitud ${getFormattedVacationNumber(numeroPedido)} será cancelada. Permanecerá en el historial con estado 'Cancelada'.`;
+
+    if (status === "delivered") {
+      title = "¿Cancelar solicitud entregada?";
+      text = "Se cancelará la solicitud entregada y se restaurarán los días de vacaciones.";
+    }
+
+    const result = await sweetAlert.confirm(title, text, "Sí, Cancelar", "No hacer nada");
 
     if (!result.isConfirmed) return;
 
@@ -562,6 +570,23 @@ export const ManageVacationsPage: React.FC = () => {
       );
     }
 
+    if (selectedVacation.estado === "delivered") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(selectedVacation.startDate);
+      start.setHours(0, 0, 0, 0);
+
+      if (today > start) {
+        return null;
+      }
+
+      return (
+        <button onClick={(e) => handleDelete(selectedVacation.id, selectedVacation.numeroPedido, selectedVacation.estado, e)} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          Cancelar Solicitud
+        </button>
+      );
+    }
+
     return null;
   };
 
@@ -613,13 +638,13 @@ export const ManageVacationsPage: React.FC = () => {
               }
               footerActions={
                 [
-                  !["delivered", "rejected", "cancelled"].includes(vacation.estado)
+                  !["rejected", "cancelled"].includes(vacation.estado)
                     ? {
                         icon: faTrash,
                         onClick: (e: any) => {
                           e?.stopPropagation();
                           // @ts-ignore
-                          handleDelete(vacation.id, vacation.numeroPedido, e);
+                          handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e);
                         },
                         title: "Cancelar solicitud",
                         variant: "default",
@@ -778,8 +803,8 @@ export const ManageVacationsPage: React.FC = () => {
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString() : "-"}</td>
                         <td className="py-3 px-4 text-center">
-                          {!["delivered", "rejected", "cancelled"].includes(vacation.estado) && (
-                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cancelar solicitud" aria-label="Cancelar solicitud">
+                          {!["rejected", "cancelled"].includes(vacation.estado) && (
+                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cancelar solicitud" aria-label="Cancelar solicitud">
                               <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                             </button>
                           )}
@@ -933,7 +958,22 @@ export const ManageVacationsPage: React.FC = () => {
                   <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                   <div className="flex-1">
                     <h4 className="font-semibold text-green-800 dark:text-green-400 mb-1">Solicitud Entregada</h4>
-                    <p className="text-sm text-green-700 dark:text-green-300">Su solicitud ha sido entregada exitosamente.</p>
+                    <p className="text-sm text-green-700 dark:text-green-300 mb-2">Su solicitud ha sido entregada exitosamente.</p>
+                    <p className="text-xs text-green-700 dark:text-green-300 font-medium bg-green-100 dark:bg-green-800/30 p-2 rounded flex items-start gap-2">
+                      <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5" />
+                      <span>
+                        La fecha límite para cancelar la solicitud es el primer día solicitado: {formatDateShort(selectedVacation.startDate)}
+                        {(() => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const start = new Date(selectedVacation.startDate);
+                          start.setHours(0, 0, 0, 0);
+                          const diffTime = start.getTime() - today.getTime();
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                          return diffDays > 0 ? ` (Faltan ${diffDays} días)` : "";
+                        })()}
+                      </span>
+                    </p>
                   </div>
                 </div>
               </div>
