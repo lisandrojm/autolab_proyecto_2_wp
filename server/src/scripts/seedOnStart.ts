@@ -944,13 +944,20 @@ export async function seedOnStart() {
         tenantId,
         diasBeneficio: 0,
         permiteArrastre: false,
-        permiteFraccionadas: false,
+        permiteFraccionadas: true,
+        minDiasFraccion: 7,
         requiereFirma: true,
         maxDiasGozados: 30,
         pdfTemplateId: vacationTemplate?._id,
       });
       console.log("✅ Global vacation config created");
     } else {
+      if (!globalConfig.permiteFraccionadas) {
+        globalConfig.permiteFraccionadas = true;
+        if (!globalConfig.minDiasFraccion) globalConfig.minDiasFraccion = 7;
+        await globalConfig.save();
+        console.log("✔️ Global vacation config updated: permiteFraccionadas set to true");
+      }
       console.log("✔️ Global vacation config already present");
     }
 

@@ -124,7 +124,7 @@ export const vacationsAPI = {
     return response.data;
   },
 
-  getAvailability: async (): Promise<string[]> => {
+  getAvailability: async (): Promise<{ date: string; status: "pending" | "approved" }[]> => {
     const response = await axios.get("/vacations/availability");
     return response.data;
   },

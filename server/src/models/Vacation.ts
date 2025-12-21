@@ -11,6 +11,7 @@ interface VacationRules {
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
+  minDiasFraccion?: number;
   requiereFirma: boolean;
   pdfTemplateId?: string;
 }
@@ -34,6 +35,8 @@ export interface IVacation extends Document {
   preApprovedAt?: Date;
   approvedBy?: mongoose.Types.ObjectId;
   approvedAt?: Date;
+  rejectedAt?: Date;
+  cancelledAt?: Date;
   deliveredAt?: Date;
   requiresSignature?: boolean;
   signatureStatus?: "not_required" | "pending" | "sent" | "signed";
@@ -42,8 +45,7 @@ export interface IVacation extends Document {
   signedAt?: Date;
   signedBy?: mongoose.Types.ObjectId;
   pdfPreAprobacionUrl?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  managerComment?: string; // Also missing based on usage
 }
 
 const VacationSchema = new Schema<IVacation>(
@@ -90,6 +92,7 @@ const VacationSchema = new Schema<IVacation>(
         maxDiasHabiles: { type: Number, required: false },
         anticipacionMinimaDias: { type: Number, required: false },
         permiteFraccionadas: { type: Boolean, required: true },
+        minDiasFraccion: { type: Number, required: false },
         requiereFirma: { type: Boolean, required: true },
         pdfTemplateId: { type: String, required: false },
       },
@@ -126,10 +129,13 @@ const VacationSchema = new Schema<IVacation>(
       type: String,
       required: false,
     },
+    managerComment: { type: String },
     preApprovedBy: { type: Schema.Types.ObjectId, ref: "User" },
     preApprovedAt: { type: Date },
     approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
     approvedAt: { type: Date },
+    rejectedAt: { type: Date },
+    cancelledAt: { type: Date },
     deliveredAt: { type: Date },
     requiresSignature: { type: Boolean, default: false },
     signatureStatus: {

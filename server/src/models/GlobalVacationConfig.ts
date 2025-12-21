@@ -11,6 +11,7 @@ interface IGlobalVacationConfig extends Document {
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
+  minDiasFraccion?: number;
   requiereFirma: boolean;
   pdfTemplateId?: string;
   createdAt: Date;
@@ -65,7 +66,13 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
     permiteFraccionadas: {
       type: Boolean,
       required: true,
-      default: false,
+      default: true,
+    },
+    minDiasFraccion: {
+      type: Number,
+      required: true,
+      default: 7,
+      min: 1,
     },
     requiereFirma: {
       type: Boolean,

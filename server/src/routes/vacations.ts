@@ -88,23 +88,35 @@ router.get("/availability", async (req, res) => {
     }).lean();
 
     // Calculate daily occupancy
-    const occupancyMap: Record<string, number> = {};
+    const occupancyMap: Record<string, { count: number; hasPending: boolean }> = {};
 
     for (const v of areaVacations) {
       let current = new Date(v.startDate < searchStart ? searchStart : v.startDate);
       const end = new Date(v.endDate > searchEnd ? searchEnd : v.endDate);
+      const isPending = v.status === "pending";
 
       while (current <= end) {
         const dateStr = current.toISOString().split("T")[0];
-        occupancyMap[dateStr] = (occupancyMap[dateStr] || 0) + 1;
+        if (!occupancyMap[dateStr]) {
+          occupancyMap[dateStr] = { count: 0, hasPending: false };
+        }
+
+        occupancyMap[dateStr].count++;
+        if (isPending) {
+          occupancyMap[dateStr].hasPending = true;
+        }
+
         current.setDate(current.getDate() + 1);
       }
     }
 
     // Filter dates where occupancy >= limit
     const blockedDates = Object.entries(occupancyMap)
-      .filter(([_, count]) => count >= overlapRule.maxSimultaneousUsers)
-      .map(([date]) => date);
+      .filter(([_, data]) => data.count >= overlapRule.maxSimultaneousUsers)
+      .map(([date, data]) => ({
+        date,
+        status: data.hasPending ? "pending" : "approved",
+      }));
 
     console.log(`[Availability] User: ${userId}, Area: ${areaName}, Rule Max: ${overlapRule.maxSimultaneousUsers}`);
     console.log(`[Availability] Found ${areaVacations.length} vacations. Blocked Dates: ${blockedDates.length}`);
@@ -335,6 +347,7 @@ router.post("/", async (req, res) => {
         maxDiasHabiles: globalConfig.maxDiasHabiles,
         anticipacionMinimaDias: globalConfig.anticipacionMinimaDias,
         permiteFraccionadas: globalConfig.permiteFraccionadas,
+        minDiasFraccion: globalConfig.minDiasFraccion,
         requiereFirma: globalConfig.requiereFirma,
         pdfTemplateId: globalConfig.pdfTemplateId,
       },

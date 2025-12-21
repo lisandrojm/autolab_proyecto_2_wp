@@ -161,16 +161,26 @@ export const GlobalVacationConfigTab: React.FC = () => {
               </table>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-blue-700 dark:text-blue-300 text-sm">Regla de Fraccionamiento Mínimo</h4>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                    La licencia puede fraccionarse, pero <strong>ningún tramo puede ser menor a 7 días corridos</strong>, según lo establecido por la ley.
-                  </p>
+            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <input type="checkbox" checked={config.permiteFraccionadas} onChange={(e) => updateConfig("permiteFraccionadas", e.target.checked)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">Permitir vacaciones fraccionadas</label>
+                  <button type="button" onClick={() => setShowFraccionadasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
+                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
+
+              {config.permiteFraccionadas && (
+                <div className="pl-7">
+                  <div className="max-w-xs">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Días mínimos por fracción</label>
+                    <input type="number" value={config.minDiasFraccion || ""} onChange={(e) => updateConfig("minDiasFraccion", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="1" placeholder="Ej: 7" />
+                    <p className="text-xs text-gray-500 mt-1">Mínimo de días corridos que debe tener cada solicitud fraccionada.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="max-w-md">
@@ -252,16 +262,6 @@ export const GlobalVacationConfigTab: React.FC = () => {
           <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Opciones adicionales</h3>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <input type="checkbox" checked={config.permiteFraccionadas} onChange={(e) => updateConfig("permiteFraccionadas", e.target.checked)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Permitir vacaciones fraccionadas</label>
-                  <button type="button" onClick={() => setShowFraccionadasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
               <div className="flex items-center gap-3">
                 <input type="checkbox" checked={config.requiereFirma} onChange={(e) => updateConfig("requiereFirma", e.target.checked)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Requiere firma del empleado</label>

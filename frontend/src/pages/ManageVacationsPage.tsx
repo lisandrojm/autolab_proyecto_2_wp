@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -959,21 +959,6 @@ export const ManageVacationsPage: React.FC = () => {
                   <div className="flex-1">
                     <h4 className="font-semibold text-green-800 dark:text-green-400 mb-1">Solicitud Entregada</h4>
                     <p className="text-sm text-green-700 dark:text-green-300 mb-2">Su solicitud ha sido entregada exitosamente.</p>
-                    <p className="text-xs text-green-700 dark:text-green-300 font-medium bg-green-100 dark:bg-green-800/30 p-2 rounded flex items-start gap-2">
-                      <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5" />
-                      <span>
-                        La fecha límite para cancelar la solicitud es el primer día solicitado: {formatDateShort(selectedVacation.startDate)}
-                        {(() => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          const start = new Date(selectedVacation.startDate);
-                          start.setHours(0, 0, 0, 0);
-                          const diffTime = start.getTime() - today.getTime();
-                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                          return diffDays > 0 ? ` (Faltan ${diffDays} días)` : "";
-                        })()}
-                      </span>
-                    </p>
                   </div>
                 </div>
               </div>

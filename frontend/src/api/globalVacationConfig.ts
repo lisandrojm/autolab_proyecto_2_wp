@@ -20,6 +20,7 @@ export interface GlobalVacationConfig {
   maxDiasHabiles?: number;
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
+  minDiasFraccion?: number;
   requiereFirma: boolean;
   pdfTemplateId?: string;
   createdAt?: string;

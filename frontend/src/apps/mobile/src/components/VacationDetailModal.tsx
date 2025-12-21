@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faTimes, faFileArrowUp, faBell, faFilePdf, faDownload, faClock, faCheckCircle, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faTimes, faBell, faClock, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { VacationRequest, vacationsAPI } from "../../../../api/vacations";
 import { ProfileData } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
@@ -224,14 +224,10 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
           {(() => {
             // State: Delivered
             if (vacation.status === "delivered") {
-              const startDateFormatted = formatDateShort(vacation.startDate);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const start = new Date(vacation.startDate);
               start.setHours(0, 0, 0, 0);
-              const diffTime = start.getTime() - today.getTime();
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              const daysRemaining = diffDays > 0 ? ` (Faltan ${diffDays} días)` : "";
 
               return (
                 <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
@@ -240,13 +236,6 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
                     <div className="flex-1">
                       <h4 className="font-semibold text-green-500 mb-1">Solicitud Entregada</h4>
                       <p className="text-sm text-green-500/80 mb-2">Su solicitud ha sido entregada exitosamente.</p>
-                      <p className="text-xs text-green-500/80 font-medium bg-green-500/10 p-2 rounded flex items-start gap-2">
-                        <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5" />
-                        <span>
-                          La fecha límite para cancelar la solicitud es el primer día solicitado: {startDateFormatted}
-                          {daysRemaining}
-                        </span>
-                      </p>
                     </div>
                   </div>
                 </div>
