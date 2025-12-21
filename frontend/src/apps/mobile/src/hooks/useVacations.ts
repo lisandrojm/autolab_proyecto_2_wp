@@ -1,3 +1,4 @@
+import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { useState, useEffect } from "react";
 import { personnelAPI } from "../../../../api/personnel";
 import { vacationsAPI, VacationRequest } from "../../../../api/vacations";
@@ -16,8 +17,29 @@ export const useVacations = () => {
       const [vacationsData, profileStats, availabilityData] = await Promise.all([vacationsAPI.getAll({ mine: true }), personnelAPI.getProfileStats(), vacationsAPI.getAvailability()]);
       setVacations(vacationsData);
       setAvailableDays(profileStats.vacations);
-      setOccupiedDates(availabilityData);
-      console.log("Occupied Dates received:", availabilityData);
+
+      // Process user's own vacations to add to occupied dates
+      const myVacationDates: string[] = [];
+      vacationsData.forEach((v) => {
+        if (["pending", "pre_approved", "approved", "delivered"].includes(v.status) && v.startDate && v.endDate) {
+          try {
+            const start = parseISO(v.startDate);
+            const end = parseISO(v.endDate);
+            const days = eachDayOfInterval({ start, end });
+            days.forEach((day) => {
+              myVacationDates.push(format(day, "yyyy-MM-dd"));
+            });
+          } catch (e) {
+            console.error("Error parsing vacation dates:", e);
+          }
+        }
+      });
+
+      // Merge unique dates
+      const allOccupied = Array.from(new Set([...availabilityData, ...myVacationDates]));
+      setOccupiedDates(allOccupied);
+
+      console.log("Occupied Dates received (merged):", allOccupied);
     } catch (err: any) {
       setError(err.response?.data?.error || "Error al cargar vacaciones");
       console.error("Error fetching vacations:", err);

@@ -88,14 +88,21 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const [calendarOpen, setCalendarOpen] = useState<"start" | "end" | null>(null);
   const [viewDate, setViewDate] = useState(new Date());
 
-  const hasNoDays = (availableDays?.available || 0) <= 0;
+  // Calculate available days consistent with display
+  const calculatedTotal = profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) : availableDays?.total || 0;
+  const calculatedAvailable = profile?.hireDate ? calculatedTotal - (availableDays?.used || 0) - (availableDays?.pending || 0) : availableDays?.available || 0;
+
+  const hasNoDays = calculatedAvailable <= 0;
 
   const handleCalendarConfirm = async () => {
     if (startDate && endDate) {
       const start = parseISO(startDate);
       const end = parseISO(endDate);
       const daysRequested = differenceInDays(end, start) + 1;
-      const available = availableDays?.available || 0;
+
+      // Use calculatedAvailable instead of availableDays.available
+      // If calculatedAvailable is negative, treat as 0 for positive checks, but here we check limit
+      const limit = Math.max(0, calculatedAvailable);
 
       if (daysRequested < 7) {
         await Swal.fire({
@@ -112,11 +119,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         return;
       }
 
-      if (daysRequested > available) {
+      if (daysRequested > limit) {
         await Swal.fire({
           icon: "warning",
           title: "Límite excedido",
-          text: `Estás solicitando ${daysRequested} días, pero solo tienes ${available} días disponibles.`,
+          text: `Estás solicitando ${daysRequested} días, pero solo tienes ${limit} días disponibles.`,
           confirmButtonText: "Entendido",
           confirmButtonColor: "#3b82f6",
           customClass: {
@@ -310,7 +317,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Vacaciones</h1>
             </div>
           </div>
-          <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20" title={hasActiveRequest ? "Ya tienes una solicitud en curso" : "Nueva Solicitud"}>
+          <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest || hasNoDays} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20" title={hasActiveRequest ? "Ya tienes una solicitud en curso" : hasNoDays ? "Sin días disponibles" : "Nueva Solicitud"}>
             <FontAwesomeIcon icon={faPlus} />
             <span className="hidden sm:inline">Nueva Solicitud</span>
           </button>
