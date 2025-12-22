@@ -112,8 +112,8 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
   return role;
 }
 
-async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId; areaId?: Types.ObjectId; hireDate?: Date; extraVacationDays?: number }) {
-  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0 } = params;
+async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId; areaId?: Types.ObjectId; hireDate?: Date; extraVacationDays?: number; carryOverVacationDays?: number }) {
+  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0, carryOverVacationDays = 0 } = params;
 
   let user = await User.findOne({ tenantId, email });
   let wantedRole: any = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${roleName}$`, "i") } });
@@ -138,6 +138,7 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
       areaId,
       hireDate,
       extraVacationDays,
+      carryOverVacationDays,
     });
     await user.save();
 
@@ -186,6 +187,10 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
     }
     if (extraVacationDays !== undefined && user.extraVacationDays !== extraVacationDays) {
       user.extraVacationDays = extraVacationDays;
+      isModified = true;
+    }
+    if (carryOverVacationDays !== undefined && user.carryOverVacationDays !== carryOverVacationDays) {
+      user.carryOverVacationDays = carryOverVacationDays;
       isModified = true;
     }
 
@@ -667,6 +672,7 @@ export async function seedOnStart() {
       areaId: areaMap["Editores"],
       hireDate: new Date("2023-05-01"),
       extraVacationDays: 0,
+      carryOverVacationDays: 5,
     });
     console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
 

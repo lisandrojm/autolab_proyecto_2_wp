@@ -21,6 +21,7 @@ export interface ProfileData {
   areaMembers?: number;
   hireDate?: string;
   extraVacationDays?: number;
+  carryOverVacationDays?: number;
   seniorityYears?: number;
   birthDate?: string;
   profilePhotoUrl?: string;

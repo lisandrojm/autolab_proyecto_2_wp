@@ -90,11 +90,15 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     }
 
     // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
+    // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
     if (!profile.hireDate && user?.hireDate) {
       profile.hireDate = user.hireDate;
     }
 
-    res.json({ ...profile, areaName, areaMembers });
+    const extraVacationDays = user?.extraVacationDays || 0;
+    const carryOverVacationDays = user?.carryOverVacationDays || 0;
+
+    res.json({ ...profile, areaName, areaMembers, extraVacationDays, carryOverVacationDays });
   } catch (error) {
     console.error("Get profile error:", error);
     if (error instanceof Error) {

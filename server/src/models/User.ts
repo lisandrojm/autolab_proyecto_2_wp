@@ -17,16 +17,10 @@ export interface IUser extends Document {
   lastLoginAt?: Date;
   hireDate: Date;
   extraVacationDays: number;
+  carryOverVacationDays: number; // Días de arrastre de periodos anteriores
   createdAt: Date;
   updatedAt: Date;
-  comparePassword(candidatePassword: string): Promise<boolean>;
-  // Virtuals
-  seniorityAtEndOfYear?: number;
-  vacationDays?: {
-    lawDays: number;
-    extraDays: number;
-    totalDays: number;
-  };
+  closeYear(maxDiasArrastre?: number): Promise<void>;
 }
 
 const userSchema = new Schema<IUser>(
@@ -52,6 +46,7 @@ const userSchema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     hireDate: { type: Date, required: true },
     extraVacationDays: { type: Number, default: 0 },
+    carryOverVacationDays: { type: Number, default: 0 },
     lastLoginAt: { type: Date },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
@@ -68,7 +63,7 @@ userSchema.virtual("seniorityAtEndOfYear").get(function (this: IUser) {
 // Virtual: Cálculo de días de vacaciones según LCT
 userSchema.virtual("vacationDays").get(function (this: IUser) {
   if (!this.hireDate) {
-    return { lawDays: 0, extraDays: 0, totalDays: 0 };
+    return { lawDays: 0, extraDays: 0, carryOverDays: 0, totalDays: 0 };
   }
 
   const now = new Date();
@@ -99,11 +94,13 @@ userSchema.virtual("vacationDays").get(function (this: IUser) {
   }
 
   const extraDays = this.extraVacationDays || 0;
+  const carryOverDays = this.carryOverVacationDays || 0;
 
   return {
     lawDays,
     extraDays,
-    totalDays: lawDays + extraDays,
+    carryOverDays,
+    totalDays: lawDays + extraDays + carryOverDays,
   };
 });
 
@@ -123,6 +120,28 @@ userSchema.pre("save", async function (this: IUser, next) {
 
 userSchema.methods.comparePassword = async function (this: IUser, candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Contemplación del Cierre de Año
+// Esta función simula la lógica de transición de periodo.
+// Al cerrar el año, los días restantes (disponibles) se convierten en 'carryOverVacationDays' para el nuevo año,
+// respetando el límite máximo (FIFO: lo que no se usó de arrastre viejo se pierde, lo nuevo se arrastra).
+userSchema.methods.closeYear = async function (this: IUser, remainingDays: number, maxDiasArrastre = 0) {
+  // Lógica FIFO implícita:
+  // Si remainingDays > 0, significa que sobraron días.
+  // Estos días sobrantes son candidatos a ser el NUEVO arrastre.
+  // El arrastre viejo (carryOverVacationDays actual) ya se considera 'vencido' o 'consumido' en la lógica del nuevo cálculo.
+
+  let newCarryOver = remainingDays;
+
+  // Aplicar límite si existe
+  if (maxDiasArrastre > 0 && newCarryOver > maxDiasArrastre) {
+    newCarryOver = maxDiasArrastre;
+  }
+
+  this.carryOverVacationDays = newCarryOver;
+  // Nota: extraVacationDays (beneficio) se mantiene o resetea según política aparte, aquí solo tocamos el arrastre.
+  await this.save();
 };
 
 // No exponer password en respuestas JSON

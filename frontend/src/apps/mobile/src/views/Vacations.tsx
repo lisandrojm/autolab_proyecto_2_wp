@@ -101,7 +101,10 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   }, [endDate]);
 
   // Calculate available days consistent with display
-  const calculatedTotal = profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) : availableDays?.total || 0;
+  // Calculate available days consistent with display
+  const carryOver = profile?.carryOverVacationDays || 0;
+  const isArrastreEnabled = globalConfig?.permiteArrastre ?? false;
+  const calculatedTotal = profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) + (isArrastreEnabled ? carryOver : 0) : availableDays?.total || 0;
   const calculatedAvailable = profile?.hireDate ? calculatedTotal - (availableDays?.used || 0) - (availableDays?.pending || 0) : availableDays?.available || 0;
 
   const hasNoDays = calculatedAvailable <= 0;
@@ -490,12 +493,12 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 {/* Días Corridos (Saldo Contable, el más grande) */}
                 <div className="text-center">
                   <p className="text-xs text-slate-400">Total Anual</p>
-                  <p className="text-3xl font-extrabold text-blue-500">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) : availableDays?.total || 0}</p>
+                  <p className="text-3xl font-extrabold text-blue-500">{calculatedTotal}</p>
                 </div>
                 {/* Disponibles */}
                 <div className="text-center">
                   <p className="text-xs text-slate-400 mb-1">Disponibles</p>
-                  <p className="text-2xl font-bold text-blue-500">{profile?.hireDate ? Math.max(0, calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) - (availableDays?.used || 0) - (availableDays?.pending || 0)) : (availableDays?.available ?? "-")}</p>
+                  <p className="text-2xl font-bold text-blue-500">{calculatedAvailable}</p>
                 </div>
                 {/* Pendientes */}
                 <div className="text-center">
@@ -505,19 +508,28 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               </div>
             </div>
 
-            {/* BALANCE DE DÍAS (Fila única 3x2) - BALANCE Contable y Uso */}
-            {/* BALANCE DE DÍAS (Fila única 3x2) - BALANCE Contable y Uso */}
-            <div className="grid grid-cols-3 gap-y-4 gap-x-2 text-center">
+            {/* BALANCE DE DÍAS (Fila única 4 columnas o 2x2 para mobile) - BALANCE Contable y Uso */}
+            <div className={`grid grid-cols-2 ${isArrastreEnabled ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-y-4 gap-x-2 text-center`}>
               {/* LCT */}
               <div>
                 <p className="text-xs text-slate-400 mb-1">Por Ley (LCT)</p>
                 <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) : "-"}</p>
               </div>
+
               {/* Beneficio */}
               <div>
                 <p className="text-xs text-slate-400 mb-1">Beneficio</p>
                 <p className="text-lg font-bold text-blue-500">{(globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0)}</p>
               </div>
+
+              {/* Arrastre - Solo visible si está habilitado */}
+              {isArrastreEnabled && (
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Arrastre</p>
+                  <p className="text-lg font-bold text-purple-500">{carryOver}</p>
+                </div>
+              )}
+
               {/* Gozados */}
               <div>
                 <p className="text-xs text-slate-400 mb-1">Gozados</p>
@@ -648,7 +660,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   </button>
                 </div>
                 <button onClick={handleClearSelection} className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-600 text-blue-600 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-900/80 transition-colors ml-2 text-xs font-medium" title="Borrar selección">
-                  Borrar
+                  Limpiar
                 </button>
                 <button onClick={() => setCalendarOpen(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ml-1">
                   <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
