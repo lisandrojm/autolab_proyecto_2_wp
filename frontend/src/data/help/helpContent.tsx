@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs";
 
 export type HelpEntry = {
   title: string;
@@ -174,6 +174,10 @@ const helpResources = {
       "vacationsRules.title": "Configuración de Vacaciones",
       "vacationsRules.description": "Define las reglas y políticas globales que rigen el cálculo y gestión de vacaciones en la empresa.",
       "vacationsRules.items": ["***Configuración Global***", "**Días Base**: Define la cantidad estándar de días de vacaciones y beneficios adicionales.", "**Antigüedad**: Crea tablas para otorgar días extra automáticos según años de servicio.", "**Límites**: Establece topes de días por año, duración máxima por solicitud y días de anticipación.", "**Arrastre**: Configura si los días no usados se pierden o se acumulan para el siguiente periodo.", "***Solapamiento***", "**Control por Área**: Restringe cuántos colaboradores de un mismo equipo pueden estar ausentes al mismo tiempo.", "**Cupos Dinámicos**: Define un número máximo de personas de vacaciones simultáneas para asegurar la operatividad."],
+
+      "activityLogs.title": "Registro de Novedades",
+      "activityLogs.description": "Sistema de reporte diario de asistencia y novedades del personal.",
+      "activityLogs.items": ["**Reportes Diarios**: Visualización centralizada de los formularios enviados por coordinadores.", "**Control de Asistencia**: Detalle de horas de entrada, salida y verificación de horas extras.", "**Gestión de Ausencias**: Registro de faltas justificadas, compensatorios y licencias.", "**Firmas**: Estado de validación digital de los reportes.", "**Filtros**: Búsqueda por fecha y área para auditoría rápida."],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -349,6 +353,11 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     title: "Configuración de Vacaciones",
     size: "sm",
     content: buildHelpContent("vacationsRules"),
+  },
+  activityLogs: {
+    title: "Registro de Novedades",
+    size: "sm",
+    content: buildHelpContent("activityLogs"),
   },
 };
 
