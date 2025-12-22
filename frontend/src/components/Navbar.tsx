@@ -285,7 +285,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users });
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacations", disabled: false, icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: true, icon: faFileText, label: "Registro de Actividades", scope: "global", dividerTop: true });
+      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: false, icon: faFileText, label: "Registro de novedades", scope: "global", dividerTop: true });
       if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
