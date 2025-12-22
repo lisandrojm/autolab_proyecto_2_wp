@@ -52,7 +52,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: (() => {
     try {
       const savedUser = localStorage.getItem("user");
-      return savedUser ? JSON.parse(savedUser) : null;
+      if (!savedUser) return null;
+      const parsed = JSON.parse(savedUser);
+      // Validar que tenga al menos un ID
+      return parsed && (parsed.id || parsed._id) ? parsed : null;
     } catch {
       return null;
     }
@@ -61,9 +64,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   tenantId: localStorage.getItem("tenantId") || "demo-tenant",
   isAuthenticated: (() => {
     const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
-    console.log("Auth store init - token:", !!token, "user:", !!user);
-    return !!(token && user);
+    const userStr = localStorage.getItem("user");
+    let hasValidUser = false;
+    try {
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        hasValidUser = !!(u && (u.id || u._id));
+      }
+    } catch {
+      hasValidUser = false;
+    }
+    console.log("Auth store init - token:", !!token, "validUser:", hasValidUser);
+    return !!(token && hasValidUser);
   })(),
 
   async checkTenants(email) {

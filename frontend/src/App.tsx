@@ -66,7 +66,7 @@ const DashboardRouter: React.FC = () => {
   const { user } = useAuthStore();
   if (!user) return null;
   if (user.tenantSlug === "superadmin") return <DashboardPage />;
-  if (["admin", "manager"].includes(user.primaryRole)) return <UsersPage />;
+  if (["admin", "manager"].includes(user.primaryRole || "")) return <UsersPage />;
   return <ClientDashboardPage />;
 };
 
@@ -130,10 +130,19 @@ function App() {
             if (savedUser) {
               try {
                 const userData = JSON.parse(savedUser);
-                useAuthStore.setState({ user: userData, isAuthenticated: true });
+                if (userData && (userData.id || userData._id)) {
+                  useAuthStore.setState({ user: userData, isAuthenticated: true });
+                } else {
+                  console.warn("Token valid but user data invalid -> logout");
+                  useAuthStore.getState().logout();
+                }
               } catch {
                 useAuthStore.getState().logout();
               }
+            } else {
+              // Token válido pero sin datos de usuario -> Logout
+              console.warn("Token valid but no user data -> logout");
+              useAuthStore.getState().logout();
             }
           }
         } catch {
