@@ -4,8 +4,7 @@ import { clientsAPI, Client } from "../api/clients";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faSearch, faUsers, faXmark, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { getImageUrl } from "../utils/imageHelpers";
+import { faChevronDown, faChevronRight, faSearch, faUsers, faXmark, faPlus } from "@fortawesome/free-solid-svg-icons";
 
 export const ClientSelector: React.FC = () => {
   const { selectedClient, setSelectedClient, clearSelectedClient } = useClientContextStore();
@@ -67,7 +66,7 @@ export const ClientSelector: React.FC = () => {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const response = await clientsAPI.list({ limit: 100, _t: Date.now() as any });
+      const response = await clientsAPI.list({ limit: 100 });
       setClients(response.clients || []);
     } catch (error) {
       console.error("Error fetching clients:", error);
@@ -103,13 +102,9 @@ export const ClientSelector: React.FC = () => {
         <div className="flex items-center space-x-2 min-w-0 flex-1">
           {selectedClient ? (
             <>
-              {selectedClient.brandKit?.logos?.[0]?.url ? (
-                <img src={getImageUrl(selectedClient.brandKit.logos[0].url)} alt={`${selectedClient.name} logo`} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-bold">{selectedClient.name.charAt(0).toUpperCase()}</span>
-                </div>
-              )}
+              <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">{selectedClient.name.charAt(0).toUpperCase()}</span>
+              </div>
               <span className="text-gray-900 dark:text-white truncate">{selectedClient.name}</span>
               <span onClick={handleClearClient} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-500 flex-shrink-0 cursor-pointer" title="Limpiar selección">
                 <FontAwesomeIcon icon={faXmark} className="h-3 w-3 text-gray-500" />
@@ -122,7 +117,7 @@ export const ClientSelector: React.FC = () => {
             </>
           )}
         </div>
-        <FontAwesomeIcon icon={faChevronDown} className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
       </button>
 
       {isOpen && (
@@ -155,13 +150,9 @@ export const ClientSelector: React.FC = () => {
             ) : (
               filteredClients.map((client) => (
                 <button key={client._id} onClick={() => handleSelectClient(client)} className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-blue-900/30 transition-colors">
-                  {client.brandKit?.logos?.[0]?.url ? (
-                    <img src={getImageUrl(client.brandKit.logos[0].url)} alt={`${client.name} logo`} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">{client.name.charAt(0).toUpperCase()}</span>
-                    </div>
-                  )}
+                  <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs font-bold">{client.name.charAt(0).toUpperCase()}</span>
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{client.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{client.company || client.email}</div>

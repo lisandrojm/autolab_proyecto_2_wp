@@ -71,7 +71,8 @@ export const ClientDashboardPage: React.FC = () => {
       });
 
       // Fetch briefs
-      const briefs = await briefsAPI.list({ limit: 100 });
+      const briefsResponse = await briefsAPI.list({ limit: 100 });
+      const briefs = briefsResponse.briefs || [];
 
       if (campaignsResponse.ok && postsResponse.ok) {
         const campaigns = await campaignsResponse.json();
@@ -86,7 +87,7 @@ export const ClientDashboardPage: React.FC = () => {
           activeCampaigns,
           pendingApprovals,
           scheduledPosts,
-          totalBriefs: briefs.length,
+          totalBriefs: briefsResponse.pagination.total || briefs.length,
         });
 
         // Create activities list (last 5 items)
@@ -171,7 +172,6 @@ export const ClientDashboardPage: React.FC = () => {
       clientMiniAvatar={
         selectedClient
           ? {
-              src: selectedClient.brandKit?.logo,
               alt: `${selectedClient.name} logo`,
               fallback: selectedClient.name?.charAt(0)?.toUpperCase() || "?",
               label: selectedClient.name,

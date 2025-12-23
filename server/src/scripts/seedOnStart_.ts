@@ -210,7 +210,6 @@ async function ensureClient({ tenantId, name, email, data }: { tenantId: Types.O
   } else {
     const updates: any = {};
     if (client.name !== name) updates.name = name;
-    if (data?.brandKit) updates["brandKit"] = { ...(client.brandKit || {}), ...data.brandKit };
     if (typeof data?.status === "string" && client.status !== data.status) updates.status = data.status;
     if (Object.keys(updates).length) {
       await Client.updateOne({ _id: client._id }, { $set: updates });
@@ -593,12 +592,7 @@ export async function seedOnStart() {
           facebook: "https://facebook.com/arcor",
           linkedin: "https://linkedin.com/company/arcor",
         },
-        brandKit: {
-          logos: [], // <-- vacío, no inventamos logos
-          colors: ["#0054A6", "#F9C300", "#FFFFFF"], // azul corporativo, amarillo, blanco
-          fonts: ["Roboto", "Open Sans"],
-          guidelines: "Marca cercana y masiva, foco en disfrute y confianza familiar.",
-        },
+
         status: "active",
         favorite: true,
       },
@@ -620,12 +614,7 @@ export async function seedOnStart() {
           facebook: "https://facebook.com/pumaenergy",
           linkedin: "https://linkedin.com/company/puma-energy",
         },
-        brandKit: {
-          logos: [], // <-- vacío, no inventamos logos
-          colors: ["#006D3C", "#FFFFFF", "#D91F26"], // verde Puma, blanco, rojo acento
-          fonts: ["Inter", "Montserrat"],
-          guidelines: "Energía accesible y confiable. Tono directo, profesional, enfocado en movilidad y servicio.",
-        },
+
         status: "active",
         favorite: false,
       },

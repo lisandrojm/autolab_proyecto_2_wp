@@ -12,7 +12,6 @@ import { faFacebook, faInstagram, faLinkedin, faTiktok, faXTwitter, faYoutube } 
 import { Card } from "../components/ui/Card";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { SocialMediaInput } from "../components/forms/SocialMediaInput";
-import { getImageUrl } from "../utils/imageHelpers";
 
 const HELP_KEY = "clientContextInfo" as const;
 
@@ -21,7 +20,6 @@ type SocialMediaMap = Partial<Record<"instagram" | "facebook" | "linkedin" | "tw
 type ClientView = Client & {
   createdAt?: string;
   updatedAt?: string;
-  brandKit?: { logo?: string | null } | null;
   socialMedia?: SocialMediaMap | null;
 };
 
@@ -131,7 +129,7 @@ export const ClientContextInfoPage: React.FC = () => {
     if (!client) return;
 
     try {
-      const payload: Partial<Client> = {
+      const payload: any = {
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone?.trim() || undefined,
@@ -164,7 +162,6 @@ export const ClientContextInfoPage: React.FC = () => {
     return <EmptyState icon={faUser} title="Cliente no encontrado" description="No se pudo encontrar el cliente solicitado." action={{ label: "Volver", onClick: () => navigate(-1) }} />;
   }
 
-  const displayLogo = client.brandKit?.logos?.[0]?.url || client.brandKit?.logo;
   const hasAnySocial = !!client.socialMedia && Object.values(client.socialMedia as Record<string, string | undefined>).some((v) => typeof v === "string" && v.length > 0);
 
   const getIconForPlatform = (p: string) => {
@@ -192,7 +189,6 @@ export const ClientContextInfoPage: React.FC = () => {
       faIcon={{ icon: faUser }}
       subtitle={`Datos de contacto y empresa de ${client.name ?? ""}`}
       clientMiniAvatar={{
-        src: getImageUrl(displayLogo) ?? undefined,
         alt: client?.name ? `${client.name} logo` : undefined,
         fallback: client?.name?.charAt(0)?.toUpperCase?.() || "?",
         label: client?.name,

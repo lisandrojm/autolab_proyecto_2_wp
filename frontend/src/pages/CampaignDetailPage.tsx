@@ -31,7 +31,7 @@ interface Campaign {
   kpis?: { name: string; target: number; current: number; unit: string }[];
   createdAt: string;
   projectId?: string | { _id: string };
-  clientId?: string | { _id: string; name?: string; brandKit?: { logo?: string } } | null;
+  clientId?: string | { _id: string; name?: string } | null;
 }
 
 const formatEUR = (n: number) =>
@@ -438,9 +438,6 @@ export const CampaignDetailPage: React.FC = () => {
     );
   }
 
-  // Intentamos logo en brandKit.logos[0].url o logo "plano"
-  const logoSrc = resolveAssetUrl(client?.brandKit?.logos?.[0]?.url ?? client?.logo);
-
   return (
     <PageLayout
       title={`Campaña | ${campaign?.name}`}
@@ -449,7 +446,6 @@ export const CampaignDetailPage: React.FC = () => {
       /* badgeState={campaign ? { text: getStatusText(campaign.status), variant: "default" } : undefined} */
       faIcon={{ icon: faBullhorn }}
       clientMiniAvatar={{
-        src: logoSrc,
         alt: client?.name ? `${client.name} logo` : undefined,
         fallback: client?.name?.charAt(0)?.toUpperCase?.() || "?",
         label: client?.name,

@@ -37,12 +37,13 @@ export const ClientProjectsPage: React.FC = () => {
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  // form state (compartido; se rellena según modo)
+  // form state
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    objectives: [""],
-    targetAudience: "",
+    status: "active" as "active" | "completed" | "on_hold" | "archived",
+    startDate: "",
+    endDate: "",
     budget: { total: 0 },
   });
 
@@ -113,7 +114,9 @@ export const ClientProjectsPage: React.FC = () => {
     const endTs = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : null;
 
     return projects.filter((p) => {
-      const t = p.createdAt ? new Date(p.createdAt).getTime() : NaN;
+      // Usamos startDate del proyecto si existe, o createdAt
+      const d = p.startDate ? p.startDate : p.createdAt;
+      const t = d ? new Date(d).getTime() : NaN;
       if (Number.isNaN(t)) return false;
       let ok = true;
       if (startTs !== null) ok = ok && t >= startTs;
@@ -128,8 +131,9 @@ export const ClientProjectsPage: React.FC = () => {
     setFormData({
       name: "",
       description: "",
-      objectives: [""],
-      targetAudience: "",
+      status: "active",
+      startDate: "",
+      endDate: "",
       budget: { total: 0 },
     });
     setShowModal(true);
@@ -141,8 +145,9 @@ export const ClientProjectsPage: React.FC = () => {
     setFormData({
       name: project.name,
       description: project.description || "",
-      objectives: project.objectives && project.objectives.length ? project.objectives : [""],
-      targetAudience: project.targetAudience || "",
+      status: project.status || "active",
+      startDate: project.startDate ? project.startDate.split("T")[0] : "",
+      endDate: project.endDate ? project.endDate.split("T")[0] : "",
       budget: { total: project.budget?.total || 0 },
     });
     setShowModal(true);
@@ -153,7 +158,6 @@ export const ClientProjectsPage: React.FC = () => {
     try {
       const data = {
         ...formData,
-        objectives: formData.objectives.filter((obj) => obj.trim()),
         budget: formData.budget.total > 0 ? formData.budget : undefined,
       };
 
@@ -216,7 +220,7 @@ export const ClientProjectsPage: React.FC = () => {
     );
   }
 
-  const displayLogo = client?.brandKit?.logos?.[0]?.url || client?.brandKit?.logo;
+  const displayLogo = client?.attachments?.find((a: any) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url || client?.brandKit?.logos?.[0]?.url;
 
   return (
     <PageLayout
@@ -228,7 +232,7 @@ export const ClientProjectsPage: React.FC = () => {
         fallback: client?.name?.charAt(0)?.toUpperCase?.() || "?",
         label: client?.name,
       }}
-      subtitle="Gestiona los proyectos y campañas del cliente"
+      subtitle="Gestiona los proyectos del cliente"
       onBack={() => navigate(-1)}
       infoModal={{
         isOpen: openInfo,
@@ -309,86 +313,44 @@ export const ClientProjectsPage: React.FC = () => {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Objetivos</label>
-                      <div className="space-y-2">
-                        {formData.objectives.map((objective, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={objective}
-                              onChange={(e) =>
-                                setFormData((p) => ({
-                                  ...p,
-                                  objectives: p.objectives.map((o, i) => (i === index ? e.target.value : o)),
-                                }))
-                              }
-                              className="input-field flex-1"
-                              placeholder="Ej: Aumentar awareness de marca"
-                            />
-                            {formData.objectives.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setFormData((p) => ({
-                                    ...p,
-                                    objectives: p.objectives.filter((_, i) => i !== index),
-                                  }))
-                                }
-                                className="px-2 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() =>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
+                        <select className="input-field" value={formData.status} onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value as any }))}>
+                          <option value="active">Activo</option>
+                          <option value="on_hold">En Espera</option>
+                          <option value="completed">Completado</option>
+                          <option value="archived">Archivado</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presupuesto (USD)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={formData.budget.total}
+                          onChange={(e) =>
                             setFormData((p) => ({
                               ...p,
-                              objectives: [...p.objectives, ""],
+                              budget: { total: Number(e.target.value) },
                             }))
                           }
-                          className="text-primary-600 dark:text-primary-400 text-sm hover:text-primary-700 dark:hover:text-primary-300"
-                        >
-                          + Agregar objetivo
-                        </button>
+                          className="input-field"
+                          placeholder="0"
+                        />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Audiencia Objetivo</label>
-                      <textarea
-                        value={formData.targetAudience}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            targetAudience: e.target.value,
-                          }))
-                        }
-                        rows={2}
-                        className="input-field resize-none"
-                        placeholder="Describe el público objetivo..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presupuesto Total (USD)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="100"
-                        value={formData.budget.total}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            budget: { total: Number(e.target.value) },
-                          }))
-                        }
-                        className="input-field"
-                        placeholder="0"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Inicio</label>
+                        <input type="date" className="input-field" value={formData.startDate} onChange={(e) => setFormData((p) => ({ ...p, startDate: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Fin</label>
+                        <input type="date" className="input-field" value={formData.endDate} onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))} />
+                      </div>
                     </div>
                   </div>
                 </form>
@@ -420,16 +382,12 @@ export const ClientProjectsPage: React.FC = () => {
                 leftContent: (
                   <div className="space-y-1">
                     <div className="text-xs text-gray-500 dark:text-gray-500">{new Date(project.createdAt).toLocaleDateString()}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-500">
-                      {project.campaigns.length} campaña
-                      {project.campaigns.length !== 1 ? "s" : ""}
-                    </div>
                   </div>
                 ),
                 actions: [
                   {
                     icon: faEdit,
-                    onClick: (e) => {
+                    onClick: (e: any) => {
                       e.stopPropagation();
                       handleOpenEdit(project);
                     },
@@ -438,7 +396,7 @@ export const ClientProjectsPage: React.FC = () => {
                   },
                   {
                     icon: faTrash,
-                    onClick: (e) => {
+                    onClick: (e: any) => {
                       e.stopPropagation();
                       handleDeleteProject(project._id);
                     },
@@ -449,13 +407,9 @@ export const ClientProjectsPage: React.FC = () => {
               }}
             >
               <div className="space-y-2">
-                {project.objectives && project.objectives.length > 0 && (
-                  <div className="text-xs text-gray-500 dark:text-gray-500">
-                    {project.objectives.length} objetivo
-                    {project.objectives.length !== 1 ? "s" : ""}
-                  </div>
-                )}
-                {/*                 {project.budget?.total && <div className="text-xs text-gray-500 dark:text-gray-500">USD{project.budget.total.toLocaleString()}</div>} */}
+                {/* <div className="text-xs text-gray-500 dark:text-gray-500">
+         INFO VISIBLE
+      </div> */}
               </div>
             </Card>
           ))}

@@ -15,9 +15,6 @@ export interface TenantRef {
 export interface Client {
   _id: string;
   name: string;
-  brandKit?: {
-    logo?: string;
-  };
 }
 
 export interface Project {
@@ -31,10 +28,10 @@ export interface Project {
 
   name: string;
   description?: string;
-  objectives?: string[];
-  targetAudience?: string;
+  status: "active" | "completed" | "on_hold" | "archived";
+  startDate?: string;
+  endDate?: string;
   budget?: { total?: number };
-  campaigns: string[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -73,10 +70,10 @@ function normalizeProject(raw: any): Project {
     clientId: raw?.clientId && typeof raw.clientId === "object" ? { _id: String(raw.clientId._id ?? raw.clientId.id ?? ""), name: raw.clientId.name } : String(raw?.clientId ?? ""),
     name: raw?.name ?? "",
     description: raw?.description ?? "",
-    objectives: Array.isArray(raw?.objectives) ? raw.objectives : [],
-    targetAudience: raw?.targetAudience ?? "",
+    status: raw?.status ?? "active",
+    startDate: raw?.startDate ?? undefined,
+    endDate: raw?.endDate ?? undefined,
     budget: typeof raw?.budget === "object" ? raw.budget : {},
-    campaigns: Array.isArray(raw?.campaigns) ? raw.campaigns : [],
     createdBy: String(raw?.createdBy ?? ""),
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: String(raw?.updatedAt ?? ""),

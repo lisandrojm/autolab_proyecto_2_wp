@@ -580,15 +580,12 @@ export const ClientContextPostsPage: React.FC = () => {
 
   if (loading) return <LoadingSpinner message="Cargando posts del cliente..." />;
 
-  const displayLogo = selectedClient?.brandKit?.logos?.[0]?.url || selectedClient?.brandKit?.logo;
-
   return (
     <PageLayout
       title="Publicaciones"
       faIcon={{ icon: faPaperPlane }}
       subtitle={`Todos los posts de ${selectedClient?.name || "este cliente"}`}
       clientMiniAvatar={{
-        src: getImageUrl(displayLogo),
         alt: selectedClient?.name ? `${selectedClient.name} logo` : undefined,
         fallback: selectedClient?.name?.charAt(0)?.toUpperCase?.() || "?",
         label: selectedClient?.name,

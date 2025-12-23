@@ -26,38 +26,15 @@ export interface Client {
   industry?: string;
   website?: string;
 
-  socialMedia?: {
-    facebook?: string;
-    instagram?: string;
-    twitter?: string;
-    linkedin?: string;
-    tiktok?: string;
-    youtube?: string;
-  };
-
-  brandKit?: {
-    logo?: string;
-    logos?: Array<{
-      _id: string;
-      url: string;
-      name?: string;
-      fileName?: string;
-      uploadedAt?: string | Date;
-      size?: number;
-    }>;
-    documents?: Array<{
-      _id: string;
-      url: string;
-      name?: string;
-      fileName?: string;
-      fileType?: string;
-      uploadedAt?: string | Date;
-      size?: number;
-    }>;
-    colors: string[];
-    fonts: string[];
-    guidelines?: string;
-  };
+  attachments?: Array<{
+    _id: string;
+    url: string;
+    name?: string;
+    fileName?: string;
+    fileType?: string;
+    uploadedAt?: string | Date;
+    size?: number;
+  }>;
 
   brief?: {
     objectives: string[];
@@ -121,15 +98,7 @@ function normalizeClient(raw: any): Client {
     company: raw?.company ?? "",
     industry: raw?.industry ?? "",
     website: raw?.website ?? "",
-    socialMedia: raw?.socialMedia ?? {},
-    brandKit: {
-      logo: raw?.brandKit?.logo ?? "",
-      logos: Array.isArray(raw?.brandKit?.logos) ? raw.brandKit.logos : [],
-      documents: Array.isArray(raw?.brandKit?.documents) ? raw.brandKit.documents : [],
-      colors: Array.isArray(raw?.brandKit?.colors) ? raw.brandKit.colors : [],
-      fonts: Array.isArray(raw?.brandKit?.fonts) ? raw.brandKit.fonts : [],
-      guidelines: raw?.brandKit?.guidelines ?? "",
-    },
+    attachments: Array.isArray(raw?.attachments) ? raw.attachments : [],
     brief: {
       objectives: Array.isArray(raw?.brief?.objectives) ? raw.brief.objectives : [],
       targetAudience: raw?.brief?.targetAudience ?? "",
@@ -265,106 +234,14 @@ class ClientsAPI {
 
   /** Compartir cliente con un usuario (vincular usuario al cliente) */
   async share(clientId: string, userId: string, permiso: "ver" | "editar" = "ver"): Promise<Client> {
-    const { data } = await axios.post(
-      `/clients/${clientId}/share`,
-      { id: userId, permiso },
-      { headers: this.getHeaders() }
-    );
+    const { data } = await axios.post(`/clients/${clientId}/share`, { id: userId, permiso }, { headers: this.getHeaders() });
     return normalizeClient(data);
   }
 
   /** Desvincular usuario del cliente */
   async unshare(clientId: string, userId: string): Promise<Client> {
-    const { data } = await axios.post(
-      `/clients/${clientId}/unshare`,
-      { id: userId },
-      { headers: this.getHeaders() }
-    );
+    const { data } = await axios.post(`/clients/${clientId}/unshare`, { id: userId }, { headers: this.getHeaders() });
     return normalizeClient(data);
-  }
-
-  /** Agregar nuevo logo al brandkit */
-  async addLogo(clientId: string, logoData: { url: string; name?: string; fileName?: string; size?: number }): Promise<any> {
-    const { data } = await axios.post(
-      `/clients/${clientId}/brandkit/logos`,
-      logoData,
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-    return data;
-  }
-
-  /** Actualizar nombre de un logo */
-  async updateLogoName(clientId: string, logoId: string, name: string): Promise<any> {
-    const { data } = await axios.patch(
-      `/clients/${clientId}/brandkit/logos/${logoId}`,
-      { name },
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-    return data;
-  }
-
-  /** Eliminar un logo */
-  async deleteLogo(clientId: string, logoId: string): Promise<void> {
-    await axios.delete(
-      `/clients/${clientId}/brandkit/logos/${logoId}`,
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-  }
-
-  /** Reordenar logos */
-  async reorderLogos(clientId: string, logoIds: string[]): Promise<any> {
-    const { data } = await axios.put(
-      `/clients/${clientId}/brandkit/logos/reorder`,
-      { logoIds },
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-    return data;
-  }
-
-  /** Agregar nuevo documento al brandkit */
-  async addDocument(clientId: string, documentData: { url: string; name?: string; fileName?: string; fileType?: string; size?: number }): Promise<any> {
-    const { data } = await axios.post(
-      `/clients/${clientId}/brandkit/documents`,
-      documentData,
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-    return data;
-  }
-
-  /** Actualizar nombre de un documento */
-  async updateDocumentName(clientId: string, docId: string, name: string): Promise<any> {
-    const { data } = await axios.patch(
-      `/clients/${clientId}/brandkit/documents/${docId}`,
-      { name },
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-    return data;
-  }
-
-  /** Eliminar un documento */
-  async deleteDocument(clientId: string, docId: string): Promise<void> {
-    await axios.delete(
-      `/clients/${clientId}/brandkit/documents/${docId}`,
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-  }
-
-  /** Reordenar documentos */
-  async reorderDocuments(clientId: string, documentIds: string[]): Promise<any> {
-    const { data } = await axios.put(
-      `/clients/${clientId}/brandkit/documents/reorder`,
-      { documentIds },
-      { headers: this.getHeaders() }
-    );
-    emitClientsChanged("update", clientId);
-    return data;
   }
 }
 

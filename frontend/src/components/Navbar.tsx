@@ -7,7 +7,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faSquareCheck, faShield, faUserGear, faBuilding, faPalette, faArrowUpRightFromSquare, faCalendar, faRobot, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileLines, faBell, faClipboardList, faCalendarCheck, faListCheck, faIdCard, faFileText, faBox, faList, faUmbrellaBeach, faBriefcase, faUserGraduate, faUserTie, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { rolesAPI } from "../api/roles";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
@@ -57,6 +57,7 @@ interface AdminCounts {
   areas: number;
   positions: number;
   levels: number;
+  projects: number;
 }
 
 type DeployMeta = {
@@ -105,13 +106,13 @@ export const MobileNavbar: React.FC = () => {
     return localStorage.getItem("adminOpenSection") || "general";
   });
 
-  const toggleAdminSection = (section: "users" | "general" | "config") => {
+  const toggleAdminSection = (section: "users" | "general" | "config" | "management") => {
     const newVal = openAdminSection === section ? null : section;
     setOpenAdminSection(newVal);
     if (newVal) localStorage.setItem("adminOpenSection", newVal);
     else localStorage.removeItem("adminOpenSection");
   };
-  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0 });
+  const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -204,7 +205,7 @@ export const MobileNavbar: React.FC = () => {
           usersCount = await tryFetchClientUsers();
         }
 
-        const [clientsRes, tenantsRes, rolesRes, areasRes, positionsRes, levelsRes, usersRes] = await Promise.all(promises);
+        const [clientsRes, tenantsRes, rolesRes, areasRes, positionsRes, levelsRes, projectsRes, usersRes] = await Promise.all(promises);
 
         setAdminCounts({
           clients: clientsRes?.data?.count || 0,
@@ -213,6 +214,7 @@ export const MobileNavbar: React.FC = () => {
           areas: areasRes?.data?.count || 0,
           positions: positionsRes?.data?.count || 0,
           levels: levelsRes?.data?.count || 0,
+          projects: projectsRes?.data?.count || 0,
           users: hasPermission("users:view") ? usersRes?.data?.count || 0 : usersCount,
         });
       } catch (error) {
@@ -283,6 +285,10 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("users:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions });
       if (hasPermission("users:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels });
       if (hasPermission("users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users });
+
+      // New Management Group Items
+      if (hasPermission("clients:view")) base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
+
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacations", disabled: false, icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: false, icon: faFileText, label: "Registro de novedades", scope: "global", dividerTop: true });
@@ -394,14 +400,16 @@ export const MobileNavbar: React.FC = () => {
     const adminItems = menuItems.filter((item) => !item.isCreativeSuite);
     const creativeSuiteItem = menuItems.find((item) => item.isCreativeSuite);
 
-    // Partición de items: Admin Usuarios, Admin General y Configuración
+    // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
     const userAdminItems = adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users"].includes(item.path));
 
-    const generalAdminItems = adminItems.filter((item) => ["/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
+    const managementItems = adminItems.filter((item) => ["/projects"].includes(item.path));
+
+    const generalAdminItems = adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
     const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules"].includes(item.path));
 
-    const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item) && !configItems.includes(item));
+    const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item) && !configItems.includes(item) && !managementItems.includes(item));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {
@@ -483,10 +491,25 @@ export const MobileNavbar: React.FC = () => {
                 <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
                 Admin <span className="uppercase">Usuarios</span>
               </span>
-              <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "users" ? "rotate-180" : ""}`} />
+              <FontAwesomeIcon icon={openAdminSection === "users" ? faChevronDown : faChevronRight} className="h-3 w-3" />
             </button>
 
             {openAdminSection === "users" && <nav className="space-y-1 pb-2">{userAdminItems.map((item) => renderMenuItem(item))}</nav>}
+          </div>
+        )}
+
+        {/* ADMIN GESTIÓN (Nuevo Grupo) */}
+        {managementItems.length > 0 && (
+          <div className="px-2 mb-2">
+            <button onClick={() => toggleAdminSection("management")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+              <span>
+                <FontAwesomeIcon icon={faBriefcase} className="mr-2 h-4 w-4" /> {/* Assuming faBriefcase for management */}
+                Admin <span className="uppercase">Gestión</span>
+              </span>
+              <FontAwesomeIcon icon={openAdminSection === "management" ? faChevronDown : faChevronRight} className="h-3 w-3" />
+            </button>
+
+            {openAdminSection === "management" && <nav className="space-y-1 pb-2">{managementItems.map((item) => renderMenuItem(item))}</nav>}
           </div>
         )}
 
@@ -498,7 +521,7 @@ export const MobileNavbar: React.FC = () => {
                 <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
                 Admin <span className="uppercase">General</span>
               </span>
-              <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "general" ? "rotate-180" : ""}`} />
+              <FontAwesomeIcon icon={openAdminSection === "general" ? faChevronDown : faChevronRight} className="h-3 w-3" />
             </button>
 
             {openAdminSection === "general" && <nav className="space-y-1 pb-2">{generalAdminItems.map((item) => renderMenuItem(item))}</nav>}
@@ -513,7 +536,7 @@ export const MobileNavbar: React.FC = () => {
                 <FontAwesomeIcon icon={faCog} className="mr-2 h-4 w-4" />
                 Configuración
               </span>
-              <FontAwesomeIcon icon={faChevronDown} className={`h-3 w-3 transform transition-transform ${openAdminSection === "config" ? "rotate-180" : ""}`} />
+              <FontAwesomeIcon icon={openAdminSection === "config" ? faChevronDown : faChevronRight} className="h-3 w-3" />
             </button>
 
             {openAdminSection === "config" && <nav className="space-y-1 pb-2">{configItems.map((item) => renderMenuItem(item))}</nav>}
@@ -636,17 +659,15 @@ export const MobileNavbar: React.FC = () => {
 
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4 pt-1 space-y-3">
-              {/*               {showClientContext && (
-                <div className="bg-white dark:bg-gray-800">
+              {showClientContext && (
+                <div className="bg-white dark:bg-gray-800 mb-4">
                   <div>
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-40 uppercase tracking-wider mb-2">Cliente</div>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Cliente</div>
                     <ClientSelector />
                   </div>
-                  <div>
-                    <ClientContextMenu />
-                  </div>
+                  <div>{selectedClient && <ClientContextMenu />}</div>
                 </div>
-              )} */}
+              )}
               <div>
                 <NavMenu onItemClick={() => setOpen(false)} />
               </div>
@@ -667,6 +688,15 @@ export const MobileNavbar: React.FC = () => {
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:dark:bg-gray-800 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex flex-col pt-5 pb-4 overflow-y-auto mt-12">
+            {showClientContext && (
+              <div className="px-3">
+                <div className="bg-white dark:bg-gray-800 dark:border-gray-700 pt-4">
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 pb-2">Cliente</div>
+                  <ClientSelector />
+                  {selectedClient && <ClientContextMenu />}
+                </div>
+              </div>
+            )}
             <div className="px-3 mb-4">
               <div className={`bg-white dark:bg-gray-800 py-2`}>
                 <NavMenu onItemClick={() => setOpen(false)} />

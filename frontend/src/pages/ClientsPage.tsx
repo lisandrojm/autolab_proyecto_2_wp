@@ -12,7 +12,6 @@ import { faClone, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-i
 import { clientsAPI, type Client } from "../api/clients";
 import { customAlphabet } from "nanoid";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { SocialMediaInput } from "../components/forms/SocialMediaInput";
 
 const HELP_KEY = "clients" as const;
 
@@ -27,39 +26,22 @@ interface ClientFormData {
   industry?: string;
   website?: string;
   status: "active" | "inactive" | "onboarding";
-  socialMedia: {
-    facebook: string;
-    instagram: string;
-    twitter: string;
-    linkedin: string;
-    tiktok: string;
-    youtube: string;
-  };
 }
 
 const getStatusBadgeVariant = (status: Client["status"]) => (status === "active" ? "success" : status === "onboarding" ? "warning" : "blue");
 const getStatusLabel = (status: Client["status"]) => (status ? status.charAt(0).toUpperCase() + status.slice(1) : "");
 
-/** Generador corto de IDs (evita 0/O/1/I). 6 chars ≈ 2.18B combinaciones. */
+/* Generador corto de IDs */
 const genId = customAlphabet("23456789ABCDEFGHJKLMNPQRSTUVWXYZ", 6);
 
-/** Email único para clonación. */
+/* Email único para clonación */
 const makeCloneEmail = (srcEmail?: string) => {
-  const id = genId(); // p.ej. 7XK4QD
+  const id = genId();
   if (srcEmail && srcEmail.includes("@")) {
     const [local, domain] = srcEmail.split("@");
     return `${local}_copy-${id}@${domain}`;
   }
   return `client_copy-${id}@clone.local`;
-};
-
-const EMPTY_SOCIALS = {
-  facebook: "",
-  instagram: "",
-  twitter: "",
-  linkedin: "",
-  tiktok: "",
-  youtube: "",
 };
 
 export const ClientsPage: React.FC = () => {
@@ -96,7 +78,6 @@ export const ClientsPage: React.FC = () => {
     industry: "",
     website: "",
     status: "active",
-    socialMedia: { ...EMPTY_SOCIALS },
   });
 
   const canManage = hasPermission("clients:manage");
@@ -120,17 +101,13 @@ export const ClientsPage: React.FC = () => {
   };
 
   // ---------- acciones ----------
-  /** Usa endpoint dedicado y optimistic update con rollback */
   const toggleFavorite = async (id: string, current: boolean) => {
-    // Optimista
     setClients((prev) => prev.map((c) => (c._id === id ? { ...c, favorite: !current } : c)));
-
     try {
       const updated = await clientsAPI.toggleFavorite(id, !current);
       setClients((prev) => prev.map((c) => (c._id === id ? { ...c, favorite: !!updated.favorite } : c)));
       sweetAlert.success("Favoritos", !current ? "Cliente marcado como favorito" : "Cliente removido de favoritos");
     } catch (e) {
-      // Rollback
       setClients((prev) => prev.map((c) => (c._id === id ? { ...c, favorite: current } : c)));
       sweetAlert.error("Error", "No se pudo actualizar favorito");
     }
@@ -148,7 +125,6 @@ export const ClientsPage: React.FC = () => {
       industry: "",
       website: "",
       status: client.status || "active",
-      socialMedia: { ...EMPTY_SOCIALS },
     });
     setShowModal(true);
   };
@@ -164,15 +140,7 @@ export const ClientsPage: React.FC = () => {
         company: cloneSource.company,
         industry: cloneSource.industry,
         website: cloneSource.website,
-        socialMedia: cloneSource.socialMedia ? { ...cloneSource.socialMedia } : {},
-        brandKit: cloneSource.brandKit
-          ? {
-              logos: [...(cloneSource.brandKit.logos || [])],
-              colors: [...(cloneSource.brandKit.colors || [])],
-              fonts: [...(cloneSource.brandKit.fonts || [])],
-              guidelines: cloneSource.brandKit.guidelines,
-            }
-          : { logos: [], colors: [], fonts: [] },
+        attachments: cloneSource.attachments ? [...cloneSource.attachments] : [],
         brief: cloneSource.brief
           ? {
               objectives: [...(cloneSource.brief.objectives || [])],
@@ -222,7 +190,6 @@ export const ClientsPage: React.FC = () => {
       industry: "",
       website: "",
       status: "active",
-      socialMedia: { ...EMPTY_SOCIALS },
     });
     setShowModal(true);
   };
@@ -231,10 +198,8 @@ export const ClientsPage: React.FC = () => {
   useEffect(() => {
     if (searchParams.get("openModal") === "true" && canManage) {
       openCreate();
-      // Limpiar el parámetro de la URL
       setSearchParams({});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, canManage]);
 
   const closeModal = () => {
@@ -247,12 +212,8 @@ export const ClientsPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Filtrar redes sociales vacías antes de enviar
-      const socialMediaFiltered = Object.fromEntries(Object.entries(formData.socialMedia || {}).filter(([, value]) => (value || "").trim()));
-
       const payload = {
         ...formData,
-        socialMedia: socialMediaFiltered,
       };
 
       if (modalMode === "edit" && editingClient) {
@@ -331,17 +292,17 @@ export const ClientsPage: React.FC = () => {
           onSearchChange={setSearchTerm}
           searchPlaceholder="Buscar clientes por nombre, email o empresa..."
           /*    filters={[
-            {
-              value: filterStatus,
-              onChange: (v) => setFilterStatus(v as StatusFilter),
-              options: [
-                { value: "all", label: "Todos" },
-                { value: "active", label: "Activos" },
-                { value: "onboarding", label: "Onboarding" },
-                { value: "inactive", label: "Inactivos" },
-              ],
-            },
-          ]} */
+              {
+                value: filterStatus,
+                onChange: (v) => setFilterStatus(v as StatusFilter),
+                options: [
+                  { value: "all", label: "Todos" },
+                  { value: "active", label: "Activos" },
+                  { value: "onboarding", label: "Onboarding" },
+                  { value: "inactive", label: "Inactivos" },
+                ],
+              },
+            ]} */
           dateFilter={{
             startDate,
             endDate,
@@ -379,7 +340,6 @@ export const ClientsPage: React.FC = () => {
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email *</label>
                     <input type="email" required value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} className="input-field" placeholder="cliente_copy@ejemplo.com" />
-                    <p className="text-xs text-gray-500 mt-1">Se clona toda la info del cliente original; solo asegurá un email único.</p>
                   </div>
                 </div>
               ) : (
@@ -408,36 +368,6 @@ export const ClientsPage: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sitio web</label>
                     <input type="url" value={formData.website || ""} onChange={(e) => setFormData((p) => ({ ...p, website: e.target.value }))} className="input-field" placeholder="https://ejemplo.com" />
                   </div>
-
-                  {/* Redes Sociales */}
-                  <div className="sm:col-span-2">
-                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3 pt-2 border-t border-gray-200 dark:border-gray-700">Redes Sociales</h4>
-                    <SocialMediaInput
-                      value={formData.socialMedia}
-                      onChange={(newSocialMedia) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          socialMedia: newSocialMedia,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  {/*                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { v: "active", l: "Activo" },
-                        { v: "onboarding", l: "Onboarding" },
-                        { v: "inactive", l: "Inactivo" },
-                      ].map((opt) => (
-                        <label key={opt.v} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer">
-                          <input type="radio" name="status" className="accent-primary-600" checked={formData.status === (opt.v as ClientFormData["status"])} onChange={() => setFormData((p) => ({ ...p, status: opt.v as ClientFormData["status"] }))} />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{opt.l}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div> */}
                 </div>
               )}
             </div>
@@ -456,7 +386,7 @@ export const ClientsPage: React.FC = () => {
               subtitle: client.company || "",
               icon: faUsers,
               avatar: {
-                src: client.brandKit?.logos?.[0]?.url,
+                src: client.attachments?.find((a: any) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url,
                 fallback: client.name?.charAt(0)?.toUpperCase?.() || "?",
                 alt: `${client.name} logo`,
               },

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuthStore } from "../stores/authStore";
+
 import { useClientContextStore } from "../stores/clientContextStore";
 import { clientsAPI, Client } from "../api/clients";
 import { usersAPI } from "../api/users";
@@ -11,9 +11,9 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faUsers, faLayerGroup, faPalette, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faLayerGroup, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { getClientStatusLabel, getClientStatusBadgeVariant } from "../utils/clientStatus";
+import { getClientStatusLabel } from "../utils/clientStatus";
 
 const HELP_KEY = "clientDetail" as const;
 
@@ -23,12 +23,9 @@ interface ClientUser {
   permiso: "ver" | "editar";
 }
 
-type ModalMode = "createClientUser" | null;
-
 export const ClientDetailPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuthStore();
   const { setSelectedClient } = useClientContextStore();
 
   // Data
@@ -39,7 +36,6 @@ export const ClientDetailPage: React.FC = () => {
 
   // Modals
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [openInfo, setOpenInfo] = useState(false);
 
   // Forms
@@ -52,7 +48,6 @@ export const ClientDetailPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const helpEntry = getHelp(HELP_KEY);
-  const canManage = hasPermission("clients:manage");
 
   useEffect(() => {
     if (!clientId) return;
@@ -94,20 +89,10 @@ export const ClientDetailPage: React.FC = () => {
     }
   };
 
-  // Modal handlers
-  const openCreateClientUser = () => {
-    setModalMode("createClientUser");
-    setCreateUserForm({ email: "", password: "", firstName: "", lastName: "" });
-    setShowPassword(false);
-    setShowModal(true);
-  };
-
   const closeModal = () => {
     setShowModal(false);
-    setModalMode(null);
   };
 
-  // Submit handlers
   const handleCreateClientUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -137,34 +122,6 @@ export const ClientDetailPage: React.FC = () => {
     } catch (error: any) {
       const message = error?.response?.data?.error || "No se pudo crear el usuario";
       sweetAlert.error("Error", message);
-    }
-  };
-
-  // Remove handlers
-  const handleRemoveClientUser = async (userId: string) => {
-    const user = clientUsers.find((u) => u.id === userId);
-    if (!user) return;
-
-    const result = await sweetAlert.confirm("¿Remover usuario cliente?", `¿Estás seguro de que quieres remover a ${user.email} del cliente?`);
-
-    if (result.isConfirmed) {
-      try {
-        await fetch(`${import.meta.env.VITE_API_URL}/clients/${clientId}/unshare`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "X-Tenant-Id": localStorage.getItem("tenantId") || "",
-          },
-          body: JSON.stringify({ id: userId }),
-        });
-
-        sweetAlert.success("Usuario removido", "El usuario ha sido removido del cliente");
-        fetchClientAndUsers();
-      } catch (error: any) {
-        const message = error?.response?.data?.error || "No se pudo remover el usuario";
-        sweetAlert.error("Error", message);
-      }
     }
   };
 
@@ -198,15 +155,12 @@ export const ClientDetailPage: React.FC = () => {
     );
   }
 
-  const totalUsers = clientUsers.length;
-
   return (
     <PageLayout
       title={client.name}
-      subtitle={`${(client as any).company || client.email} • ${getClientStatusLabel(client.status)}`}
+      subtitle={`${client.company || client.email} • ${getClientStatusLabel(client.status)}`}
       faIcon={{ icon: faUsers }}
       clientMiniAvatar={{
-        src: client.brandKit?.logos?.[0]?.url,
         alt: `${client.name} logo`,
         fallback: client.name?.charAt(0)?.toUpperCase() || "?",
         label: client.name,
@@ -308,39 +262,11 @@ export const ClientDetailPage: React.FC = () => {
               <span className="text-gray-500 dark:text-gray-400">Email:</span>
               <div className="font-medium text-gray-900 dark:text-white">{client.email}</div>
             </div>
-            {(client as any).website && (
+            {client.website && (
               <div className="text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Sitio:</span>
-                <div className="font-medium text-gray-900 dark:text-white truncate">{(client as any).website}</div>
+                <div className="font-medium text-gray-900 dark:text-white truncate">{client.website}</div>
               </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Brand Kit */}
-        <Card
-          header={{
-            title: "Brand Kit",
-            icon: faPalette,
-          }}
-          onClick={() => navigate(`/cliente/${clientId}/brand-kit`)}
-          className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-        >
-          <div className="space-y-2">
-            {client.brandKit?.colors && client.brandKit.colors.length > 0 ? (
-              <div className="text-sm">
-                <span className="text-gray-500 dark:text-gray-400">
-                  {client.brandKit.colors.length} colores • {client.brandKit.fonts?.length || 0} fuentes
-                </span>
-                <div className="flex space-x-1 mt-2">
-                  {client.brandKit.colors.slice(0, 3).map((color, index) => (
-                    <div key={index} className="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600" style={{ backgroundColor: color }} />
-                  ))}
-                  {client.brandKit.colors.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{client.brandKit.colors.length - 3}</span>}
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-gray-500 dark:text-gray-500">No configurado</div>
             )}
           </div>
         </Card>

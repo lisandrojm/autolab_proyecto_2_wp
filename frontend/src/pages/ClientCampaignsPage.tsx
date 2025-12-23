@@ -27,23 +27,6 @@ interface Campaign {
   favorite?: boolean;
 }
 
-const getStatusText = (status: Campaign["status"]) => {
-  switch (status) {
-    case "active":
-      return "Activa";
-    case "completed":
-      return "Completada";
-    case "paused":
-      return "Pausada";
-    case "cancelled":
-      return "Cancelada";
-    case "draft":
-      return "Borrador";
-    default:
-      return status;
-  }
-};
-
 const calcDuration = (startDate?: string, endDate?: string) => {
   if (!startDate || !endDate) return "—";
   const start = new Date(startDate).getTime();
@@ -130,11 +113,11 @@ export const ClientCampaignsPage: React.FC = () => {
 
   const hasActiveDate = !!startDate || !!endDate;
 
-  const handleUpload = async (file: File, scope: "brandkit" | "campaigns" | "assets", clientId: string) => {
+  const handleUpload = async (file: File, scope: "campaigns" | "assets", clientId: string) => {
     if (!file) return;
     console.log("CLIENT ID: ", clientId);
 
-    sweetAlert.loading("Subiendo archivo...", "Por favor espera");
+    sweetAlert.loading("Subiendo archivo...");
 
     try {
       const formData = new FormData();
@@ -175,7 +158,6 @@ export const ClientCampaignsPage: React.FC = () => {
       clientMiniAvatar={
         selectedClient
           ? {
-              src: selectedClient.brandKit?.logo,
               alt: `${selectedClient.name} logo`,
               fallback: selectedClient.name?.charAt(0)?.toUpperCase() || "?",
               label: selectedClient.name,
@@ -332,22 +314,6 @@ export const ClientCampaignsPage: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Subir Assets (Prueba)</h3>
             <div className="flex flex-wrap gap-4 justify-center">
-              {/* Brandkit */}
-              <label className="btn-primary flex items-center px-4 py-2 cursor-pointer">
-                <FontAwesomeIcon icon={faPlus} className="h-5 w-5 mr-2" />
-                Subir a Brandkit
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={async (e) => {
-                    if (e.target.files?.[0] && selectedClient?._id) {
-                      const file = e.target.files[0];
-                      await handleUpload(file, "brandkit", selectedClient._id);
-                    }
-                  }}
-                />
-              </label>
-
               {/* Campaigns */}
               <label className="btn-primary flex items-center px-4 py-2 cursor-pointer">
                 <FontAwesomeIcon icon={faPlus} className="h-5 w-5 mr-2" />

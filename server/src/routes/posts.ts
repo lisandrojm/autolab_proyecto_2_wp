@@ -9,49 +9,54 @@ const router = Router();
 
 router.use(requireTenant, authenticateToken, requireAnyRole);
 
-const createPostSchema = z.object({
-  campaignId: z.string().min(1),
-  clientId: z.string().min(1),
-  title: z.string().optional().default(""),
-  postType: z.enum(["social", "email", "push"]).default("social"),
-  contentFormat: z.enum(["post", "reel", "story", "video", "short", "article", "thread"]).optional(),
-  channelConfig: z.record(z.any()).optional(),
-  content: z.object({
-    copy: z.string().optional().default(""),
-    hashtags: z.array(z.string()).default([]),
-    mentions: z.array(z.string()).default([]),
-  }),
-  media: z
-    .array(
-      z.object({
-        type: z.enum(["image", "video", "carousel"]),
-        urls: z.array(z.string().url()),
-        alt: z.string().optional(),
+const createPostSchema = z
+  .object({
+    campaignId: z.string().min(1),
+    clientId: z.string().min(1),
+    title: z.string().optional().default(""),
+    postType: z.enum(["social", "email", "push"]).default("social"),
+    contentFormat: z.enum(["post", "reel", "story", "video", "short", "article", "thread"]).optional(),
+    channelConfig: z.record(z.any()).optional(),
+    content: z.object({
+      copy: z.string().optional().default(""),
+      hashtags: z.array(z.string()).default([]),
+      mentions: z.array(z.string()).default([]),
+    }),
+    media: z
+      .array(
+        z.object({
+          type: z.enum(["image", "video", "carousel"]),
+          urls: z.array(z.string().url()),
+          alt: z.string().optional(),
+        })
+      )
+      .default([]),
+    platforms: z.array(z.enum(["facebook", "instagram", "twitter", "linkedin", "tiktok", "youtube"])).default([]),
+    scheduling: z
+      .object({
+        publishAt: z
+          .union([z.string(), z.literal("")])
+          .transform((str) => (str ? new Date(str) : undefined))
+          .optional(),
+        timezone: z.string().default("UTC"),
+        isScheduled: z.boolean().default(false),
       })
-    )
-    .default([]),
-  platforms: z.array(z.enum(["facebook", "instagram", "twitter", "linkedin", "tiktok", "youtube"])).default([]),
-  scheduling: z
-    .object({
-      publishAt: z
-        .union([z.string(), z.literal("")])
-        .transform((str) => (str ? new Date(str) : undefined))
-        .optional(),
-      timezone: z.string().default("UTC"),
-      isScheduled: z.boolean().default(false),
-    })
-    .optional(),
-}).refine((data) => {
-  // Para posts de tipo social, copy y title son requeridos
-  if (data.postType === "social") {
-    return data.content.copy.trim().length > 0 && data.title.trim().length > 0;
-  }
-  // Para email y push, copy es opcional (el contenido está en channelConfig)
-  return true;
-}, {
-  message: "El título y contenido son obligatorios para publicaciones en redes sociales",
-  path: ["content", "copy"],
-});
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      // Para posts de tipo social, copy y title son requeridos
+      if (data.postType === "social") {
+        return data.content.copy.trim().length > 0 && data.title.trim().length > 0;
+      }
+      // Para email y push, copy es opcional (el contenido está en channelConfig)
+      return true;
+    },
+    {
+      message: "El título y contenido son obligatorios para publicaciones en redes sociales",
+      path: ["content", "copy"],
+    }
+  );
 
 // ✅ GET /posts/debug
 router.get("/debug", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -101,7 +106,7 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
         select: "name projectId",
         populate: { path: "projectId", select: "name" },
       })
-      .populate("clientId", "name brandKit");
+      .populate("clientId", "name");
 
     if (!post) return res.status(404).json({ error: "Post not found" });
 
@@ -138,9 +143,9 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       .lean();
 
     // Clean titles in response (defensive measure for existing corrupted data)
-    const cleanedPosts = posts.map(post => ({
+    const cleanedPosts = posts.map((post) => ({
       ...post,
-      title: post.title ? post.title.replace(/^Publicación\s*\|\s*/i, "") : post.title
+      title: post.title ? post.title.replace(/^Publicación\s*\|\s*/i, "") : post.title,
     }));
 
     res.json(cleanedPosts);
@@ -288,7 +293,7 @@ router.patch("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const post = await Post.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { $set: updateData }, { new: true })
       .populate({ path: "campaignId", select: "name projectId", populate: { path: "projectId", select: "name" } })
-      .populate("clientId", "name brandKit");
+      .populate("clientId", "name");
 
     res.json(post);
   } catch (error) {

@@ -321,7 +321,6 @@ router.post("/register-client", requireTenant, validate(registerClientSchema), a
       email,
       phone,
       company,
-      brandKit: { colors: [], fonts: [] },
       contacts: [{ name, email, phone, role: "owner" }],
       status: "onboarding",
     });

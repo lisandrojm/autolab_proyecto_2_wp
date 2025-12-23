@@ -25,7 +25,7 @@ import { ServerStatusCard } from "./components/ServerStatusCard";
 import { CampaignDetailPage } from "./pages/CampaignDetailPage";
 
 import { ClientContextInfoPage } from "./pages/ClientContextInfoPage";
-import { ClientContextBrandKitPage } from "./pages/ClientContextBrandKitPage";
+
 import { ClientContextCampaignsPage } from "./pages/ClientContextCampaignsPage";
 import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
 import { ClientContextUsersPage } from "./pages/ClientContextUsersPage";
@@ -527,14 +527,7 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="brand-kit"
-                  element={
-                    <ProtectedRoute>
-                      <ClientContextBrandKitPage />
-                    </ProtectedRoute>
-                  }
-                />
+
                 <Route
                   path="campanas"
                   element={

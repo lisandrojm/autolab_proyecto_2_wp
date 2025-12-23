@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuthStore } from "../stores/authStore";
+import { useSearchParams } from "react-router-dom";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { briefsAPI, Brief } from "../api/briefs";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -10,44 +9,9 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faPlus, faEdit, faTrash, faEye, faSave, faCalendar, faDollarSign } from "@fortawesome/free-solid-svg-icons";
-
-const getStatusText = (status: Brief["status"]) => {
-  switch (status) {
-    case "approved":
-      return "Aprobado";
-    case "completed":
-      return "Completado";
-    case "pending_review":
-      return "En Revisión";
-    case "in_progress":
-      return "En Progreso";
-    case "cancelled":
-      return "Cancelado";
-    case "draft":
-      return "Borrador";
-    default:
-      return status;
-  }
-};
-
-const getPriorityText = (priority: Brief["priority"]) => {
-  switch (priority) {
-    case "urgent":
-      return "Urgente";
-    case "high":
-      return "Alta";
-    case "medium":
-      return "Media";
-    case "low":
-      return "Baja";
-    default:
-      return priority;
-  }
-};
+import { faFileText, faPlus, faEdit, faTrash, faEye, faCalendar, faDollarSign } from "@fortawesome/free-solid-svg-icons";
 
 export const ClientRequestsPage: React.FC = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { selectedClient } = useClientContextStore();
 
@@ -100,7 +64,7 @@ export const ClientRequestsPage: React.FC = () => {
       }
 
       const data = await briefsAPI.list(params);
-      setBriefs(data);
+      setBriefs(data.briefs || []);
     } catch (error) {
       console.error("Error fetching briefs:", error);
       sweetAlert.error("Error", "No se pudieron cargar las solicitudes");
@@ -195,7 +159,6 @@ export const ClientRequestsPage: React.FC = () => {
       clientMiniAvatar={
         selectedClient
           ? {
-              src: selectedClient.brandKit?.logo,
               alt: `${selectedClient.name} logo`,
               fallback: selectedClient.name?.charAt(0)?.toUpperCase() || "?",
               label: selectedClient.name,

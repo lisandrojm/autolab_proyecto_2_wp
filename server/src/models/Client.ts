@@ -1,14 +1,5 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
-export interface ILogo {
-  _id?: Types.ObjectId;
-  url: string;
-  name?: string;
-  fileName?: string;
-  uploadedAt?: Date;
-  size?: number;
-}
-
 export interface IDocument {
   _id?: Types.ObjectId;
   url: string;
@@ -29,15 +20,7 @@ export interface IClient extends Document {
   company?: string;
   industry?: string;
   website?: string;
-  socialMedia: {
-    facebook?: string;
-    instagram?: string;
-    twitter?: string;
-    linkedin?: string;
-    tiktok?: string;
-    youtube?: string;
-  };
-  brandKit: { logos: ILogo[]; documents: IDocument[]; colors: string[]; fonts: string[]; guidelines?: string };
+  attachments: IDocument[];
   contacts: {
     name?: string;
     email?: string;
@@ -50,6 +33,26 @@ export interface IClient extends Document {
   createdAt: Date;
   updatedAt: Date;
   createdBy?: string;
+  costCenters?: {
+    name: string;
+    code: string;
+    description?: string;
+    budget: {
+      total: number;
+      allocated: number;
+      spent: number;
+      currency: string;
+    };
+    isActive: boolean;
+  }[];
+  brief?: {
+    objectives: string[];
+    targetAudience?: string;
+    budget?: number;
+    timeline?: string;
+    preferences?: string;
+  };
+
   usuarios?: { userId: Types.ObjectId; permiso: "ver" | "editar" }[];
 }
 
@@ -68,39 +71,16 @@ const clientSchema = new Schema<IClient>(
     industry: { type: String, trim: true },
     website: { type: String, trim: true },
 
-    socialMedia: {
-      facebook: String,
-      instagram: String,
-      twitter: String,
-      linkedin: String,
-      tiktok: String,
-      youtube: String,
-    },
-
-    brandKit: {
-      logos: [
-        {
-          url: { type: String, required: true },
-          name: { type: String, maxlength: 50 },
-          fileName: String,
-          uploadedAt: { type: Date, default: Date.now },
-          size: Number,
-        },
-      ],
-      documents: [
-        {
-          url: { type: String, required: true },
-          name: { type: String, maxlength: 100 },
-          fileName: String,
-          fileType: String,
-          uploadedAt: { type: Date, default: Date.now },
-          size: Number,
-        },
-      ],
-      colors: { type: [String], default: [] },
-      fonts: { type: [String], default: [] },
-      guidelines: String,
-    },
+    attachments: [
+      {
+        url: { type: String, required: true },
+        name: { type: String, maxlength: 100 },
+        fileName: String,
+        fileType: String,
+        uploadedAt: { type: Date, default: Date.now },
+        size: Number,
+      },
+    ],
 
     contacts: [
       {
@@ -111,6 +91,29 @@ const clientSchema = new Schema<IClient>(
       },
     ],
     proyectos: [{ type: Schema.Types.ObjectId, ref: "Project", index: true }],
+
+    brief: {
+      objectives: [String],
+      targetAudience: String,
+      budget: Number,
+      timeline: String,
+      preferences: String,
+    },
+
+    costCenters: [
+      {
+        name: String,
+        code: String,
+        description: String,
+        budget: {
+          total: Number,
+          allocated: { type: Number, default: 0 },
+          spent: { type: Number, default: 0 },
+          currency: { type: String, default: "EUR" },
+        },
+        isActive: { type: Boolean, default: true },
+      },
+    ],
 
     status: { type: String, enum: ["active", "inactive", "onboarding"], default: "onboarding", index: true },
 

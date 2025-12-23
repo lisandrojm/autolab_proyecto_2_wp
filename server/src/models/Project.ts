@@ -5,10 +5,10 @@ export interface IProject extends Document {
   clientId: Types.ObjectId;
   name: string;
   description?: string;
-  objectives?: string[];
-  targetAudience?: string;
+  status: "active" | "completed" | "on_hold" | "archived";
+  startDate?: Date;
+  endDate?: Date;
   budget?: { total?: number };
-  campaigns?: Types.ObjectId[];
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -24,12 +24,17 @@ const projectSchema = new Schema<IProject>(
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
 
-    objectives: { type: [String], default: [] },
-    targetAudience: { type: String, trim: true },
+    status: {
+      type: String,
+      enum: ["active", "completed", "on_hold", "archived"],
+      default: "active",
+      index: true,
+    },
+
+    startDate: { type: Date },
+    endDate: { type: Date },
 
     budget: { total: { type: Number, min: 0, default: 0 } },
-
-    campaigns: [{ type: Schema.Types.ObjectId, ref: "Campaign" }],
 
     createdBy: { type: String, required: true },
 
