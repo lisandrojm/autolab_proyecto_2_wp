@@ -33,11 +33,6 @@ const createProjectSchema = z.object({
     }),
   objectives: z.array(z.string()).default([]),
   targetAudience: z.string().optional(),
-  budget: z
-    .object({
-      total: z.number().min(0).optional(),
-    })
-    .optional(),
 });
 
 // GET /projects
@@ -55,8 +50,9 @@ router.get("/", requireTenant, authenticateToken, requireAnyRole, async (req: Au
       filter.name = { $regex: q, $options: "i" };
     }
 
-    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
-    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+    const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
+    const primaryRole = req.user?.primaryRole?.toLowerCase();
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin") || primaryRole === "admin" || primaryRole === "superadmin";
 
     if (!isAdmin) {
       filter.assignedUsers = req.user!.userId;

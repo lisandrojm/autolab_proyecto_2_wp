@@ -12,7 +12,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup, faBullseye, faDollarSign, faBullhorn, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faBullseye, faBullhorn, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -104,9 +104,11 @@ export const ProjectDetailPage: React.FC = () => {
   const [projectForm, setProjectForm] = useState({
     name: "",
     description: "",
+    status: "active" as Project["status"],
+    startDate: "",
+    endDate: "",
     objectives: [""],
     targetAudience: "",
-    budget: { total: 0 },
   });
 
   const [campaignForm, setCampaignForm] = useState({
@@ -142,9 +144,11 @@ export const ProjectDetailPage: React.FC = () => {
     setProjectForm({
       name: data.name,
       description: data.description || "",
+      status: data.status || "active",
+      startDate: data.startDate ? data.startDate.split("T")[0] : "",
+      endDate: data.endDate ? data.endDate.split("T")[0] : "",
       objectives: data.objectives?.length ? data.objectives : [""],
       targetAudience: data.targetAudience || "",
-      budget: { total: data.budget?.total || 0 },
     });
 
     // si viene populado, evitamos otra request
@@ -303,7 +307,6 @@ export const ProjectDetailPage: React.FC = () => {
       const payload = {
         ...projectForm,
         objectives: projectForm.objectives.filter((o) => o.trim()),
-        budget: projectForm.budget.total > 0 ? projectForm.budget : undefined,
       };
 
       await projectsAPI.updateProject(project._id, payload);
@@ -555,9 +558,36 @@ export const ProjectDetailPage: React.FC = () => {
                   <textarea value={projectForm.targetAudience} onChange={(e) => setProjectForm((p) => ({ ...p, targetAudience: e.target.value }))} rows={2} className="input-field resize-none" placeholder="Describe el público objetivo..." />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presupuesto total (USD)</label>
-                  <input type="number" min="0" step="100" value={projectForm.budget.total} onChange={(e) => setProjectForm((p) => ({ ...p, budget: { total: Number(e.target.value) } }))} className="input-field" placeholder="0" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Inicio</label>
+                    <input type="date" className="input-field" value={projectForm.startDate} onChange={(e) => setProjectForm((p) => ({ ...p, startDate: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Fin</label>
+                    <input type="date" className="input-field" value={projectForm.endDate} onChange={(e) => setProjectForm((p) => ({ ...p, endDate: e.target.value }))} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProjectForm((p) => ({
+                          ...p,
+                          status: p.status === "active" ? "on_hold" : "active",
+                        }))
+                      }
+                      className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${projectForm.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400"}`}
+                    >
+                      <svg data-prefix="fas" data-icon={projectForm.status === "active" ? "toggle-on" : "toggle-off"} className="svg-inline--fa mr-1 h-4 w-4" role="img" viewBox="0 0 576 512" aria-hidden="true">
+                        <path fill="currentColor" d={projectForm.status === "active" ? "M192 64C86 64 0 150 0 256S86 448 192 448l192 0c106 0 192-86 192-192S490 64 384 64L192 64zm192 96a96 96 0 1 1 0 192 96 96 0 1 1 0-192z" : "M384 64l-192 0C86 64 0 150 0 256s86 192 192 192l192 0c106 0 192-86 192-192S490 64 384 64M192 352a96 96 0 1 1 0-192 96 96 0 1 1 0 192z"}></path>
+                      </svg>
+                      {projectForm.status === "active" ? "Activo" : "En Espera"}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -785,24 +815,6 @@ export const ProjectDetailPage: React.FC = () => {
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500 dark:text-gray-500">No hay objetivos definidos</p>
-                  )}
-                </div>
-
-                {/* Presupuesto */}
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon icon={faDollarSign} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Presupuesto</h3>
-                  </div>
-                  {project.budget?.total ? (
-                    <div className="text-center py-4">
-                      <p className="text-4xl font-bold text-gray-900 dark:text-white">USD{(project.budget.total ?? 0).toLocaleString()}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Total del proyecto</p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-500">Presupuesto no definido</p>
                   )}
                 </div>
 

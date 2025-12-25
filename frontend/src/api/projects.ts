@@ -31,7 +31,6 @@ export interface Project {
   status: "active" | "completed" | "on_hold" | "archived";
   startDate?: string;
   endDate?: string;
-  budget?: { total?: number };
   createdBy: string;
   createdAt: string;
   objectives?: string[];
@@ -75,7 +74,6 @@ function normalizeProject(raw: any): Project {
     status: raw?.status ?? "active",
     startDate: raw?.startDate ?? undefined,
     endDate: raw?.endDate ?? undefined,
-    budget: typeof raw?.budget === "object" ? raw.budget : {},
     createdBy: String(raw?.createdBy ?? ""),
     createdAt: String(raw?.createdAt ?? ""),
     objectives: Array.isArray(raw?.objectives) ? raw.objectives : [],
@@ -187,7 +185,6 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
-      budget?: { total?: number };
     }
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {
@@ -212,7 +209,6 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
-      budget?: { total?: number };
     }
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {

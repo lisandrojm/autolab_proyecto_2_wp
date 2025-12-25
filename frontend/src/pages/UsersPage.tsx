@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
 import { rolesAPI, Role } from "../api/roles";
@@ -96,6 +96,17 @@ export const UsersPage: React.FC = () => {
   const [viewUser, setViewUser] = useState<User | null>(null);
 
   const canManage = hasPermission("users:manage");
+
+  // Helper Switch component
+  const FormSwitch = ({ checked, onChange, label, description, activeColor = "text-primary-600 dark:text-primary-400", activeBg = "bg-primary-100 dark:bg-primary-900/30", inactiveColor = "text-gray-700 dark:text-gray-300" }: { checked: boolean; onChange: (checked: boolean) => void; label: string; description?: string; activeColor?: string; activeBg?: string; inactiveColor?: string }) => (
+    <button type="button" onClick={() => onChange(!checked)} className={`flex items-center w-full p-2 rounded-lg transition-colors text-left ${checked ? `${activeBg} ${activeColor}` : `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${inactiveColor}`}`}>
+      <FontAwesomeIcon icon={checked ? faToggleOn : faToggleOff} className={`h-4 w-4 mr-3 transition-colors ${checked ? activeColor : "text-gray-400"}`} />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate">{label}</div>
+        {description && <div className="text-[10px] opacity-70 line-clamp-1">{description}</div>}
+      </div>
+    </button>
+  );
 
   // Para descartar respuestas viejas
   const requestIdRef = useRef(0);
@@ -203,12 +214,34 @@ export const UsersPage: React.FC = () => {
 
   const fetchAllProjects = async () => {
     try {
-      const projects = await projectsAPI.listAll();
+      const projects = await projectsAPI.listAll({ limit: 500 }); // Increase limit for safety
       setAllProjects(projects);
+      console.log("📂 Proyectos cargados para asignación:", {
+        count: projects.length,
+        projects: projects.map((p) => ({
+          name: p.name,
+          cid: typeof p.clientId === "string" ? p.clientId : p.clientId?._id,
+        })),
+      });
     } catch (error) {
       console.error("Error fetching all projects:", error);
     }
   };
+
+  const filteredProjects = useMemo(() => {
+    if (formData.clientIds.length === 0) return [];
+
+    // Log selected client IDs for debugging
+    console.log("🔍 Filtrando proyectos para clientes:", formData.clientIds);
+
+    return allProjects.filter((p) => {
+      // Robust client ID extraction
+      const cid = typeof p.clientId === "string" ? p.clientId : p.clientId && typeof p.clientId === "object" ? p.clientId._id : null;
+
+      const matches = cid && formData.clientIds.includes(cid);
+      return matches;
+    });
+  }, [allProjects, formData.clientIds]);
 
   // Abrir modales
   const openCreate = () => {
@@ -247,6 +280,12 @@ export const UsersPage: React.FC = () => {
       }
     }
   }, [formData.positionId, showModal, modalMode]);
+
+  useEffect(() => {
+    if (showModal && modalMode === "edit") {
+      fetchAllProjects();
+    }
+  }, [showModal, modalMode]);
 
   const openEdit = (user: User) => {
     setEditingUser(user);
@@ -817,11 +856,11 @@ export const UsersPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
-                  <div className="space-y-2 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
                     {roles
                       .filter((role) => role.name.toLowerCase() !== "superadmin")
                       .map((role) => (
-                        <label key={role._id} className="flex items-center space-x-2">
+                        <label key={role._id} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors">
                           <input
                             type="checkbox"
                             checked={formData.roles.includes(role._id)}
@@ -832,11 +871,11 @@ export const UsersPage: React.FC = () => {
                                 setFormData((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== role._id) }));
                               }
                             }}
-                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                           />
-                          <div>
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{role.name}</span>
-                            {role.description && <p className="text-xs text-gray-500 dark:text-gray-500">{role.description}</p>}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{role.name}</span>
+                            {role.description && <p className="text-[10px] text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
                           </div>
                         </label>
                       ))}
@@ -846,26 +885,36 @@ export const UsersPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Asignar Clientes</label>
-                    <div className="space-y-2 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
+                    <div className="space-y-1 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
                       {allClients.length === 0 ? (
                         <p className="text-xs text-gray-500">No hay clientes disponibles</p>
                       ) : (
                         allClients.map((client) => (
-                          <label key={client._id} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={formData.clientIds.includes(client._id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormData((prev) => ({ ...prev, clientIds: [...prev.clientIds, client._id] }));
-                                } else {
-                                  setFormData((prev) => ({ ...prev, clientIds: prev.clientIds.filter((id) => id !== client._id) }));
-                                }
-                              }}
-                              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{client.name}</span>
-                          </label>
+                          <FormSwitch
+                            key={client._id}
+                            checked={formData.clientIds.includes(client._id)}
+                            onChange={(checked) => {
+                              if (checked) {
+                                setFormData((prev) => ({ ...prev, clientIds: [...prev.clientIds, client._id] }));
+                              } else {
+                                setFormData((prev) => {
+                                  const newClientIds = prev.clientIds.filter((id) => id !== client._id);
+                                  // Also remove projects belonging to this client
+                                  const projectsToRemove = allProjects
+                                    .filter((p) => {
+                                      const cid = typeof p.clientId === "string" ? p.clientId : p.clientId?._id;
+                                      return cid === client._id;
+                                    })
+                                    .map((p) => p._id);
+                                  const newProjectIds = prev.projectIds.filter((pid) => !projectsToRemove.includes(pid));
+                                  return { ...prev, clientIds: newClientIds, projectIds: newProjectIds };
+                                });
+                              }
+                            }}
+                            label={client.name}
+                            activeColor="text-emerald-600 dark:text-emerald-400"
+                            activeBg="bg-emerald-100 dark:bg-emerald-900/30"
+                          />
                         ))
                       )}
                     </div>
@@ -873,26 +922,35 @@ export const UsersPage: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Asignar Proyectos</label>
-                    <div className="space-y-2 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
-                      {allProjects.length === 0 ? (
-                        <p className="text-xs text-gray-500">No hay proyectos disponibles</p>
+                    <div className="space-y-1 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
+                      {formData.clientIds.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">Selecciona un cliente para ver sus proyectos</p>
+                      ) : filteredProjects.length === 0 ? (
+                        <div className="text-center py-2">
+                          <p className="text-xs text-gray-500">No hay proyectos disponibles para los clientes seleccionados</p>
+                          <p className="text-[10px] text-gray-400 mt-1">(Total proyectos en memoria: {allProjects.length})</p>
+                          {allProjects.length > 0 && (
+                            <button type="button" onClick={() => fetchAllProjects()} className="text-[10px] text-blue-500 hover:underline mt-2">
+                              Sincronizar proyectos
+                            </button>
+                          )}
+                        </div>
                       ) : (
-                        allProjects.map((project) => (
-                          <label key={project._id} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={formData.projectIds.includes(project._id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
-                                } else {
-                                  setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
-                                }
-                              }}
-                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{project.name}</span>
-                          </label>
+                        filteredProjects.map((project) => (
+                          <FormSwitch
+                            key={project._id}
+                            checked={formData.projectIds.includes(project._id)}
+                            onChange={(checked) => {
+                              if (checked) {
+                                setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
+                              } else {
+                                setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
+                              }
+                            }}
+                            label={project.name}
+                            activeColor="text-indigo-600 dark:text-indigo-400"
+                            activeBg="bg-indigo-100 dark:bg-indigo-900/30"
+                          />
                         ))
                       )}
                     </div>
@@ -1047,11 +1105,14 @@ export const UsersPage: React.FC = () => {
                   {user.seniorityAtEndOfYear !== undefined && <span className="w-fit inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.seniorityAtEndOfYear} años</span>}
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
                 {/* Clientes asignados */}
                 {user.clientIds && user.clientIds.length > 0 && (
                   <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Clientes</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                      <FontAwesomeIcon icon={faHourglassHalf} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                      Clientes
+                    </label>
                     <div className="flex flex-wrap gap-1">
                       {user.clientIds.map((client) => (
                         <span key={client._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300">

@@ -8,7 +8,6 @@ export interface IProject extends Document {
   status: "active" | "completed" | "on_hold" | "archived";
   startDate?: Date;
   endDate?: Date;
-  budget?: { total?: number };
   objectives: string[];
   targetAudience?: string;
   createdBy: string;
@@ -36,7 +35,6 @@ const projectSchema = new Schema<IProject>(
     startDate: { type: Date },
     endDate: { type: Date },
 
-    budget: { total: { type: Number, min: 0, default: 0 } },
     objectives: { type: [String], required: true, default: [] },
     targetAudience: { type: String, trim: true },
 

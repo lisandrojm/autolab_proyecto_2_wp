@@ -44,7 +44,6 @@ export const ClientProjectsPage: React.FC = () => {
     status: "active" as "active" | "completed" | "on_hold" | "archived",
     startDate: "",
     endDate: "",
-    budget: { total: 0 },
   });
 
   // ⓘ estado del modal de información
@@ -134,7 +133,6 @@ export const ClientProjectsPage: React.FC = () => {
       status: "active",
       startDate: "",
       endDate: "",
-      budget: { total: 0 },
     });
     setShowModal(true);
   };
@@ -148,7 +146,6 @@ export const ClientProjectsPage: React.FC = () => {
       status: project.status || "active",
       startDate: project.startDate ? project.startDate.split("T")[0] : "",
       endDate: project.endDate ? project.endDate.split("T")[0] : "",
-      budget: { total: project.budget?.total || 0 },
     });
     setShowModal(true);
   };
@@ -158,7 +155,6 @@ export const ClientProjectsPage: React.FC = () => {
     try {
       const data = {
         ...formData,
-        budget: formData.budget.total > 0 ? formData.budget : undefined,
       };
 
       if (modalMode === "create") {
@@ -315,41 +311,33 @@ export const ClientProjectsPage: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
-                        <select className="input-field" value={formData.status} onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value as any }))}>
-                          <option value="active">Activo</option>
-                          <option value="on_hold">En Espera</option>
-                          <option value="completed">Completado</option>
-                          <option value="archived">Archivado</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presupuesto (USD)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="100"
-                          value={formData.budget.total}
-                          onChange={(e) =>
-                            setFormData((p) => ({
-                              ...p,
-                              budget: { total: Number(e.target.value) },
-                            }))
-                          }
-                          className="input-field"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Inicio</label>
                         <input type="date" className="input-field" value={formData.startDate} onChange={(e) => setFormData((p) => ({ ...p, startDate: e.target.value }))} />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Fin</label>
                         <input type="date" className="input-field" value={formData.endDate} onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((p) => ({
+                              ...p,
+                              status: p.status === "active" ? "on_hold" : "active",
+                            }))
+                          }
+                          className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${formData.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400"}`}
+                        >
+                          <svg data-prefix="fas" data-icon={formData.status === "active" ? "toggle-on" : "toggle-off"} className="svg-inline--fa mr-1 h-4 w-4" role="img" viewBox="0 0 576 512" aria-hidden="true">
+                            <path fill="currentColor" d={formData.status === "active" ? "M192 64C86 64 0 150 0 256S86 448 192 448l192 0c106 0 192-86 192-192S490 64 384 64L192 64zm192 96a96 96 0 1 1 0 192 96 96 0 1 1 0-192z" : "M384 64l-192 0C86 64 0 150 0 256s86 192 192 192l192 0c106 0 192-86 192-192S490 64 384 64M192 352a96 96 0 1 1 0-192 96 96 0 1 1 0 192z"}></path>
+                          </svg>
+                          {formData.status === "active" ? "Activo" : "En Espera"}
+                        </button>
                       </div>
                     </div>
                   </div>
