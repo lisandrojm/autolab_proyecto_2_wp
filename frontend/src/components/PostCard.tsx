@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "./ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faEye, faCalendar, faHeart, faPaperPlane, faLayerGroup, faBullhorn } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faEye, faCalendar, faHeart, faPaperPlane, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { getPostTypeDisplay } from "../utils/postTypeHelpers";
 
 interface Post {
@@ -13,14 +13,10 @@ interface Post {
   channel?: string;
   channels?: string[];
   channelConfig?: any;
-  campaignId?:
+  projectId?:
     | {
         _id: string;
         name: string;
-        projectId?: {
-          _id: string;
-          name: string;
-        };
       }
     | string;
   clientId?:
@@ -115,8 +111,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onEdit, onDelete, onAp
     variant: "default" as const,
   });
 
-  const campaignName = typeof post.campaignId === "object" ? post.campaignId?.name : "Campaña";
-  const projectName = typeof post.campaignId === "object" && typeof post.campaignId.projectId === "object" ? post.campaignId.projectId.name : "Proyecto";
+  const projectName = typeof post.projectId === "object" ? post.projectId.name : "Proyecto";
 
   const postTypeDisplay = getPostTypeDisplay(post.postType);
 
@@ -144,11 +139,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onEdit, onDelete, onAp
               icon: faLayerGroup,
               text: projectName,
               variant: "gray",
-            },
-            second: {
-              icon: faBullhorn,
-              text: campaignName,
-              variant: "blue",
             },
           },
         }),

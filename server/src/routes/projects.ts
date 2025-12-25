@@ -2,7 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
-import { Campaign } from "../models/Campaign.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -33,6 +32,7 @@ const createProjectSchema = z.object({
     }),
   objectives: z.array(z.string()).default([]),
   targetAudience: z.string().optional(),
+  assignedUsers: z.array(z.string()).optional(),
 });
 
 // GET /projects
@@ -323,87 +323,6 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
   } catch (error) {
     console.error("Delete project error:", error);
     res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// GET /projects/:projectId/campaigns
-router.get("/projects/:projectId/campaigns", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const { projectId } = req.params;
-    const filter: any = {
-      _id: projectId,
-      tenantId: req.tenantObjectId,
-    };
-
-    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
-    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
-
-    if (!isAdmin) {
-      filter.assignedUsers = req.user!.userId;
-    }
-
-    const project = await Project.findOne(filter);
-
-    if (!project) {
-      res.status(404).json({ error: "Project not found" });
-      return;
-    }
-
-    const campaigns = await Campaign.find({
-      projectId: project._id,
-      tenantId: req.tenantObjectId,
-    }).sort({ createdAt: -1 });
-
-    res.json(campaigns);
-  } catch (error) {
-    console.error("Get project campaigns error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// POST /projects/:projectId/campaigns
-router.post("/projects/:projectId/campaigns", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const { projectId } = req.params;
-
-    let projectObjectId: Types.ObjectId;
-    try {
-      projectObjectId = new Types.ObjectId(projectId);
-    } catch {
-      return res.status(400).json({ error: "projectId inválido" });
-    }
-
-    const project = await Project.findOne({
-      _id: projectObjectId,
-      tenantId: req.tenantObjectId,
-    });
-
-    if (!project) {
-      res.status(404).json({ error: "Project not found" });
-      return;
-    }
-
-    const campaignData = {
-      ...req.body,
-      tenantId: req.tenantObjectId,
-      clientId: project.clientId,
-      projectId: project._id,
-      createdBy: req.user!.userId,
-      assignedUsers: [req.user!.userId],
-      status: req.body.status || "draft",
-      objectives: req.body.objectives || [],
-      platforms: req.body.platforms || [],
-      kpis: req.body.kpis || [],
-    };
-
-    const campaign = new Campaign(campaignData);
-    await campaign.save();
-
-    res.status(201).json(campaign);
-  } catch (error: any) {
-    console.error("Create project campaign error:", error);
-    const message = error?.message || "Internal server error";
-    res.status(500).json({ error: message });
   }
 });
 

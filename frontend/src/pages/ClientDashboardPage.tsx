@@ -13,14 +13,14 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 const HELP_KEY = "clientDashboard" as const;
 
 interface DashboardStats {
-  activeCampaigns: number;
+  activeProjects: number;
   pendingApprovals: number;
   scheduledPosts: number;
 }
 
 interface Activity {
   _id: string;
-  type: "post" | "campaign";
+  type: "post" | "project";
   title: string;
   status?: string;
   updatedAt: string;
@@ -32,7 +32,7 @@ export const ClientDashboardPage: React.FC = () => {
   const { selectedClient } = useClientContextStore();
 
   const [stats, setStats] = useState<DashboardStats>({
-    activeCampaigns: 0,
+    activeProjects: 0,
     pendingApprovals: 0,
     scheduledPosts: 0,
   });
@@ -52,8 +52,8 @@ export const ClientDashboardPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Fetch campaigns
-      const campaignsResponse = await fetch(`${import.meta.env.VITE_API_URL}/campaigns`, {
+      // Fetch projects
+      const projectsResponse = await fetch(`${import.meta.env.VITE_API_URL}/projects`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "X-Tenant-Id": tenantId,
@@ -68,17 +68,17 @@ export const ClientDashboardPage: React.FC = () => {
         },
       });
 
-      if (campaignsResponse.ok && postsResponse.ok) {
-        const campaigns = await campaignsResponse.json();
+      if (projectsResponse.ok && postsResponse.ok) {
+        const projects = await projectsResponse.json();
         const posts = await postsResponse.json();
 
         // Calculate stats
-        const activeCampaigns = campaigns.filter((c: any) => c.status === "active").length;
+        const activeProjects = projects.filter((p: any) => p.status === "active").length;
         const pendingApprovals = posts.filter((p: any) => p.status === "pending_approval" || p.status === "in_review").length;
         const scheduledPosts = posts.filter((p: any) => p.scheduling?.isScheduled && new Date(p.scheduling.publishAt) > new Date()).length;
 
         setStats({
-          activeCampaigns,
+          activeProjects,
           pendingApprovals,
           scheduledPosts,
         });
@@ -92,12 +92,12 @@ export const ClientDashboardPage: React.FC = () => {
             status: p.status,
             updatedAt: p.updatedAt,
           })),
-          ...campaigns.map((c: any) => ({
-            _id: c._id,
-            type: "campaign" as const,
-            title: c.name,
-            status: c.status,
-            updatedAt: c.updatedAt,
+          ...projects.map((p: any) => ({
+            _id: p._id,
+            type: "project" as const,
+            title: p.name,
+            status: p.status,
+            updatedAt: p.updatedAt,
           })),
         ];
 
@@ -117,7 +117,7 @@ export const ClientDashboardPage: React.FC = () => {
     switch (type) {
       case "post":
         return faImage;
-      case "campaign":
+      case "project":
         return faBullhorn;
 
       default:
@@ -129,7 +129,7 @@ export const ClientDashboardPage: React.FC = () => {
     switch (type) {
       case "post":
         return "text-blue-600 dark:text-blue-400";
-      case "campaign":
+      case "project":
         return "text-blue-600 dark:text-blue-400";
 
       default:
@@ -168,14 +168,14 @@ export const ClientDashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card
             header={{
-              title: "Campañas Activas",
+              title: "Proyectos Activos",
               icon: faBullhorn,
               badges: [],
             }}
-            onClick={() => navigate("/client/campañas")}
+            onClick={() => navigate("/client/proyectos")}
           >
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeCampaigns}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeProjects}</p>
               <p className="text-sm text-gray-500 dark:text-gray-500">En ejecución</p>
             </div>
           </Card>
@@ -218,9 +218,9 @@ export const ClientDashboardPage: React.FC = () => {
               <span className="font-medium">Ver Aprobaciones</span>
             </button>
 
-            <button onClick={() => navigate("/client/campañas")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100/20 dark:hover:bg-blue-900/30 transition-colors">
+            <button onClick={() => navigate("/client/proyectos")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100/20 dark:hover:bg-blue-900/30 transition-colors">
               <FontAwesomeIcon icon={faBullhorn} className="h-5 w-5" />
-              <span className="font-medium">Ver Campañas</span>
+              <span className="font-medium">Ver Proyectos</span>
             </button>
           </div>
         </div>

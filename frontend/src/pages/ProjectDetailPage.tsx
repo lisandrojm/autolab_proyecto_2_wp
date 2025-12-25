@@ -1,18 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
+import { usersAPI, User } from "../api/users";
 import { useAuthStore } from "../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
-import { emitCampaignsChanged } from "../utils/navbarEvents";
 
 import { PageLayout } from "../components/ui/PageLayout";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup, faBullseye, faBullhorn, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faBullseye, faEdit, faUsers, faInfoCircle, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -28,71 +27,24 @@ const getClientIdFromProject = (p: any): string | undefined => {
   return undefined;
 };
 
-interface Campaign {
-  _id: string;
-  name: string;
-  description?: string;
-  status: "draft" | "active" | "paused" | "completed" | "cancelled";
-  budget: { total: number; allocated: number; spent: number };
-  timeline: { startDate: string; endDate: string };
-  platforms: string[];
-  objectives?: string[];
-  targetAudience?: string;
-  kpis?: { name: string; target: number; current: number; unit: string }[];
-  createdAt: string;
-}
-
-type ModalMode = "editProject" | "createCampaign" | "editCampaign" | null;
-
-const statusText = (status: string) => {
-  switch (status) {
-    case "active":
-      return "Activa";
-    case "completed":
-      return "Completada";
-    case "paused":
-      return "Pausada";
-    case "cancelled":
-      return "Cancelada";
-    case "draft":
-      return "Borrador";
-    default:
-      return status;
-  }
-};
-
-const calcDuration = (startDate?: string, endDate?: string) => {
-  if (!startDate || !endDate) return "—";
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  return `${diffDays} días`;
-};
+type ModalMode = "editProject" | "assignUser" | null;
 
 /* -------------------------------- Component -------------------------------- */
 
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { token, tenantId } = useAuthStore();
+  const { token } = useAuthStore();
 
   // data
   const [project, setProject] = useState<Project | null>(null);
   const [client, setClient] = useState<Client | null>(null);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   const [loading, setLoading] = useState(true);
 
-  // search + date filter (Campañas)
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState(""); // YYYY-MM-DD
-  const [endDate, setEndDate] = useState(""); // YYYY-MM-DD
-
   // info modal (ⓘ)
   const [openInfo, setOpenInfo] = useState(false);
-
-  // project details modal
-  const [showProjectDetails, setShowProjectDetails] = useState(false);
 
   const helpEntry = getHelp(HELP_KEY);
 
@@ -111,20 +63,7 @@ export const ProjectDetailPage: React.FC = () => {
     targetAudience: "",
   });
 
-  const [campaignForm, setCampaignForm] = useState({
-    _id: "" as string | "",
-    name: "",
-    description: "",
-    objectives: [""],
-    targetAudience: "",
-    status: "draft" as Campaign["status"],
-    budget: { total: 0, allocated: 0, spent: 0 },
-    timeline: {
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    },
-    platforms: [] as string[],
-  });
+  const [selectedUserId, setSelectedUserId] = useState("");
 
   /* ------------------------------ Fetchers ------------------------------- */
 
@@ -139,76 +78,57 @@ export const ProjectDetailPage: React.FC = () => {
   };
 
   const fetchProject = async () => {
-    const data = await projectsAPI.getProject(projectId!);
-    setProject(data);
-    setProjectForm({
-      name: data.name,
-      description: data.description || "",
-      status: data.status || "active",
-      startDate: data.startDate ? data.startDate.split("T")[0] : "",
-      endDate: data.endDate ? data.endDate.split("T")[0] : "",
-      objectives: data.objectives?.length ? data.objectives : [""],
-      targetAudience: data.targetAudience || "",
-    });
+    try {
+      const data = await projectsAPI.getProject(projectId!);
+      setProject(data);
+      setProjectForm({
+        name: data.name,
+        description: data.description || "",
+        status: data.status || "active",
+        startDate: data.startDate ? data.startDate.split("T")[0] : "",
+        endDate: data.endDate ? data.endDate.split("T")[0] : "",
+        objectives: data.objectives?.length ? data.objectives : [""],
+        targetAudience: data.targetAudience || "",
+      });
 
-    // si viene populado, evitamos otra request
-    if (data && typeof (data as any).client === "object") {
-      setClient((data as any).client);
-    } else if (data && typeof (data as any).clientId === "object") {
-      setClient((data as any).clientId);
-    }
+      // si viene populado, evitamos otra request
+      if (data && typeof (data as any).client === "object") {
+        setClient((data as any).client);
+      } else if (data && typeof (data as any).clientId === "object") {
+        setClient((data as any).clientId);
+      }
 
-    // resolvemos el id string para llamadas adicionales
-    const clientIdStr = getClientIdFromProject(data);
-    if (clientIdStr) {
-      if (!client) await fetchClientById(clientIdStr);
+      // resolvemos el id string para llamadas adicionales
+      const clientIdStr = getClientIdFromProject(data);
+      if (clientIdStr) {
+        if (!client) await fetchClientById(clientIdStr);
+      }
+    } catch (error) {
+      console.error("Error fetching project:", error);
     }
   };
 
-  const fetchCampaigns = async () => {
-    const data = await projectsAPI.getProjectCampaigns(projectId!);
-    setCampaigns(data);
+  const fetchUsers = async () => {
+    try {
+      const { users } = await usersAPI.list({ limit: 1000 });
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
   };
 
   /* ------------------------------- Effects ------------------------------- */
 
   useEffect(() => {
-    if (!projectId || !token) return; // evita 401 mientras se hidrata auth
+    if (!projectId || !token) return;
     (async () => {
       try {
-        await Promise.all([fetchProject(), fetchCampaigns()]);
+        await Promise.all([fetchProject(), fetchUsers()]);
       } finally {
         setLoading(false);
       }
     })();
   }, [projectId, token]);
-
-  /* ------------------------------ Derived UI ----------------------------- */
-
-  const filteredCampaigns = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    const hasDates = !!startDate || !!endDate;
-    const startTs = startDate ? new Date(startDate).getTime() : null;
-    const endTs = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : null;
-
-    return campaigns.filter((c) => {
-      // texto
-      const textOk = !q || c.name.toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q);
-
-      // fecha (por createdAt)
-      let dateOk = true;
-      if (hasDates) {
-        const t = c.createdAt ? new Date(c.createdAt).getTime() : NaN;
-        if (Number.isNaN(t)) return false;
-        if (startTs !== null) dateOk = dateOk && t >= startTs;
-        if (endTs !== null) dateOk = dateOk && t <= endTs;
-      }
-
-      return textOk && dateOk;
-    });
-  }, [campaigns, searchTerm, startDate, endDate]);
-
-  const hasActiveDate = !!startDate || !!endDate;
 
   /* ------------------------------- Actions -------------------------------- */
 
@@ -218,53 +138,9 @@ export const ProjectDetailPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const openProjectDetails = () => {
-    setShowProjectDetails(true);
-  };
-
-  const closeProjectDetails = () => {
-    setShowProjectDetails(false);
-  };
-
-  const openCreateCampaign = () => {
-    setCampaignForm({
-      _id: "",
-      name: "",
-      description: "",
-      objectives: [""],
-      targetAudience: "",
-      status: "draft",
-      budget: { total: 0, allocated: 0, spent: 0 },
-      timeline: {
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      },
-      platforms: [],
-    });
-    setModalMode("createCampaign");
-    setShowModal(true);
-  };
-
-  const openEditCampaign = (c: Campaign) => {
-    setCampaignForm({
-      _id: c._id,
-      name: c.name,
-      description: c.description || "",
-      objectives: c.objectives?.length ? c.objectives : [""],
-      targetAudience: c.targetAudience || "",
-      status: c.status,
-      budget: {
-        total: c.budget?.total ?? 0,
-        allocated: c.budget?.allocated ?? 0,
-        spent: c.budget?.spent ?? 0,
-      },
-      timeline: {
-        startDate: new Date(c.timeline.startDate).toISOString().split("T")[0],
-        endDate: new Date(c.timeline.endDate).toISOString().split("T")[0],
-      },
-      platforms: c.platforms || [],
-    });
-    setModalMode("editCampaign");
+  const openAssignUser = () => {
+    setModalMode("assignUser");
+    setSelectedUserId("");
     setShowModal(true);
   };
 
@@ -273,27 +149,20 @@ export const ProjectDetailPage: React.FC = () => {
     setModalMode(null);
   };
 
-  const handleDeleteCampaign = async (campaignId: string) => {
-    const result = await sweetAlert.confirm("¿Eliminar campaña?", "Esta acción no se puede deshacer.");
+  const handleUnassignUser = async (userId: string) => {
+    if (!project) return;
+    const result = await sweetAlert.confirm("¿Retirar del proyecto?", "¿Estás seguro de que quieres quitar a esta persona del proyecto?");
     if (!result.isConfirmed) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/campaigns/${campaignId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}`, "X-Tenant-Id": tenantId },
-      });
+      const newAssigned = (project as any).assignedUsers.map((u: any) => u._id).filter((id: string) => id !== userId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "No se pudo eliminar la campaña");
-      }
-
-      sweetAlert.success("Campaña eliminada", "La campaña fue eliminada correctamente");
-      emitCampaignsChanged("delete", campaignId);
-      fetchCampaigns();
-    } catch (error: any) {
-      console.error("Error deleting campaign:", error);
-      sweetAlert.error("Error", error?.message || "No se pudo eliminar la campaña");
+      await projectsAPI.updateProject(project._id, { assignedUsers: newAssigned });
+      sweetAlert.success("Persona retirada", "El equipo ha sido actualizado");
+      fetchProject();
+    } catch (error) {
+      console.error("Error unassigning user:", error);
+      sweetAlert.error("Error", "No se pudo retirar a la persona");
     }
   };
 
@@ -312,80 +181,34 @@ export const ProjectDetailPage: React.FC = () => {
       await projectsAPI.updateProject(project._id, payload);
       sweetAlert.success("Proyecto actualizado", "Los cambios se han guardado correctamente");
       closeModal();
-      await fetchProject(); // refresca también cliente y briefs
+      await fetchProject();
     } catch (error) {
       console.error("Error updating project:", error);
       sweetAlert.error("Error", "No se pudo actualizar el proyecto");
     }
   };
 
-  const submitCreateCampaign = async (e: React.FormEvent) => {
+  const submitAssignUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!project || !selectedUserId) return;
+
     try {
-      const clientIdResolved = getClientIdFromProject(project || {});
-      // ⚠️ armamos payload whitelisted (sin _id ni campos vacíos)
-      const payload = {
-        name: campaignForm.name.trim(),
-        description: campaignForm.description?.trim() || undefined,
-        objectives: campaignForm.objectives.map((o) => o.trim()).filter(Boolean),
-        targetAudience: campaignForm.targetAudience.trim(),
-        status: campaignForm.status || "draft",
-        // timeline en ISO
-        timeline: {
-          startDate: new Date(campaignForm.timeline.startDate).toISOString(),
-          endDate: new Date(campaignForm.timeline.endDate).toISOString(),
-        },
-        budget: {
-          total: Number(campaignForm.budget.total) || 0,
-          allocated: Number(campaignForm.budget.allocated) || 0,
-          spent: Number(campaignForm.budget.spent) || 0,
-        },
-        platforms: Array.isArray(campaignForm.platforms) ? campaignForm.platforms : [],
-        projectId,
-        ...(clientIdResolved ? { clientId: clientIdResolved } : {}),
-      };
+      const currentIds = (project as any).assignedUsers.map((u: any) => u._id);
+      if (currentIds.includes(selectedUserId)) {
+        sweetAlert.warning("Ya asignado", "Esta persona ya forma parte del proyecto");
+        return;
+      }
 
-      await projectsAPI.createProjectCampaign(projectId!, payload);
-      sweetAlert.success("Campaña creada", "La campaña se ha creado correctamente");
-      closeModal();
-      await Promise.all([fetchCampaigns(), fetchProject()]);
-    } catch (error: any) {
-      console.error("Error creating campaign:", error);
-      const msg = error?.response?.data?.error || error?.response?.data?.message || error?.message || "No se pudo crear la campaña";
-      sweetAlert.error("Error", msg);
-    }
-  };
-
-  const submitEditCampaign = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const data = {
-        ...campaignForm,
-        objectives: campaignForm.objectives.filter((o) => o.trim()),
-        timeline: {
-          startDate: new Date(campaignForm.timeline.startDate).toISOString(),
-          endDate: new Date(campaignForm.timeline.endDate).toISOString(),
-        },
-      };
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/campaigns/${campaignForm._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          "X-Tenant-Id": tenantId,
-        },
-        body: JSON.stringify(data),
+      await projectsAPI.updateProject(project._id, {
+        assignedUsers: [...currentIds, selectedUserId],
       });
 
-      if (!response.ok) throw new Error("Error al actualizar campaña");
-
-      sweetAlert.success("Campaña actualizada", "Los cambios se han guardado correctamente");
+      sweetAlert.success("Persona asignada", "El perfil se ha añadido al proyecto");
       closeModal();
-      fetchCampaigns();
+      fetchProject();
     } catch (error) {
-      console.error("Error updating campaign:", error);
-      sweetAlert.error("Error", "No se pudo actualizar la campaña");
+      console.error("Error assigning user:", error);
+      sweetAlert.error("Error", "No se pudo asignar a la persona");
     }
   };
 
@@ -398,7 +221,7 @@ export const ProjectDetailPage: React.FC = () => {
         title="Proyecto no válido"
         description="Parece que el enlace no es correcto."
         action={{
-          label: "Volver a Clientes",
+          label: "Volver a Proyectos",
           onClick: () => navigate("/clients"),
         }}
       />
@@ -414,21 +237,23 @@ export const ProjectDetailPage: React.FC = () => {
         title="Proyecto no encontrado"
         description="No pudimos encontrar el proyecto solicitado."
         action={{
-          label: "Volver a Clientes",
+          label: "Volver a Proyectos",
           onClick: () => navigate("/clients"),
         }}
       />
     );
   }
 
-  const modalTitle = modalMode === "editProject" ? "Editar Proyecto" : modalMode === "editCampaign" ? "Editar Campaña" : "Nueva Campaña";
-  const modalPrimary = modalMode === "editProject" ? "Actualizar" : modalMode === "editCampaign" ? "Actualizar" : "Crear";
-  const modalSubtitle = modalMode === "editProject" ? "Actualiza los datos del proyecto" : modalMode === "editCampaign" ? "Modifica los datos de la campaña" : "Completa los datos para crear la campaña";
+  const modalTitle = modalMode === "editProject" ? "Editar Proyecto" : "Asignar Persona";
+  const modalPrimary = modalMode === "editProject" ? "Actualizar" : "Asignar";
+  const modalSubtitle = modalMode === "editProject" ? "Actualiza los datos del proyecto" : "Selecciona una persona para sumar al proyecto";
 
   const handleModalPrimary = () => {
     const form = document.querySelector<HTMLFormElement>("#pd-modal-form");
     form?.requestSubmit();
   };
+
+  const assignedUsers = (project as any).assignedUsers || [];
 
   return (
     <PageLayout
@@ -455,40 +280,11 @@ export const ProjectDetailPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={openProjectDetails} className="btn-secondary flex items-center justify-center text-sm px-3 gap-2">
-            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
-          </button>
           <button onClick={openEditProject} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
             <FontAwesomeIcon icon={faEdit} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="hidden sm:inline">Editar</span>
           </button>
         </div>
-      }
-      preSearchContent={null}
-      faIconSecondary={{ icon: faBullhorn }}
-      preSearchTitle={`Campañas`}
-      preSearchActions={
-        <button onClick={openCreateCampaign} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
-          <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
-        </button>
-      }
-      searchAndFilters={
-        campaigns.length > 0 ? (
-          <>
-            {/*             <div className="hidden md:block text-xs text-gray-500 dark:text-gray-500 mb-2">Campañas: {filteredCampaigns.length}</div> */}
-            <SearchAndFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              searchPlaceholder="Buscar campañas del proyecto..."
-              filters={[]}
-              dateFilter={{
-                startDate,
-                endDate,
-                onStartDateChange: setStartDate,
-                onEndDateChange: setEndDate,
-              }}
-            />
-          </>
-        ) : undefined
       }
       modal={{
         isOpen: showModal,
@@ -501,7 +297,7 @@ export const ProjectDetailPage: React.FC = () => {
           { label: "Cancelar", onClick: closeModal, variant: "ghost" as const },
         ],
         content: (
-          <form id="pd-modal-form" onSubmit={modalMode === "editProject" ? submitEditProject : modalMode === "createCampaign" ? submitCreateCampaign : submitEditCampaign}>
+          <form id="pd-modal-form" onSubmit={modalMode === "editProject" ? submitEditProject : submitAssignUser}>
             {modalMode === "editProject" && (
               <div className="space-y-6">
                 <div>
@@ -582,9 +378,7 @@ export const ProjectDetailPage: React.FC = () => {
                       }
                       className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${projectForm.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400"}`}
                     >
-                      <svg data-prefix="fas" data-icon={projectForm.status === "active" ? "toggle-on" : "toggle-off"} className="svg-inline--fa mr-1 h-4 w-4" role="img" viewBox="0 0 576 512" aria-hidden="true">
-                        <path fill="currentColor" d={projectForm.status === "active" ? "M192 64C86 64 0 150 0 256S86 448 192 448l192 0c106 0 192-86 192-192S490 64 384 64L192 64zm192 96a96 96 0 1 1 0 192 96 96 0 1 1 0-192z" : "M384 64l-192 0C86 64 0 150 0 256s86 192 192 192l192 0c106 0 192-86 192-192S490 64 384 64M192 352a96 96 0 1 1 0-192 96 96 0 1 1 0 192z"}></path>
-                      </svg>
+                      <FontAwesomeIcon icon={projectForm.status === "active" ? faLayerGroup : faLayerGroup} className="mr-2 h-4 w-4" />
                       {projectForm.status === "active" ? "Activo" : "En Espera"}
                     </button>
                   </div>
@@ -592,98 +386,21 @@ export const ProjectDetailPage: React.FC = () => {
               </div>
             )}
 
-            {(modalMode === "createCampaign" || modalMode === "editCampaign") && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Columna izquierda */}
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre de la Campaña *</label>
-                    <input type="text" required value={campaignForm.name} onChange={(e) => setCampaignForm((p) => ({ ...p, name: e.target.value }))} className="input-field" placeholder="Ej: Campaña Black Friday 2024" />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
-                    <textarea value={campaignForm.description} onChange={(e) => setCampaignForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción de la campaña..." />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Timeline *</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Inicio</label>
-                        <input type="date" required value={campaignForm.timeline.startDate} onChange={(e) => setCampaignForm((p) => ({ ...p, timeline: { ...p.timeline, startDate: e.target.value } }))} className="input-field" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Fin</label>
-                        <input type="date" required value={campaignForm.timeline.endDate} onChange={(e) => setCampaignForm((p) => ({ ...p, timeline: { ...p.timeline, endDate: e.target.value } }))} className="input-field" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Columna derecha */}
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Objetivos</label>
-                    <div className="space-y-2">
-                      {campaignForm.objectives.map((o, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={o}
-                            onChange={(e) =>
-                              setCampaignForm((p) => ({
-                                ...p,
-                                objectives: p.objectives.map((x, idx) => (idx === i ? e.target.value : x)),
-                              }))
-                            }
-                            className="input-field flex-1"
-                            placeholder="Ej: Aumentar awareness de marca"
-                          />
-                          {campaignForm.objectives.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setCampaignForm((p) => ({
-                                  ...p,
-                                  objectives: p.objectives.filter((_, idx) => idx !== i),
-                                }))
-                              }
-                              className="px-2 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
+            {modalMode === "assignUser" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Seleccionar Persona</label>
+                  <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="input-field" required>
+                    <option value="">Selecciona un usuario...</option>
+                    {allUsers
+                      .filter((u) => !assignedUsers.some((au: any) => au._id === u._id))
+                      .map((u) => (
+                        <option key={u._id} value={u._id}>
+                          {u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}
+                        </option>
                       ))}
-                      <button type="button" onClick={() => setCampaignForm((p) => ({ ...p, objectives: [...p.objectives, ""] }))} className="text-primary-600 dark:text-primary-400 text-sm hover:text-primary-700 dark:hover:text-primary-300">
-                        + Agregar objetivo
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Audiencia objetivo *</label>
-                    <textarea required value={campaignForm.targetAudience} onChange={(e) => setCampaignForm((p) => ({ ...p, targetAudience: e.target.value }))} rows={2} className="input-field resize-none" placeholder="Describe el público objetivo..." />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Presupuesto (USD)</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Total</label>
-                        <input type="number" min="0" step="100" value={campaignForm.budget.total} onChange={(e) => setCampaignForm((p) => ({ ...p, budget: { ...p.budget, total: Number(e.target.value) } }))} className="input-field" placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Asignado</label>
-                        <input type="number" min="0" step="100" value={campaignForm.budget.allocated} onChange={(e) => setCampaignForm((p) => ({ ...p, budget: { ...p.budget, allocated: Number(e.target.value) } }))} className="input-field" placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Gastado</label>
-                        <input type="number" min="0" step="100" value={campaignForm.budget.spent} onChange={(e) => setCampaignForm((p) => ({ ...p, budget: { ...p.budget, spent: Number(e.target.value) } }))} className="input-field" placeholder="0" />
-                      </div>
-                    </div>
-                  </div>
+                  </select>
+                  <p className="mt-2 text-xs text-gray-500">Solo aparecen personas que aún no están en el proyecto.</p>
                 </div>
               </div>
             )}
@@ -691,175 +408,101 @@ export const ProjectDetailPage: React.FC = () => {
         ),
       }}
     >
-      {/* --------------------------- Campaigns Grid --------------------------- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4mt-2 mt-3">
-        {/* Nueva Campaña */}
-
-        {filteredCampaigns.map((c) => (
-          <Card
-            key={c._id}
-            onClick={() => navigate(`/projects/${projectId}/campaigns/${c._id}`)}
-            className="hover:scale-[1.01] hover:shadow-lg transition-all duration-200"
-            header={{
-              title: `Campaña | ${c.name}`,
-              subtitle: c.description,
-              icon: faBullhorn,
-              badges: [],
-            }}
-            footer={{
-              leftContent: (
-                <div className="space-y-1">
-                  <div className="text-xs text-gray-500 dark:text-gray-500">{new Date(c.createdAt).toLocaleDateString()}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500">
-                    {c.platforms.length} plataforma{c.platforms.length !== 1 ? "s" : ""}
-                  </div>
-                </div>
-              ),
-              actions: [
-                {
-                  icon: faEdit,
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    openEditCampaign(c);
-                  },
-                  title: "Editar campaña",
-                  variant: "default" as const,
-                },
-                {
-                  icon: faTrash,
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    handleDeleteCampaign(c._id);
-                  },
-                  title: "Eliminar campaña",
-                  variant: "default" as const,
-                },
-              ],
-            }}
-          >
-            <div className="space-y-2">
-              {!!c.objectives?.length && (
-                <div className="text-xs text-gray-500 dark:text-gray-500">
-                  {c.objectives.length} objetivo{c.objectives.length !== 1 ? "s" : ""}
-                </div>
-              )}
-              {/*               <div className="text-xs text-gray-500 dark:text-gray-500">Presupuesto: USD{(c.budget?.total ?? 0).toLocaleString()}</div> */}
-              <div className="text-xs text-gray-500 dark:text-gray-500">Duración: {calcDuration(c.timeline?.startDate, c.timeline?.endDate)}</div>
-            </div>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+        {/* Card 1: Información del Proyecto */}
         <Card
-          variant="create"
-          onClick={openCreateCampaign}
           header={{
-            title: "Nueva Campaña",
-            subtitle: "Crear una nueva campaña para este proyecto",
-            icon: faPlus,
+            title: "Información del Proyecto",
+            subtitle: "Objetivos y detalles estratégicos",
+            icon: faInfoCircle,
           }}
-        />
-      </div>
+        >
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Descripción</h4>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{project.description || "Sin descripción proporcionada."}</p>
+            </div>
 
-      {/* Empty states */}
-      {campaigns.length === 0 && <EmptyState icon={faBullhorn} title="No hay campañas" description='Usa la card "Nueva Campaña" para crear tu primera campaña.' action={{ label: "Nueva Campaña", onClick: openCreateCampaign, icon: faPlus }} />}
-
-      {campaigns.length > 0 && filteredCampaigns.length === 0 && <EmptyState icon={faBullhorn} title={hasActiveDate ? "Sin campañas en este rango" : "Sin coincidencias"} description={hasActiveDate ? `No se encontraron campañas ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Ajustá el texto de búsqueda para ver resultados."} />}
-
-      {/* Project Details Modal */}
-      {showProjectDetails && (
-        <div className="fixed inset-0 overflow-y-auto" style={{ zIndex: 60 }}>
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 h-vh" onClick={closeProjectDetails} />
-            <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 z-10">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalle del Proyecto</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Información completa de {project.name}</p>
-                </div>
-                <button onClick={closeProjectDetails} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar">
-                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+            {project.objectives && project.objectives.length > 0 && (
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Objetivos</h4>
+                <ul className="space-y-2">
+                  {project.objectives.map((obj, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <FontAwesomeIcon icon={faBullseye} className="text-primary-500 mt-1 h-3 w-3" />
+                      {obj}
+                    </li>
+                  ))}
+                </ul>
               </div>
+            )}
 
-              {/* Content */}
-              <div className="p-6 space-y-6">
-                {/* Objetivos / Público */}
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon icon={faBullseye} className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Objetivos / Público</h3>
-                  </div>
-                  {project.objectives?.length ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Objetivos</label>
-                        <ul className="mt-2 space-y-2">
-                          {project.objectives?.map((o, i) => (
-                            <li key={i} className="text-sm text-gray-900 dark:text-white flex items-start">
-                              <span className="w-1.5 h-1.5 bg-primary-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                              {o}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      {project.targetAudience && (
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Audiencia</label>
-                          <p className="text-sm text-gray-900 dark:text-white mt-2 leading-relaxed">{project.targetAudience}</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-500">No hay objetivos definidos</p>
-                  )}
-                </div>
-
-                {/* Estadísticas */}
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Estadísticas</h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{campaigns.length}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Campañas</p>
-                    </div>
-
-                    <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(project.createdAt).toLocaleDateString()}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Creado</p>
-                    </div>
-                  </div>
-                </div>
+            {project.targetAudience && (
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Público Objetivo</h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{project.targetAudience}</p>
               </div>
+            )}
 
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0">
-                <button onClick={closeProjectDetails} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-                  Cerrar
-                </button>
-                <button
-                  onClick={() => {
-                    closeProjectDetails();
-                    openEditProject();
-                  }}
-                  className="btn-primary flex items-center gap-2 text-sm px-4 py-2"
-                >
-                  <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                  Editar Proyecto
-                </button>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Fecha Inicio</h4>
+                <p className="text-sm text-gray-900 dark:text-white">{project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"}</p>
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Fecha Fin</h4>
+                <p className="text-sm text-gray-900 dark:text-white">{project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}</p>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </Card>
+
+        {/* Card 2: Personas Asignadas */}
+        <Card
+          header={{
+            title: "Equipo del Proyecto",
+            subtitle: `${assignedUsers.length} personas asignadas`,
+            icon: faUsers,
+            actions: [
+              {
+                icon: faUserPlus,
+                onClick: openAssignUser,
+                title: "Asignar Persona",
+                variant: "blue",
+              },
+            ],
+          }}
+        >
+          {assignedUsers.length > 0 ? (
+            <div className="space-y-4">
+              {assignedUsers.map((u: any) => (
+                <div key={u._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">{u.firstName?.charAt(0) || u.email?.charAt(0).toUpperCase()}</div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => handleUnassignUser(u._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Quitar del proyecto">
+                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FontAwesomeIcon icon={faUsers} className="text-gray-400 h-8 w-8" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No hay personas asignadas a este proyecto.</p>
+              <button onClick={openAssignUser} className="mt-4 text-sm text-primary-600 dark:text-primary-400 font-semibold hover:underline">
+                + Asignar la primera persona
+              </button>
+            </div>
+          )}
+        </Card>
+      </div>
     </PageLayout>
   );
 };

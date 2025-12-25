@@ -6,21 +6,7 @@ export type ContentFormat = "post" | "reel" | "story" | "video" | "short" | "art
 
 export type Platform = "facebook" | "instagram" | "twitter" | "linkedin" | "tiktok" | "youtube";
 
-export type SocialChannel =
-  | "instagram_post"
-  | "instagram_reel"
-  | "instagram_story"
-  | "facebook_post"
-  | "facebook_reel"
-  | "facebook_story"
-  | "linkedin_post"
-  | "linkedin_article"
-  | "tiktok_post"
-  | "tiktok_story"
-  | "youtube_short"
-  | "youtube_video"
-  | "twitter_post"
-  | "twitter_thread";
+export type SocialChannel = "instagram_post" | "instagram_reel" | "instagram_story" | "facebook_post" | "facebook_reel" | "facebook_story" | "linkedin_post" | "linkedin_article" | "tiktok_post" | "tiktok_story" | "youtube_short" | "youtube_video" | "twitter_post" | "twitter_thread";
 
 export type Channel = SocialChannel | "email" | "push_notification";
 
@@ -56,7 +42,7 @@ export type ChannelConfig = EmailConfig | PushConfig | Record<string, any>;
 
 export interface IPost extends Document {
   tenantId: Types.ObjectId;
-  campaignId: Types.ObjectId;
+  projectId: Types.ObjectId;
   clientId: Types.ObjectId;
   title: string;
   postType: PostType;
@@ -97,7 +83,7 @@ const postSchema = new Schema<IPost>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
 
-    campaignId: { type: Schema.Types.ObjectId, ref: "Campaign", required: true, index: true },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true, index: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", required: true, index: true },
 
     title: { type: String, required: false, trim: true, default: "" },
@@ -119,48 +105,14 @@ const postSchema = new Schema<IPost>(
 
     channel: {
       type: String,
-      enum: [
-        "instagram_post",
-        "instagram_reel",
-        "instagram_story",
-        "facebook_post",
-        "facebook_reel",
-        "facebook_story",
-        "linkedin_post",
-        "linkedin_article",
-        "tiktok_post",
-        "tiktok_story",
-        "youtube_short",
-        "youtube_video",
-        "twitter_post",
-        "twitter_thread",
-        "email",
-        "push_notification",
-      ],
+      enum: ["instagram_post", "instagram_reel", "instagram_story", "facebook_post", "facebook_reel", "facebook_story", "linkedin_post", "linkedin_article", "tiktok_post", "tiktok_story", "youtube_short", "youtube_video", "twitter_post", "twitter_thread", "email", "push_notification"],
       required: false,
       index: true,
     },
 
     channels: {
       type: [String],
-      enum: [
-        "instagram_post",
-        "instagram_reel",
-        "instagram_story",
-        "facebook_post",
-        "facebook_reel",
-        "facebook_story",
-        "linkedin_post",
-        "linkedin_article",
-        "tiktok_post",
-        "tiktok_story",
-        "youtube_short",
-        "youtube_video",
-        "twitter_post",
-        "twitter_thread",
-        "email",
-        "push_notification",
-      ],
+      enum: ["instagram_post", "instagram_reel", "instagram_story", "facebook_post", "facebook_reel", "facebook_story", "linkedin_post", "linkedin_article", "tiktok_post", "tiktok_story", "youtube_short", "youtube_video", "twitter_post", "twitter_thread", "email", "push_notification"],
       default: [],
       index: true,
     },
@@ -257,6 +209,7 @@ postSchema.index({ tenantId: 1, postType: 1 });
 postSchema.index({ tenantId: 1, contentFormat: 1 });
 postSchema.index({ tenantId: 1, channel: 1 });
 postSchema.index({ tenantId: 1, clientId: 1, postType: 1 });
+postSchema.index({ tenantId: 1, projectId: 1 });
 
 postSchema.pre("save", function (next) {
   if (this.postType === "social" && this.contentFormat && this.platforms && this.platforms.length > 0) {
@@ -264,14 +217,7 @@ postSchema.pre("save", function (next) {
 
     for (const platform of this.platforms) {
       const channelKey = `${platform}_${this.contentFormat}` as Channel;
-      const validChannels = [
-        "instagram_post", "instagram_reel", "instagram_story",
-        "facebook_post", "facebook_reel", "facebook_story",
-        "linkedin_post", "linkedin_article",
-        "tiktok_post", "tiktok_story",
-        "youtube_short", "youtube_video",
-        "twitter_post", "twitter_thread"
-      ];
+      const validChannels = ["instagram_post", "instagram_reel", "instagram_story", "facebook_post", "facebook_reel", "facebook_story", "linkedin_post", "linkedin_article", "tiktok_post", "tiktok_story", "youtube_short", "youtube_video", "twitter_post", "twitter_thread"];
 
       if (validChannels.includes(channelKey)) {
         generatedChannels.push(channelKey);

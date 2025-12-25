@@ -37,7 +37,7 @@ interface Post {
     clicks: number;
     shares: number;
   };
-  campaignId: string;
+  projectId: string;
   createdAt: string;
   favorite?: boolean;
 }
@@ -359,8 +359,8 @@ export const ClientApprovalsPage: React.FC = () => {
           title="No hay posts para revisar"
           description={filterStatus === "pending" ? "No tienes posts pendientes de aprobación en este momento." : "No hay posts en el estado seleccionado."}
           action={{
-            label: "Ver Todas las Campañas",
-            onClick: () => navigate("/client/campañas"),
+            label: "Ver Todos los Proyectos",
+            onClick: () => navigate("/client/proyectos"),
           }}
         />
       )}

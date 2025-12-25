@@ -35,7 +35,6 @@ export interface ITenant extends Document {
   usage: {
     users: { current: number; limit: number };
     clients: { current: number; limit: number };
-    campaigns: { current: number; limit: number };
     storage: { usedMB: number; limitMB: number };
     apiCalls: { current: number; limit: number; resetDate: Date };
     lastUpdated: Date;
@@ -91,7 +90,7 @@ const tenantSchema = new Schema<ITenant>(
       logoUrl: { type: String, trim: true },
       firmaRRHHUrl: { type: String, trim: true },
     },
-    
+
     contact: {
       firstName: { type: String, required: true, trim: true },
       lastName: { type: String, required: true, trim: true },
@@ -100,20 +99,20 @@ const tenantSchema = new Schema<ITenant>(
       position: { type: String, trim: true },
       department: { type: String, trim: true },
     },
-    
+
     settings: {
       timezone: { type: String, default: "UTC" },
       currency: { type: String, default: "USD" },
       language: { type: String, default: "en" },
       features: [{ type: String }],
     },
-    
+
     subscription: {
       plan: { type: String, enum: ["free", "basic", "pro", "enterprise"], default: "free" },
       status: { type: String, enum: ["active", "suspended", "cancelled"], default: "active" },
       expiresAt: Date,
     },
-    
+
     usage: {
       users: {
         current: { type: Number, default: 0, min: 0 },
@@ -122,10 +121,6 @@ const tenantSchema = new Schema<ITenant>(
       clients: {
         current: { type: Number, default: 0, min: 0 },
         limit: { type: Number, default: 50, min: 1 },
-      },
-      campaigns: {
-        current: { type: Number, default: 0, min: 0 },
-        limit: { type: Number, default: 100, min: 1 },
       },
       storage: {
         usedMB: { type: Number, default: 0, min: 0 },
@@ -138,7 +133,7 @@ const tenantSchema = new Schema<ITenant>(
       },
       lastUpdated: { type: Date, default: Date.now },
     },
-    
+
     billing: {
       currentPeriod: {
         startDate: { type: Date, required: true },
@@ -163,7 +158,7 @@ const tenantSchema = new Schema<ITenant>(
       nextBillingDate: Date,
       autoRenew: { type: Boolean, default: true },
     },
-    
+
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
@@ -172,15 +167,15 @@ const tenantSchema = new Schema<ITenant>(
 // Índices para optimizar consultas
 tenantSchema.index({ slug: 1 }, { unique: true });
 tenantSchema.index({ domain: 1 });
-tenantSchema.index({ 'contact.email': 1 });
-tenantSchema.index({ 'subscription.status': 1 });
+tenantSchema.index({ "contact.email": 1 });
+tenantSchema.index({ "subscription.status": 1 });
 tenantSchema.index({ isActive: 1 });
 
-tenantSchema.post('save', async function(doc) {
+tenantSchema.post("save", async function (doc) {
   if (this.isNew) {
     try {
-      const { ensureDefaultRoles } = await import('../services/roleInitService.js');
-      const { Types } = await import('mongoose');
+      const { ensureDefaultRoles } = await import("../services/roleInitService.js");
+      const { Types } = await import("mongoose");
       const tenantId = new Types.ObjectId(doc._id as any);
       await ensureDefaultRoles(tenantId);
     } catch (error) {

@@ -20,7 +20,7 @@ interface AnalyticsData {
     clicks: number;
     spent: number;
   }[];
-  topCampaigns: {
+  topProjects: {
     id: string;
     name: string;
     impressions: number;
@@ -61,8 +61,8 @@ export const AnalyticsPage: React.FC = () => {
           { period: "2024-01-06", impressions: 21000, engagement: 1620, clicks: 410, spent: 630 },
           { period: "2024-01-07", impressions: 24930, engagement: 1758, clicks: 450, spent: 730 },
         ],
-        topCampaigns: [
-          { id: "1", name: "Campaña Verano 2024", impressions: 45000, engagement: 3200, roi: 285 },
+        topProjects: [
+          { id: "1", name: "Proyecto Verano 2024", impressions: 45000, engagement: 3200, roi: 285 },
           { id: "2", name: "Black Friday Promo", impressions: 38000, engagement: 2800, roi: 320 },
           { id: "3", name: "Lanzamiento Producto", impressions: 32000, engagement: 2100, roi: 195 },
         ],
@@ -109,7 +109,7 @@ export const AnalyticsPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t("nav.analytics")}</h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">Analiza el rendimiento de tus campañas y contenido</p>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">Analiza el rendimiento de tus proyectos y contenido</p>
               </div>
               <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
                 <option value="7d">Últimos 7 días</option>
@@ -211,24 +211,24 @@ export const AnalyticsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Top Campaigns */}
+                {/* Top Projects */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Mejores Campañas</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Mejores Proyectos</h3>
                   <div className="space-y-4">
-                    {analytics.topCampaigns.map((campaign, index) => (
-                      <div key={campaign.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    {analytics.topProjects.map((project, index) => (
+                      <div key={project.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full">
                             <span className="text-sm font-bold text-primary-600 dark:text-primary-400">{index + 1}</span>
                           </div>
                           <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white text-sm">{campaign.name}</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">{formatNumber(campaign.impressions)} impresiones</p>
+                            <h4 className="font-medium text-gray-900 dark:text-white text-sm">{project.name}</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">{formatNumber(project.impressions)} impresiones</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">ROI: {campaign.roi}%</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500">{formatNumber(campaign.engagement)} engagement</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">ROI: {project.roi}%</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">{formatNumber(project.engagement)} engagement</p>
                         </div>
                       </div>
                     ))}

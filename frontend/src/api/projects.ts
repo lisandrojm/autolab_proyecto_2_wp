@@ -35,6 +35,7 @@ export interface Project {
   createdAt: string;
   objectives?: string[];
   targetAudience?: string;
+  assignedUsers?: string[] | any[];
   updatedAt: string;
 }
 
@@ -78,6 +79,7 @@ function normalizeProject(raw: any): Project {
     createdAt: String(raw?.createdAt ?? ""),
     objectives: Array.isArray(raw?.objectives) ? raw.objectives : [],
     targetAudience: raw?.targetAudience ?? "",
+    assignedUsers: Array.isArray(raw?.assignedUsers) ? raw.assignedUsers : [],
     updatedAt: String(raw?.updatedAt ?? ""),
   };
 }
@@ -209,6 +211,7 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
+      assignedUsers?: string[];
     }
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {

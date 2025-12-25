@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Upload, X, ChevronLeft, ChevronRight, Save, Calendar, Eye, FileText, Image as ImageIcon, Maximize2, Minimize2 } from "lucide-react";
+import { Upload, X, ChevronLeft, ChevronRight, Save, Calendar, Eye, FileText, Image as ImageIcon } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHashtag, faAt, faGlobe, faCalendar, faClock, faLayerGroup, faBullhorn, faPaperPlane, faXmark, faLightbulb } from "@fortawesome/free-solid-svg-icons";
-import { faFacebook, faInstagram, faTwitter, faLinkedin, faTiktok, faYoutube } from "@fortawesome/free-brands-svg-icons";
+import { faCalendar, faClock, faLayerGroup, faPaperPlane, faXmark, faLightbulb } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../stores/authStore";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CreativeGalleryPanel } from "./CreativeGalleryPanel";
@@ -14,9 +13,8 @@ import { useAssetGallery } from "../../hooks/useAssetGallery";
 import { EmailConfigForm } from "../forms/EmailConfigForm";
 import { PushConfigForm } from "../forms/PushConfigForm";
 import { DynamicContentFields } from "../forms/DynamicContentFields";
-import { Channel, PostType, EmailConfig, PushConfig, ContentFormat, Platform, getPostTypeFromChannel, CONTENT_FORMATS } from "../../types/post";
-import { getFieldsForFormat, validateFieldValue } from "../../utils/contentFormatFields";
-import { convertLegacyToDynamic, initializeFormDataFromPost, prepareSavePayload } from "../../utils/postDataMigration";
+import { Channel, PostType, EmailConfig, PushConfig, ContentFormat, Platform, getPostTypeFromChannel } from "../../types/post";
+import { convertLegacyToDynamic } from "../../utils/postDataMigration";
 import { validateDynamicFieldsForFormat, hasRequiredDynamicFields } from "../../utils/postValidation";
 
 type PostStatus = "draft" | "pending_approval" | "approved" | "rejected" | "scheduled" | "published";
@@ -64,84 +62,31 @@ interface Project {
   description?: string;
 }
 
-interface Campaign {
-  _id: string;
-  name: string;
-  description?: string;
-  projectId: string;
-}
-
 interface PostFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: PostFormData) => void;
   initialData?: Partial<PostFormData>;
   mode: "create" | "edit";
-  campaignContext?: {
-    campaignId: string;
-    campaignName: string;
+  projectContext?: {
     projectId: string;
     projectName: string;
     clientId: string;
   };
   clientId?: string;
   availableProjects?: Project[];
-  availableCampaigns?: Campaign[];
 }
 
 type TabType = "context" | "content" | "media" | "scheduling" | "preview";
 
 const tabSequence: TabType[] = ["context", "content", "media", "scheduling", "preview"];
 
-const getTabLabel = (tab: TabType): string => {
-  switch (tab) {
-    case "context":
-      return "Contexto";
-    case "content":
-      return "Contenido";
-    case "media":
-      return "Multimedia";
-    case "scheduling":
-      return "Programación";
-    case "preview":
-      return "Vista Previa";
-  }
-};
-
-const getNextTabLabel = (currentTab: TabType): string | null => {
-  const currentIndex = tabSequence.indexOf(currentTab);
-  if (currentIndex < tabSequence.length - 1) {
-    return getTabLabel(tabSequence[currentIndex + 1]);
-  }
-  return null;
-};
-
-const getPlatformIcon = (platform: string) => {
-  switch (platform) {
-    case "facebook":
-      return faFacebook;
-    case "instagram":
-      return faInstagram;
-    case "twitter":
-      return faTwitter;
-    case "linkedin":
-      return faLinkedin;
-    case "tiktok":
-      return faTiktok;
-    case "youtube":
-      return faYoutube;
-    default:
-      return faGlobe;
-  }
-};
-
-export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, onSave, initialData, mode, campaignContext, clientId, availableProjects = [], availableCampaigns = [] }) => {
+export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, onSave, initialData, mode, projectContext, clientId, availableProjects = [] }) => {
   const { token, tenantId } = useAuthStore();
-  const needsContextSelection = !campaignContext && mode === "create";
-  const initialTab = mode === "edit" || campaignContext ? "content" : needsContextSelection ? "context" : "content";
+  const needsContextSelection = !projectContext && mode === "create";
+  const initialTab = mode === "edit" || projectContext ? "content" : needsContextSelection ? "context" : "content";
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [completedTabs, setCompletedTabs] = useState<Set<TabType>>(new Set());
-  const [galleryCollapsed, setGalleryCollapsed] = useState(false);
 
   const [formData, setFormData] = useState<PostFormData>({
     title: "",
@@ -166,17 +111,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
     dynamicFields: {},
   });
 
-  const [hashtagsInput, setHashtagsInput] = useState("");
-  const [mentionsInput, setMentionsInput] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Project and Campaign selection
-  const [projects, setProjects] = useState<any[]>([]);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [selectedCampaignId, setSelectedCampaignId] = useState("");
-  const [loadingProjects, setLoadingProjects] = useState(false);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
 
   // Image upload and gallery
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -188,26 +125,17 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
   const [isSaving, setIsSaving] = useState(false);
 
   // Asset Gallery Hook
-  const currentClientId = campaignContext?.clientId || clientId;
-  const { images: galleryImages, loading: galleryLoading, error: galleryError, total: totalAssets, newImagesCount, fetchAssets, refreshGallery, includeUserAssets, setIncludeUserAssets, pendingIncludeUserAssets, setPendingIncludeUserAssets, applyFilters, activeFilters, removeFilter, sortBy, setSortBy, sortOrder, setSortOrder } = useAssetGallery(currentClientId, selectedCampaignId);
+  const currentClientId = projectContext?.clientId || clientId;
+  const { images: galleryImages, loading: galleryLoading, total: totalAssets, pendingIncludeUserAssets, setPendingIncludeUserAssets, applyFilters, activeFilters, removeFilter } = useAssetGallery(currentClientId, selectedProjectId);
 
   useEffect(() => {
-    if (isOpen && availableProjects.length > 0) {
-      setProjects(availableProjects);
-    }
-
-    if (isOpen && availableCampaigns.length > 0) {
-      setCampaigns(availableCampaigns);
-    }
-
-    if (isOpen && !campaignContext && availableProjects.length === 0) {
+    if (isOpen && !projectContext && availableProjects.length === 0) {
       fetchProjects();
     }
 
-    if (isOpen && (campaignContext || mode === "edit")) {
-      if (campaignContext) {
-        setSelectedProjectId(campaignContext.projectId);
-        setSelectedCampaignId(campaignContext.campaignId);
+    if (isOpen && (projectContext || mode === "edit")) {
+      if (projectContext) {
+        setSelectedProjectId(projectContext.projectId);
       }
       setCompletedTabs(new Set(["context", "content", "media", "scheduling"]));
       setActiveTab("content");
@@ -252,8 +180,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
         media: initialData.media,
         dynamicFields,
       });
-      setHashtagsInput(initialData.content?.hashtags?.join(", ") || "");
-      setMentionsInput(initialData.content?.mentions?.join(", ") || "");
 
       if (initialData.media && initialData.media.length > 0 && initialData.media[0].urls) {
         setExistingImageUrls(initialData.media[0].urls);
@@ -278,14 +204,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
       setExistingImageUrls([]);
       setSelectedAssetIds([]);
       setSelectedGalleryImages([]);
-      setIsSaving(false);
     }
-  }, [initialData, isOpen, campaignContext]);
+  }, [initialData, isOpen, projectContext, availableProjects]);
 
   useEffect(() => {
-    if (selectedProjectId && !campaignContext) {
-      fetchCampaigns(selectedProjectId);
-    }
+    // Gallery is now scoped to project via useAssetGallery
   }, [selectedProjectId]);
 
   // Sync gallery images when assets are loaded in edit mode
@@ -303,10 +226,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
         setImagePreviews((prev) => [...prev, ...newPreviews]);
       }
     }
-  }, [galleryImages, galleryLoading, mode, selectedAssetIds]);
+  }, [galleryImages, galleryLoading, mode, selectedAssetIds, imagePreviews, existingImageUrls]);
 
   const fetchProjects = async () => {
-    setLoadingProjects(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/clients?limit=1000`, {
         headers: {
@@ -342,34 +264,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
             console.error("Error fetching projects for client:", client._id, e);
           }
         }
-
-        setProjects(allProjects);
       }
     } catch (error) {
       console.error("Error fetching projects:", error);
-    } finally {
-      setLoadingProjects(false);
-    }
-  };
-
-  const fetchCampaigns = async (projectId: string) => {
-    setLoadingCampaigns(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/projects/${projectId}/campaigns`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Tenant-Id": tenantId,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCampaigns(data);
-      }
-    } catch (error) {
-      console.error("Error fetching campaigns:", error);
-    } finally {
-      setLoadingCampaigns(false);
     }
   };
 
@@ -415,18 +312,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
       ...prev,
       channel,
       postType: newPostType,
-      title: "",
-      content: {
-        copy: "",
-        hashtags: [],
-        mentions: [],
-      },
-      channelConfig: newPostType === "email" ? { subject: "", body: "", recipients: [] } : newPostType === "push" ? { title: "", body: "" } : {},
-      contentFormat: undefined,
       platforms: [],
     }));
-    setHashtagsInput("");
-    setMentionsInput("");
   };
 
   const handleMultiChannelSelect = (channels: Channel[]) => {
@@ -495,7 +382,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
 
   const canContinueFromCurrentTab = (): boolean => {
     if (activeTab === "context") {
-      return !!(selectedProjectId && selectedCampaignId);
+      return !!selectedProjectId;
     }
     if (activeTab === "content") {
       if (formData.postType === "social") {
@@ -685,8 +572,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
       }
     }
 
-    if (mode === "create" && !campaignContext && !selectedCampaignId) {
-      sweetAlert.error("Error", "Debes seleccionar un proyecto y una campaña");
+    if (mode === "create" && !projectContext && !selectedProjectId) {
+      sweetAlert.error("Error", "Debes seleccionar un proyecto");
       setActiveTab("context");
       return;
     }
@@ -702,8 +589,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
       imageFiles,
       existingImageUrls,
       selectedAssetIds,
-      campaignId: campaignContext?.campaignId || selectedCampaignId,
-      clientId: campaignContext?.clientId || clientId,
+      projectId: projectContext?.projectId || selectedProjectId,
+      clientId: projectContext?.clientId || clientId,
       publishImmediately: formData.publicationType === "immediate",
     };
 
@@ -741,16 +628,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
       publicationType: "draft",
       dynamicFields: {},
     });
-    setHashtagsInput("");
-    setMentionsInput("");
     setFieldErrors({});
     setImageFiles([]);
     setImagePreviews([]);
     setSelectedGalleryImages([]);
     setSelectedAssetIds([]);
     setSelectedProjectId("");
-    setSelectedCampaignId("");
-    setCampaigns([]);
     setActiveTab(initialTab);
     setCompletedTabs(new Set());
   };
@@ -787,13 +670,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{mode === "create" ? "Crear Nueva Publicación" : "Editar publicación"}</h2>
-          {campaignContext && (
+          {projectContext && (
             <div className="flex items-center space-x-2 mt-1 text-sm text-gray-600 dark:text-gray-400">
               <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5" />
-              <span>{campaignContext.projectName}</span>
-              <span>/</span>
-              <FontAwesomeIcon icon={faBullhorn} className="h-3.5 w-3.5" />
-              <span>{campaignContext.campaignName}</span>
+              <span>{projectContext.projectName}</span>
             </div>
           )}
         </div>
@@ -816,7 +696,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
 
           <div className="flex-1 flex overflow-hidden relative">
             {/* Main Content Area */}
-            <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${galleryCollapsed ? "w-full" : ""}`}>
+            <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 w-full">
               {/* Tabs */}
               <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6">
                 {needsContextSelection && (
@@ -864,7 +744,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                         value={selectedProjectId}
                         onChange={(e) => {
                           setSelectedProjectId(e.target.value);
-                          setSelectedCampaignId("");
                         }}
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                       >
@@ -876,25 +755,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                         ))}
                       </select>
                       {availableProjects.length === 0 && <p className="text-xs text-gray-500 mt-1">No hay proyectos disponibles</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        <FontAwesomeIcon icon={faBullhorn} className="h-4 w-4 mr-2" />
-                        Campaña *
-                      </label>
-                      <select value={selectedCampaignId} onChange={(e) => setSelectedCampaignId(e.target.value)} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" disabled={!selectedProjectId}>
-                        <option value="">Selecciona una campaña</option>
-                        {availableCampaigns
-                          .filter((c) => c.projectId === selectedProjectId)
-                          .map((campaign) => (
-                            <option key={campaign._id} value={campaign._id}>
-                              {campaign.name}
-                            </option>
-                          ))}
-                      </select>
-                      {!selectedProjectId && <p className="text-xs text-gray-500 mt-1">Primero selecciona un proyecto</p>}
-                      {selectedProjectId && availableCampaigns.filter((c) => c.projectId === selectedProjectId).length === 0 && <p className="text-xs text-gray-500 mt-1">No hay campañas disponibles para este proyecto</p>}
                     </div>
                   </div>
                 )}
@@ -1445,7 +1305,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
             </div>
 
             {/* Creative Gallery Panel - Solo visible en el paso de Multimedia */}
-            {!galleryCollapsed && activeTab === "media" && (
+            {activeTab === "media" && (
               <div className="w-96 flex-shrink-0 transition-all duration-300">
                 <CreativeGalleryPanel images={galleryImages} selectedImages={selectedGalleryImages} onImageSelect={handleGalleryImageSelect} onOpenCreativeSuite={handleOpenCreativeSuite} loading={galleryLoading} totalCount={totalAssets} pendingIncludeUserAssets={pendingIncludeUserAssets} onTogglePendingUserAssets={setPendingIncludeUserAssets} onApplyFilters={applyFilters} activeFilters={activeFilters} onRemoveFilter={removeFilter} />
               </div>

@@ -22,18 +22,14 @@ import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
-import { CampaignDetailPage } from "./pages/CampaignDetailPage";
 
 import { ClientContextInfoPage } from "./pages/ClientContextInfoPage";
-
-import { ClientContextCampaignsPage } from "./pages/ClientContextCampaignsPage";
 import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
 
 import { ClientDashboardPage } from "./pages/ClientDashboardPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
 
 import { ClientApprovalsPage } from "./pages/ClientApprovalsPage";
-import { ClientCampaignsPage } from "./pages/ClientCampaignsPage";
 import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
 import { AIAssistantModal } from "./components/AIAssistantModal";
@@ -221,14 +217,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/client/campañas"
-                element={
-                  <ProtectedRoute>
-                    <ClientCampaignsPage />
-                  </ProtectedRoute>
-                }
-              />
 
               {/* General Routes */}
               <Route
@@ -260,14 +248,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ProjectDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/:projectId/campaigns/:campaignId"
-                element={
-                  <ProtectedRoute>
-                    <CampaignDetailPage />
                   </ProtectedRoute>
                 }
               />
@@ -521,14 +501,6 @@ function App() {
                   }
                 />
 
-                <Route
-                  path="campanas"
-                  element={
-                    <ProtectedRoute>
-                      <ClientContextCampaignsPage />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="posts"
                   element={

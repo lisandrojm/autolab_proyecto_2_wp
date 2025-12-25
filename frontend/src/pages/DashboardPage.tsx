@@ -70,10 +70,10 @@ export const DashboardPage: React.FC = () => {
 
   const statCards = [
     {
-      title: "Campañas",
-      value: stats?.campaigns.total || 0,
-      subtitle: `${stats?.campaigns.active || 0} activas`,
-      change: stats?.campaigns.change || 0,
+      title: "Proyectos",
+      value: stats?.projects.total || 0,
+      subtitle: `${stats?.projects.active || 0} activos`,
+      change: stats?.projects.change || 0,
       icon: faBullseye,
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-50 dark:bg-blue-900/20",
@@ -160,7 +160,7 @@ export const DashboardPage: React.FC = () => {
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold text-sm">{index + 1}</div>
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">{client.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{client.campaignCount} campañas</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{client.projectCount} proyectos</p>
                       </div>
                     </div>
                   </div>
@@ -189,7 +189,7 @@ export const DashboardPage: React.FC = () => {
 
                   return (
                     <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                      <div className={`flex-shrink-0 w-2 h-2 mt-2 rounded-full ${activity.type === "campaign" ? "bg-blue-500" : activity.type === "client" ? "bg-blue-500" : activity.type === "post" ? "bg-blue-500" : "bg-blue-500"}`} />
+                      <div className={`flex-shrink-0 w-2 h-2 mt-2 rounded-full ${activity.type === "project" ? "bg-blue-500" : activity.type === "client" ? "bg-blue-500" : activity.type === "post" ? "bg-blue-500" : "bg-blue-500"}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900 dark:text-white">{activity.description}</p>
                         {activity.user && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">por {activity.user}</p>}

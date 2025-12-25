@@ -1,7 +1,7 @@
 import axios from "./axiosConfig";
 
 export interface DashboardStats {
-  campaigns: {
+  projects: {
     total: number;
     active: number;
     draft: number;
@@ -27,7 +27,7 @@ export interface DashboardStats {
     change: number;
   };
   recentActivity: {
-    type: "campaign" | "client" | "post" | "user";
+    type: "project" | "client" | "post" | "user";
     description: string;
     timestamp: string;
     user?: string;
@@ -35,7 +35,7 @@ export interface DashboardStats {
   topClients: {
     _id: string;
     name: string;
-    campaignCount: number;
+    projectCount: number;
     postCount: number;
   }[];
   platformDistribution: {

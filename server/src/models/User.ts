@@ -21,6 +21,7 @@ export interface IUser extends Document {
   carryOverVacationDays: number; // Días de arrastre de periodos anteriores
   createdAt: Date;
   updatedAt: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
   closeYear(maxDiasArrastre?: number): Promise<void>;
 }
 

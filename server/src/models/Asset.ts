@@ -3,12 +3,11 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IAsset extends Document {
   tenantId: string;
   clientId: string;
-  campaignId?: string;
   projectId?: string;
   nombre: string;
   tipo: "imagen" | "video" | "audio" | "documento" | "otro";
   url: string;
-  scope?: "brandkit" | "campaigns" | "assets" | "posts";
+  scope?: "brandkit" | "assets" | "posts";
   creadoPor: string;
   tags: string[];
   permisos: {
@@ -40,12 +39,11 @@ const AssetSchema = new Schema<IAsset>(
   {
     tenantId: { type: String, required: true },
     clientId: { type: String, required: true, index: true },
-    campaignId: { type: String, index: true },
     projectId: { type: String, index: true },
     nombre: { type: String, required: true },
     tipo: { type: String, enum: ["imagen", "video", "audio", "documento", "otro"], required: true },
     url: { type: String, required: true },
-    scope: { type: String, enum: ["brandkit", "campaigns", "assets", "posts"], index: true },
+    scope: { type: String, enum: ["brandkit", "assets", "posts"], index: true },
     creadoPor: { type: String, required: true, index: true },
     tags: [{ type: String, index: true }],
     permisos: {
@@ -76,7 +74,6 @@ const AssetSchema = new Schema<IAsset>(
 // Índices compuestos para búsquedas optimizadas
 AssetSchema.index({ tenantId: 1, clientId: 1 });
 AssetSchema.index({ tenantId: 1, clientId: 1, scope: 1 });
-AssetSchema.index({ tenantId: 1, campaignId: 1 });
 AssetSchema.index({ tenantId: 1, projectId: 1 });
 AssetSchema.index({ tenantId: 1, creadoPor: 1 });
 AssetSchema.index({ tenantId: 1, tags: 1 });

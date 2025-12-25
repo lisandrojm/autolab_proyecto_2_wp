@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { Role } from "../models/Role.js";
 
-import { Campaign } from "../models/Campaign.js";
 import { Client } from "../models/Client.js";
 import { Post } from "../models/Post.js";
 import { Project } from "../models/Project.js";
@@ -123,8 +122,6 @@ export const canViewDocument = async (collection: string, docId: string, userId:
  */
 function getModelByCollection(collection: string) {
   switch (collection) {
-    case "campaigns":
-      return Campaign;
     case "clients":
       return Client;
     case "posts":

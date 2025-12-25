@@ -12,11 +12,10 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { emitPostsChanged } from "../utils/navbarEvents";
 import { prepareSavePayload, initializeFormDataFromPost } from "../utils/postDataMigration";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImage, faLayerGroup, faBullhorn, faPlus, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import { faImage, faLayerGroup, faPlus, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { PostFormModal } from "../components/ui/PostFormModal";
 import { PostCard } from "../components/PostCard";
-import { getImageUrl } from "../utils/imageHelpers";
 
 const HELP_KEY = "clientContextPosts" as const;
 
@@ -24,13 +23,6 @@ interface Project {
   _id: string;
   name: string;
   description?: string;
-}
-
-interface Campaign {
-  _id: string;
-  name: string;
-  description?: string;
-  projectId: string;
 }
 
 interface Post {
@@ -41,14 +33,12 @@ interface Post {
   channel?: string;
   channels?: string[];
   channelConfig?: any;
-  campaignId: {
-    _id: string;
-    name: string;
-    projectId?: {
-      _id: string;
-      name: string;
-    };
-  };
+  projectId?:
+    | {
+        _id: string;
+        name: string;
+      }
+    | string;
   clientId: {
     _id: string;
     name: string;
@@ -89,25 +79,6 @@ interface Post {
   favorite?: boolean;
 }
 
-const getStatusText = (status: Post["status"]) => {
-  switch (status) {
-    case "published":
-      return "Publicado";
-    case "scheduled":
-      return "Programado";
-    case "approved":
-      return "Aprobado";
-    case "pending_approval":
-      return "Pendiente";
-    case "rejected":
-      return "Rechazado";
-    case "draft":
-      return "Borrador";
-    default:
-      return status;
-  }
-};
-
 export const ClientContextPostsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -115,13 +86,10 @@ export const ClientContextPostsPage: React.FC = () => {
   const { token, tenantId } = useAuthStore();
 
   const [projects, setProjects] = useState<Project[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
-  const [filterCampaign, setFilterCampaign] = useState<string>("all");
   const [showPostModal, setShowPostModal] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [editInitialData, setEditInitialData] = useState<any>(null);
@@ -142,15 +110,9 @@ export const ClientContextPostsPage: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!id || projects.length === 0) return;
-    fetchCampaigns();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, filterProject, projects.length]);
-
-  useEffect(() => {
     if (!id) return;
     fetchPosts();
-  }, [id, filterProject, filterCampaign, filterStatus]);
+  }, [id, filterProject]);
 
   const fetchClientAndProjects = async () => {
     if (!id) return;
@@ -179,41 +141,6 @@ export const ClientContextPostsPage: React.FC = () => {
     }
   };
 
-  const fetchCampaigns = async () => {
-    if (!id) return;
-
-    try {
-      let url = `${import.meta.env.VITE_API_URL}/campaigns?clientId=${id}`;
-      if (filterProject !== "all") url += `&projectId=${filterProject}`;
-
-      const campaignsResponse = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Tenant-Id": tenantId,
-        },
-      });
-
-      if (campaignsResponse.ok) {
-        const campaignsData = await campaignsResponse.json();
-
-        const enrichedCampaigns = campaignsData.map((campaign: any) => {
-          const project = projects.find((p) => p._id === campaign.projectId);
-          return {
-            ...campaign,
-            projectName: project?.name || "Proyecto desconocido",
-          };
-        });
-
-        setCampaigns(enrichedCampaigns);
-      } else {
-        setCampaigns([]);
-      }
-    } catch (error) {
-      console.error("Error fetching campaigns:", error);
-      setCampaigns([]);
-    }
-  };
-
   const fetchPosts = async () => {
     if (!id) {
       setLoading(false);
@@ -226,28 +153,8 @@ export const ClientContextPostsPage: React.FC = () => {
       let url = `${import.meta.env.VITE_API_URL}/posts?clientId=${id}`;
 
       if (filterProject !== "all") {
-        // Solo filtrar por campaña si hay campañas cargadas
-        if (campaigns.length === 0) {
-          setPosts([]);
-          setLoading(false);
-          return;
-        }
-
-        const projectCampaigns = campaigns.filter((c) => c.projectId === filterProject);
-
-        if (projectCampaigns.length === 0) {
-          setPosts([]);
-          setLoading(false);
-          return;
-        }
-
-        const campaignIds = projectCampaigns.map((c) => c._id).join(",");
-        url += `&campaignId=${campaignIds}`;
-      } else if (filterCampaign !== "all") {
-        url += `&campaignId=${filterCampaign}`;
+        url += `&projectId=${filterProject}`;
       }
-
-      if (filterStatus !== "all") url += `&status=${filterStatus}`;
 
       const postsResponse = await fetch(url, {
         headers: {
@@ -386,10 +293,8 @@ export const ClientContextPostsPage: React.FC = () => {
 
           if (assetsResponse.ok) {
             const assetsData = await assetsResponse.json();
-            // Filtrar solo los assets que están en selectedAssetIds
             const selectedAssets = assetsData.assets?.filter((asset: any) => selectedAssetIds.includes(asset._id)) || [];
             galleryImageUrls = selectedAssets.map((asset: any) => asset.url);
-            console.log(`Assets de galería encontrados: ${galleryImageUrls.length}`);
           }
         } catch (error) {
           console.error("Error fetching gallery image URLs:", error);
@@ -397,15 +302,8 @@ export const ClientContextPostsPage: React.FC = () => {
       }
 
       if (editingPost) {
-        // existingImageUrls now represents the images that should remain (user didn't delete them)
         const existingUrls = postData.existingImageUrls || [];
         const allImageUrls = [...existingUrls, ...newImageUrls, ...galleryImageUrls];
-
-        console.log("[ClientContextPosts] Update - Existing URLs:", existingUrls.length);
-        console.log("[ClientContextPosts] Update - New uploaded:", newImageUrls.length);
-        console.log("[ClientContextPosts] Update - Gallery images:", galleryImageUrls.length);
-        console.log("[ClientContextPosts] Update - Total images:", allImageUrls.length);
-        console.log("[ClientContextPosts] Update - Asset IDs:", selectedAssetIds);
 
         const preparedData = prepareSavePayload(postData);
 
@@ -426,7 +324,6 @@ export const ClientContextPostsPage: React.FC = () => {
 
         delete payload.imageFiles;
         delete payload.existingImageUrls;
-        delete payload.campaignId;
         delete payload.clientId;
         delete payload.publishImmediately;
         delete payload.selectedAssetIds;
@@ -491,7 +388,6 @@ export const ClientContextPostsPage: React.FC = () => {
     }
   };
 
-  // 🔎 Filtrado local por texto + rango de fechas (createdAt). El status/proyecto/campaña ya viene filtrado del backend.
   const filteredPosts = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     const hasDates = !!startDate || !!endDate;
@@ -499,8 +395,7 @@ export const ClientContextPostsPage: React.FC = () => {
     const endTs = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : null;
 
     return posts.filter((post) => {
-      const campaignName = post.campaignId?.name || "";
-      const matchesText = !q || post.title.toLowerCase().includes(q) || post.content.copy.toLowerCase().includes(q) || campaignName.toLowerCase().includes(q);
+      const matchesText = !q || post.title.toLowerCase().includes(q) || post.content.copy.toLowerCase().includes(q);
 
       if (!hasDates) return matchesText;
 
@@ -515,10 +410,6 @@ export const ClientContextPostsPage: React.FC = () => {
 
   const projectFilterOptions = [{ value: "all", label: "Todos los proyectos" }, ...projects.map((project) => ({ value: project._id, label: project.name }))];
 
-  const availableCampaigns = filterProject === "all" ? campaigns : campaigns.filter((c) => c.projectId === filterProject);
-
-  const campaignFilterOptions = [{ value: "all", label: "Todas las campañas" }, ...availableCampaigns.map((campaign) => ({ value: campaign._id, label: campaign.name }))];
-
   const getEmptyStateMessage = () => {
     const clientName = selectedClient?.name || "Este cliente";
 
@@ -528,18 +419,7 @@ export const ClientContextPostsPage: React.FC = () => {
 
     if (filterProject !== "all") {
       const selectedProjectName = projects.find((p) => p._id === filterProject)?.name || "este proyecto";
-
-      if (filterCampaign !== "all") {
-        const selectedCampaignName = campaigns.find((c) => c._id === filterCampaign)?.name || "esta campaña";
-        return `${clientName} aún no tiene posts creados en la campaña "${selectedCampaignName}" del proyecto "${selectedProjectName}".`;
-      }
-
       return `${clientName} aún no tiene posts creados en el proyecto "${selectedProjectName}".`;
-    }
-
-    if (filterCampaign !== "all") {
-      const selectedCampaignName = campaigns.find((c) => c._id === filterCampaign)?.name || "esta campaña";
-      return `${clientName} aún no tiene posts creados en la campaña "${selectedCampaignName}".`;
     }
 
     return `${clientName} aún no tiene posts creados.`;
@@ -556,21 +436,10 @@ export const ClientContextPostsPage: React.FC = () => {
         };
       }
     }
-
-    if (filterCampaign !== "all") {
-      const selectedCampaign = campaigns.find((c) => c._id === filterCampaign);
-      if (selectedCampaign) {
-        return {
-          label: "Ir a la Campaña",
-          onClick: () => navigate(`/projects/${selectedCampaign.projectId}/campaigns/${selectedCampaign._id}`),
-          icon: faBullhorn,
-        };
-      }
-    }
     return {
-      label: "Ver Campañas",
-      onClick: () => navigate(`/cliente/${id}/campanas`),
-      icon: faBullhorn,
+      label: "Ir a Proyectos",
+      onClick: () => navigate(`/cliente/${id}/proyectos`),
+      icon: faLayerGroup,
     };
   };
 
@@ -609,34 +478,13 @@ export const ClientContextPostsPage: React.FC = () => {
         <SearchAndFilters
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar posts por título, contenido, campaña o proyecto..."
+          searchPlaceholder="Buscar posts por título, contenido o proyecto..."
           filters={[
             {
               value: filterProject,
-              onChange: (value) => {
-                setFilterProject(value);
-                if (value !== filterProject) setFilterCampaign("all");
-              },
+              onChange: (value) => setFilterProject(value),
               options: projectFilterOptions,
             },
-            {
-              value: filterCampaign,
-              onChange: setFilterCampaign,
-              options: campaignFilterOptions,
-            },
-            /*             {
-              value: filterStatus,
-              onChange: setFilterStatus,
-              options: [
-                { value: "all", label: "Todos los estados" },
-                { value: "draft", label: "Borrador" },
-                { value: "pending_approval", label: "Pendiente" },
-                { value: "approved", label: "Aprobado" },
-                { value: "scheduled", label: "Programado" },
-                { value: "published", label: "Publicado" },
-                { value: "rejected", label: "Rechazado" },
-              ],
-            }, */
           ]}
           dateFilter={{
             startDate,
@@ -649,16 +497,7 @@ export const ClientContextPostsPage: React.FC = () => {
     >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 mt-4mt-2">
         {filteredPosts.map((post) => (
-          <PostCard
-            key={post._id}
-            post={{
-              ...post,
-              title: `Publicación | ${post.title}`,
-            }}
-            onEdit={handleEditPost}
-            onDelete={handleDeletePost}
-            showBreadcrumbs={true}
-          />
+          <PostCard key={post._id} post={post as any} onEdit={handleEditPost as any} onDelete={handleDeletePost as any} showBreadcrumbs={true} />
         ))}
         <Card
           variant="create"
@@ -686,15 +525,12 @@ export const ClientContextPostsPage: React.FC = () => {
           mode={editingPost ? "edit" : "create"}
           clientId={id}
           availableProjects={projects}
-          availableCampaigns={campaigns}
-          campaignContext={
+          projectContext={
             editingPost
               ? {
-                  campaignId: typeof editingPost.campaignId === "object" ? editingPost.campaignId._id : editingPost.campaignId,
-                  campaignName: typeof editingPost.campaignId === "object" ? editingPost.campaignId.name : "Campaña",
-                  projectId: typeof editingPost.campaignId === "object" && typeof editingPost.campaignId.projectId === "object" ? editingPost.campaignId.projectId._id : "",
-                  projectName: typeof editingPost.campaignId === "object" && typeof editingPost.campaignId.projectId === "object" ? editingPost.campaignId.projectId.name : "Proyecto",
-                  clientId: typeof editingPost.clientId === "object" ? editingPost.clientId._id : editingPost.clientId,
+                  projectId: typeof editingPost.projectId === "object" ? editingPost.projectId._id : (editingPost.projectId as string),
+                  projectName: typeof editingPost.projectId === "object" ? editingPost.projectId.name : "Proyecto",
+                  clientId: typeof editingPost.clientId === "object" ? editingPost.clientId._id : (editingPost.clientId as string),
                 }
               : undefined
           }

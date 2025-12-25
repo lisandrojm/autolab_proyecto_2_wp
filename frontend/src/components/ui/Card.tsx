@@ -49,6 +49,7 @@ interface CardHeaderProps {
   breadcrumbs?: BreadcrumbsProps;
   favorite?: boolean;
   onToggleFavorite?: () => void;
+  actions?: CardAction[];
 }
 
 interface CardFooterProps {
@@ -222,8 +223,28 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                     <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{header.title}</h3>
                     {header.subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{header.subtitle}</p>}
                   </div>
-                  {/* Badges (Header Right Position) */}
-                  {header.badgesPosition === "header-right" && <div className="ml-2 flex-shrink-0">{renderBadges()}</div>}
+                  <div className="flex items-center gap-2">
+                    {/* Badges (Header Right Position) */}
+                    {header.badgesPosition === "header-right" && <div className="ml-2 flex-shrink-0">{renderBadges()}</div>}
+
+                    {header.actions && header.actions.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        {header.actions.map((action, idx) => (
+                          <button
+                            key={idx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              action.onClick(e);
+                            }}
+                            className={`p-1.5 rounded-lg transition-colors ${getActionClasses(action.variant)}`}
+                            title={action.title}
+                          >
+                            <FontAwesomeIcon icon={action.icon} className="h-3.5 w-3.5" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

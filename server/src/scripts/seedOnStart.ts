@@ -63,7 +63,6 @@ async function ensureTenant({ name, slug }: { name: string; slug: string }) {
       usage: {
         users: { current: 0, limit: 100 },
         clients: { current: 0, limit: 500 },
-        campaigns: { current: 0, limit: 1000 },
         storage: { usedMB: 0, limitMB: 10240 },
         apiCalls: { current: 0, limit: 100000, resetDate: endOfPeriod.toISOString() },
       },
@@ -249,7 +248,6 @@ export async function ensureSuperAdmin() {
         usage: {
           users: { current: 0, limit: 999999 },
           clients: { current: 0, limit: 999999 },
-          campaigns: { current: 0, limit: 999999 },
           storage: { usedMB: 0, limitMB: 999999 },
           apiCalls: {
             current: 0,
