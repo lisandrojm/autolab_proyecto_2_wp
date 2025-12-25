@@ -36,7 +36,7 @@ const createProjectSchema = z.object({
 });
 
 // GET /projects
-router.get("/", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { q } = req.query as { q?: string };
     const page = Number(req.query.page ?? 1);
@@ -55,12 +55,18 @@ router.get("/", requireTenant, authenticateToken, requireAnyRole, async (req: Au
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin") || primaryRole === "admin" || primaryRole === "superadmin";
 
     if (!isAdmin) {
-      filter.assignedUsers = req.user!.userId;
+      // Usar Types.ObjectId para asegurar el match en el array de assignedUsers
+      filter.assignedUsers = new Types.ObjectId(req.user!.userId);
     }
+
+    console.log(`[PROJECTS] List for tenant ${req.tenantId}, isAdmin=${isAdmin}`);
+    console.log(`[PROJECTS] Filter: ${JSON.stringify(filter)}`);
 
     const skip = (page - 1) * limit;
 
     const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name"), Project.countDocuments(filter)]);
+
+    console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
 
     res.json({
       projects,
@@ -132,12 +138,15 @@ router.get(
         filter.name = { $regex: q, $options: "i" };
       }
 
-      const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
-      const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+      const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
+      const primaryRole = req.user?.primaryRole?.toLowerCase();
+      const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin") || primaryRole === "admin" || primaryRole === "superadmin";
 
       if (!isAdmin) {
-        filter.assignedUsers = req.user!.userId;
+        filter.assignedUsers = new Types.ObjectId(req.user!.userId);
       }
+
+      console.log(`[PROJECTS] List for client ${clientId}, tenant ${req.tenantId}, isAdmin=${isAdmin}`);
 
       const skip = (page - 1) * limit;
 

@@ -14,7 +14,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserGroup, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -103,7 +103,7 @@ export const UsersPage: React.FC = () => {
       <FontAwesomeIcon icon={checked ? faToggleOn : faToggleOff} className={`h-4 w-4 mr-3 transition-colors ${checked ? activeColor : "text-gray-400"}`} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{label}</div>
-        {description && <div className="text-[10px] opacity-70 line-clamp-1">{description}</div>}
+        {description && <div className="text-xs opacity-70 line-clamp-1">{description}</div>}
       </div>
     </button>
   );
@@ -223,22 +223,26 @@ export const UsersPage: React.FC = () => {
           cid: typeof p.clientId === "string" ? p.clientId : p.clientId?._id,
         })),
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching all projects:", error);
+      // Solo loguear, pero podríamos poner un estado de error si quisiéramos
     }
   };
 
   const filteredProjects = useMemo(() => {
     if (formData.clientIds.length === 0) return [];
 
-    // Log selected client IDs for debugging
-    console.log("🔍 Filtrando proyectos para clientes:", formData.clientIds);
-
     return allProjects.filter((p) => {
-      // Robust client ID extraction
-      const cid = typeof p.clientId === "string" ? p.clientId : p.clientId && typeof p.clientId === "object" ? p.clientId._id : null;
+      // Intentar obtener el ID del cliente de varias formas (string u objeto poblado)
+      let cid: string | null = null;
+      if (typeof p.clientId === "string") {
+        cid = p.clientId;
+      } else if (p.clientId && typeof p.clientId === "object") {
+        cid = (p.clientId as any)._id || (p.clientId as any).id;
+      }
 
       const matches = cid && formData.clientIds.includes(cid);
+
       return matches;
     });
   }, [allProjects, formData.clientIds]);
@@ -518,112 +522,128 @@ export const UsersPage: React.FC = () => {
         ],
         content: viewUser ? (
           <div className="space-y-6">
-            <div className="flex justify-end items-center gap-2">
-              <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewUser.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" : "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
-              {viewUser.primaryRole && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 uppercase">{viewUser.primaryRole}</span>}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="flex justify-between items-start">
               <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Nombre</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{viewUser.firstName || "—"}</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{viewUser.firstName || viewUser.lastName ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim() : viewUser.email.split("@")[0]}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{viewUser.email}</p>
               </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Apellido</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{viewUser.lastName || "—"}</p>
+              <div className="flex flex-col items-end gap-2">
+                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewUser.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
+                {viewUser.primaryRole && <span className="inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 uppercase tracking-wider">{viewUser.primaryRole}</span>}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faUserTie} className="text-gray-400" />
-                  Cargo
-                </h4>
-                {typeof viewUser.positionId === "object" && viewUser.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.positionId.name}</span> : <p className="text-sm text-gray-500">Sin cargo</p>}
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400" />
-                  Area
-                </h4>
-                {typeof viewUser.areaId === "object" && viewUser.areaId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.areaId.name}</span> : <p className="text-sm text-gray-500">Sin area</p>}
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faUserGraduate} className="text-gray-400" />
-                  Nivel
-                </h4>
-                {typeof viewUser.levelId === "object" && viewUser.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.levelId.name}</span> : <p className="text-sm text-gray-500">Sin nivel</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
-                  Fecha de Ingreso
-                </h4>
-                {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <p className="text-sm text-gray-500">—</p>}
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faHourglassHalf} className="text-gray-400" />
-                  Antigüedad
-                </h4>
-                {viewUser.seniorityAtEndOfYear !== undefined ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{viewUser.seniorityAtEndOfYear} años</span> : <p className="text-sm text-gray-500">—</p>}
-              </div>
-            </div>
-
-            {viewUser.clientIds && viewUser.clientIds.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Clientes asignados</h4>
-                <div className="flex flex-wrap gap-2">
-                  {viewUser.clientIds.map((client) => (
-                    <span key={client._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">
-                      {client.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {viewUser.projectIds && viewUser.projectIds.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Proyectos asignados</h4>
-                <div className="flex flex-wrap gap-2">
-                  {viewUser.projectIds.map((project) => (
-                    <span key={project._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
-                      {project.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
+            {/* Roles */}
             <div>
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
-                <FontAwesomeIcon icon={faUserShield} className="text-gray-400" />
-                Roles ({viewUser.roles.filter((r) => r.name.toLowerCase() !== "superadmin").length})
-              </h4>
-              {viewUser.roles.filter((r) => r.name.toLowerCase() !== "superadmin").length === 0 ? (
-                <p className="text-sm text-gray-500">Sin roles</p>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 text-gray-400" />
+                Rol/es
+              </label>
+              {viewUser.roles.length === 0 ? (
+                <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {viewUser.roles
-                    .filter((role) => role.name.toLowerCase() !== "superadmin")
-                    .map((role) => (
-                      <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                        {role.name}
-                      </span>
-                    ))}
+                <div className="flex flex-wrap gap-1">
+                  {viewUser.roles.map((role) => (
+                    <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">
+                      {role.name}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
 
-            <div>
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Último ingreso</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{viewUser.lastLoginAt ? new Date(viewUser.lastLoginAt).toLocaleString() : "Nunca"}</p>
+            <div className="flex flex-wrap gap-4">
+              {/* Área */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
+                  Área
+                </label>
+                {typeof viewUser.areaId === "object" && viewUser.areaId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300 w-fit">{viewUser.areaId.name}</span> : <span className="text-xs text-gray-500">Sin área</span>}
+              </div>
+
+              {/* Cargo */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 text-gray-400" />
+                  Cargo
+                </label>
+                {typeof viewUser.positionId === "object" && viewUser.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.positionId.name}</span> : <span className="text-xs text-gray-500">Sin cargo</span>}
+              </div>
+
+              {/* Nivel */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 text-gray-400" />
+                  Nivel
+                </label>
+                {typeof viewUser.levelId === "object" && viewUser.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.levelId.name}</span> : <span className="text-xs text-gray-500">Sin nivel</span>}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              {/* Fecha de ingreso */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faCalendar} className="h-3 w-3 text-gray-400" />
+                  Ingreso
+                </label>
+                {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <span className="text-xs text-gray-500">—</span>}
+              </div>
+
+              {/* Antigüedad */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faHourglassHalf} className="h-3 w-3 text-gray-400" />
+                  Antigüedad
+                </label>
+                {viewUser.seniorityAtEndOfYear !== undefined ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.seniorityAtEndOfYear} años</span> : <span className="text-xs text-gray-500">—</span>}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              {/* Clientes asignados */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faUserGroup} className="h-3 w-3 text-gray-400" />
+                  Clientes
+                </label>
+                {viewUser.clientIds && viewUser.clientIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {viewUser.clientIds.map((client) => (
+                      <span key={client._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                        {client.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">Sin clientes asignados</span>
+                )}
+              </div>
+
+              {/* Proyectos asignados */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
+                  Proyectos
+                </label>
+                {viewUser.projectIds && viewUser.projectIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {viewUser.projectIds.map((project) => (
+                      <span key={project._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                        {project.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">Sin proyectos asignados</span>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Último ingreso</label>
+              <p className="text-xs text-gray-600 dark:text-gray-400 italic">{viewUser.lastLoginAt ? new Date(viewUser.lastLoginAt).toLocaleString() : "Nunca"}</p>
             </div>
           </div>
         ) : null,
@@ -875,7 +895,7 @@ export const UsersPage: React.FC = () => {
                           />
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{role.name}</span>
-                            {role.description && <p className="text-[10px] text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
+                            {role.description && <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
                           </div>
                         </label>
                       ))}
@@ -912,8 +932,8 @@ export const UsersPage: React.FC = () => {
                               }
                             }}
                             label={client.name}
-                            activeColor="text-emerald-600 dark:text-emerald-400"
-                            activeBg="bg-emerald-100 dark:bg-emerald-900/30"
+                            activeColor="text-blue-600 dark:text-blue-400"
+                            activeBg="bg-blue-100 dark:bg-blue-900/50"
                           />
                         ))
                       )}
@@ -928,9 +948,9 @@ export const UsersPage: React.FC = () => {
                       ) : filteredProjects.length === 0 ? (
                         <div className="text-center py-2">
                           <p className="text-xs text-gray-500">No hay proyectos disponibles para los clientes seleccionados</p>
-                          <p className="text-[10px] text-gray-400 mt-1">(Total proyectos en memoria: {allProjects.length})</p>
+                          <p className="text-xs text-gray-400 mt-1">(Total proyectos en memoria: {allProjects.length})</p>
                           {allProjects.length > 0 && (
-                            <button type="button" onClick={() => fetchAllProjects()} className="text-[10px] text-blue-500 hover:underline mt-2">
+                            <button type="button" onClick={() => fetchAllProjects()} className="text-xs text-blue-500 hover:underline mt-2">
                               Sincronizar proyectos
                             </button>
                           )}
@@ -948,8 +968,8 @@ export const UsersPage: React.FC = () => {
                               }
                             }}
                             label={project.name}
-                            activeColor="text-indigo-600 dark:text-indigo-400"
-                            activeBg="bg-indigo-100 dark:bg-indigo-900/30"
+                            activeColor="text-blue-600 dark:text-blue-400"
+                            activeBg="bg-blue-100 dark:bg-blue-900/50"
                           />
                         ))
                       )}
@@ -1086,55 +1106,6 @@ export const UsersPage: React.FC = () => {
                   </label>
                   {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {/* Fecha de ingreso */}
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faCalendar} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                    Ingreso
-                  </label>
-                  {user.hireDate !== undefined && <span className="w-fit inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{new Date(user.hireDate).toLocaleDateString()}</span>}
-                </div>
-                {/* Antigüedad */}
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faHourglassHalf} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                    Antigüedad
-                  </label>
-                  {user.seniorityAtEndOfYear !== undefined && <span className="w-fit inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.seniorityAtEndOfYear} años</span>}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
-                {/* Clientes asignados */}
-                {user.clientIds && user.clientIds.length > 0 && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faHourglassHalf} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Clientes
-                    </label>
-                    <div className="flex flex-wrap gap-1">
-                      {user.clientIds.map((client) => (
-                        <span key={client._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300">
-                          {client.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Proyectos asignados */}
-                {user.projectIds && user.projectIds.length > 0 && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Proyectos</label>
-                    <div className="flex flex-wrap gap-1">
-                      {user.projectIds.map((project) => (
-                        <span key={project._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300">
-                          {project.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </Card>
           ))}

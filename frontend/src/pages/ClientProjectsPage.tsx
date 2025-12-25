@@ -365,6 +365,13 @@ export const ClientProjectsPage: React.FC = () => {
                 title: `Proyecto | ${project.name}`,
                 subtitle: project.description,
                 icon: faLayerGroup,
+                badges: [
+                  {
+                    text: project.status === "active" ? "Activo" : project.status === "on_hold" ? "En Espera" : project.status === "completed" ? "Completado" : "Archivado",
+                    variant: project.status === "active" ? "green" : project.status === "on_hold" ? "warning" : project.status === "completed" ? "info" : "default",
+                  },
+                ],
+                badgesPosition: "header-right",
               }}
               footer={{
                 leftContent: (
