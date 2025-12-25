@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { useClientContextStore } from "../stores/clientContextStore";
-import { briefsAPI } from "../api/briefs";
+
 import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartLine, faBullhorn, faClipboardCheck, faCalendarDays, faPlus, faEye, faFileText, faImage, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faBullhorn, faClipboardCheck, faCalendarDays, faEye, faFileText, faImage, faClock } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientDashboard" as const;
@@ -16,12 +16,11 @@ interface DashboardStats {
   activeCampaigns: number;
   pendingApprovals: number;
   scheduledPosts: number;
-  totalBriefs: number;
 }
 
 interface Activity {
   _id: string;
-  type: "post" | "campaign" | "brief";
+  type: "post" | "campaign";
   title: string;
   status?: string;
   updatedAt: string;
@@ -36,7 +35,6 @@ export const ClientDashboardPage: React.FC = () => {
     activeCampaigns: 0,
     pendingApprovals: 0,
     scheduledPosts: 0,
-    totalBriefs: 0,
   });
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,10 +68,6 @@ export const ClientDashboardPage: React.FC = () => {
         },
       });
 
-      // Fetch briefs
-      const briefsResponse = await briefsAPI.list({ limit: 100 });
-      const briefs = briefsResponse.briefs || [];
-
       if (campaignsResponse.ok && postsResponse.ok) {
         const campaigns = await campaignsResponse.json();
         const posts = await postsResponse.json();
@@ -87,7 +81,6 @@ export const ClientDashboardPage: React.FC = () => {
           activeCampaigns,
           pendingApprovals,
           scheduledPosts,
-          totalBriefs: briefsResponse.pagination.total || briefs.length,
         });
 
         // Create activities list (last 5 items)
@@ -105,13 +98,6 @@ export const ClientDashboardPage: React.FC = () => {
             title: c.name,
             status: c.status,
             updatedAt: c.updatedAt,
-          })),
-          ...briefs.map((b: any) => ({
-            _id: b._id,
-            type: "brief" as const,
-            title: b.title,
-            status: b.status,
-            updatedAt: b.updatedAt,
           })),
         ];
 
@@ -133,8 +119,7 @@ export const ClientDashboardPage: React.FC = () => {
         return faImage;
       case "campaign":
         return faBullhorn;
-      case "brief":
-        return faFileText;
+
       default:
         return faFileText;
     }
@@ -146,8 +131,7 @@ export const ClientDashboardPage: React.FC = () => {
         return "text-blue-600 dark:text-blue-400";
       case "campaign":
         return "text-blue-600 dark:text-blue-400";
-      case "brief":
-        return "text-cyan-600 dark:text-cyan-400";
+
       default:
         return "text-gray-600 dark:text-gray-400";
     }
@@ -181,7 +165,7 @@ export const ClientDashboardPage: React.FC = () => {
     >
       <div className="space-y-6">
         {/* KPIs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card
             header={{
               title: "Campañas Activas",
@@ -223,31 +207,12 @@ export const ClientDashboardPage: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-500">Programadas</p>
             </div>
           </Card>
-
-          <Card
-            header={{
-              title: "Solicitudes",
-              icon: faFileText,
-              badges: [],
-            }}
-            onClick={() => navigate("/client/solicitudes")}
-          >
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalBriefs}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">Briefs totales</p>
-            </div>
-          </Card>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Acciones Rápidas</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button onClick={() => navigate("/client/solicitudes?new=1")} className="flex items-center justify-center space-x-2 p-4 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors">
-              <FontAwesomeIcon icon={faPlus} className="h-5 w-5" />
-              <span className="font-medium">Crear Solicitud</span>
-            </button>
-
             <button onClick={() => navigate("/client/aprobaciones")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
               <FontAwesomeIcon icon={faEye} className="h-5 w-5" />
               <span className="font-medium">Ver Aprobaciones</span>

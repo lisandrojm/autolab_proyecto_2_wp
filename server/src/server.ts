@@ -27,7 +27,6 @@ import { clientRoutes } from "./routes/clients.js";
 import { campaignRoutes } from "./routes/campaigns.js";
 import { postRoutes } from "./routes/posts.js";
 
-import { briefRoutes } from "./routes/briefs.js";
 import { roleRoutes } from "./routes/roles.js";
 import { userRoutes } from "./routes/users.js";
 import { projectRoutes } from "./routes/projects.js";
@@ -140,7 +139,6 @@ app.use("/api/v1/clients", clientRoutes);
 app.use("/api/v1/campaigns", campaignRoutes);
 app.use("/api/v1/posts", postRoutes);
 
-app.use("/api/v1/briefs", briefRoutes);
 app.use("/api/v1/roles", roleRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/tenants", tenantRoutes);

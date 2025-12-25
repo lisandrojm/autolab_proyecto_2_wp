@@ -9,8 +9,8 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faIdCard, faFileLines, faRocket, faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faHouse, faUsers, faSquareCheck, faPalette, faBuilding, faShield, faUserGear, faInfoCircle, faBullhorn, faFileText, faImage, faChartBar, faLock, faEye, faPencil, faCalendar, faRobot, faCog, faMobileAlt, faBox, faCalendarCheck } from "@fortawesome/free-solid-svg-icons";
-import { faUser, faUserTie, faUserGraduate, faKey, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faIdCard, faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faCalendar, faMobileAlt, faBox, faCalendarCheck, faFileText } from "@fortawesome/free-solid-svg-icons";
+import { faUserGraduate } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -108,12 +108,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     description: "Gestión de publicaciones",
     permissions: ["posts:view", "posts:create", "posts:update", "posts:delete"],
   },
-  briefs: {
-    label: "Briefs",
-    icon: faFileLines,
-    description: "Gestión de briefs",
-    permissions: ["briefs:view", "briefs:create", "briefs:update", "briefs:delete"],
-  },
+
   assets: {
     label: "Assets",
     icon: faImage,
@@ -203,7 +198,7 @@ export const RolesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "default" | "custom">("all");
+  const [filterStatus] = useState<"all" | "default" | "custom">("all");
 
   // Modal de acción (crear/editar)
   const [showModal, setShowModal] = useState(false);
@@ -227,7 +222,6 @@ export const RolesPage: React.FC = () => {
 
   const canManage = hasPermission("roles:view");
   const isSuperAdmin = user?.primaryRole === "superadmin";
-  const isAdmin = user?.primaryRole === "admin" || isSuperAdmin;
 
   useEffect(() => {
     fetchRoles();
@@ -622,7 +616,7 @@ export const RolesPage: React.FC = () => {
                         </div>
                         <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
                           {moduleData.permissions.map((permission) => {
-                            const [moduleName, action] = permission.split(":");
+                            const [_moduleName, action] = permission.split(":");
                             const actionLabel = ACTION_LABELS[action] || action;
 
                             return (
@@ -657,7 +651,7 @@ export const RolesPage: React.FC = () => {
                           </div>
                           <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
                             {moduleData.permissions.map((permission) => {
-                              const [moduleName, action] = permission.split(":");
+                              const [_moduleName, action] = permission.split(":");
                               const actionLabel = ACTION_LABELS[action] || action;
 
                               return (

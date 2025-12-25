@@ -31,7 +31,7 @@ import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
 import { ClientContextUsersPage } from "./pages/ClientContextUsersPage";
 import { ClientDashboardPage } from "./pages/ClientDashboardPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
-import { ClientRequestsPage } from "./pages/ClientRequestsPage";
+
 import { ClientApprovalsPage } from "./pages/ClientApprovalsPage";
 import { ClientCampaignsPage } from "./pages/ClientCampaignsPage";
 import { PlatformUsagePage } from "./pages/PlatformUsagePage";
@@ -212,14 +212,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/client/solicitudes"
-                element={
-                  <ProtectedRoute>
-                    <ClientRequestsPage />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/client/aprobaciones"
                 element={

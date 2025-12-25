@@ -12,7 +12,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup, faBullseye, faDollarSign, faBullhorn, faPlus, faEdit, faTrash, faInfoCircle, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faBullseye, faDollarSign, faBullhorn, faPlus, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -39,15 +39,6 @@ interface Campaign {
   objectives?: string[];
   targetAudience?: string;
   kpis?: { name: string; target: number; current: number; unit: string }[];
-  createdAt: string;
-}
-
-interface Brief {
-  _id: string;
-  title: string;
-  description?: string;
-  status: "draft" | "pending_review" | "approved" | "in_progress" | "completed" | "cancelled";
-  priority: "low" | "medium" | "high" | "urgent";
   createdAt: string;
 }
 
@@ -89,7 +80,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [briefs, setBriefs] = useState<Brief[]>([]);
+
   const [loading, setLoading] = useState(true);
 
   // search + date filter (Campañas)
@@ -145,16 +136,6 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const fetchBriefsByClient = async (clientId: string) => {
-    try {
-      const data = await projectsAPI.getClientBriefs(clientId);
-      setBriefs(data);
-    } catch (e) {
-      console.error("Error fetching briefs:", e);
-      setBriefs([]);
-    }
-  };
-
   const fetchProject = async () => {
     const data = await projectsAPI.getProject(projectId!);
     setProject(data);
@@ -176,11 +157,7 @@ export const ProjectDetailPage: React.FC = () => {
     // resolvemos el id string para llamadas adicionales
     const clientIdStr = getClientIdFromProject(data);
     if (clientIdStr) {
-      await fetchBriefsByClient(clientIdStr);
       if (!client) await fetchClientById(clientIdStr);
-    } else {
-      setClient(null);
-      setBriefs([]);
     }
   };
 
@@ -450,16 +427,13 @@ export const ProjectDetailPage: React.FC = () => {
     form?.requestSubmit();
   };
 
-  // Logo del cliente (acepta rutas absolutas o relativas al ASSETS_URL)
-  const logoSrc = client?.brandKit?.logos?.[0]?.url ? (client.brandKit.logos[0].url.startsWith("http") ? client.brandKit.logos[0].url : `${import.meta.env.VITE_ASSETS_URL ?? ""}${client.brandKit.logos[0].url}`) : undefined;
-
   return (
     <PageLayout
       title={`Proyecto | ${project.name}`}
       badge={{ text: "Proyecto", variant: "default" }}
       faIcon={{ icon: faLayerGroup }}
       clientMiniAvatar={{
-        src: logoSrc,
+        src: undefined,
         alt: client?.name ? `${client.name} logo` : undefined,
         fallback: client?.name?.charAt(0)?.toUpperCase?.() || "?",
         label: client?.name,
@@ -479,7 +453,7 @@ export const ProjectDetailPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-2">
           <button onClick={openProjectDetails} className="btn-secondary flex items-center justify-center text-sm px-3 gap-2">
-            <FontAwesomeIcon icon={faFileLines} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
           </button>
           <button onClick={openEditProject} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
             <FontAwesomeIcon icon={faEdit} className="h-3 w-3 lg:h-4 lg:w-4" />
@@ -794,7 +768,7 @@ export const ProjectDetailPage: React.FC = () => {
                       <div>
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Objetivos</label>
                         <ul className="mt-2 space-y-2">
-                          {project.objectives.map((o, i) => (
+                          {project.objectives?.map((o, i) => (
                             <li key={i} className="text-sm text-gray-900 dark:text-white flex items-start">
                               <span className="w-1.5 h-1.5 bg-primary-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                               {o}
@@ -840,15 +814,12 @@ export const ProjectDetailPage: React.FC = () => {
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Estadísticas</h3>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">{campaigns.length}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Campañas</p>
                     </div>
-                    <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{briefs.length}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Briefs</p>
-                    </div>
+
                     <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
                       <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(project.createdAt).toLocaleDateString()}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Creado</p>

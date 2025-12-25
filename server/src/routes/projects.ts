@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { Campaign } from "../models/Campaign.js";
-import { Brief } from "../models/Brief.js";
+
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
@@ -281,7 +281,7 @@ router.get("/projects/:projectId/campaigns", requireTenant, authenticateToken, r
     }
 
     const campaigns = await Campaign.find({
-      _id: { $in: project.campaigns },
+      projectId: projectObjectId,
       tenantId: req.tenantObjectId,
     }).sort({ createdAt: -1 });
 
@@ -344,30 +344,6 @@ router.post("/projects/:projectId/campaigns", requireTenant, authenticateToken, 
     console.error("Create project campaign error:", error);
     const message = error?.message || "Internal server error";
     res.status(500).json({ error: message });
-  }
-});
-
-// GET /clients/:clientId/briefs
-router.get("/clients/:clientId/briefs", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const { clientId } = req.params;
-    const { campaignId } = req.query as { campaignId?: string };
-
-    // Si Brief.clientId también es ObjectId en tu modelo, conviene castear aquí también.
-    const filter: any = {
-      clientId,
-      tenantId: req.tenantObjectId,
-    };
-
-    if (campaignId) {
-      filter.campaignId = campaignId;
-    }
-
-    const briefs = await Brief.find(filter).sort({ createdAt: -1 });
-    res.json(briefs);
-  } catch (error) {
-    console.error("Get client briefs error:", error);
-    res.status(500).json({ error: "Internal server error" });
   }
 });
 

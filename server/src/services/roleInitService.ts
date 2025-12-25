@@ -27,69 +27,66 @@ const USER_PERMISSIONS: string[] = [];
  */
 const ADMIN_PERMISSIONS = [
   // ──────────── Core Modules ────────────
-  "dashboard:view",      // Dashboard
+  "dashboard:view", // Dashboard
 
   // ──────────── Clientes ────────────
-  "clients:view",        // Clientes (incluye selector y contexto)
-  "clients:create",      // Crear clientes
-  "clients:update",      // Actualizar clientes
-  "clients:delete",      // Eliminar clientes
+  "clients:view", // Clientes (incluye selector y contexto)
+  "clients:create", // Crear clientes
+  "clients:update", // Actualizar clientes
+  "clients:delete", // Eliminar clientes
 
   // ──────────── Calendario y Tareas ────────────
-  "calendar:view",       // Calendario
-  "calendar:create",     // Crear eventos
-  "calendar:update",     // Actualizar eventos
-  "calendar:delete",     // Eliminar eventos
-  "tasks:view",          // Tareas
-  "tasks:create",        // Crear tareas
-  "tasks:update",        // Actualizar tareas
-  "tasks:delete",        // Eliminar tareas
+  "calendar:view", // Calendario
+  "calendar:create", // Crear eventos
+  "calendar:update", // Actualizar eventos
+  "calendar:delete", // Eliminar eventos
+  "tasks:view", // Tareas
+  "tasks:create", // Crear tareas
+  "tasks:update", // Actualizar tareas
+  "tasks:delete", // Eliminar tareas
 
   // ──────────── Asistente y Herramientas ────────────
-  "assistant:view",      // Asistente IA
-  "creative:view",       // Creative Suite
-  "settings:view",       // Settings
-  "analytics:view",      // Ver analíticas
+  "assistant:view", // Asistente IA
+  "creative:view", // Creative Suite
+  "settings:view", // Settings
+  "analytics:view", // Ver analíticas
 
   // ──────────── Administración de Accesos (SOLO ADMIN) ────────────
-  "roles:view",          // Roles
-  "roles:create",        // Crear roles
-  "roles:update",        // Actualizar roles
-  "roles:delete",        // Eliminar roles
-  "users:view",          // Usuarios del Sistema
-  "users:create",        // Crear usuarios
-  "users:update",        // Actualizar usuarios
-  "users:delete",        // Eliminar usuarios
+  "roles:view", // Roles
+  "roles:create", // Crear roles
+  "roles:update", // Actualizar roles
+  "roles:delete", // Eliminar roles
+  "users:view", // Usuarios del Sistema
+  "users:create", // Crear usuarios
+  "users:update", // Actualizar usuarios
+  "users:delete", // Eliminar usuarios
 
   // ──────────── Gestión de Campañas ────────────
-  "campaigns:view",      // Ver campañas
-  "campaigns:create",    // Crear campañas
-  "campaigns:update",    // Actualizar campañas
-  "campaigns:delete",    // Eliminar campañas
-  "projects:view",       // Ver proyectos
-  "projects:create",     // Crear proyectos
-  "projects:update",     // Actualizar proyectos
-  "projects:delete",     // Eliminar proyectos
-  "posts:view",          // Ver posts
-  "posts:create",        // Crear posts
-  "posts:update",        // Actualizar posts
-  "posts:delete",        // Eliminar posts
-  "briefs:view",         // Ver briefs
-  "briefs:create",       // Crear briefs
-  "briefs:update",       // Actualizar briefs
-  "briefs:delete",       // Eliminar briefs
-  "assets:view",         // Ver assets
-  "assets:create",       // Crear assets
-  "assets:update",       // Actualizar assets
-  "assets:delete",       // Eliminar assets
+  "campaigns:view", // Ver campañas
+  "campaigns:create", // Crear campañas
+  "campaigns:update", // Actualizar campañas
+  "campaigns:delete", // Eliminar campañas
+  "projects:view", // Ver proyectos
+  "projects:create", // Crear proyectos
+  "projects:update", // Actualizar proyectos
+  "projects:delete", // Eliminar proyectos
+  "posts:view", // Ver posts
+  "posts:create", // Crear posts
+  "posts:update", // Actualizar posts
+  "posts:delete", // Eliminar posts
+
+  "assets:view", // Ver assets
+  "assets:create", // Crear assets
+  "assets:update", // Actualizar assets
+  "assets:delete", // Eliminar assets
 
   // ──────────── Módulos de Recursos Humanos (RRHH) ────────────
-  "activityLogs:view",       // Registro de Actividades del Sistema
-  "calendarEvents:view",     // Eventos de Calendario (RRHH)
-  "employeeProfiles:view",   // Perfiles de Empleados
-  "hrDocuments:view",        // Documentos de RRHH
-  "orders:view",             // Pedidos de Material/Equipamiento
-  "vacationRequests:view",   // Solicitudes de Vacaciones
+  "activityLogs:view", // Registro de Actividades del Sistema
+  "calendarEvents:view", // Eventos de Calendario (RRHH)
+  "employeeProfiles:view", // Perfiles de Empleados
+  "hrDocuments:view", // Documentos de RRHH
+  "orders:view", // Pedidos de Material/Equipamiento
+  "vacationRequests:view", // Solicitudes de Vacaciones
 ];
 
 /**
@@ -103,13 +100,13 @@ const ADMIN_PERMISSIONS = [
  * - mobile:coordinator - Permisos de coordinador en la app mobile
  */
 const MOBILE_COLLABORATOR_PERMISSIONS = [
-  "mobile:access",       // Acceso base a la app mobile
+  "mobile:access", // Acceso base a la app mobile
   "mobile:collaborator", // Permisos de colaborador mobile
 ];
 
 const MOBILE_COORDINATOR_PERMISSIONS = [
-  "mobile:access",       // Acceso base a la app mobile
-  "mobile:coordinator",  // Permisos de coordinador mobile
+  "mobile:access", // Acceso base a la app mobile
+  "mobile:coordinator", // Permisos de coordinador mobile
 ];
 
 /**
@@ -153,9 +150,7 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
     // Actualizar permisos si han cambiado
     const currentPerms = new Set(userRole.permissions);
     const expectedPerms = new Set(USER_PERMISSIONS);
-    const permsMatch =
-      currentPerms.size === expectedPerms.size &&
-      Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
 
     if (!permsMatch) {
       userRole.permissions = USER_PERMISSIONS;
@@ -199,9 +194,7 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
     // Actualizar permisos si han cambiado
     const currentPerms = new Set(adminRole.permissions);
     const expectedPerms = new Set(ADMIN_PERMISSIONS);
-    const permsMatch =
-      currentPerms.size === expectedPerms.size &&
-      Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
 
     if (!permsMatch) {
       adminRole.permissions = ADMIN_PERMISSIONS;
@@ -228,12 +221,12 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
   const tid = new Types.ObjectId(tenantId);
 
   const PERMISSION_MAPPING: Record<string, string> = {
-    'campaigns:read': 'campaigns:view',
-    'posts:read': 'posts:view',
-    'briefs:read': 'briefs:view',
-    'projects:read': 'projects:view',
-    'assets:read': 'assets:view',
-    'clients:read': 'clients:view',
+    "campaigns:read": "campaigns:view",
+    "posts:read": "posts:view",
+
+    "projects:read": "projects:view",
+    "assets:read": "assets:view",
+    "clients:read": "clients:view",
   };
 
   // Actualizar rol client si existe
@@ -244,7 +237,7 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
 
   if (clientRole) {
     let needsUpdate = false;
-    const updatedPermissions = clientRole.permissions.map(perm => {
+    const updatedPermissions = clientRole.permissions.map((perm) => {
       if (PERMISSION_MAPPING[perm]) {
         needsUpdate = true;
         return PERMISSION_MAPPING[perm];
@@ -267,7 +260,7 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
 
   if (managerRole) {
     let needsUpdate = false;
-    const updatedPermissions = managerRole.permissions.map(perm => {
+    const updatedPermissions = managerRole.permissions.map((perm) => {
       if (PERMISSION_MAPPING[perm]) {
         needsUpdate = true;
         return PERMISSION_MAPPING[perm];
@@ -316,9 +309,7 @@ export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Prom
     // Actualizar permisos si han cambiado
     const currentPerms = new Set(collaboratorRole.permissions);
     const expectedPerms = new Set(MOBILE_COLLABORATOR_PERMISSIONS);
-    const permsMatch =
-      currentPerms.size === expectedPerms.size &&
-      Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
 
     if (!permsMatch) {
       collaboratorRole.permissions = MOBILE_COLLABORATOR_PERMISSIONS;
@@ -349,9 +340,7 @@ export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Prom
     // Actualizar permisos si han cambiado
     const currentPerms = new Set(coordinatorRole.permissions);
     const expectedPerms = new Set(MOBILE_COORDINATOR_PERMISSIONS);
-    const permsMatch =
-      currentPerms.size === expectedPerms.size &&
-      Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
 
     if (!permsMatch) {
       coordinatorRole.permissions = MOBILE_COORDINATOR_PERMISSIONS;

@@ -34,6 +34,8 @@ export interface Project {
   budget?: { total?: number };
   createdBy: string;
   createdAt: string;
+  objectives?: string[];
+  targetAudience?: string;
   updatedAt: string;
 }
 
@@ -76,23 +78,14 @@ function normalizeProject(raw: any): Project {
     budget: typeof raw?.budget === "object" ? raw.budget : {},
     createdBy: String(raw?.createdBy ?? ""),
     createdAt: String(raw?.createdAt ?? ""),
+    objectives: Array.isArray(raw?.objectives) ? raw.objectives : [],
+    targetAudience: raw?.targetAudience ?? "",
     updatedAt: String(raw?.updatedAt ?? ""),
   };
 }
 
 /* ------------------------------ API ------------------------------ */
 class ProjectsAPI {
-  async getClientBriefs(clientId: string): Promise<any[]> {
-    try {
-      const { data } = await axios.get(`/clients/${clientId}/briefs`, {
-        headers: this.getHeaders(),
-      });
-      return Array.isArray(data) ? data : [];
-    } catch (error) {
-      console.error("Error fetching client briefs:", error);
-      return [];
-    }
-  }
   /** Lee credenciales desde localStorage y, si faltan, cae al Zustand store */
   private getHeaders() {
     const lsToken = localStorage.getItem("token");
