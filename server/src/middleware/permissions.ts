@@ -115,7 +115,7 @@ export const canViewDocument = async (collection: string, docId: string, userId:
   if (String(doc.createdBy) === String(userId)) return true;
 
   // ✅ Usuario asignado puede verlo
-  return Boolean(doc.usuarios?.some((u: any) => String(u.id ?? u.userId) === String(userId)));
+  return Boolean(doc.assignedUsers?.some((id: any) => String(id) === String(userId)));
 };
 
 /**

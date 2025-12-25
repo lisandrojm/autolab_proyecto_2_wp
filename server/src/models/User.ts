@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password: string;
   roles: Types.ObjectId[];
   clientIds: Types.ObjectId[];
+  projectIds: Types.ObjectId[];
   tenantId: Types.ObjectId;
   firstName?: string;
   lastName?: string;
@@ -29,6 +30,7 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true, minlength: 6 },
     roles: { type: [Schema.Types.ObjectId], ref: "Role", default: [] },
     clientIds: { type: [Schema.Types.ObjectId], ref: "Client", default: [] },
+    projectIds: { type: [Schema.Types.ObjectId], ref: "Project", default: [] },
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     firstName: {
       type: String,
@@ -106,6 +108,7 @@ userSchema.virtual("vacationDays").get(function (this: IUser) {
 
 userSchema.index({ email: 1, tenantId: 1 }, { unique: true });
 userSchema.index({ tenantId: 1, clientIds: 1 });
+userSchema.index({ tenantId: 1, projectIds: 1 });
 
 userSchema.pre("save", async function (this: IUser, next) {
   if (!this.isModified("password")) return next();

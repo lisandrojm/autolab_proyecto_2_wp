@@ -16,12 +16,11 @@ export interface ICampaign extends Document {
   platforms: ("facebook" | "instagram" | "twitter" | "linkedin" | "tiktok" | "youtube" | "google-ads")[];
   kpis: { name: string; target: number; current: number; unit: string }[];
   posts: Types.ObjectId[];
-  assignedUsers: string[];
+  assignedUsers: Types.ObjectId[];
   createdBy: string;
   favorite: boolean;
   createdAt: Date;
   updatedAt: Date;
-  usuarios?: { id: string; email: string; permiso: "ver" | "editar" }[];
 }
 
 const campaignSchema = new Schema<ICampaign>(
@@ -62,19 +61,11 @@ const campaignSchema = new Schema<ICampaign>(
 
     posts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
 
-    assignedUsers: [{ type: String, default: [] }],
+    assignedUsers: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
 
     createdBy: { type: String, required: true },
 
     favorite: { type: Boolean, default: false },
-
-    usuarios: [
-      {
-        id: { type: String, required: true },
-        email: { type: String, required: true },
-        permiso: { type: String, enum: ["ver", "editar"], required: true },
-      },
-    ],
   },
   { timestamps: true }
 );

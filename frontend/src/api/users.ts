@@ -28,6 +28,10 @@ export interface User {
     _id: string;
     name: string;
   }[];
+  projectIds?: {
+    _id: string;
+    name: string;
+  }[];
   /** ← ahora viaja como OBJETO (no tenantId string) */
   tenant?: TenantRef;
   tenantId?: string;
@@ -158,6 +162,12 @@ function normalizeUser(raw: any): User {
           name: String(c?.name ?? ""),
         }))
       : undefined,
+    projectIds: Array.isArray(raw?.projectIds)
+      ? raw.projectIds.map((p: any) => ({
+          _id: String(p?._id ?? p?.id ?? ""),
+          name: String(p?.name ?? ""),
+        }))
+      : undefined,
     tenant: normalizeTenant(raw),
     tenantId: raw?.tenantId ?? undefined,
     positionId,
@@ -233,7 +243,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null; hireDate?: string; extraVacationDays?: number }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[] }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -253,6 +263,8 @@ class UsersAPI {
       areaId?: string | null;
       hireDate?: string;
       extraVacationDays?: number;
+      clientIds?: string[];
+      projectIds?: string[];
     }
   ): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}`, data, { headers: this.getHeaders() });

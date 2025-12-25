@@ -142,6 +142,44 @@ class ProjectsAPI {
     };
   }
 
+  async list(params: { q?: string; page?: number; limit?: number } = {}): Promise<ProjectsListResponse> {
+    const sp = new URLSearchParams();
+    if (params.q) sp.append("q", params.q);
+    if (params.page) sp.append("page", String(params.page));
+    if (params.limit) sp.append("limit", String(params.limit));
+
+    const { data } = await axios.get(`/projects?${sp.toString()}`, {
+      headers: this.getHeaders(),
+    });
+
+    const rows: any[] = Array.isArray(data?.projects) ? data.projects : Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+
+    return {
+      projects: rows.map(normalizeProject),
+      pagination: data?.pagination ?? {
+        page: Number(params.page ?? 1),
+        limit: Number(params.limit ?? rows.length ?? 0),
+        total: Number(data?.total ?? rows.length ?? 0),
+        pages: Number(data?.pages ?? 1),
+      },
+    };
+  }
+
+  async listAll(params: { q?: string; limit?: number } = {}): Promise<Project[]> {
+    const pageSize = params.limit ?? 200;
+    let resp = await this.list({ ...params, page: 1, limit: pageSize });
+    const all: Project[] = [...resp.projects];
+
+    const totalPages = resp.pagination?.pages ?? 1;
+    if (totalPages > 1) {
+      for (let page = 2; page <= totalPages; page++) {
+        resp = await this.list({ ...params, page, limit: pageSize });
+        all.push(...resp.projects);
+      }
+    }
+    return all;
+  }
+
   async createProject(
     clientId: string,
     data: {

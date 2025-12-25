@@ -5,6 +5,8 @@ import { rolesAPI, Role } from "../api/roles";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
 import { areasAPI, Area } from "../api/areas";
+import { clientsAPI, Client } from "../api/clients";
+import { projectsAPI, Project } from "../api/projects";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -30,6 +32,8 @@ interface UserFormData {
   areaId?: string;
   hireDate: string;
   extraVacationDays: number;
+  clientIds: string[];
+  projectIds: string[];
 }
 
 type ModalMode = "edit" | "password";
@@ -44,12 +48,13 @@ export const UsersPage: React.FC = () => {
   const [positions, setPositions] = useState<Position[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
 
   // búsqueda/filters (server-side)
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -71,6 +76,8 @@ export const UsersPage: React.FC = () => {
     areaId: undefined,
     hireDate: new Date().toISOString().split("T")[0],
     extraVacationDays: 0,
+    clientIds: [],
+    projectIds: [],
   });
 
   // password modal fields (cuando modalMode === "password")
@@ -98,7 +105,7 @@ export const UsersPage: React.FC = () => {
     const init = async () => {
       try {
         setInitialLoading(true);
-        await Promise.all([fetchUsers({ silent: true }), fetchRoles(), fetchPositions(), fetchLevels(), fetchAreas()]);
+        await Promise.all([fetchUsers({ silent: true }), fetchRoles(), fetchPositions(), fetchLevels(), fetchAreas(), fetchAllClients(), fetchAllProjects()]);
       } finally {
         setInitialLoading(false);
       }
@@ -114,7 +121,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, filterActive, startDate, endDate]);
+  }, [searchTerm, startDate, endDate]);
 
   const fetchUsers = async ({ silent = false }: { silent?: boolean } = {}) => {
     try {
@@ -123,7 +130,6 @@ export const UsersPage: React.FC = () => {
 
       const params: any = {};
       if (searchTerm) params.email = searchTerm;
-      if (filterActive !== "all") params.isActive = filterActive === "active";
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
@@ -186,6 +192,24 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  const fetchAllClients = async () => {
+    try {
+      const clients = await clientsAPI.listAll();
+      setAllClients(clients);
+    } catch (error) {
+      console.error("Error fetching all clients:", error);
+    }
+  };
+
+  const fetchAllProjects = async () => {
+    try {
+      const projects = await projectsAPI.listAll();
+      setAllProjects(projects);
+    } catch (error) {
+      console.error("Error fetching all projects:", error);
+    }
+  };
+
   // Abrir modales
   const openCreate = () => {
     setEditingUser(null);
@@ -207,6 +231,8 @@ export const UsersPage: React.FC = () => {
       areaId: undefined,
       hireDate: new Date().toISOString().split("T")[0],
       extraVacationDays: 0,
+      clientIds: [],
+      projectIds: [],
     });
     setShowPassword(false);
     setShowModal(true);
@@ -248,6 +274,8 @@ export const UsersPage: React.FC = () => {
       areaId,
       hireDate: user.hireDate ? new Date(user.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       extraVacationDays: user.extraVacationDays || 0,
+      clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
+      projectIds: user.projectIds ? user.projectIds.map((p) => p._id) : [],
     });
     setShowPassword(false);
     setShowModal(true);
@@ -513,8 +541,21 @@ export const UsersPage: React.FC = () => {
                 <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Clientes asignados</h4>
                 <div className="flex flex-wrap gap-2">
                   {viewUser.clientIds.map((client) => (
-                    <span key={client._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                    <span key={client._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">
                       {client.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {viewUser.projectIds && viewUser.projectIds.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Proyectos asignados</h4>
+                <div className="flex flex-wrap gap-2">
+                  {viewUser.projectIds.map((project) => (
+                    <span key={project._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
+                      {project.name}
                     </span>
                   ))}
                 </div>
@@ -776,7 +817,7 @@ export const UsersPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
-                  <div className="space-y-2 border border-gray-300 dark:border-gray-600 rounded-lg p-3">
+                  <div className="space-y-2 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
                     {roles
                       .filter((role) => role.name.toLowerCase() !== "superadmin")
                       .map((role) => (
@@ -799,6 +840,62 @@ export const UsersPage: React.FC = () => {
                           </div>
                         </label>
                       ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Asignar Clientes</label>
+                    <div className="space-y-2 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
+                      {allClients.length === 0 ? (
+                        <p className="text-xs text-gray-500">No hay clientes disponibles</p>
+                      ) : (
+                        allClients.map((client) => (
+                          <label key={client._id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={formData.clientIds.includes(client._id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData((prev) => ({ ...prev, clientIds: [...prev.clientIds, client._id] }));
+                                } else {
+                                  setFormData((prev) => ({ ...prev, clientIds: prev.clientIds.filter((id) => id !== client._id) }));
+                                }
+                              }}
+                              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{client.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Asignar Proyectos</label>
+                    <div className="space-y-2 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-40 overflow-y-auto">
+                      {allProjects.length === 0 ? (
+                        <p className="text-xs text-gray-500">No hay proyectos disponibles</p>
+                      ) : (
+                        allProjects.map((project) => (
+                          <label key={project._id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={formData.projectIds.includes(project._id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
+                                } else {
+                                  setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
+                                }
+                              }}
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{project.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -907,7 +1004,7 @@ export const UsersPage: React.FC = () => {
                   </label>
                   {typeof user.areaId === "object" && user.areaId?.name ? (
                     <div className="flex flex-wrap gap-1">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg--100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
                     </div>
                   ) : (
                     <span className="text-xs text-gray-500 dark:text-gray-500">Sin área asignada</span>
@@ -950,19 +1047,34 @@ export const UsersPage: React.FC = () => {
                   {user.seniorityAtEndOfYear !== undefined && <span className="w-fit inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.seniorityAtEndOfYear} años</span>}
                 </div>
               </div>
-              {/* Clientes asignados (si los hay) */}
-              {user.clientIds && user.clientIds.length > 0 && (
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">Clientes</label>
-                  <div className="flex flex-wrap gap-1">
-                    {user.clientIds.map((client) => (
-                      <span key={client._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                        {client.name}
-                      </span>
-                    ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+                {/* Clientes asignados */}
+                {user.clientIds && user.clientIds.length > 0 && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Clientes</label>
+                    <div className="flex flex-wrap gap-1">
+                      {user.clientIds.map((client) => (
+                        <span key={client._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300">
+                          {client.name}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+                {/* Proyectos asignados */}
+                {user.projectIds && user.projectIds.length > 0 && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Proyectos</label>
+                    <div className="flex flex-wrap gap-1">
+                      {user.projectIds.map((project) => (
+                        <span key={project._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300">
+                          {project.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </Card>
           ))}
           {canManage && (

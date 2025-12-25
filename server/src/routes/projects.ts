@@ -23,6 +23,47 @@ const createProjectSchema = z.object({
     .optional(),
 });
 
+// GET /projects
+router.get("/", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { q } = req.query as { q?: string };
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 20);
+
+    const filter: any = {
+      tenantId: req.tenantObjectId,
+    };
+
+    if (q) {
+      filter.name = { $regex: q, $options: "i" };
+    }
+
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name"), Project.countDocuments(filter)]);
+
+    res.json({
+      projects,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Get all projects error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /clients/:clientId/projects/count
 router.get("/clients/:clientId/projects/count", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -78,7 +119,12 @@ router.get(
         filter.name = { $regex: q, $options: "i" };
       }
 
-      // ❌ Eliminado el filtro por nombre de rol / ownership
+      const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+      const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+      if (!isAdmin) {
+        filter.assignedUsers = req.user!.userId;
+      }
 
       const skip = (page - 1) * limit;
 
@@ -131,21 +177,11 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
       tenantId: req.tenantObjectId,
       // Guardar como string funciona porque Mongoose castea, pero dejamos el valor original
       clientId: clientObjectId,
-      createdBy: req.user!.userId,
-      usuarios: [
-        {
-          id: req.user!.userId,
-          email: req.user!.email,
-          permiso: "editar",
-        },
-      ],
+      assignedUsers: [req.user!.userId],
       campaigns: [],
     });
 
     await project.save();
-
-    // (Opcional según tu modelo de Client) — lo dejo tal como lo tenías
-    await Client.findByIdAndUpdate(clientObjectId, { $push: { proyectos: project._id } });
 
     res.status(201).json(project);
   } catch (error) {
@@ -165,17 +201,19 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
     // Como pediste eliminar filtros por nombre de rol, lo saco.
     const { projectId } = req.params;
 
-    let projectObjectId: Types.ObjectId;
-    try {
-      projectObjectId = new Types.ObjectId(projectId);
-    } catch {
-      return res.status(400).json({ error: "projectId inválido" });
+    const filter: any = {
+      _id: projectId,
+      tenantId: req.tenantObjectId,
+    };
+
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOne({
-      _id: projectObjectId,
-      tenantId: req.tenantObjectId,
-    }).populate("clientId", "name email");
+    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email");
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });
@@ -199,14 +237,15 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
 
     const { projectId } = req.params;
 
-    let projectObjectId: Types.ObjectId;
-    try {
-      projectObjectId = new Types.ObjectId(projectId);
-    } catch {
-      return res.status(400).json({ error: "projectId inválido" });
+    const filter: any = { _id: projectId, tenantId: req.tenantObjectId };
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOneAndUpdate({ _id: projectObjectId, tenantId: req.tenantObjectId }, updateData, { new: true, runValidators: true });
+    const project = await Project.findOneAndUpdate(filter, updateData, { new: true, runValidators: true });
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });
@@ -229,17 +268,19 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
   try {
     const { projectId } = req.params;
 
-    let projectObjectId: Types.ObjectId;
-    try {
-      projectObjectId = new Types.ObjectId(projectId);
-    } catch {
-      return res.status(400).json({ error: "projectId inválido" });
+    const filter: any = {
+      _id: projectId,
+      tenantId: req.tenantObjectId,
+    };
+
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOneAndDelete({
-      _id: projectObjectId,
-      tenantId: req.tenantObjectId,
-    });
+    const project = await Project.findOneAndDelete(filter);
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });
@@ -262,18 +303,19 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
 router.get("/projects/:projectId/campaigns", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { projectId } = req.params;
+    const filter: any = {
+      _id: projectId,
+      tenantId: req.tenantObjectId,
+    };
 
-    let projectObjectId: Types.ObjectId;
-    try {
-      projectObjectId = new Types.ObjectId(projectId);
-    } catch {
-      return res.status(400).json({ error: "projectId inválido" });
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOne({
-      _id: projectObjectId,
-      tenantId: req.tenantObjectId,
-    });
+    const project = await Project.findOne(filter);
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });
@@ -281,7 +323,7 @@ router.get("/projects/:projectId/campaigns", requireTenant, authenticateToken, r
     }
 
     const campaigns = await Campaign.find({
-      projectId: projectObjectId,
+      projectId: project._id,
       tenantId: req.tenantObjectId,
     }).sort({ createdAt: -1 });
 
@@ -320,13 +362,6 @@ router.post("/projects/:projectId/campaigns", requireTenant, authenticateToken, 
       clientId: project.clientId,
       projectId: project._id,
       createdBy: req.user!.userId,
-      usuarios: [
-        {
-          id: req.user!.userId,
-          email: req.user!.email,
-          permiso: "editar",
-        },
-      ],
       assignedUsers: [req.user!.userId],
       status: req.body.status || "draft",
       objectives: req.body.objectives || [],
@@ -336,8 +371,6 @@ router.post("/projects/:projectId/campaigns", requireTenant, authenticateToken, 
 
     const campaign = new Campaign(campaignData);
     await campaign.save();
-
-    await Project.findByIdAndUpdate(project._id, { $push: { campaigns: campaign._id } });
 
     res.status(201).json(campaign);
   } catch (error: any) {

@@ -12,7 +12,7 @@ export interface IProject extends Document {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
-  usuarios?: { id: string; email: string; permiso: "ver" | "editar" }[];
+  assignedUsers: Types.ObjectId[];
   favorite?: boolean;
 }
 
@@ -38,13 +38,7 @@ const projectSchema = new Schema<IProject>(
 
     createdBy: { type: String, required: true },
 
-    usuarios: [
-      {
-        id: { type: String, required: true },
-        email: { type: String, required: true },
-        permiso: { type: String, enum: ["ver", "editar"], required: true },
-      },
-    ],
+    assignedUsers: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
 
     favorite: { type: Boolean, default: false, index: true },
   },

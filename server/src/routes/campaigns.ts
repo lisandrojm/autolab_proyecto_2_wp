@@ -45,7 +45,13 @@ router.get("/count", requireTenant, authenticateToken, requireAnyRole, async (re
     const filter: any = { tenantId: req.tenantObjectId };
     if (clientId) filter.clientId = clientId;
 
-    // ❌ sin gating por nombres de rol/ownership
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
     const count = await Campaign.countDocuments(filter);
     res.json({ count });
   } catch (error) {
@@ -68,7 +74,13 @@ router.get("/", requireTenant, authenticateToken, requireAnyRole, async (req: Au
     if (status) filter.status = status;
     if (projectId) filter.projectId = projectId;
 
-    // ❌ sin gating por nombres de rol/ownership
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
     const campaigns = await Campaign.find(filter).sort({ createdAt: -1 });
     res.json(campaigns);
   } catch (error) {
@@ -91,13 +103,6 @@ router.post("/", requireTenant, authenticateToken, requireAnyRole, async (req: A
       ...data,
       tenantId: req.tenantObjectId,
       createdBy: req.user!.userId,
-      usuarios: [
-        {
-          id: req.user!.userId,
-          email: req.user!.email,
-          permiso: "editar",
-        },
-      ],
       assignedUsers: [req.user!.userId],
       status: data.status || "draft",
     });
@@ -118,10 +123,19 @@ router.post("/", requireTenant, authenticateToken, requireAnyRole, async (req: A
 // GET /campaigns/:id
 router.get("/:id", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const campaign = await Campaign.findOne({
+    const filter: any = {
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    });
+    };
+
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const campaign = await Campaign.findOne(filter);
 
     if (!campaign) {
       res.status(404).json({ error: "Campaign not found" });
@@ -141,7 +155,15 @@ router.patch("/:id", requireTenant, authenticateToken, requireAnyRole, async (re
     const updateData = createCampaignSchema.partial().parse(req.body);
     delete (updateData as any).createdBy;
 
-    const campaign = await Campaign.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, updateData, { new: true, runValidators: true });
+    const filter: any = { _id: req.params.id, tenantId: req.tenantObjectId };
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const campaign = await Campaign.findOneAndUpdate(filter, updateData, { new: true, runValidators: true });
 
     if (!campaign) {
       res.status(404).json({ error: "Campaign not found" });
@@ -164,7 +186,15 @@ router.patch("/:id/favorite", requireTenant, authenticateToken, requireAnyRole, 
   try {
     const { favorite } = z.object({ favorite: z.boolean() }).parse(req.body);
 
-    const campaign = await Campaign.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, { favorite }, { new: true });
+    const filter: any = { _id: req.params.id, tenantId: req.tenantObjectId };
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const campaign = await Campaign.findOneAndUpdate(filter, { favorite }, { new: true });
 
     if (!campaign) {
       res.status(404).json({ error: "Campaign not found" });
@@ -185,10 +215,15 @@ router.patch("/:id/favorite", requireTenant, authenticateToken, requireAnyRole, 
 // DELETE /campaigns/:id
 router.delete("/:id", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const campaign = await Campaign.findOneAndDelete({
-      _id: req.params.id,
-      tenantId: req.tenantObjectId,
-    });
+    const filter: any = { _id: req.params.id, tenantId: req.tenantObjectId };
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const campaign = await Campaign.findOneAndDelete(filter);
 
     if (!campaign) {
       res.status(404).json({ error: "Campaign not found" });
@@ -198,80 +233,6 @@ router.delete("/:id", requireTenant, authenticateToken, requireAnyRole, async (r
     res.json({ message: "Campaign deleted successfully" });
   } catch (error) {
     console.error("Delete campaign error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// POST /campaigns/:id/share
-router.post("/:id/share", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const { id, email, permiso } = z
-      .object({
-        id: z.string().min(1),
-        email: z.string().email(),
-        permiso: z.enum(["ver", "editar"]),
-      })
-      .parse(req.body);
-
-    const campaign = await Campaign.findOne({
-      _id: req.params.id,
-      tenantId: req.tenantObjectId,
-    });
-
-    if (!campaign) {
-      res.status(404).json({ error: "Campaign not found" });
-      return;
-    }
-
-    const existingIndex = campaign.usuarios.findIndex((u) => u.id === id);
-    if (existingIndex >= 0) {
-      campaign.usuarios[existingIndex] = { id, email, permiso };
-    } else {
-      campaign.usuarios.push({ id, email, permiso });
-    }
-
-    await campaign.save();
-    res.json(campaign);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Invalid data", details: error.errors });
-      return;
-    }
-    console.error("Share campaign error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// POST /campaigns/:id/unshare
-router.post("/:id/unshare", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const { id } = z.object({ id: z.string().min(1) }).parse(req.body);
-
-    const campaign = await Campaign.findOne({
-      _id: req.params.id,
-      tenantId: req.tenantObjectId,
-    });
-
-    if (!campaign) {
-      res.status(404).json({ error: "Campaign not found" });
-      return;
-    }
-
-    // No permitir remover al creador
-    if (id === campaign.createdBy) {
-      res.status(400).json({ error: "No se puede remover al creador del documento" });
-      return;
-    }
-
-    campaign.usuarios = campaign.usuarios.filter((u) => u.id !== id);
-    await campaign.save();
-    res.json(campaign);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Invalid data", details: error.errors });
-      return;
-    }
-    console.error("Unshare campaign error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

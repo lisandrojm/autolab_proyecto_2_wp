@@ -53,7 +53,7 @@ export interface IClient extends Document {
     preferences?: string;
   };
 
-  usuarios?: { userId: Types.ObjectId; permiso: "ver" | "editar" }[];
+  assignedUsers: Types.ObjectId[];
 }
 
 const clientSchema = new Schema<IClient>(
@@ -119,12 +119,7 @@ const clientSchema = new Schema<IClient>(
 
     createdBy: { type: String }, // opcional por seed
 
-    usuarios: [
-      {
-        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-        permiso: { type: String, enum: ["ver", "editar"], required: true },
-      },
-    ],
+    assignedUsers: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
 
     favorite: { type: Boolean, default: false, index: true },
   },

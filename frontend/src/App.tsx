@@ -28,7 +28,7 @@ import { ClientContextInfoPage } from "./pages/ClientContextInfoPage";
 
 import { ClientContextCampaignsPage } from "./pages/ClientContextCampaignsPage";
 import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
-import { ClientContextUsersPage } from "./pages/ClientContextUsersPage";
+
 import { ClientDashboardPage } from "./pages/ClientDashboardPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
 
@@ -534,14 +534,6 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <ClientContextPostsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="usuarios"
-                  element={
-                    <ProtectedRoute>
-                      <ClientContextUsersPage />
                     </ProtectedRoute>
                   }
                 />
