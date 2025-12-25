@@ -4,6 +4,7 @@ import { Campaign } from "../models/Campaign.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
+import { Types } from "mongoose";
 
 const router = Router();
 
@@ -21,8 +22,14 @@ const createCampaignSchema = z.object({
     spent: z.number().min(0).default(0),
   }),
   timeline: z.object({
-    startDate: z.string().transform((str) => new Date(str)),
-    endDate: z.string().transform((str) => new Date(str)),
+    startDate: z.string().transform((str) => {
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? new Date() : d;
+    }),
+    endDate: z.string().transform((str) => {
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? new Date() : d;
+    }),
   }),
   platforms: z.array(z.enum(["facebook", "instagram", "twitter", "linkedin", "tiktok", "youtube", "google-ads"])).default([]),
   kpis: z
@@ -103,17 +110,19 @@ router.post("/", requireTenant, authenticateToken, requireAnyRole, async (req: A
       ...data,
       tenantId: req.tenantObjectId,
       createdBy: req.user!.userId,
-      assignedUsers: [req.user!.userId],
+      assignedUsers: [new Types.ObjectId(req.user!.userId)],
       status: data.status || "draft",
     });
 
     await campaign.save();
     res.status(201).json(campaign);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       console.error("Campaign validation error:", error.errors);
-      res.status(400).json({ error: "Invalid data", details: error.errors });
-      return;
+      return res.status(400).json({ error: "Invalid data", details: error.errors });
+    }
+    if (error.code === 11000) {
+      return res.status(409).json({ error: "Ya existe una campaña con este nombre" });
     }
     console.error("Create campaign error:", error);
     res.status(500).json({ error: "Internal server error" });

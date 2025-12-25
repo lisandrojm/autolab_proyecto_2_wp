@@ -14,6 +14,23 @@ const router = Router();
 const createProjectSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
+  status: z.enum(["active", "completed", "on_hold", "archived"]).optional(),
+  startDate: z
+    .string()
+    .optional()
+    .transform((s) => {
+      if (!s) return undefined;
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? undefined : d;
+    }),
+  endDate: z
+    .string()
+    .optional()
+    .transform((s) => {
+      if (!s) return undefined;
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? undefined : d;
+    }),
   objectives: z.array(z.string()).default([]),
   targetAudience: z.string().optional(),
   budget: z
@@ -177,17 +194,22 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
       tenantId: req.tenantObjectId,
       // Guardar como string funciona porque Mongoose castea, pero dejamos el valor original
       clientId: clientObjectId,
-      assignedUsers: [req.user!.userId],
-      campaigns: [],
+      createdBy: req.user!.userId,
+      assignedUsers: [new Types.ObjectId(req.user!.userId)],
     });
 
     await project.save();
 
+    // Actualizar el cliente para incluir el proyecto
+    await Client.findByIdAndUpdate(clientObjectId, { $push: { proyectos: project._id } });
+
     res.status(201).json(project);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Invalid data", details: error.errors });
-      return;
+      return res.status(400).json({ error: "Invalid data", details: error.errors });
+    }
+    if (error.code === 11000) {
+      return res.status(409).json({ error: "Ya existe un proyecto con este nombre para este cliente" });
     }
     console.error("Create project error:", error);
     res.status(500).json({ error: "Internal server error" });

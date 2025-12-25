@@ -155,14 +155,18 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       ...data,
       tenantId: req.tenantObjectId,
       createdBy: req.user!.userId,
-      assignedUsers: [req.user!.userId], // El creador se asigna por defecto
+      assignedUsers: [new Types.ObjectId(req.user!.userId)], // El creador se asigna por defecto
       status: "onboarding",
     });
 
     await client.save();
     res.status(201).json(client);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) return res.status(400).json({ error: "Invalid data", details: error.errors });
+
+    if (error.code === 11000) {
+      return res.status(409).json({ error: "Ya existe un cliente con este email en este tenant" });
+    }
 
     console.error("Create client error:", error);
     res.status(500).json({ error: "Internal server error" });
