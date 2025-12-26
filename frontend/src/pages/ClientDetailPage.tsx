@@ -10,7 +10,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faLayerGroup, faEdit } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { getClientStatusLabel } from "../utils/clientStatus";
 
@@ -27,14 +27,42 @@ export const ClientDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openInfo, setOpenInfo] = useState(false);
 
+  // Edit Modal State
+  const [openEdit, setOpenEdit] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    industry: "",
+    website: "",
+    status: "active" as Client["status"],
+  });
+
   const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
     if (!clientId) return;
     fetchClientData();
     fetchProjectsCount();
+    setIsEditing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  useEffect(() => {
+    if (client) {
+      setFormData({
+        name: client.name || "",
+        email: client.email || "",
+        phone: client.phone || "",
+        company: client.company || "",
+        industry: client.industry || "",
+        website: client.website || "",
+        status: client.status || "active",
+      });
+    }
+  }, [client]);
 
   const fetchClientData = async () => {
     try {
@@ -57,6 +85,33 @@ export const ClientDetailPage: React.FC = () => {
     } catch (error) {
       console.error("Error fetching projects count:", error);
       setProjectsCount(0);
+    }
+  };
+
+  const submitEdit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!client) return;
+
+    try {
+      const payload: any = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone?.trim() || undefined,
+        company: formData.company?.trim() || undefined,
+        industry: formData.industry?.trim() || undefined,
+        website: formData.website?.trim() || undefined,
+        status: formData.status,
+      };
+
+      await clientsAPI.update(client._id, payload);
+      const refreshed = await clientsAPI.get(client._id);
+      setClient(refreshed);
+      setSelectedClient(refreshed);
+      sweetAlert.success("Cliente actualizado", "Los cambios se han guardado correctamente");
+      setOpenEdit(false);
+    } catch (error: any) {
+      const message = error?.response?.data?.error || "No se pudo actualizar el cliente";
+      sweetAlert.error("Error", message);
     }
   };
 
@@ -110,6 +165,98 @@ export const ClientDetailPage: React.FC = () => {
         content: helpEntry.content,
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
+      modal={{
+        isOpen: openEdit,
+        onClose: () => setOpenEdit(false),
+        title: isEditing ? "Editar Información" : "Información del Cliente",
+        subtitle: isEditing ? "Actualiza los datos del cliente" : "Detalles generales",
+        size: "lg",
+        actions: isEditing
+          ? [
+              {
+                label: "Guardar",
+                onClick: () => {
+                  const form = document.querySelector<HTMLFormElement>("#client-edit-form");
+                  form?.requestSubmit();
+                },
+                variant: "primary",
+              },
+              { label: "Cancelar", onClick: () => setIsEditing(false), variant: "ghost" },
+            ]
+          : [
+              {
+                label: "Editar",
+                onClick: () => setIsEditing(true),
+                variant: "primary",
+              },
+              { label: "Cerrar", onClick: () => setOpenEdit(false), variant: "ghost" },
+            ],
+        content: isEditing ? (
+          <form id="client-edit-form" onSubmit={submitEdit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
+                <input type="text" required value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} className="input-field" placeholder="Nombre del cliente" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email *</label>
+                <input type="email" required value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} className="input-field" placeholder="cliente@ejemplo.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Teléfono</label>
+                <input type="tel" value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} className="input-field" placeholder="+34 600 000 000" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Empresa</label>
+                <input type="text" value={formData.company} onChange={(e) => setFormData((p) => ({ ...p, company: e.target.value }))} className="input-field" placeholder="Nombre de la empresa" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Industria</label>
+                <input type="text" value={formData.industry} onChange={(e) => setFormData((p) => ({ ...p, industry: e.target.value }))} className="input-field" placeholder="Ej: Tecnología" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sitio web</label>
+                <input type="url" value={formData.website} onChange={(e) => setFormData((p) => ({ ...p, website: e.target.value }))} className="input-field" placeholder="https://ejemplo.com" />
+              </div>
+            </div>
+          </form>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-1">
+            <div className="sm:col-span-2">
+              <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Nombre</span>
+              <div className="text-base font-medium text-gray-900 dark:text-white">{client.name}</div>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Email</span>
+              <div className="text-sm text-gray-900 dark:text-white">{client.email}</div>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Teléfono</span>
+              <div className="text-sm text-gray-900 dark:text-white">{client.phone || "—"}</div>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Empresa</span>
+              <div className="text-sm text-gray-900 dark:text-white">{client.company || "—"}</div>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Industria</span>
+              <div className="text-sm text-gray-900 dark:text-white">{client.industry || "—"}</div>
+            </div>
+            <div className="sm:col-span-2">
+              <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Sitio web</span>
+              <div className="text-sm text-primary-600 dark:text-primary-400">
+                {client.website ? (
+                  <a href={client.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    {client.website}
+                  </a>
+                ) : (
+                  <span className="text-gray-500 dark:text-gray-500">—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ),
+      }}
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Información */}
@@ -118,9 +265,22 @@ export const ClientDetailPage: React.FC = () => {
             title: "Información General",
             icon: faUsers,
             badges: [],
+            actions: [
+              {
+                icon: faEdit,
+                onClick: (e) => {
+                  e.stopPropagation();
+                  setOpenEdit(true);
+                },
+                title: "Editar Información",
+              },
+            ],
           }}
-          onClick={() => navigate(`/cliente/${clientId}/info-basica`)}
-          className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+          onClick={() => {
+            setIsEditing(false);
+            setOpenEdit(true);
+          }}
+          className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
         >
           <div className="space-y-4">
             <div className="text-sm">
@@ -146,36 +306,20 @@ export const ClientDetailPage: React.FC = () => {
         <Card
           header={{
             title: "Proyectos",
+            subtitle: "Gestión de proyectos",
             icon: faLayerGroup,
-            badges: [],
+          }}
+          footer={{
+            leftContent: (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {projectsCount} proyecto{projectsCount !== 1 ? "s" : ""} activo{projectsCount !== 1 ? "s" : ""}
+              </span>
+            ),
           }}
           onClick={() => navigate(`/clients/${clientId}/projects`)}
-          className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+          className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
         >
-          <div className="space-y-2">
-            {projectsCount > 0 ? (
-              <div className="flex flex-col items-center justify-center py-4">
-                <div className="text-3xl font-bold text-primary-600 mb-1">{projectsCount}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  proyecto{projectsCount !== 1 ? "s" : ""} activo{projectsCount !== 1 ? "s" : ""}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <FontAwesomeIcon icon={faLayerGroup} className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-3" />
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">No hay proyectos creados</div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/clients/${clientId}/projects`);
-                  }}
-                  className="btn-primary text-xs px-4 py-2"
-                >
-                  Crear Primer Proyecto
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Body content removed as requested */}
         </Card>
       </div>
     </PageLayout>

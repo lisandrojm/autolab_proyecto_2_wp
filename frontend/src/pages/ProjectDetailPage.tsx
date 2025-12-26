@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
-import { usersAPI, User } from "../api/users";
+
 import { useAuthStore } from "../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -11,7 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup, faBullseye, faEdit, faUsers, faInfoCircle, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faBullseye, faEdit, faUsers, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -27,7 +27,7 @@ const getClientIdFromProject = (p: any): string | undefined => {
   return undefined;
 };
 
-type ModalMode = "editProject" | "assignUser" | null;
+type ModalMode = "editProject" | "assignUser" | "manageTeam" | null;
 
 /* -------------------------------- Component -------------------------------- */
 
@@ -39,8 +39,6 @@ export const ProjectDetailPage: React.FC = () => {
   // data
   const [project, setProject] = useState<Project | null>(null);
   const [client, setClient] = useState<Client | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-
   const [loading, setLoading] = useState(true);
 
   // info modal (ⓘ)
@@ -62,8 +60,6 @@ export const ProjectDetailPage: React.FC = () => {
     objectives: [""],
     targetAudience: "",
   });
-
-  const [selectedUserId, setSelectedUserId] = useState("");
 
   /* ------------------------------ Fetchers ------------------------------- */
 
@@ -108,22 +104,13 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      const { users } = await usersAPI.list({ limit: 1000 });
-      setAllUsers(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
   /* ------------------------------- Effects ------------------------------- */
 
   useEffect(() => {
     if (!projectId || !token) return;
     (async () => {
       try {
-        await Promise.all([fetchProject(), fetchUsers()]);
+        await Promise.all([fetchProject()]);
       } finally {
         setLoading(false);
       }
@@ -138,32 +125,15 @@ export const ProjectDetailPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const openAssignUser = () => {
-    setModalMode("assignUser");
-    setSelectedUserId("");
-    setShowModal(true);
+  const openManageTeam = () => {
+    if (project) {
+      navigate(`/projects/${project._id}/team`);
+    }
   };
 
   const closeModal = () => {
     setShowModal(false);
     setModalMode(null);
-  };
-
-  const handleUnassignUser = async (userId: string) => {
-    if (!project) return;
-    const result = await sweetAlert.confirm("¿Retirar del proyecto?", "¿Estás seguro de que quieres quitar a esta persona del proyecto?");
-    if (!result.isConfirmed) return;
-
-    try {
-      const newAssigned = (project as any).assignedUsers.map((u: any) => u._id).filter((id: string) => id !== userId);
-
-      await projectsAPI.updateProject(project._id, { assignedUsers: newAssigned });
-      sweetAlert.success("Persona retirada", "El equipo ha sido actualizado");
-      fetchProject();
-    } catch (error) {
-      console.error("Error unassigning user:", error);
-      sweetAlert.error("Error", "No se pudo retirar a la persona");
-    }
   };
 
   /* ------------------------------- Submitters ----------------------------- */
@@ -185,30 +155,6 @@ export const ProjectDetailPage: React.FC = () => {
     } catch (error) {
       console.error("Error updating project:", error);
       sweetAlert.error("Error", "No se pudo actualizar el proyecto");
-    }
-  };
-
-  const submitAssignUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!project || !selectedUserId) return;
-
-    try {
-      const currentIds = (project as any).assignedUsers.map((u: any) => u._id);
-      if (currentIds.includes(selectedUserId)) {
-        sweetAlert.warning("Ya asignado", "Esta persona ya forma parte del proyecto");
-        return;
-      }
-
-      await projectsAPI.updateProject(project._id, {
-        assignedUsers: [...currentIds, selectedUserId],
-      });
-
-      sweetAlert.success("Persona asignada", "El perfil se ha añadido al proyecto");
-      closeModal();
-      fetchProject();
-    } catch (error) {
-      console.error("Error assigning user:", error);
-      sweetAlert.error("Error", "No se pudo asignar a la persona");
     }
   };
 
@@ -244,16 +190,22 @@ export const ProjectDetailPage: React.FC = () => {
     );
   }
 
-  const modalTitle = modalMode === "editProject" ? "Editar Proyecto" : "Asignar Persona";
-  const modalPrimary = modalMode === "editProject" ? "Actualizar" : "Asignar";
-  const modalSubtitle = modalMode === "editProject" ? "Actualiza los datos del proyecto" : "Selecciona una persona para sumar al proyecto";
+  const modalTitle = modalMode === "editProject" ? "Editar Proyecto" : "Gestionar Equipo";
+  const modalPrimary = modalMode === "editProject" ? "Actualizar" : "Cerrar"; // In manage mode, primary is just close or we hide it
+  const modalSubtitle = modalMode === "editProject" ? "Actualiza los datos del proyecto" : "Agrega o quita miembros del equipo";
 
   const handleModalPrimary = () => {
-    const form = document.querySelector<HTMLFormElement>("#pd-modal-form");
-    form?.requestSubmit();
+    if (modalMode === "editProject") {
+      const form = document.querySelector<HTMLFormElement>("#pd-modal-form");
+      form?.requestSubmit();
+    } else {
+      closeModal();
+    }
   };
 
   const assignedUsers = (project as any).assignedUsers || [];
+  const assignedCount = assignedUsers.length;
+  const assignedSubtitle = assignedCount === 1 ? "1 persona asignada" : `${assignedCount} personas asignadas`;
 
   return (
     <PageLayout
@@ -282,7 +234,6 @@ export const ProjectDetailPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <button onClick={openEditProject} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
             <FontAwesomeIcon icon={faEdit} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden sm:inline">Editar</span>
           </button>
         </div>
       }
@@ -292,14 +243,17 @@ export const ProjectDetailPage: React.FC = () => {
         title: modalTitle,
         subtitle: modalSubtitle,
         size: "lg",
-        actions: [
-          { label: modalPrimary, onClick: handleModalPrimary, variant: "primary" as const },
-          { label: "Cancelar", onClick: closeModal, variant: "ghost" as const },
-        ],
+        actions:
+          modalMode === "editProject"
+            ? [
+                { label: modalPrimary, onClick: handleModalPrimary, variant: "primary" as const },
+                { label: "Cancelar", onClick: closeModal, variant: "ghost" as const },
+              ]
+            : [{ label: "Listo", onClick: closeModal, variant: "primary" as const }],
         content: (
-          <form id="pd-modal-form" onSubmit={modalMode === "editProject" ? submitEditProject : submitAssignUser}>
+          <div className="space-y-6">
             {modalMode === "editProject" && (
-              <div className="space-y-6">
+              <form id="pd-modal-form" onSubmit={submitEditProject} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
                   <input type="text" required value={projectForm.name} onChange={(e) => setProjectForm((p) => ({ ...p, name: e.target.value }))} className="input-field" placeholder="Nombre del proyecto" />
@@ -383,28 +337,9 @@ export const ProjectDetailPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </form>
             )}
-
-            {modalMode === "assignUser" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Seleccionar Persona</label>
-                  <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="input-field" required>
-                    <option value="">Selecciona un usuario...</option>
-                    {allUsers
-                      .filter((u) => !assignedUsers.some((au: any) => au._id === u._id))
-                      .map((u) => (
-                        <option key={u._id} value={u._id}>
-                          {u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}
-                        </option>
-                      ))}
-                  </select>
-                  <p className="mt-2 text-xs text-gray-500">Solo aparecen personas que aún no están en el proyecto.</p>
-                </div>
-              </div>
-            )}
-          </form>
+          </div>
         ),
       }}
     >
@@ -415,6 +350,13 @@ export const ProjectDetailPage: React.FC = () => {
             title: "Información del Proyecto",
             subtitle: "Objetivos y detalles estratégicos",
             icon: faInfoCircle,
+          }}
+          footer={{
+            leftContent: (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}
+              </span>
+            ),
           }}
         >
           <div className="space-y-6">
@@ -443,65 +385,27 @@ export const ProjectDetailPage: React.FC = () => {
                 <p className="text-sm text-gray-700 dark:text-gray-300">{project.targetAudience}</p>
               </div>
             )}
-
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <div>
-                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Fecha Inicio</h4>
-                <p className="text-sm text-gray-900 dark:text-white">{project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"}</p>
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Fecha Fin</h4>
-                <p className="text-sm text-gray-900 dark:text-white">{project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}</p>
-              </div>
-            </div>
           </div>
         </Card>
-
         {/* Card 2: Personas Asignadas */}
         <Card
+          onClick={openManageTeam}
           header={{
             title: "Equipo del Proyecto",
-            subtitle: `${assignedUsers.length} personas asignadas`,
+            subtitle: "Gestiona el acceso de usuarios",
             icon: faUsers,
+          }}
+          footer={{
+            leftContent: <span className="text-sm text-gray-500 dark:text-gray-400">{assignedSubtitle}</span>,
             actions: [
               {
-                icon: faUserPlus,
-                onClick: openAssignUser,
-                title: "Asignar Persona",
-                variant: "blue",
+                icon: faEdit,
+                onClick: openManageTeam,
+                title: "Gestionar Equipo",
               },
             ],
           }}
-        >
-          {assignedUsers.length > 0 ? (
-            <div className="space-y-4">
-              {assignedUsers.map((u: any) => (
-                <div key={u._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">{u.firstName?.charAt(0) || u.email?.charAt(0).toUpperCase()}</div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
-                    </div>
-                  </div>
-                  <button onClick={() => handleUnassignUser(u._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Quitar del proyecto">
-                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FontAwesomeIcon icon={faUsers} className="text-gray-400 h-8 w-8" />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">No hay personas asignadas a este proyecto.</p>
-              <button onClick={openAssignUser} className="mt-4 text-sm text-primary-600 dark:text-primary-400 font-semibold hover:underline">
-                + Asignar la primera persona
-              </button>
-            </div>
-          )}
-        </Card>
+        />
       </div>
     </PageLayout>
   );

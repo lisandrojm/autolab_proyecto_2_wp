@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam";
 
 export type HelpEntry = {
   title: string;
@@ -178,6 +178,10 @@ const helpResources = {
       "activityLogs.title": "Registro de Novedades",
       "activityLogs.description": "Sistema de reporte diario de asistencia y novedades del personal.",
       "activityLogs.items": ["**Reportes Diarios**: Visualización centralizada de los formularios enviados por coordinadores.", "**Control de Asistencia**: Detalle de horas de entrada, salida y verificación de horas extras.", "**Gestión de Ausencias**: Registro de faltas justificadas, compensatorios y licencias.", "**Firmas**: Estado de validación digital de los reportes.", "**Filtros**: Búsqueda por fecha y área para auditoría rápida."],
+
+      "projectTeam.title": "Gestión de Equipo",
+      "projectTeam.description": "Administra los miembros asignados al proyecto.",
+      "projectTeam.items": ["**Usuarios Disponibles**: Lista de candidatos para agregar.", "**Filtros**: Busca por área, cargo o palabra clave.", "**Equipo Actual**: Miembros activos en el proyecto.", "**Acciones**: Agrega o elimina usuarios con un clic."],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -358,6 +362,11 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
     title: "Registro de Novedades",
     size: "sm",
     content: buildHelpContent("activityLogs"),
+  },
+  projectTeam: {
+    title: "Gestión de Equipo",
+    size: "sm",
+    content: buildHelpContent("projectTeam"),
   },
 };
 

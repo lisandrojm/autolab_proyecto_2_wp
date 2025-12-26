@@ -19,11 +19,11 @@ import { TenantsPage } from "./pages/TenantsPage";
 import { ClientDetailPage } from "./pages/ClientDetailPage";
 import { ClientProjectsPage } from "./pages/ClientProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
+import { ProjectTeamPage } from "./pages/ProjectTeamPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 
-import { ClientContextInfoPage } from "./pages/ClientContextInfoPage";
 import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
 
 import { ClientDashboardPage } from "./pages/ClientDashboardPage";
@@ -248,6 +248,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ProjectDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:projectId/team"
+                element={
+                  <ProtectedRoute>
+                    <ProjectTeamPage />
                   </ProtectedRoute>
                 }
               />
@@ -492,15 +500,6 @@ function App() {
                   </ProtectedRoute>
                 }
               >
-                <Route
-                  path="info-basica"
-                  element={
-                    <ProtectedRoute>
-                      <ClientContextInfoPage />
-                    </ProtectedRoute>
-                  }
-                />
-
                 <Route
                   path="posts"
                   element={

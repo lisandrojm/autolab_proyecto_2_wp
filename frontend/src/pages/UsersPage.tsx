@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
 import { rolesAPI, Role } from "../api/roles";
@@ -14,7 +14,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserGroup, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -96,17 +96,6 @@ export const UsersPage: React.FC = () => {
   const [viewUser, setViewUser] = useState<User | null>(null);
 
   const canManage = hasPermission("users:manage");
-
-  // Helper Switch component
-  const FormSwitch = ({ checked, onChange, label, description, activeColor = "text-primary-600 dark:text-primary-400", activeBg = "bg-primary-100 dark:bg-primary-900/30", inactiveColor = "text-gray-700 dark:text-gray-300" }: { checked: boolean; onChange: (checked: boolean) => void; label: string; description?: string; activeColor?: string; activeBg?: string; inactiveColor?: string }) => (
-    <button type="button" onClick={() => onChange(!checked)} className={`flex items-center w-full p-2 rounded-lg transition-colors text-left ${checked ? `${activeBg} ${activeColor}` : `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${inactiveColor}`}`}>
-      <FontAwesomeIcon icon={checked ? faToggleOn : faToggleOff} className={`h-4 w-4 mr-3 transition-colors ${checked ? activeColor : "text-gray-400"}`} />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{label}</div>
-        {description && <div className="text-xs opacity-70 line-clamp-1">{description}</div>}
-      </div>
-    </button>
-  );
 
   // Para descartar respuestas viejas
   const requestIdRef = useRef(0);
@@ -229,24 +218,6 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const filteredProjects = useMemo(() => {
-    if (formData.clientIds.length === 0) return [];
-
-    return allProjects.filter((p) => {
-      // Intentar obtener el ID del cliente de varias formas (string u objeto poblado)
-      let cid: string | null = null;
-      if (typeof p.clientId === "string") {
-        cid = p.clientId;
-      } else if (p.clientId && typeof p.clientId === "object") {
-        cid = (p.clientId as any)._id || (p.clientId as any).id;
-      }
-
-      const matches = cid && formData.clientIds.includes(cid);
-
-      return matches;
-    });
-  }, [allProjects, formData.clientIds]);
-
   // Abrir modales
   const openCreate = () => {
     setEditingUser(null);
@@ -284,12 +255,6 @@ export const UsersPage: React.FC = () => {
       }
     }
   }, [formData.positionId, showModal, modalMode]);
-
-  useEffect(() => {
-    if (showModal && modalMode === "edit") {
-      fetchAllProjects();
-    }
-  }, [showModal, modalMode]);
 
   const openEdit = (user: User) => {
     setEditingUser(user);
@@ -602,25 +567,6 @@ export const UsersPage: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              {/* Clientes asignados */}
-              <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faUserGroup} className="h-3 w-3 text-gray-400" />
-                  Clientes
-                </label>
-                {viewUser.clientIds && viewUser.clientIds.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {viewUser.clientIds.map((client) => (
-                      <span key={client._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                        {client.name}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-500">Sin clientes asignados</span>
-                )}
-              </div>
-
               {/* Proyectos asignados */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
@@ -629,11 +575,25 @@ export const UsersPage: React.FC = () => {
                 </label>
                 {viewUser.projectIds && viewUser.projectIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    {viewUser.projectIds.map((project) => (
-                      <span key={project._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                        {project.name}
-                      </span>
-                    ))}
+                    {viewUser.projectIds.map((project) => {
+                      const fullProject = allProjects.find((p) => p._id === project._id);
+                      let clientName = "";
+                      if (fullProject) {
+                        if (typeof fullProject.clientId === "object" && fullProject.clientId.name) {
+                          clientName = fullProject.clientId.name;
+                        } else if (typeof fullProject.clientId === "string") {
+                          const client = allClients.find((c) => c._id === fullProject.clientId);
+                          if (client) clientName = client.name;
+                        }
+                      }
+
+                      return (
+                        <span key={project._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                          {project.name}
+                          {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
+                        </span>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-xs text-gray-500">Sin proyectos asignados</span>
@@ -902,80 +862,6 @@ export const UsersPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Asignar Clientes</label>
-                    <div className="space-y-1 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
-                      {allClients.length === 0 ? (
-                        <p className="text-xs text-gray-500">No hay clientes disponibles</p>
-                      ) : (
-                        allClients.map((client) => (
-                          <FormSwitch
-                            key={client._id}
-                            checked={formData.clientIds.includes(client._id)}
-                            onChange={(checked) => {
-                              if (checked) {
-                                setFormData((prev) => ({ ...prev, clientIds: [...prev.clientIds, client._id] }));
-                              } else {
-                                setFormData((prev) => {
-                                  const newClientIds = prev.clientIds.filter((id) => id !== client._id);
-                                  // Also remove projects belonging to this client
-                                  const projectsToRemove = allProjects
-                                    .filter((p) => {
-                                      const cid = typeof p.clientId === "string" ? p.clientId : p.clientId?._id;
-                                      return cid === client._id;
-                                    })
-                                    .map((p) => p._id);
-                                  const newProjectIds = prev.projectIds.filter((pid) => !projectsToRemove.includes(pid));
-                                  return { ...prev, clientIds: newClientIds, projectIds: newProjectIds };
-                                });
-                              }
-                            }}
-                            label={client.name}
-                            activeColor="text-blue-600 dark:text-blue-400"
-                            activeBg="bg-blue-100 dark:bg-blue-900/50"
-                          />
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Asignar Proyectos</label>
-                    <div className="space-y-1 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
-                      {formData.clientIds.length === 0 ? (
-                        <p className="text-xs text-gray-500 italic">Selecciona un cliente para ver sus proyectos</p>
-                      ) : filteredProjects.length === 0 ? (
-                        <div className="text-center py-2">
-                          <p className="text-xs text-gray-500">No hay proyectos disponibles para los clientes seleccionados</p>
-                          <p className="text-xs text-gray-400 mt-1">(Total proyectos en memoria: {allProjects.length})</p>
-                          {allProjects.length > 0 && (
-                            <button type="button" onClick={() => fetchAllProjects()} className="text-xs text-blue-500 hover:underline mt-2">
-                              Sincronizar proyectos
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        filteredProjects.map((project) => (
-                          <FormSwitch
-                            key={project._id}
-                            checked={formData.projectIds.includes(project._id)}
-                            onChange={(checked) => {
-                              if (checked) {
-                                setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
-                              } else {
-                                setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
-                              }
-                            }}
-                            label={project.name}
-                            activeColor="text-blue-600 dark:text-blue-400"
-                            activeBg="bg-blue-100 dark:bg-blue-900/50"
-                          />
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
                   <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
