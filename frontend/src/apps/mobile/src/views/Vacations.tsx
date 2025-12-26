@@ -14,6 +14,7 @@ import {
   faInfoCircle,
   faCheckCircle,
   faBriefcase,
+  faUserTie,
 } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
@@ -507,6 +508,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold">Antigüedad:</span> {calculateAntiguedad()} Años
                 </span>
+                {/* Cargo */}
+                <span className="flex items-center gap-1">
+                  <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
+                </span>
                 {/* Área / Miembros */}
                 <span className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
@@ -517,13 +523,31 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 {/* Proyecto */}
                 <span className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold uppercase">Proyecto:</span>
-                  {stats?.project || "Sin Asignación"}
+                  <span className="font-semibold uppercase">Reglas:</span>
                   {/* Min Days Project/Global */}
-                  {(globalConfig?.minDiasFraccion || (stats?.projectVacationConfig as any)?.minDiasFraccion) && <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">Min: {(stats?.projectVacationConfig as any)?.useGlobalConfig === false ? ((stats?.projectVacationConfig as any)?.minDiasFraccion ?? 1) : (globalConfig?.minDiasFraccion ?? 7)} días</span>}
+                  {/* Min Days Badge */}
+                  {/* Reglas Badges */}
+                  {(() => {
+                    const effConfig = (stats?.projectVacationConfig as any) ?? globalConfig;
+                    const fractionalAllowed = effConfig?.permiteFraccionadas;
+                    const minDays = effConfig?.minDiasFraccion ?? 1;
+                    const source = stats?.vacationConfigSource || "Global";
+
+                    return fractionalAllowed ? (
+                      <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                        Min: {minDays} días <span className="opacity-70">({source})</span>
+                      </span>
+                    ) : (
+                      <span className="ml-1 text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
+                        No Fracc. <span className="opacity-70">({source})</span>
+                      </span>
+                    );
+                  })()}
 
                   {/* Consecutive Days Rule Badge */}
-                  <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"}</span>
+                  <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                    {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({stats?.vacationConfigSource || "Global"})</span>
+                  </span>
                 </span>
               </div>
             </div>

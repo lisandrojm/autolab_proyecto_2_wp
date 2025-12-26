@@ -38,7 +38,7 @@ const createProjectSchema = z.object({
     .object({
       useGlobalConfig: z.boolean(),
       permiteFraccionadas: z.boolean(),
-      minDiasFraccion: z.number().min(1).optional(),
+      minDiasFraccion: z.number().min(1).nullable().optional(),
       diasCorridos: z.boolean().optional(),
     })
     .optional(),

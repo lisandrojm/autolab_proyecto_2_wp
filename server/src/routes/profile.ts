@@ -5,6 +5,7 @@ import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { VacationRequest } from "../models/VacationRequest.js";
 import { User } from "../models/User.js";
 import { Area } from "../models/Area.js";
+import { Position } from "../models/Position.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -89,6 +90,18 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       }
     }
 
+    let positionName = profile.position || "";
+    if (user && user.positionId) {
+      try {
+        const position = await Position.findById(user.positionId);
+        if (position) {
+          positionName = position.name;
+        }
+      } catch (posError) {
+        console.error("Error fetching position info:", posError);
+      }
+    }
+
     // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
     // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
     if (!profile.hireDate && user?.hireDate) {
@@ -98,7 +111,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const extraVacationDays = user?.extraVacationDays || 0;
     const carryOverVacationDays = user?.carryOverVacationDays || 0;
 
-    res.json({ ...profile, areaName, areaMembers, extraVacationDays, carryOverVacationDays });
+    res.json({ ...profile, areaName, areaMembers, positionName, extraVacationDays, carryOverVacationDays });
   } catch (error) {
     console.error("Get profile error:", error);
     if (error instanceof Error) {
@@ -219,18 +232,56 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Because Pending also reserves days (F3: "restarse inmediatamente").
     const daysAvailable = Math.max(0, annualDays - daysUsed - daysPending);
 
-    // 4. Get User Project Name & Vacation Config
+    // 4. Resolve Vacation Config (Position > Area > Project > Global)
+    // 4. Resolve Vacation Config (Position > Area > Project > Global)
     let projectName = "Sin Proyecto";
-    let projectVacationConfig = undefined;
+    let effectiveVacationConfig: any = undefined;
+    let vacationConfigSource = "Global";
 
+    // A. Check Position (Highest Priority)
+    if (user.positionId) {
+      try {
+        const Position = (await import("../models/Position.js")).Position;
+        // User.positionId can be object or string depending on population, usually ID in raw find
+        const posId = user.positionId._id || user.positionId;
+        const position = await Position.findById(posId).select("vacationConfig").lean();
+        if (position && position.vacationConfig && !position.vacationConfig.useGlobalConfig) {
+          effectiveVacationConfig = position.vacationConfig;
+          vacationConfigSource = "Cargo";
+        }
+      } catch (err) {
+        console.error("Error fetching position for stats:", err);
+      }
+    }
+
+    // B. Check Area (Second Priority)
+    if (!effectiveVacationConfig && user.areaId) {
+      try {
+        const Area = (await import("../models/Area.js")).Area;
+        // User.areaId can be object or string
+        const arId = user.areaId._id || user.areaId;
+        const area = await Area.findById(arId).select("vacationConfig").lean();
+        if (area && area.vacationConfig && !area.vacationConfig.useGlobalConfig) {
+          effectiveVacationConfig = area.vacationConfig;
+          vacationConfigSource = "Área";
+        }
+      } catch (err) {
+        console.error("Error fetching area for stats:", err);
+      }
+    }
+
+    // C. Check Project (Lowest Priority before Global)
     if (user && user.projectIds && user.projectIds.length > 0) {
       try {
-        // Dynamic import to avoid circular dependency issues if any, or just standard import usage
         const Project = (await import("../models/Project.js")).Project;
         const project = await Project.findById(user.projectIds[0]).select("name vacationConfig").lean();
         if (project) {
           projectName = project.name;
-          projectVacationConfig = project.vacationConfig;
+          // Only apply if we haven't found a higher priority config
+          if (!effectiveVacationConfig && project.vacationConfig && !project.vacationConfig.useGlobalConfig) {
+            effectiveVacationConfig = project.vacationConfig;
+            vacationConfigSource = "Proyecto";
+          }
         }
       } catch (err) {
         console.error("Error fetching project for stats:", err);
@@ -242,14 +293,12 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       vacations: {
         total: annualDays,
         used: daysUsed, // Gozados
-        pending: daysPending, // We can add this field if frontend expects it, current interface might not have it in "vacations" object but F2 requires it.
+        pending: daysPending, // Pendientes
         available: daysAvailable,
-        // We can return extra fields if permitted, but strictly matching interface:
-        // Interface ProfileStats in frontend has { total, used, available }.
-        // We should probably pass 'used' as 'daysUsed' (Gozados).
       },
       project: projectName,
-      projectVacationConfig,
+      projectVacationConfig: effectiveVacationConfig,
+      vacationConfigSource,
     });
   } catch (error) {
     console.error("Get stats error:", error);

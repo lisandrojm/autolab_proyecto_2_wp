@@ -12,6 +12,14 @@ const router = Router();
 const createAreaSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
+  vacationConfig: z
+    .object({
+      useGlobalConfig: z.boolean(),
+      permiteFraccionadas: z.boolean(),
+      minDiasFraccion: z.number().min(1).nullable().optional(),
+      diasCorridos: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 const updateAreaSchema = createAreaSchema.partial();

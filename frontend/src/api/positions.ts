@@ -5,6 +5,12 @@ export interface Position {
   tenantId: string;
   name: string;
   description?: string;
+  vacationConfig?: {
+    useGlobalConfig: boolean;
+    permiteFraccionadas: boolean;
+    minDiasFraccion?: number;
+    diasCorridos?: boolean;
+  };
   levelCount?: number;
   specificLevelCount?: number;
   levels?: Array<{
@@ -20,6 +26,12 @@ export interface Position {
 export interface PositionFormData {
   name: string;
   description?: string;
+  vacationConfig?: {
+    useGlobalConfig: boolean;
+    permiteFraccionadas: boolean;
+    minDiasFraccion?: number;
+    diasCorridos?: boolean;
+  };
 }
 
 export interface PositionListResponse {

@@ -16,6 +16,7 @@ export interface ProfileData {
     zip?: string;
   };
   position?: string;
+  positionName?: string;
   department?: string;
   areaName?: string;
   areaMembers?: number;
@@ -49,6 +50,7 @@ export interface ProfileStats {
     minDiasFraccion?: number;
     diasCorridos?: boolean;
   };
+  vacationConfigSource?: string;
 }
 
 export interface DocumentData {

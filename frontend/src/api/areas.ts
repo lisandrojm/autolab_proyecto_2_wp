@@ -5,6 +5,12 @@ export interface Area {
   tenantId?: string;
   name: string;
   description?: string;
+  vacationConfig?: {
+    useGlobalConfig: boolean;
+    permiteFraccionadas: boolean;
+    minDiasFraccion?: number;
+    diasCorridos?: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -12,6 +18,12 @@ export interface Area {
 export interface AreaFormData {
   name: string;
   description?: string;
+  vacationConfig?: {
+    useGlobalConfig: boolean;
+    permiteFraccionadas: boolean;
+    minDiasFraccion?: number;
+    diasCorridos?: boolean;
+  };
 }
 
 export interface AreaListResponse {
