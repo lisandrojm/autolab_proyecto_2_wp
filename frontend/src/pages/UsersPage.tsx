@@ -14,7 +14,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -420,6 +420,10 @@ export const UsersPage: React.FC = () => {
             <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Areas</span>
           </button>
+          <button onClick={() => navigate("/clients")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="hidden lg:block">Proyectos</span>
+          </button>
         </div>
       }
       // Igual que RolesPage: SearchAndFilters directo (sin botón Buscar)
@@ -576,7 +580,11 @@ export const UsersPage: React.FC = () => {
                 {viewUser.projectIds && viewUser.projectIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {viewUser.projectIds.map((project) => {
-                      const fullProject = allProjects.find((p) => p._id === project._id);
+                      const projectId = typeof project === "string" ? project : project._id;
+                      const projectName = typeof project === "object" && "name" in project ? project.name : null;
+                      const fullProject = allProjects.find((p) => p._id === projectId);
+                      const displayName = projectName || fullProject?.name || "Proyecto desconocido";
+
                       let clientName = "";
                       if (fullProject) {
                         if (typeof fullProject.clientId === "object" && fullProject.clientId.name) {
@@ -588,8 +596,8 @@ export const UsersPage: React.FC = () => {
                       }
 
                       return (
-                        <span key={project._id} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                          {project.name}
+                        <span key={projectId} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                          {displayName}
                           {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
                         </span>
                       );
@@ -834,6 +842,7 @@ export const UsersPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* ROLES */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
@@ -862,6 +871,52 @@ export const UsersPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* PROYECTOS */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proyectos</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    {allProjects.length === 0 ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 p-2">No hay proyectos disponibles.</p>
+                    ) : (
+                      allProjects.map((project) => {
+                        let clientName = "";
+                        if (typeof project.clientId === "object" && (project.clientId as any).name) {
+                          clientName = (project.clientId as any).name;
+                        } else if (typeof project.clientId === "string") {
+                          const c = allClients.find((client) => client._id === project.clientId);
+                          if (c) clientName = c.name;
+                        }
+
+                        const isSelected = formData.projectIds.includes(project._id);
+
+                        return (
+                          <div key={project._id} className="p-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isSelected) {
+                                  setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
+                                } else {
+                                  setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
+                                }
+                              }}
+                              className={`w-full flex flex-col items-start px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm text-left ${isSelected ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-300 ring-1 ring-blue-300 dark:ring-blue-700" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                            >
+                              <div className="flex items-center w-full">
+                                <FontAwesomeIcon icon={isSelected ? faToggleOn : faToggleOff} className={`mr-2.5 text-lg ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`} />
+                                <span className="flex-1 truncate">
+                                  {project.name} {clientName && <span className="ml-1 opacity-70 font-normal text-xs">({clientName})</span>}
+                                </span>
+                              </div>
+                              <span className={`text-xs ml-8 mt-1 block truncate max-w-full ${isSelected ? "text-blue-800/70 dark:text-blue-300/70" : "text-gray-500 font-normal"}`}>{isSelected ? "Asignado" : "No asignado"}</span>
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
                   <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
@@ -879,7 +934,7 @@ export const UsersPage: React.FC = () => {
         {/* Indicador sutil de búsqueda en curso (no bloquea) */}
         {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Buscando…</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 mx-0.5 lg:mx-0">
           {users.map((user) => (
             <Card
               key={user._id}

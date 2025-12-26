@@ -11,7 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup, faBullseye, faEdit, faUsers, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faBullseye, faEdit, faUsers, faInfoCircle, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -163,7 +163,7 @@ export const ProjectDetailPage: React.FC = () => {
   if (!projectId) {
     return (
       <EmptyState
-        icon={faLayerGroup}
+        icon={faBriefcase}
         title="Proyecto no válido"
         description="Parece que el enlace no es correcto."
         action={{

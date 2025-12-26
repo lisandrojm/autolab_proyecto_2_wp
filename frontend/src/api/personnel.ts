@@ -42,6 +42,7 @@ export interface ProfileStats {
     available: number;
     pending?: number;
   };
+  project?: string;
 }
 
 export interface DocumentData {

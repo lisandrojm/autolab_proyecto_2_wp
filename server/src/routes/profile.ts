@@ -219,6 +219,21 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Because Pending also reserves days (F3: "restarse inmediatamente").
     const daysAvailable = Math.max(0, annualDays - daysUsed - daysPending);
 
+    // 4. Get User Project Name
+    let projectName = "Sin Proyecto";
+    if (user && user.projectIds && user.projectIds.length > 0) {
+      try {
+        // Dynamic import to avoid circular dependency issues if any, or just standard import usage
+        const Project = (await import("../models/Project.js")).Project;
+        const project = await Project.findById(user.projectIds[0]).select("name").lean();
+        if (project) {
+          projectName = project.name;
+        }
+      } catch (err) {
+        console.error("Error fetching project for stats:", err);
+      }
+    }
+
     res.json({
       daysWorked,
       vacations: {
@@ -230,6 +245,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
         // Interface ProfileStats in frontend has { total, used, available }.
         // We should probably pass 'used' as 'daysUsed' (Gozados).
       },
+      project: projectName,
     });
   } catch (error) {
     console.error("Get stats error:", error);

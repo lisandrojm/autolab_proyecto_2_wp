@@ -13,6 +13,7 @@ import {
   faPlus,
   faInfoCircle,
   faCheckCircle,
+  faBriefcase,
 } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
@@ -44,7 +45,7 @@ interface VacationsProps {
 
 export default function Vacations({ onNavigate }: VacationsProps) {
   const { vacations, availableDays, occupiedDates, pendingDates, loading: vacationsLoading, createVacation, refetch } = useVacations();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, stats, loading: profileLoading } = useProfile();
 
   const [showForm, setShowForm] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -171,18 +172,45 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
       const remainingBalance = limit - daysRequested;
       if (remainingBalance > 0 && remainingBalance < minDays) {
-        await Swal.fire({
+        const daysToLeaveMin = limit - minDays;
+        const showOptionB = daysToLeaveMin > 0;
+
+        const result = await Swal.fire({
           icon: "warning",
           title: "Saldo Restante Inválido",
-          text: `Esta solicitud dejaría un saldo de ${remainingBalance} días, lo cual es menor al mínimo permitido (${minDays} días). Por favor ajustá los días para consumir todo tu saldo o dejar al menos ${minDays} días.`,
-          confirmButtonText: "Entendido",
+          html: `Esta solicitud de <b>${daysRequested} días</b> dejaría un saldo de <b>${remainingBalance} días</b>.<br/><br/>
+                 El mínimo permitido para dejar en el saldo es de <b>${minDays} días</b> (o consumo total).<br/><br/>
+                 ¿Qué te gustaría hacer?`,
+          showDenyButton: showOptionB,
+          showCancelButton: true,
+          confirmButtonText: `Tomar todo (${limit} días)`,
+          denyButtonText: showOptionB ? `Tomar max. permitido (${daysToLeaveMin} días)` : undefined,
+          cancelButtonText: "Corregir manualmente",
           confirmButtonColor: "#3b82f6",
+          denyButtonColor: "#10b981",
           customClass: {
             popup: "mobile-swal-popup",
             title: "mobile-swal-title",
+            htmlContainer: "text-sm text-gray-600 dark:text-gray-300",
           },
         });
-        return;
+
+        if (result.isConfirmed) {
+          // Tomar todo (Consumption total)
+          const newEndDate = addDays(parseISO(startDate), limit - 1);
+          setEndDate(format(newEndDate, "yyyy-MM-dd"));
+          setCalendarOpen(null);
+          return;
+        } else if (result.isDenied && showOptionB) {
+          // Ajustar para dejar el mínimo (Leave minDays)
+          const newEndDate = addDays(parseISO(startDate), daysToLeaveMin - 1);
+          setEndDate(format(newEndDate, "yyyy-MM-dd"));
+          setCalendarOpen(null);
+          return;
+        } else {
+          // Corregir manualmente
+          return;
+        }
       }
     }
     setCalendarOpen(null);
@@ -465,6 +493,12 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   <span className="font-semibold uppercase">Área:</span>
                   {profile?.areaName || profile?.department || "Sin Área"}
                   {profile?.areaMembers !== undefined && <span className="ml-1">| {profile.areaMembers} Miembro(s)</span>}
+                </span>
+                {/* Proyecto */}
+                <span className="flex items-center gap-1">
+                  <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold uppercase">Proyecto:</span>
+                  {stats?.project || "Sin Asignación"}
                 </span>
               </div>
             </div>

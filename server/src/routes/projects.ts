@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
+import { User } from "../models/User.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -208,6 +209,9 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
     // Actualizar el cliente para incluir el proyecto
     await Client.findByIdAndUpdate(clientObjectId, { $push: { proyectos: project._id } });
 
+    // Actualizar el usuario creador para incluir el proyecto
+    await User.findByIdAndUpdate(req.user!.userId, { $addToSet: { projectIds: project._id } });
+
     res.status(201).json(project);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -265,19 +269,39 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
     const { projectId } = req.params;
 
     const filter: any = { _id: projectId, tenantId: req.tenantObjectId };
-    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
 
     if (!isAdmin) {
       filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOneAndUpdate(filter, updateData, { new: true, runValidators: true });
+    // 1. Fetch current project state explicitly to manage User.projectIds sync
+    const currentProject = await Project.findOne(filter);
 
-    if (!project) {
+    if (!currentProject) {
       res.status(404).json({ error: "Project not found" });
       return;
     }
+
+    // 2. Handle assignedUsers sync if present
+    if (updateData.assignedUsers) {
+      const oldAssigned = currentProject.assignedUsers.map((id) => id.toString());
+      const newAssigned = updateData.assignedUsers;
+
+      const added = newAssigned.filter((id) => !oldAssigned.includes(id));
+      const removed = oldAssigned.filter((id) => !newAssigned.includes(id));
+
+      if (added.length > 0) {
+        await User.updateMany({ _id: { $in: added }, tenantId: req.tenantObjectId }, { $addToSet: { projectIds: currentProject._id } });
+      }
+
+      if (removed.length > 0) {
+        await User.updateMany({ _id: { $in: removed }, tenantId: req.tenantObjectId }, { $pull: { projectIds: currentProject._id } });
+      }
+    }
+
+    const project = await Project.findOneAndUpdate(filter, updateData, { new: true, runValidators: true });
 
     res.json(project);
   } catch (error) {

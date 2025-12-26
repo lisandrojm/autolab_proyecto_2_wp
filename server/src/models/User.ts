@@ -21,6 +21,8 @@ export interface IUser extends Document {
   carryOverVacationDays: number; // Días de arrastre de periodos anteriores
   createdAt: Date;
   updatedAt: Date;
+  vacationDays: { lawDays: number; extraDays: number; carryOverDays: number; totalDays: number };
+  seniorityAtEndOfYear: number;
   comparePassword(candidatePassword: string): Promise<boolean>;
   closeYear(maxDiasArrastre?: number): Promise<void>;
 }

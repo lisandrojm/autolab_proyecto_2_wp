@@ -94,7 +94,7 @@ router.get("/users", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
+    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
 
     const userIds = users.map((u) => u._id);
     const profiles = await EmployeeProfile.find({
@@ -142,7 +142,8 @@ router.get("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) 
       tenantId: req.tenantObjectId,
     })
       .select("-password")
-      .populate("roles", "name description");
+      .populate("roles", "name description")
+      .populate("projectIds", "name");
 
     if (!user) {
       res.status(404).json({ error: "User not found" });

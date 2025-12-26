@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Types } from "mongoose";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
+import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -232,6 +233,11 @@ router.post("/", requireTenant, authenticateToken, requirePermission("users:view
 
     await user.save();
 
+    // Sync projects: Add this user to assignedUsers of selected projects
+    if (user.projectIds && user.projectIds.length > 0) {
+      await Project.updateMany({ _id: { $in: user.projectIds }, tenantId: req.tenantObjectId }, { $addToSet: { assignedUsers: user._id } });
+    }
+
     // Agregar usuario al array userIds del tenant
     await Tenant.findByIdAndUpdate(req.tenantObjectId, {
       $addToSet: { userIds: user._id },
@@ -383,7 +389,30 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("users:
       delete updateData.$set;
     }
 
+    // Antes de actualizar, obtener el estado actual para sincronización
+    const currentUser = await User.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+    if (!currentUser) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
     const user = await User.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description");
+
+    // Sincronizar proyectos si hubo cambio
+    if (data.projectIds) {
+      const oldProjectIds = currentUser.projectIds.map((id) => id.toString());
+      const newProjectIds = data.projectIds;
+
+      const added = newProjectIds.filter((id) => !oldProjectIds.includes(id));
+      const removed = oldProjectIds.filter((id) => !newProjectIds.includes(id));
+
+      if (added.length > 0) {
+        await Project.updateMany({ _id: { $in: added }, tenantId: req.tenantObjectId }, { $addToSet: { assignedUsers: user!._id } });
+      }
+      if (removed.length > 0) {
+        await Project.updateMany({ _id: { $in: removed }, tenantId: req.tenantObjectId }, { $pull: { assignedUsers: user!._id } });
+      }
+    }
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
