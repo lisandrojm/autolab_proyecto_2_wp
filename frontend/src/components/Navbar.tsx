@@ -398,7 +398,6 @@ export const MobileNavbar: React.FC = () => {
 
   const NavMenu: React.FC<{ onItemClick?: () => void }> = ({ onItemClick }) => {
     const adminItems = menuItems.filter((item) => !item.isCreativeSuite);
-    const creativeSuiteItem = menuItems.find((item) => item.isCreativeSuite);
 
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
     const userAdminItems = adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users"].includes(item.path));
@@ -483,36 +482,6 @@ export const MobileNavbar: React.FC = () => {
 
     return (
       <div>
-        {/* ADMIN USUARIOS */}
-        {userAdminItems.length > 0 && (
-          <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection("users")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
-              <span>
-                <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
-                Admin <span className="uppercase">Usuarios</span>
-              </span>
-              <FontAwesomeIcon icon={openAdminSection === "users" ? faChevronDown : faChevronRight} className="h-3 w-3" />
-            </button>
-
-            {openAdminSection === "users" && <nav className="space-y-1 pb-2">{userAdminItems.map((item) => renderMenuItem(item))}</nav>}
-          </div>
-        )}
-
-        {/* ADMIN GESTIÓN (Nuevo Grupo) */}
-        {managementItems.length > 0 && (
-          <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection("management")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
-              <span>
-                <FontAwesomeIcon icon={faBriefcase} className="mr-2 h-4 w-4" /> {/* Assuming faBriefcase for management */}
-                Admin <span className="uppercase">Gestión</span>
-              </span>
-              <FontAwesomeIcon icon={openAdminSection === "management" ? faChevronDown : faChevronRight} className="h-3 w-3" />
-            </button>
-
-            {openAdminSection === "management" && <nav className="space-y-1 pb-2">{managementItems.map((item) => renderMenuItem(item))}</nav>}
-          </div>
-        )}
-
         {/* ADMIN GENERAL (RRHH) */}
         {generalAdminItems.length > 0 && (
           <div className="px-2 mb-2">
@@ -525,6 +494,21 @@ export const MobileNavbar: React.FC = () => {
             </button>
 
             {openAdminSection === "general" && <nav className="space-y-1 pb-2">{generalAdminItems.map((item) => renderMenuItem(item))}</nav>}
+          </div>
+        )}
+
+        {/* ADMIN USUARIOS */}
+        {userAdminItems.length > 0 && (
+          <div className="px-2 mb-2">
+            <button onClick={() => toggleAdminSection("users")} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+              <span>
+                <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
+                Admin <span className="uppercase">Usuarios</span>
+              </span>
+              <FontAwesomeIcon icon={openAdminSection === "users" ? faChevronDown : faChevronRight} className="h-3 w-3" />
+            </button>
+
+            {openAdminSection === "users" && <nav className="space-y-1 pb-2">{userAdminItems.map((item) => renderMenuItem(item))}</nav>}
           </div>
         )}
 
