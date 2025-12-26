@@ -41,6 +41,7 @@ export interface Project {
     useGlobalConfig: boolean;
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
+    diasCorridos?: boolean;
   };
 }
 
@@ -222,6 +223,7 @@ class ProjectsAPI {
         useGlobalConfig: boolean;
         permiteFraccionadas: boolean;
         minDiasFraccion?: number;
+        diasCorridos?: boolean;
       };
     }
   ): Promise<Project> {

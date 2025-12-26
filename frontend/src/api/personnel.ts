@@ -43,6 +43,12 @@ export interface ProfileStats {
     pending?: number;
   };
   project?: string;
+  projectVacationConfig?: {
+    useGlobalConfig: boolean;
+    permiteFraccionadas: boolean;
+    minDiasFraccion?: number;
+    diasCorridos?: boolean;
+  };
 }
 
 export interface DocumentData {

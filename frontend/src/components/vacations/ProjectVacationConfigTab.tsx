@@ -42,9 +42,16 @@ export const ProjectVacationConfigTab: React.FC = () => {
     setSavingId(project._id);
     try {
       const updatedConfig = {
+        useGlobalConfig: true,
+        permiteFraccionadas: true,
         ...project.vacationConfig,
         ...updates,
       };
+
+      // Sanitize minDiasFraccion
+      if (updatedConfig.minDiasFraccion !== undefined && updatedConfig.minDiasFraccion < 1) {
+        updatedConfig.minDiasFraccion = 1;
+      }
 
       await projectsAPI.updateProject(project._id, { vacationConfig: updatedConfig });
       sweetAlert.success("Actualizado", "Configuración guardada correctamente");
@@ -146,7 +153,16 @@ export const ProjectVacationConfigTab: React.FC = () => {
         ) : (
           projects.map((project) => {
             const client = clients.find((c) => c._id === (typeof project.clientId === "string" ? project.clientId : (project.clientId as any)._id));
-            const config = project.vacationConfig || { useGlobalConfig: true, permiteFraccionadas: true, minDiasFraccion: undefined };
+            const config = {
+              useGlobalConfig: true,
+              permiteFraccionadas: true,
+              minDiasFraccion: 1,
+              ...project.vacationConfig,
+            };
+            // Ensure minDiasFraccion is normalized if it came as null/undefined from DB but the object existed
+            if (config.minDiasFraccion === undefined || config.minDiasFraccion === null) {
+              config.minDiasFraccion = 1;
+            }
 
             return (
               <div key={project._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -187,10 +203,14 @@ export const ProjectVacationConfigTab: React.FC = () => {
                                 setProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, vacationConfig: { ...p.vacationConfig, ...config, minDiasFraccion: val } } : p)));
                               }}
                               className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder={project.name}
+                              placeholder=""
                             />
                             <button
-                              onClick={() => handleUpdateProjectConfig(project, {})} // We pass empty updates to trigger save of ANY pending changes in state
+                              onClick={() => {
+                                const currentVal = config.minDiasFraccion || 0;
+                                const finalVal = currentVal < 1 ? 1 : currentVal;
+                                handleUpdateProjectConfig(project, { minDiasFraccion: finalVal });
+                              }}
                               className="w-28 px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
                               disabled={savingId === project._id}
                             >

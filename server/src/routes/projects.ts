@@ -34,6 +34,14 @@ const createProjectSchema = z.object({
   objectives: z.array(z.string()).default([]),
   targetAudience: z.string().optional(),
   assignedUsers: z.array(z.string()).optional(),
+  vacationConfig: z
+    .object({
+      useGlobalConfig: z.boolean(),
+      permiteFraccionadas: z.boolean(),
+      minDiasFraccion: z.number().min(1).optional(),
+      diasCorridos: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 // GET /projects

@@ -102,7 +102,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
       start.setHours(0, 0, 0, 0);
 
       // If today is strictly after start date, do not show cancel button
-      if (today > start) {
+      if (today >= start) {
         return null;
       }
 
@@ -229,6 +229,8 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
               const start = new Date(vacation.startDate);
               start.setHours(0, 0, 0, 0);
 
+              const daysRemaining = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
               return (
                 <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
                   <div className="flex items-start gap-3">
@@ -236,6 +238,11 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
                     <div className="flex-1">
                       <h4 className="font-semibold text-green-500 mb-1">Solicitud Entregada</h4>
                       <p className="text-sm text-green-500/80 mb-2">Su solicitud ha sido entregada exitosamente.</p>
+                      {daysRemaining > 0 && (
+                        <p className="text-xs text-green-600 mt-1 font-medium bg-green-500/10 px-2 py-1 rounded inline-block">
+                          Tiempo para cancelar: {daysRemaining} {daysRemaining === 1 ? "día" : "días"}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

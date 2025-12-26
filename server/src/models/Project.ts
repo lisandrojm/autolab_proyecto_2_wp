@@ -19,6 +19,7 @@ export interface IProject extends Document {
     useGlobalConfig: boolean;
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
+    diasCorridos?: boolean;
   };
 }
 
@@ -52,6 +53,7 @@ const projectSchema = new Schema<IProject>(
       useGlobalConfig: { type: Boolean, default: true },
       permiteFraccionadas: { type: Boolean, default: true },
       minDiasFraccion: { type: Number },
+      diasCorridos: { type: Boolean },
     },
   },
   { timestamps: true }

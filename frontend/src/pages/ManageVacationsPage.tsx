@@ -571,15 +571,6 @@ export const ManageVacationsPage: React.FC = () => {
     }
 
     if (selectedVacation.estado === "delivered") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const start = new Date(selectedVacation.startDate);
-      start.setHours(0, 0, 0, 0);
-
-      if (today > start) {
-        return null;
-      }
-
       return (
         <button onClick={(e) => handleDelete(selectedVacation.id, selectedVacation.numeroPedido, selectedVacation.estado, e)} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
           Cancelar Solicitud

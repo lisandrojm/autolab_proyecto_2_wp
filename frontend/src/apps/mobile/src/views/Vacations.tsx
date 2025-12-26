@@ -74,6 +74,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
     fetchConfig();
   }, []);
 
+  /* Días Corridos Rule calculation */
+  const applyConsecutiveDaysRule = useMemo(() => {
+    if (stats?.projectVacationConfig && stats.projectVacationConfig.useGlobalConfig === false) {
+      return !!stats.projectVacationConfig.diasCorridos;
+    }
+    return !!globalConfig?.diasCorridos;
+  }, [stats, globalConfig]);
+
   // Refetch data when form opens to ensure availability is up to date
   useEffect(() => {
     if (showForm) {
@@ -119,11 +127,18 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       // Use calculatedAvailable instead of availableDays.available
       // If calculatedAvailable is negative, treat as 0 for positive checks, but here we check limit
       const limit = Math.max(0, calculatedAvailable);
-      const minDays = globalConfig?.minDiasFraccion || 7;
+
+      // DETERMINAR CONFIGURACIÓN A USAR (PROYECTO vs GLOBAL)
+      const projectConfig = (stats as any)?.projectVacationConfig;
+      const useProjectConfig = projectConfig && projectConfig.useGlobalConfig === false;
+
+      const minDays = useProjectConfig ? (projectConfig.minDiasFraccion ?? 1) : (globalConfig?.minDiasFraccion ?? 7);
+
+      const permiteFraccionadas = useProjectConfig ? (projectConfig.permiteFraccionadas ?? true) : (globalConfig?.permiteFraccionadas ?? true);
 
       // VALIDACIÓN DE VACACIONES FRACCIONADAS
       // Si la configuración impide fraccionar, el usuario debe solicitar TODO su saldo disponible
-      if (globalConfig && !globalConfig.permiteFraccionadas) {
+      if (!permiteFraccionadas) {
         if (daysRequested < limit) {
           await Swal.fire({
             icon: "warning",
@@ -177,7 +192,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
         const result = await Swal.fire({
           icon: "warning",
-          title: "Saldo Restante Inválido",
+          title: "Conflicto con saldo restante",
           html: `Esta solicitud de <b>${daysRequested} días</b> dejaría un saldo de <b>${remainingBalance} días</b>.<br/><br/>
                  El mínimo permitido para dejar en el saldo es de <b>${minDays} días</b> (o consumo total).<br/><br/>
                  ¿Qué te gustaría hacer?`,
@@ -187,11 +202,16 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           denyButtonText: showOptionB ? `Tomar max. permitido (${daysToLeaveMin} días)` : undefined,
           cancelButtonText: "Corregir manualmente",
           confirmButtonColor: "#3b82f6",
-          denyButtonColor: "#10b981",
+          denyButtonColor: "#3b82f6",
+          cancelButtonColor: "#334155",
           customClass: {
             popup: "mobile-swal-popup",
             title: "mobile-swal-title",
             htmlContainer: "text-sm text-gray-600 dark:text-gray-300",
+            actions: "flex flex-col gap-2 p-1",
+            confirmButton: "w-full rounded text-sm font-semibold",
+            denyButton: "w-full rounded text-sm font-semibold order-2",
+            cancelButton: "w-full rounded text-sm font-semibold !bg-slate-700 !text-white order-3",
           },
         });
 
@@ -321,7 +341,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         newEnd = "";
       } else {
         // Logic for End Date (Normal case)
-        if (isFriday(day)) {
+        if (applyConsecutiveDaysRule && isFriday(day)) {
           const saturday = addDays(day, 1);
           const sunday = addDays(day, 2);
 
@@ -343,7 +363,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             },
           });
           newEnd = format(sunday, "yyyy-MM-dd");
-        } else if (isSaturday(day)) {
+        } else if (applyConsecutiveDaysRule && isSaturday(day)) {
           const sunday = addDays(day, 1);
 
           // Verificar si el día agregado está ocupado
@@ -499,6 +519,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold uppercase">Proyecto:</span>
                   {stats?.project || "Sin Asignación"}
+                  {/* Min Days Project/Global */}
+                  {(globalConfig?.minDiasFraccion || (stats?.projectVacationConfig as any)?.minDiasFraccion) && <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">Min: {(stats?.projectVacationConfig as any)?.useGlobalConfig === false ? ((stats?.projectVacationConfig as any)?.minDiasFraccion ?? 1) : (globalConfig?.minDiasFraccion ?? 7)} días</span>}
+
+                  {/* Consecutive Days Rule Badge */}
+                  <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"}</span>
                 </span>
               </div>
             </div>

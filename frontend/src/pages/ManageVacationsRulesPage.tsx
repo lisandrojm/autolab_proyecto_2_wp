@@ -8,6 +8,7 @@ import { GlobalVacationConfigTab } from "../components/vacations/GlobalVacationC
 import { VacationOverlapRules } from "../components/vacations/VacationOverlapRules";
 
 import { ProjectVacationConfigTab } from "../components/vacations/ProjectVacationConfigTab";
+import { ConsecutiveDaysConfigTab } from "../components/vacations/ConsecutiveDaysConfigTab";
 
 const HELP_KEY = "vacationsRules" as const;
 
@@ -15,7 +16,7 @@ export function ManageVacationsRulesPage() {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
   const [openInfo, setOpenInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<"global" | "overlap" | "projects">("global");
+  const [activeTab, setActiveTab] = useState<"global" | "overlap" | "projects" | "consecutive_days">("global");
 
   return (
     <PageLayout
@@ -41,6 +42,9 @@ export function ManageVacationsRulesPage() {
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "projects" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("projects")}>
               Fraccionamiento
             </button>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "consecutive_days" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("consecutive_days")}>
+              Días Corridos
+            </button>
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "overlap" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("overlap")}>
               Solapamiento
             </button>
@@ -50,6 +54,7 @@ export function ManageVacationsRulesPage() {
           <div className="animate-in fade-in duration-300">
             {activeTab === "global" && <GlobalVacationConfigTab />}
             {activeTab === "projects" && <ProjectVacationConfigTab />}
+            {activeTab === "consecutive_days" && <ConsecutiveDaysConfigTab />}
             {activeTab === "overlap" && <VacationOverlapRules />}
           </div>
         </div>
