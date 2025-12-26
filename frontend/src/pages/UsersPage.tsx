@@ -420,10 +420,6 @@ export const UsersPage: React.FC = () => {
             <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Areas</span>
           </button>
-          <button onClick={() => navigate("/clients")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Proyectos</span>
-          </button>
         </div>
       }
       // Igual que RolesPage: SearchAndFilters directo (sin botón Buscar)
