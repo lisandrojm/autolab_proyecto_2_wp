@@ -137,16 +137,19 @@ export const ProjectTeamPage: React.FC = () => {
 
   const handleAddUser = async (userId: string) => {
     if (!project) return;
+
+    const result = await sweetAlert.confirm("¿Agregar al equipo?", "El usuario será agregado al proyecto.", "Sí, agregar");
+    if (!result.isConfirmed) return;
+
     try {
       const newAssigned = [...assignedUserIds, userId];
       await projectsAPI.updateProject(project._id, { assignedUsers: newAssigned });
-
       // Update local state without full refetch if possible, or just refetch project
       // Refetching is safer to keep sync
       const updatedProject = await projectsAPI.getProject(project._id);
       setProject(updatedProject);
 
-      // Optional: Toast notification
+      sweetAlert.success("Usuario Agregado", "El usuario ha sido añadido al equipo.");
     } catch (error) {
       console.error("Error adding user:", error);
       sweetAlert.error("Error", "No se pudo agregar al usuario.");
@@ -155,7 +158,7 @@ export const ProjectTeamPage: React.FC = () => {
 
   const handleRemoveUser = async (userId: string) => {
     if (!project) return;
-    const result = await sweetAlert.confirm("¿Retirar del equipo?", "El usuario perderá acceso al proyecto.");
+    const result = await sweetAlert.confirm("¿Retirar del equipo?", "El usuario será retirado del proyecto.");
     if (!result.isConfirmed) return;
 
     try {
@@ -164,6 +167,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       const updatedProject = await projectsAPI.getProject(project._id);
       setProject(updatedProject);
+      sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo.");
     } catch (error) {
       console.error("Error removing user:", error);
       sweetAlert.error("Error", "No se pudo retirar al usuario.");
@@ -275,7 +279,9 @@ export const ProjectTeamPage: React.FC = () => {
 
           {/* Current Team Column */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Equipo Actual ({teamMembers.length})</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+              Equipo Actual | {project.name} ({teamMembers.length})
+            </h3>
 
             <div className="bg-white dark:bg-blue-900/20 rounded-xl shadow-sm border border-blue-200 dark:border-blue-700 overflow-y-auto p-2 custom-scrollbar">
               {teamMembers.length === 0 ? (

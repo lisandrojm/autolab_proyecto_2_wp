@@ -27,7 +27,7 @@ const getClientIdFromProject = (p: any): string | undefined => {
   return undefined;
 };
 
-type ModalMode = "editProject" | "assignUser" | "manageTeam" | null;
+type ModalMode = "editProject" | "assignUser" | "manageTeam" | "viewProjectInfo" | "viewProjectTeam" | null;
 
 /* -------------------------------- Component -------------------------------- */
 
@@ -190,9 +190,31 @@ export const ProjectDetailPage: React.FC = () => {
     );
   }
 
-  const modalTitle = modalMode === "editProject" ? "Editar Proyecto" : "Gestionar Equipo";
-  const modalPrimary = modalMode === "editProject" ? "Actualizar" : "Cerrar"; // In manage mode, primary is just close or we hide it
-  const modalSubtitle = modalMode === "editProject" ? "Actualiza los datos del proyecto" : "Agrega o quita miembros del equipo";
+  const getModalTitle = () => {
+    switch (modalMode) {
+      case "editProject":
+        return "Editar Proyecto";
+      case "viewProjectInfo":
+        return `Detalles del Proyecto | ${project.name}`;
+      case "viewProjectTeam":
+        return `Equipo del Proyecto | ${project.name}`;
+      default:
+        return "Información";
+    }
+  };
+
+  const getModalSubtitle = () => {
+    switch (modalMode) {
+      case "editProject":
+        return "Actualiza los datos del proyecto";
+      case "viewProjectInfo":
+        return "Información completa y opciones";
+      case "viewProjectTeam":
+        return "Miembros asignados actualmente";
+      default:
+        return "";
+    }
+  };
 
   const handleModalPrimary = () => {
     if (modalMode === "editProject") {
@@ -206,6 +228,28 @@ export const ProjectDetailPage: React.FC = () => {
   const assignedUsers = (project as any).assignedUsers || [];
   const assignedCount = assignedUsers.length;
   const assignedSubtitle = assignedCount === 1 ? "1 persona asignada" : `${assignedCount} personas asignadas`;
+
+  const getModalActions = () => {
+    if (modalMode === "editProject") {
+      return [
+        { label: "Actualizar", onClick: handleModalPrimary, variant: "primary" as const },
+        { label: "Cancelar", onClick: closeModal, variant: "ghost" as const },
+      ];
+    }
+    if (modalMode === "viewProjectInfo") {
+      return [
+        { label: "Equipo del Proyecto", onClick: () => setModalMode("viewProjectTeam"), variant: "secondary" as const },
+        { label: "Cerrar", onClick: closeModal, variant: "ghost" as const },
+      ];
+    }
+    if (modalMode === "viewProjectTeam") {
+      return [
+        { label: "Gestionar Equipo", onClick: openManageTeam, variant: "primary" as const },
+        { label: "Volver", onClick: () => setModalMode("viewProjectInfo"), variant: "ghost" as const },
+      ];
+    }
+    return [{ label: "Listo", onClick: closeModal, variant: "primary" as const }];
+  };
 
   return (
     <PageLayout
@@ -240,16 +284,10 @@ export const ProjectDetailPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: modalTitle,
-        subtitle: modalSubtitle,
+        title: getModalTitle(),
+        subtitle: getModalSubtitle(),
         size: "lg",
-        actions:
-          modalMode === "editProject"
-            ? [
-                { label: modalPrimary, onClick: handleModalPrimary, variant: "primary" as const },
-                { label: "Cancelar", onClick: closeModal, variant: "ghost" as const },
-              ]
-            : [{ label: "Listo", onClick: closeModal, variant: "primary" as const }],
+        actions: getModalActions(),
         content: (
           <div className="space-y-6">
             {modalMode === "editProject" && (
@@ -262,50 +300,6 @@ export const ProjectDetailPage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
                   <textarea value={projectForm.description} onChange={(e) => setProjectForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del proyecto..." />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Objetivos</label>
-                  <div className="space-y-2">
-                    {projectForm.objectives.map((o, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={o}
-                          onChange={(e) =>
-                            setProjectForm((p) => ({
-                              ...p,
-                              objectives: p.objectives.map((x, idx) => (idx === i ? e.target.value : x)),
-                            }))
-                          }
-                          className="input-field flex-1"
-                          placeholder="Ej: Aumentar awareness de marca"
-                        />
-                        {projectForm.objectives.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setProjectForm((p) => ({
-                                ...p,
-                                objectives: p.objectives.filter((_, idx) => idx !== i),
-                              }))
-                            }
-                            className="px-2 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => setProjectForm((p) => ({ ...p, objectives: [...p.objectives, ""] }))} className="text-primary-600 dark:text-primary-400 text-sm hover:text-primary-700 dark:hover:text-primary-300">
-                      + Agregar objetivo
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Audiencia objetivo</label>
-                  <textarea value={projectForm.targetAudience} onChange={(e) => setProjectForm((p) => ({ ...p, targetAudience: e.target.value }))} rows={2} className="input-field resize-none" placeholder="Describe el público objetivo..." />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -339,6 +333,70 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
               </form>
             )}
+
+            {modalMode === "viewProjectInfo" && (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Descripción</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{project.description || "Sin descripción proporcionada."}</p>
+                </div>
+
+                {project.objectives && project.objectives.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Objetivos</h4>
+                    <ul className="space-y-2">
+                      {project.objectives.map((obj, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <FontAwesomeIcon icon={faBullseye} className="text-primary-500 mt-1 h-3 w-3" />
+                          {obj}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {project.targetAudience && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Público Objetivo</h4>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{project.targetAudience}</p>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <p className="text-xs text-gray-500">
+                    Duración: {project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {modalMode === "viewProjectTeam" && (
+              <div className="space-y-4">
+                {assignedUsers.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No hay miembros asignados.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {assignedUsers.map((u: any, idx: number) => {
+                      const name = typeof u === "object" ? (u.firstName ? `${u.firstName} ${u.lastName || ""}` : u.email) : "Usuario"; // Fallback if just ID
+                      const email = typeof u === "object" ? u.email : u; // Fallback if just ID
+                      const initial = name.charAt(0).toUpperCase();
+
+                      return (
+                        <div key={idx} className="flex items-center gap-3 py-3">
+                          <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-xs">{initial}</div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{name}</p>
+                            <p className="text-xs text-gray-500">{email}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ),
       }}
@@ -346,6 +404,11 @@ export const ProjectDetailPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
         {/* Card 1: Información del Proyecto */}
         <Card
+          onClick={() => {
+            setModalMode("viewProjectInfo");
+            setShowModal(true);
+          }}
+          className="cursor-pointer hover:border-primary-300 transition-colors"
           header={{
             title: "Información del Proyecto",
             subtitle: "Objetivos y detalles estratégicos",
@@ -362,29 +425,9 @@ export const ProjectDetailPage: React.FC = () => {
           <div className="space-y-6">
             <div>
               <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Descripción</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{project.description || "Sin descripción proporcionada."}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-3">{project.description || "Sin descripción proporcionada."}</p>
             </div>
-
-            {project.objectives && project.objectives.length > 0 && (
-              <div>
-                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Objetivos</h4>
-                <ul className="space-y-2">
-                  {project.objectives.map((obj, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                      <FontAwesomeIcon icon={faBullseye} className="text-primary-500 mt-1 h-3 w-3" />
-                      {obj}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {project.targetAudience && (
-              <div>
-                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Público Objetivo</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{project.targetAudience}</p>
-              </div>
-            )}
+            {/* Reduced content for preview */}
           </div>
         </Card>
         {/* Card 2: Personas Asignadas */}
@@ -392,7 +435,7 @@ export const ProjectDetailPage: React.FC = () => {
           onClick={openManageTeam}
           header={{
             title: "Equipo del Proyecto",
-            subtitle: "Gestiona el acceso de usuarios",
+            subtitle: "Gestiona los usuarios del proyecto",
             icon: faUsers,
           }}
           footer={{

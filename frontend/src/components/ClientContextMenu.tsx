@@ -39,7 +39,13 @@ export const ClientContextMenu: React.FC = () => {
     },
   ];
 
-  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + "/");
+  const isActive = (path: string) => {
+    // Special case for the "Information" link which is the base client URL
+    if (path === `/clients/${selectedClient?._id}`) {
+      return location.pathname === path;
+    }
+    return location.pathname === path || location.pathname.startsWith(path + "/");
+  };
   const handleNavigation = (actualPath: string) => navigate(actualPath);
 
   return (

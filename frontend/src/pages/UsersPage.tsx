@@ -993,6 +993,47 @@ export const UsersPage: React.FC = () => {
                   {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
                 </div>
               </div>
+
+              {/* Proyectos */}
+              <div className="mt-3">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                  Proyectos
+                </label>
+                {user.projectIds && user.projectIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {user.projectIds.map((project: any) => {
+                      const fullProject = allProjects.find((p) => p._id === (project._id || project));
+                      const pName = project.name || fullProject?.name;
+
+                      let clientName = "";
+                      if (fullProject) {
+                        if (typeof fullProject.clientId === "object" && (fullProject.clientId as any).name) {
+                          clientName = (fullProject.clientId as any).name;
+                        } else if (typeof fullProject.clientId === "string") {
+                          const c = allClients.find((client) => client._id === fullProject.clientId);
+                          if (c) clientName = c.name;
+                        }
+                      }
+
+                      if (!clientName && project.clientId && typeof project.clientId === "object" && (project.clientId as any).name) {
+                        clientName = (project.clientId as any).name;
+                      }
+
+                      if (!pName) return null;
+
+                      return (
+                        <span key={project._id || project} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                          {pName}
+                          {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos asignados</span>
+                )}
+              </div>
             </Card>
           ))}
           {canManage && (
