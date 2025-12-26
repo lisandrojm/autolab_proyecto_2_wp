@@ -15,6 +15,11 @@ export interface IProject extends Document {
   updatedAt: Date;
   assignedUsers: Types.ObjectId[];
   favorite?: boolean;
+  vacationConfig?: {
+    useGlobalConfig: boolean;
+    permiteFraccionadas: boolean;
+    minDiasFraccion?: number;
+  };
 }
 
 const projectSchema = new Schema<IProject>(
@@ -43,6 +48,11 @@ const projectSchema = new Schema<IProject>(
     assignedUsers: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
 
     favorite: { type: Boolean, default: false, index: true },
+    vacationConfig: {
+      useGlobalConfig: { type: Boolean, default: true },
+      permiteFraccionadas: { type: Boolean, default: true },
+      minDiasFraccion: { type: Number },
+    },
   },
   { timestamps: true }
 );

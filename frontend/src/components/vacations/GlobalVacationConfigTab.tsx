@@ -24,7 +24,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
   const [showVencimientoInfo, setShowVencimientoInfo] = useState(false);
 
   const [showAnticipacionInfo, setShowAnticipacionInfo] = useState(false);
-  const [showFraccionadasInfo, setShowFraccionadasInfo] = useState(false);
+
   const [showPdfTemplateInfo, setShowPdfTemplateInfo] = useState(false);
 
   useEffect(() => {
@@ -159,28 +159,6 @@ export const GlobalVacationConfigTab: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <input type="checkbox" checked={config.permiteFraccionadas} onChange={(e) => updateConfig("permiteFraccionadas", e.target.checked)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">Permitir vacaciones fraccionadas</label>
-                  <button type="button" onClick={() => setShowFraccionadasInfo(true)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {config.permiteFraccionadas && (
-                <div className="pl-7">
-                  <div className="max-w-xs">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Días mínimos por fracción</label>
-                    <input type="number" value={config.minDiasFraccion || ""} onChange={(e) => updateConfig("minDiasFraccion", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="1" placeholder="Ej: 7" />
-                    <p className="text-xs text-gray-500 mt-1">Mínimo de días corridos que debe tener cada solicitud fraccionada.</p>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="max-w-md">
@@ -345,9 +323,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
       <InfoModal isOpen={showAnticipacionInfo} onClose={() => setShowAnticipacionInfo(false)} title="Anticipación mínima">
         Cantidad mínima de días de anticipación con los que el empleado debe solicitar sus vacaciones antes de la fecha de inicio.
       </InfoModal>
-      <InfoModal isOpen={showFraccionadasInfo} onClose={() => setShowFraccionadasInfo(false)} title="Vacaciones fraccionadas">
-        Permite dividir el período de vacaciones en múltiples solicitudes a lo largo del año, en lugar de tomarlo todo de una vez.
-      </InfoModal>
+
       <InfoModal isOpen={showPdfTemplateInfo} onClose={() => setShowPdfTemplateInfo(false)} title="Plantilla PDF">
         Selecciona la plantilla de documento que se utilizará para generar el PDF de aprobación de vacaciones. Puedes gestionar las plantillas desde la sección de administración.
       </InfoModal>

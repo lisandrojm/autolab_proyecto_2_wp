@@ -14,6 +14,7 @@ import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { Level } from "../models/Level.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
+import { Project } from "../models/Project.js";
 
 const router = express.Router();
 
@@ -287,6 +288,25 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "No se encontró configuración global de vacaciones para este tenant" });
     }
 
+    // Determine effective rules based on Project assignment
+    let effectivePermiteFraccionadas = globalConfig.permiteFraccionadas;
+    let effectiveMinDiasFraccion = globalConfig.minDiasFraccion;
+
+    if (user.projectIds && user.projectIds.length > 0) {
+      const projects = await Project.find({
+        _id: { $in: user.projectIds },
+        tenantId,
+      });
+
+      // Find first project with custom config (useGlobalConfig = false)
+      const customProject = projects.find((p) => p.vacationConfig && !p.vacationConfig.useGlobalConfig);
+
+      if (customProject && customProject.vacationConfig) {
+        effectivePermiteFraccionadas = customProject.vacationConfig.permiteFraccionadas;
+        effectiveMinDiasFraccion = customProject.vacationConfig.minDiasFraccion;
+      }
+    }
+
     // CONSTANTS CALCULATION
     const timeDiff = Math.abs(end.getTime() - start.getTime());
     const daysRequested = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // Inclusive days
@@ -346,8 +366,8 @@ router.post("/", async (req, res) => {
 
         maxDiasHabiles: globalConfig.maxDiasHabiles,
         anticipacionMinimaDias: globalConfig.anticipacionMinimaDias,
-        permiteFraccionadas: globalConfig.permiteFraccionadas,
-        minDiasFraccion: globalConfig.minDiasFraccion,
+        permiteFraccionadas: effectivePermiteFraccionadas,
+        minDiasFraccion: effectiveMinDiasFraccion,
         requiereFirma: globalConfig.requiereFirma,
         pdfTemplateId: globalConfig.pdfTemplateId,
       },

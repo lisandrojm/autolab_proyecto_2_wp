@@ -37,6 +37,11 @@ export interface Project {
   targetAudience?: string;
   assignedUsers?: string[] | any[];
   updatedAt: string;
+  vacationConfig?: {
+    useGlobalConfig: boolean;
+    permiteFraccionadas: boolean;
+    minDiasFraccion?: number;
+  };
 }
 
 export interface ProjectsListResponse {
@@ -81,6 +86,7 @@ function normalizeProject(raw: any): Project {
     targetAudience: raw?.targetAudience ?? "",
     assignedUsers: Array.isArray(raw?.assignedUsers) ? raw.assignedUsers : [],
     updatedAt: String(raw?.updatedAt ?? ""),
+    vacationConfig: raw?.vacationConfig,
   };
 }
 
@@ -212,6 +218,11 @@ class ProjectsAPI {
       objectives?: string[];
       targetAudience?: string;
       assignedUsers?: string[];
+      vacationConfig?: {
+        useGlobalConfig: boolean;
+        permiteFraccionadas: boolean;
+        minDiasFraccion?: number;
+      };
     }
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {
