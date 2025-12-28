@@ -15,7 +15,7 @@ const helpResources = {
       // Clients
       "clients.title": "Información de Clientes",
       "clients.description": "Gestión completa de clientes y su información",
-      "clients.items": ["**Cliente**: Contiene datos de contacto, empresa e información adicional como redes sociales, brand kit y brief de proyecto", "**Estado**: Puede ser *Activo*, *Inactivo* u *Onboarding* para reflejar su ciclo de vida", "**Gestión**: Crear, editar, clonar y eliminar clientes desde la vista principal", "**Favoritos**: Marcar clientes importantes para acceso rápido"],
+      "clients.items": ["**Cliente**: Contiene datos de contacto, empresa e información adicional como redes sociales y brief de proyecto", "**Estado**: Puede ser *Activo*, *Inactivo* u *Onboarding* para reflejar su ciclo de vida", "**Gestión**: Crear, editar, clonar y eliminar clientes desde la vista principal"],
 
       // Dashboard
       "dashboard.title": "Información del Dashboard",
@@ -70,12 +70,12 @@ const helpResources = {
       // Client Detail
       "clientDetail.title": "Información de Cliente",
       "clientDetail.description": "Vista detallada del cliente",
-      "clientDetail.items": ["**Información básica**: Datos de contacto, empresa y estado del cliente", "**Brand Kit**: Logo, colores, fuentes y guías de marca", "**Proyectos**: Listado y gestión de proyectos asociados", "**Favoritos**: Marcar cliente como favorito para acceso rápido"],
+      "clientDetail.items": ["**Información básica**: Datos de contacto, empresa y estado del cliente", "**Proyectos**: Listado y gestión de proyectos asociados"],
 
       // Client Projects
       "clientProjects.title": "Proyectos del Cliente",
       "clientProjects.description": "Gestión de proyectos por cliente",
-      "clientProjects.items": ["**Proyectos**: Agrupan campañas, objetivos y presupuesto para un mismo cliente", "**Gestión**: Crear, buscar, editar y eliminar proyectos", "**Campañas**: Cada proyecto puede contener múltiples campañas", "**Presupuesto**: Control de presupuesto total por proyecto"],
+      "clientProjects.items": ["**Proyectos**: Agrupan objetivos para un mismo cliente", "**Gestión**: Crear, buscar, editar y eliminar proyectos"],
 
       // Campaign Detail
       "campaignDetail.title": "Sobre esta campaña",
