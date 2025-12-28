@@ -42,6 +42,7 @@ export type ChannelConfig = EmailConfig | PushConfig | Record<string, any>;
 
 export interface IPost extends Document {
   tenantId: Types.ObjectId;
+  campaignId: Types.ObjectId;
   projectId: Types.ObjectId;
   clientId: Types.ObjectId;
   title: string;
@@ -83,6 +84,7 @@ const postSchema = new Schema<IPost>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
 
+    campaignId: { type: Schema.Types.ObjectId, ref: "Campaign", required: true, index: true },
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true, index: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", required: true, index: true },
 
