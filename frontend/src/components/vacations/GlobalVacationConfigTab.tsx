@@ -295,7 +295,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
           <div className="flex justify-end gap-3">
             <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               <FontAwesomeIcon icon={faSave} />
-              {submitting ? "Guardando..." : "Guardar Configuración"}
+              {submitting ? "Guardando..." : "Guardar"}
             </button>
           </div>
         </form>

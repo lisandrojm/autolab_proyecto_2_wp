@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { pdfGlobalConfigAPI, PdfGlobalConfig } from "../../api/pdfGlobalConfig";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faBuilding, faSignature, faImage, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faSave, faBuilding, faSignature, faImage, faEye, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 
@@ -281,9 +281,18 @@ export function PdfGlobalConfigTab() {
             <FontAwesomeIcon icon={faEye} />
             Previsualizar Membrete y Firma
           </button>
-          <button type="submit" disabled={saving} className="btn-primary px-6 py-2 flex items-center gap-2">
-            {saving ? <LoadingSpinner size="sm" /> : <FontAwesomeIcon icon={faSave} />}
-            Guardar Configuración
+          <button type="submit" disabled={saving} className="btn-primary px-6 py-2 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+            {saving ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faSave} />
+                Guardar
+              </>
+            )}
           </button>
         </div>
       </form>
