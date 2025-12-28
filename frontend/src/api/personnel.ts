@@ -51,6 +51,11 @@ export interface ProfileStats {
     diasCorridos?: boolean;
   };
   vacationConfigSource?: string;
+  vacationRulesMeta?: {
+    minDiasSource: string;
+    diasCorridosSource: string;
+    fractionationSource: string;
+  };
 }
 
 export interface DocumentData {

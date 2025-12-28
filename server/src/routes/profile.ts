@@ -171,6 +171,8 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
     const tenantId = req.tenantObjectId;
+    let positionName = "";
+    let areaName = "";
 
     // 1. Get User for Vacation Days (calculated virtual) & Hire Date
     const User = (await import("../models/User.js")).User;
@@ -244,10 +246,13 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
         const Position = (await import("../models/Position.js")).Position;
         // User.positionId can be object or string depending on population, usually ID in raw find
         const posId = user.positionId._id || user.positionId;
-        const position = await Position.findById(posId).select("vacationConfig").lean();
-        if (position && position.vacationConfig && !position.vacationConfig.useGlobalConfig) {
-          effectiveVacationConfig = position.vacationConfig;
-          vacationConfigSource = "Cargo";
+        const position = await Position.findById(posId).select("name vacationConfig").lean();
+        if (position) {
+          positionName = position.name;
+          if (position.vacationConfig && !position.vacationConfig.useGlobalConfig) {
+            effectiveVacationConfig = position.vacationConfig;
+            vacationConfigSource = "Cargo";
+          }
         }
       } catch (err) {
         console.error("Error fetching position for stats:", err);
@@ -260,31 +265,123 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
         const Area = (await import("../models/Area.js")).Area;
         // User.areaId can be object or string
         const arId = user.areaId._id || user.areaId;
-        const area = await Area.findById(arId).select("vacationConfig").lean();
-        if (area && area.vacationConfig && !area.vacationConfig.useGlobalConfig) {
-          effectiveVacationConfig = area.vacationConfig;
-          vacationConfigSource = "Área";
+        const area = await Area.findById(arId).select("name vacationConfig").lean();
+        if (area) {
+          areaName = area.name;
+          if (area.vacationConfig && !area.vacationConfig.useGlobalConfig) {
+            effectiveVacationConfig = area.vacationConfig;
+            vacationConfigSource = "Área";
+          }
         }
       } catch (err) {
         console.error("Error fetching area for stats:", err);
       }
     }
 
-    // C. Check Project (Lowest Priority before Global)
-    if (user && user.projectIds && user.projectIds.length > 0) {
+    // C. Check Projects (Lowest Priority before Global)
+    let minDiasSource = vacationConfigSource; // Default to current source (Global/Cargo/Area)
+    let diasCorridosSource = vacationConfigSource; // Default to current source
+    let fractionationSource = vacationConfigSource;
+
+    if (!effectiveVacationConfig && user && user.projectIds && user.projectIds.length > 0) {
       try {
         const Project = (await import("../models/Project.js")).Project;
-        const project = await Project.findById(user.projectIds[0]).select("name vacationConfig").lean();
-        if (project) {
-          projectName = project.name;
-          // Only apply if we haven't found a higher priority config
-          if (!effectiveVacationConfig && project.vacationConfig && !project.vacationConfig.useGlobalConfig) {
-            effectiveVacationConfig = project.vacationConfig;
-            vacationConfigSource = "Proyecto";
+        const GlobalVacationConfig = (await import("../models/GlobalVacationConfig.js")).GlobalVacationConfig;
+
+        const globalConfig = await GlobalVacationConfig.findOne({ tenantId });
+        const defaultGlobal = {
+          permiteFraccionadas: globalConfig?.permiteFraccionadas ?? true,
+          minDiasFraccion: globalConfig?.minDiasFraccion ?? 7,
+          diasCorridos: globalConfig?.diasCorridos ?? false,
+        };
+
+        const projects = await Project.find({
+          _id: { $in: user.projectIds },
+          tenantId,
+        })
+          .select("name vacationConfig")
+          .lean();
+
+        if (projects.length > 0) {
+          projectName = projects.map((p) => p.name).join(", "); // List all projects
+
+          // Resolution Logic
+          // Map projects to their effective config (or global if they use global)
+          const projectConfigs = projects.map((p) => {
+            const usesCustom = p.vacationConfig && !p.vacationConfig.useGlobalConfig;
+            return {
+              name: p.name,
+              permiteFraccionadas: usesCustom ? p.vacationConfig!.permiteFraccionadas : defaultGlobal.permiteFraccionadas,
+              minDiasFraccion: usesCustom ? (p.vacationConfig!.minDiasFraccion ?? defaultGlobal.minDiasFraccion) : defaultGlobal.minDiasFraccion,
+              diasCorridos: usesCustom ? (p.vacationConfig!.diasCorridos ?? defaultGlobal.diasCorridos) : defaultGlobal.diasCorridos,
+              isCustom: usesCustom,
+            };
+          });
+
+          // 1. Fraccionamiento: True if ANY allows it
+          const anyAllowsFractionation = projectConfigs.some((c) => c.permiteFraccionadas);
+          const resolvedPermiteFraccionadas = anyAllowsFractionation;
+
+          if (anyAllowsFractionation) {
+            const allowing = projectConfigs.filter((c) => c.permiteFraccionadas);
+            fractionationSource = allowing.length === 1 ? allowing[0].name : "Múltiples Proyectos";
+          } else {
+            fractionationSource = projects.length === 1 ? projects[0].name : "Todos los Proyectos";
           }
+
+          // 2. Min Dias: Minimum of those that allow it
+          let resolvedMinDias = defaultGlobal.minDiasFraccion;
+          if (resolvedPermiteFraccionadas) {
+            const allowingConfigs = projectConfigs.filter((c) => c.permiteFraccionadas);
+            if (allowingConfigs.length > 0) {
+              const sortedByMin = allowingConfigs.sort((a, b) => (a.minDiasFraccion || 0) - (b.minDiasFraccion || 0));
+              resolvedMinDias = sortedByMin[0].minDiasFraccion || 7;
+              minDiasSource = sortedByMin[0].name;
+            }
+          }
+
+          // 3. Dias Corridos vs Hábiles (False vs True). Prioritize Hábiles (False).
+          // If ANY is False (Hábiles), result is False.
+          const anyHabiles = projectConfigs.some((c) => c.diasCorridos === false);
+          const resolvedDiasCorridos = !anyHabiles; // If any is Hábiles (false), result is Hábiles (false). Only Corridos (true) if ALL are true? No, wait.
+          // Logic from user: "Si existe una discrepancia, prioridad a Días Hábiles".
+          // Días Hábiles means diasCorridos = false.
+          // So if Project A = Hábiles (false), Project B = Corridos (true) -> Result = Hábiles (false).
+          // So if ANY is false, result is false.
+
+          if (anyHabiles) {
+            const habilesProjects = projectConfigs.filter((c) => c.diasCorridos === false);
+            diasCorridosSource = habilesProjects.length === 1 ? habilesProjects[0].name : "Múltiples Proyectos (Hábiles)";
+          } else {
+            // All are Corridos
+            diasCorridosSource = projects.length === 1 ? projects[0].name : "Todos los Proyectos";
+          }
+
+          effectiveVacationConfig = {
+            useGlobalConfig: false, // It's a resolved config
+            permiteFraccionadas: resolvedPermiteFraccionadas,
+            minDiasFraccion: resolvedMinDias,
+            diasCorridos: resolvedDiasCorridos,
+          };
+          vacationConfigSource = "Proyectos"; // Generic override, detailed sources in meta
         }
       } catch (err) {
-        console.error("Error fetching project for stats:", err);
+        console.error("Error fetching projects for stats:", err);
+      }
+    } else {
+      // If not projects, sources remain as "Global" or "Cargo" or "Area"
+      if (vacationConfigSource === "Global") {
+        minDiasSource = "Global";
+        diasCorridosSource = "Global";
+        fractionationSource = "Global";
+      } else if (vacationConfigSource === "Cargo") {
+        minDiasSource = positionName || "Cargo";
+        diasCorridosSource = positionName || "Cargo";
+        fractionationSource = positionName || "Cargo";
+      } else if (vacationConfigSource === "Área") {
+        minDiasSource = areaName || "Área";
+        diasCorridosSource = areaName || "Área";
+        fractionationSource = areaName || "Área";
       }
     }
 
@@ -299,6 +396,12 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       project: projectName,
       projectVacationConfig: effectiveVacationConfig,
       vacationConfigSource,
+      // New metadata fields
+      vacationRulesMeta: {
+        minDiasSource,
+        diasCorridosSource,
+        fractionationSource,
+      },
     });
   } catch (error) {
     console.error("Get stats error:", error);

@@ -289,8 +289,13 @@ router.post("/", async (req, res) => {
     }
 
     // Determine effective rules based on Project assignment
+    // Lógica de Resolución de Conflictos para Usuarios Multiproyecto
+    // 1. Fraccionamiento: Prioridad al que permita (TRUE wins). Si ambos permiten, el de MENOR días mínimos.
+    // 2. Tipo de Días: Prioridad a Días Hábiles (FALSE wins over TRUE for diasCorridos).
+
     let effectivePermiteFraccionadas = globalConfig.permiteFraccionadas;
-    let effectiveMinDiasFraccion = globalConfig.minDiasFraccion;
+    let effectiveMinDiasFraccion = globalConfig.minDiasFraccion || 7;
+    let effectiveDiasCorridos = globalConfig.diasCorridos;
 
     if (user.projectIds && user.projectIds.length > 0) {
       const projects = await Project.find({
@@ -298,18 +303,76 @@ router.post("/", async (req, res) => {
         tenantId,
       });
 
-      // Find first project with custom config (useGlobalConfig = false)
-      const customProject = projects.find((p) => p.vacationConfig && !p.vacationConfig.useGlobalConfig);
+      // Map to effective config per project (if useGlobal, uses global values)
+      const projectConfigs = projects.map((p) => {
+        if (p.vacationConfig && !p.vacationConfig.useGlobalConfig) {
+          return {
+            permiteFraccionadas: p.vacationConfig.permiteFraccionadas,
+            minDiasFraccion: p.vacationConfig.minDiasFraccion,
+            diasCorridos: p.vacationConfig.diasCorridos,
+          };
+        }
+        return {
+          permiteFraccionadas: globalConfig.permiteFraccionadas,
+          minDiasFraccion: globalConfig.minDiasFraccion,
+          diasCorridos: globalConfig.diasCorridos,
+        };
+      });
 
-      if (customProject && customProject.vacationConfig) {
-        effectivePermiteFraccionadas = customProject.vacationConfig.permiteFraccionadas;
-        effectiveMinDiasFraccion = customProject.vacationConfig.minDiasFraccion;
+      if (projectConfigs.length > 0) {
+        // 1. Fraccionamiento: True if ANY allows it
+        effectivePermiteFraccionadas = projectConfigs.some((c) => c.permiteFraccionadas);
+
+        // 2. Min Dias: Minimum of those that allow it (or just min of all if forced to check)
+        // Only relevant if allowed.
+        if (effectivePermiteFraccionadas) {
+          const allowedConfigs = projectConfigs.filter((c) => c.permiteFraccionadas);
+          // Get min value, default to global or 1 if missing
+          const mins = allowedConfigs.map((c) => c.minDiasFraccion ?? globalConfig.minDiasFraccion ?? 7);
+          effectiveMinDiasFraccion = Math.min(...mins);
+        }
+
+        // 3. Dias Corridos (True) vs Dias Hábiles (False). Prioridad Hábiles (False).
+        // If ANY is False (Hábiles), result is False.
+        // Result is True ONLY if ALL are True.
+        // Handle undefined as "use global" or "true" depending on safety?
+        // We already mapped useGlobal so undefined in p.vacationConfig (if explicit custom but field missing)
+        // should probably default to global. But let's assume mapped correctly.
+        // Actually map returns undefined for optional fields if not set.
+        // Let's safe guard the map above.
+
+        // Refined map above handles standard cases. For diasCorridos, if missing in custom, it might be undefined.
+        // If undefined, let's assume it inherits global for that project context or defaults to true?
+        // Let's safeguard the reduction:
+        const corridosValues = projectConfigs.map((c) => c.diasCorridos ?? globalConfig.diasCorridos ?? true);
+        effectiveDiasCorridos = corridosValues.every((v) => v === true);
       }
     }
 
     // CONSTANTS CALCULATION
-    const timeDiff = Math.abs(end.getTime() - start.getTime());
-    const daysRequested = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // Inclusive days
+    let daysRequested = 0;
+
+    if (effectiveDiasCorridos) {
+      // Días Corridos (Calendar Days)
+      const timeDiff = Math.abs(end.getTime() - start.getTime());
+      daysRequested = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // Inclusive days
+    } else {
+      // Días Hábiles (Working Days: Mon-Fri)
+      let count = 0;
+      let cur = new Date(start);
+      // Clone to avoid modifying start
+      const loopEnd = new Date(end);
+
+      while (cur <= loopEnd) {
+        const day = cur.getDay();
+        if (day !== 0 && day !== 6) {
+          // 0=Sun, 6=Sat
+          count++;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      daysRequested = count;
+    }
 
     // BALANCE CALCULATION
     // Base = globalConfig.diasAnuales
@@ -368,6 +431,7 @@ router.post("/", async (req, res) => {
         anticipacionMinimaDias: globalConfig.anticipacionMinimaDias,
         permiteFraccionadas: effectivePermiteFraccionadas,
         minDiasFraccion: effectiveMinDiasFraccion,
+        diasCorridos: effectiveDiasCorridos,
         requiereFirma: globalConfig.requiereFirma,
         pdfTemplateId: globalConfig.pdfTemplateId,
       },

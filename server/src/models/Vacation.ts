@@ -12,6 +12,7 @@ interface VacationRules {
   anticipacionMinimaDias?: number;
   permiteFraccionadas: boolean;
   minDiasFraccion?: number;
+  diasCorridos?: boolean;
   requiereFirma: boolean;
   pdfTemplateId?: string;
 }
@@ -93,6 +94,7 @@ const VacationSchema = new Schema<IVacation>(
         anticipacionMinimaDias: { type: Number, required: false },
         permiteFraccionadas: { type: Boolean, required: true },
         minDiasFraccion: { type: Number, required: false },
+        diasCorridos: { type: Boolean, required: false },
         requiereFirma: { type: Boolean, required: true },
         pdfTemplateId: { type: String, required: false },
       },

@@ -292,10 +292,74 @@ export const GlobalVacationConfigTab: React.FC = () => {
             </div>
           </div>
 
+          <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Resolución de Conflictos en Multiproyecto</h3>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex gap-3">
+                <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-1" />
+                <div className="space-y-3">
+                  <h4 className="font-medium text-blue-900 dark:text-blue-300">¿Cómo se calculan las reglas en usuarios con múltiples proyectos?</h4>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">Si un usuario pertenece a varios proyectos con reglas distintas, el sistema seleccionará automáticamente la opción más flexible:</p>
+                  <ul className="list-disc list-inside text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-2">
+                    <li>
+                      <strong>Fraccionamiento:</strong> Se permite si al menos un proyecto lo habilita, tomando siempre el mínimo de días más bajo.
+                    </li>
+                    <li>
+                      <strong>Cómputo de días:</strong> Si un proyecto permite <strong>Días Hábiles</strong>, esta regla prevalecerá sobre los Días Corridos.
+                    </li>
+                  </ul>
+
+                  {/* Table */}
+                  <div className="mt-4 overflow-hidden rounded-lg border border-blue-200 dark:border-blue-700">
+                    <table className="min-w-full divide-y divide-blue-200 dark:divide-blue-700 text-sm">
+                      <thead className="bg-blue-100 dark:bg-blue-800/50">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Escenario</th>
+                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Proyecto A</th>
+                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Proyecto B</th>
+                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Resultado Aplicado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-blue-200 dark:divide-blue-700 bg-white dark:bg-gray-800/50">
+                        <tr>
+                          <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Tipo de Días</td>
+                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Corridos</td>
+                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Hábiles</td>
+                          <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">Hábiles (Prioridad)</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Fraccionamiento</td>
+                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">No permite</td>
+                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Permite (Mín. 5 días)</td>
+                          <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">Permite</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Mínimo de Días</td>
+                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Mín. 7 días</td>
+                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Mín. 3 días</td>
+                          <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">3 días (El menor)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3">
             <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-              <FontAwesomeIcon icon={faSave} />
-              {submitting ? "Guardando..." : "Guardar"}
+              {submitting ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} spin />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faSave} />
+                  Guardar Configuración
+                </>
+              )}
             </button>
           </div>
         </form>

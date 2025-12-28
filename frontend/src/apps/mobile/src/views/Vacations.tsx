@@ -529,25 +529,33 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   {/* Reglas Badges */}
                   {(() => {
                     const effConfig = (stats?.projectVacationConfig as any) ?? globalConfig;
+                    const meta = (stats as any)?.vacationRulesMeta;
+
                     const fractionalAllowed = effConfig?.permiteFraccionadas;
                     const minDays = effConfig?.minDiasFraccion ?? 1;
-                    const source = stats?.vacationConfigSource || "Global";
 
-                    return fractionalAllowed ? (
-                      <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                        Min: {minDays} días <span className="opacity-70">({source})</span>
-                      </span>
-                    ) : (
-                      <span className="ml-1 text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
-                        No Fracc. <span className="opacity-70">({source})</span>
-                      </span>
+                    const minDaysSource = meta?.minDiasSource || stats?.vacationConfigSource || "Global";
+                    const fracSource = meta?.fractionationSource || stats?.vacationConfigSource || "Global";
+                    const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || "Global";
+
+                    return (
+                      <>
+                        {fractionalAllowed ? (
+                          <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                            Min: {minDays} días <span className="opacity-70">({minDaysSource})</span>
+                          </span>
+                        ) : (
+                          <span className="ml-1 text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
+                            No Fracc. <span className="opacity-70">({fracSource})</span>
+                          </span>
+                        )}
+
+                        <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                          {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({typeSource})</span>
+                        </span>
+                      </>
                     );
                   })()}
-
-                  {/* Consecutive Days Rule Badge */}
-                  <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                    {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({stats?.vacationConfigSource || "Global"})</span>
-                  </span>
                 </span>
               </div>
             </div>
