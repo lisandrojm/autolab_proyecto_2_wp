@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from "react";
+// ... imports
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faEye, faArrowLeft, faCheckCircle, faClock, faPen, faUser, faBuilding, faCalendar, faPrint, faTrash, faUserSlash, faGear } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faPen, faUser, faCalendar, faTrash, faUserSlash, faGear, faGrip, faTable, faBriefcase, faChartSimple, faClock, faCheck, faCheckCircle, faTimesCircle, faBan, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
-import { StatusBadge } from "../components/ui/StatusBadge";
+import { CardItemGeneric } from "../components/ui/CardItemGeneric";
+import { Modal } from "../components/ui/Modal";
 import { ActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
-// --- MOCK DATA ---
+// ... (MOCK_AREAS, MOCK_REPORTS, AttendanceTable, AbsenceBlock components remain identical, omitting for brevity in this replace block if not changing, but since I'm replacing the whole file content structure to be safe with the new function placement, I will include them or rely on the tool to just insert what I need if I were using multi-replace. Since I need to construct the whole page logic for the view toggle, I will replace the main component logic.)
+
+// ... reusing MOCK_AREAS and MOCK_REPORTS ...
 const MOCK_AREAS = [
   { id: "1", name: "Editores" },
   { id: "2", name: "Libertador" },
@@ -23,6 +27,7 @@ const MOCK_REPORTS: ActivityReport[] = [
     id: "REP-001",
     date: "2024-05-15",
     formName: "Técnica Mañana",
+    projectName: "Gran Hermano",
     areaId: "4",
     status: "sent",
     submittedBy: "Juan Perez",
@@ -32,16 +37,17 @@ const MOCK_REPORTS: ActivityReport[] = [
       { id: "1", employeeId: "E001", employeeName: "BARBONA AGUSTIN", areaId: "2", areaName: "Libertador", hasOvertime: false, overtimeHours: 0, status: "absent", absenceReason: "Compensatorio", replacementName: "JALUF Guido" },
       { id: "2", employeeId: "E002", employeeName: "GIUNTA Lucas", areaId: "2", areaName: "Libertador", hasOvertime: false, overtimeHours: 0, status: "present", entryTime: "08:00", exitTime: "17:00" },
       { id: "3", employeeId: "E003", employeeName: "JORDAN Alejandro", areaId: "2", areaName: "Libertador", hasOvertime: false, overtimeHours: 0, status: "present", entryTime: "08:00", exitTime: "17:00" },
-      { id: "4", employeeId: "E004", employeeName: "BOREA Hector", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00" },
-      { id: "5", employeeId: "E005", employeeName: "EANDI AXEL", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00" },
+      { id: "4", employeeId: "E004", employeeName: "BOREA Hector", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00", overtimeEntryTime: "13:00", overtimeExitTime: "14:00" },
+      { id: "5", employeeId: "E005", employeeName: "EANDI AXEL", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00", overtimeEntryTime: "13:00", overtimeExitTime: "14:00" },
       { id: "6", employeeId: "E006", employeeName: "HENRIQUEZ ALISTE Andres", areaId: "4", areaName: "Técnica Mañana", hasOvertime: false, overtimeHours: 0, status: "absent", absenceReason: "Enfermedad", notes: "Avisó por whatsapp" },
-      { id: "7", employeeId: "E007", employeeName: "HERNANDEZ DUNN Facundo Ariel", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 0, status: "present", entryTime: "06:30", exitTime: "13:00" },
+      { id: "7", employeeId: "E007", employeeName: "HERNANDEZ DUNN Facundo Ariel", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00", overtimeEntryTime: "13:00", overtimeExitTime: "14:00" },
     ],
   },
   {
     id: "REP-002",
     date: "2024-05-16",
     formName: "Libertador",
+    projectName: "Got Talent",
     areaId: "2",
     status: "pending_signature",
     submittedBy: "Maria Gonzalez",
@@ -51,8 +57,6 @@ const MOCK_REPORTS: ActivityReport[] = [
   },
 ];
 
-// --- COMPONENTS ---
-
 const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attendance }) => {
   return (
     <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
@@ -60,10 +64,13 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
         <thead className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold border-b border-gray-200 dark:border-gray-700">
           <tr>
             <th className="py-3 px-4">Colaborador</th>
-            <th className="py-3 px-4 text-center">Hizo horas extras</th>
+            <th className="py-3 px-4 text-center">Presente</th>
             <th className="py-3 px-4">Area</th>
             <th className="py-3 px-4 text-center">Entrada</th>
             <th className="py-3 px-4 text-center">Salida</th>
+            <th className="py-3 px-4 text-center">Hs. Extras</th>
+            <th className="py-3 px-4 text-center">Extra Entrada</th>
+            <th className="py-3 px-4 text-center">Extra Salida</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -73,11 +80,16 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
               <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                 <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>{record.employeeName}</td>
                 <td className="py-3 px-4 text-center">
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${record.hasOvertime ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}>{record.hasOvertime ? "Sí" : "No"}</span>
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
+                <td className="py-3 px-4 text-center">
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${record.overtimeHours > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}>{record.overtimeHours}</span>
+                </td>
+                <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeEntryTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeEntryTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
+                <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeExitTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeExitTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
               </tr>
             );
           })}
@@ -133,12 +145,35 @@ const AbsenceBlock: React.FC<{ title: string; type: AttendanceStatus; records: A
 // --- MAIN PAGE COMPONENT ---
 export const ManageActivityLogsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
+  const [listLayout, setListLayout] = useState<"table" | "cards">("table"); // New state for Cards/Table toggle
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
   const [openInfo, setOpenInfo] = useState(false);
+  const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments">("attendance");
 
   // Filters
   const [dateFilter, setDateFilter] = useState("daily"); // daily, weekly, monthly
   const [areaFilter, setAreaFilter] = useState("all");
+  const [showStatsModal, setShowStatsModal] = useState(false);
+
+  // Stats calculation
+  const stats = React.useMemo(() => {
+    let totalReports = MOCK_REPORTS.length;
+    let totalAbsences = 0;
+    let totalOvertimeHours = 0;
+
+    MOCK_REPORTS.forEach((report) => {
+      report.attendance.forEach((record) => {
+        if (record.status !== "present" && record.status !== "late") {
+          totalAbsences++;
+        }
+        if (record.overtimeHours > 0) {
+          totalOvertimeHours += record.overtimeHours;
+        }
+      });
+    });
+
+    return { totalReports, totalAbsences, totalOvertimeHours };
+  }, []);
 
   // Help integration
   const HELP_KEY = "activityLogs";
@@ -147,6 +182,7 @@ export const ManageActivityLogsPage: React.FC = () => {
   const handleViewDetail = (report: ActivityReport) => {
     setSelectedReport(report);
     setViewMode("detail");
+    setDetailTab("attendance");
   };
 
   const handleBackToList = () => {
@@ -161,18 +197,79 @@ export const ManageActivityLogsPage: React.FC = () => {
     return `DEM-REG-${num.padStart(6, "0")}`;
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // --- RENDER CARDS VIEW ---
+  const renderCardsView = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {MOCK_REPORTS.map((report) => {
+          const badgesTop = [
+            <span key="id" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+              {formatReportId(report.id)}
+            </span>,
+          ];
+
+          return (
+            <CardItemGeneric
+              key={report.id}
+              title={report.submittedBy}
+              subtitle={report.formName}
+              avatarFallback={getInitials(report.submittedBy)}
+              badgesTop={badgesTop}
+              footerLeft={
+                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <FontAwesomeIcon icon={faCalendar} className="h-3 w-3" />
+                  <span>{format(new Date(report.date), "dd MMM yyyy", { locale: es })}</span>
+                </div>
+              }
+              footerActions={[
+                {
+                  icon: faTrash,
+                  onClick: (e) => {
+                    e?.stopPropagation();
+                    // Delete logic would go here
+                  },
+                  title: "Eliminar",
+                  variant: "default",
+                },
+              ]}
+              onClick={() => handleViewDetail(report)}
+            >
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <span className="font-medium">{report.attendance.length}</span> registros de asistencia
+              </div>
+            </CardItemGeneric>
+          );
+        })}
+        {MOCK_REPORTS.length === 0 && <div className="col-span-full py-12 text-center text-gray-500">No se encontraron reportes.</div>}
+      </div>
+    );
+  };
+
   // --- RENDER DETAIL VIEW ---
   if (viewMode === "detail" && selectedReport) {
     return (
       <PageLayout
-        title="Detalle de Novedades"
-        subtitle={`Reporte: ${selectedReport.formName} - ${format(new Date(selectedReport.date), "dd/MM/yyyy")}`}
-        faIcon={{ icon: faFileText }}
+        title={selectedReport.projectName}
+        badge={{
+          text: format(new Date(selectedReport.date), "EEEE d 'de' MMMM, yyyy", { locale: es }),
+          variant: "default",
+        }}
+        faIcon={{ icon: faBriefcase }}
         infoModal={{
           isOpen: openInfo,
           onOpen: () => setOpenInfo(true),
           onClose: () => setOpenInfo(false),
           title: helpEntry.title,
+          subtitle: null, // Don't show page subtitle in info modal
           size: helpEntry.size,
           content: helpEntry.content,
         }}
@@ -180,83 +277,56 @@ export const ManageActivityLogsPage: React.FC = () => {
         onBack={handleBackToList}
       >
         <div className="space-y-6 animate-fade-in">
-          {/* Header Info Card */}
-          <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500 uppercase tracking-wide">Formulario / Área</span>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-400">
-                  <FontAwesomeIcon icon={faBuilding} className="h-4 w-4" />
-                </div>
-                <span className="font-semibold text-gray-900 dark:text-white">{selectedReport.formName}</span>
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500 uppercase tracking-wide">Fecha Reporte</span>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded text-purple-600 dark:text-purple-400">
-                  <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
-                </div>
-                <span className="font-semibold text-gray-900 dark:text-white">{format(new Date(selectedReport.date), "EEEE d 'de' MMMM, yyyy", { locale: es })}</span>
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500 uppercase tracking-wide">Estado Firma</span>
-              <div className="mt-1">
-                {selectedReport.status === "sent" ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    <FontAwesomeIcon icon={faCheckCircle} /> Enviado
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                    <FontAwesomeIcon icon={faClock} /> Pendiente Firma
-                  </span>
-                )}
-              </div>
-            </div>
+          {/* Header Info Card Removed as per request to save space */}
+
+          {/* Tabs Navigation */}
+          {/* Tabs Navigation */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 bg-white dark:bg-gray-800 rounded-t-lg px-2 pt-2">
+            <button onClick={() => setDetailTab("attendance")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "attendance" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Asistencia del Personal ({selectedReport.attendance.length})
+            </button>
+            <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Ausentes ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
+            </button>
+            <button onClick={() => setDetailTab("comments")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "comments" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Comentarios ({selectedReport.comments ? 1 : 0})
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Left Column: Attendance Table */}
-            <div className="xl:col-span-2 space-y-4">
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
-                  <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FontAwesomeIcon icon={faUser} className="text-gray-400" />
-                    Asistencia del Personal
-                  </h3>
-                  <span className="text-xs font-medium text-gray-500">{selectedReport.attendance.length} registros</span>
+          <div className="space-y-6">
+            {detailTab === "attendance" &&
+              (selectedReport.attendance.length > 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden animate-fade-in">
+                  <div className="p-4">
+                    <AttendanceTable attendance={selectedReport.attendance} />
+                  </div>
                 </div>
-                <div className="p-4">
-                  <AttendanceTable attendance={selectedReport.attendance} />
-                </div>
-              </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Asistencia del Personal</div>
+              ))}
 
-              {/* Comments Section */}
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faPen} className="text-gray-400" />
-                  Comentarios Generales
-                </h3>
-                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded border border-yellow-100 dark:border-yellow-900/30 text-sm text-gray-700 dark:text-gray-300 font-mono whitespace-pre-line">{selectedReport.comments}</div>
-              </div>
-            </div>
+            {detailTab === "absences" &&
+              (selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length > 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden animate-fade-in">
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    <AbsenceBlock type="compensatory" title="Compensatorios" records={selectedReport.attendance} />
+                    <AbsenceBlock type="sick" title="Enfermedad" records={selectedReport.attendance} />
+                    <AbsenceBlock type="unpaid" title="Sin goce de sueldo" records={selectedReport.attendance} />
+                    <AbsenceBlock type="vacation" title="Por Vacaciones" records={selectedReport.attendance} />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Ausentes</div>
+              ))}
 
-            {/* Right Column: Absence Blocks Group */}
-            <div className="xl:col-span-1 space-y-4">
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-gray-50 dark:bg-gray-900/50">
-                  <FontAwesomeIcon icon={faUserSlash} className="text-gray-400" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">Ausentes</h3>
+            {detailTab === "comments" &&
+              (selectedReport.comments ? (
+                <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-5 animate-fade-in">
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 rounded border border-yellow-100 dark:border-yellow-900/30 text-sm text-gray-700 dark:text-gray-300 font-mono whitespace-pre-line">{selectedReport.comments}</div>
                 </div>
-                <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                  <AbsenceBlock type="compensatory" title="Compensatorios" records={selectedReport.attendance} />
-                  <AbsenceBlock type="sick" title="Enfermedad" records={selectedReport.attendance} />
-                  <AbsenceBlock type="unpaid" title="Sin goce de sueldo" records={selectedReport.attendance} />
-                  <AbsenceBlock type="vacation" title="Por Vacaciones" records={selectedReport.attendance} />
-                </div>
-              </div>
-            </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay comentarios</div>
+              ))}
           </div>
         </div>
       </PageLayout>
@@ -279,9 +349,14 @@ export const ManageActivityLogsPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
-        <button className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" title="Exportar">
-          <FontAwesomeIcon icon={faGear} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
+            <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+          </button>
+          <button className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" title="Exportar">
+            <FontAwesomeIcon icon={faGear} />
+          </button>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -316,62 +391,106 @@ export const ManageActivityLogsPage: React.FC = () => {
               <option value="monthly">Mensual</option>
             </select>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button onClick={() => setListLayout("cards")} className={`px-4 py-1.5 rounded-md transition-all ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+              <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+            </button>
+            <button onClick={() => setListLayout("table")} className={`px-4 py-1.5 rounded-md transition-all ${listLayout === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+              <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Table List */}
-        <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs uppercase text-gray-500">
-                <th className="py-4 px-6 font-semibold">Fecha</th>
-                <th className="py-4 px-6 font-semibold">No Registro</th>
-                <th className="py-4 px-6 font-semibold">Área / Formulario</th>
-                <th className="py-4 px-6 font-semibold">Enviado Por</th>
-                <th className="py-4 px-6 font-semibold">Estado</th>
-                <th className="py-4 px-6 font-semibold text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {MOCK_REPORTS.map((report) => (
-                <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" onClick={() => handleViewDetail(report)}>
-                  <td className="py-4 px-6 text-sm font-semibold text-gray-900 dark:text-white">{format(new Date(report.date), "dd MMM yyyy", { locale: es })}</td>
-                  <td className="py-4 px-6">
-                    <span className="text-xs font-mono text-gray-500">{formatReportId(report.id)}</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                      <FontAwesomeIcon icon={faBuilding} className="text-gray-400 text-xs" />
-                      {report.formName}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-sm text-gray-600 dark:text-gray-400">
-                    {report.submittedBy}
-                    <div className="text-xs text-gray-400">{format(new Date(report.submittedAt), "HH:mm")} hs</div>
-                  </td>
-                  <td className="py-4 px-6">{report.status === "sent" ? <StatusBadge type="firma_enviado_a_firmar" /> : <StatusBadge type="firma_pendiente" />}</td>
-                  <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end items-center gap-2">
-                      <button onClick={() => handleViewDetail(report)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm inline-flex items-center gap-1 transition-colors px-2 py-1 rounded" title="Ver Detalle">
-                        <FontAwesomeIcon icon={faEye} />
-                      </button>
+        {/* List Content */}
+        {listLayout === "cards" ? (
+          renderCardsView()
+        ) : (
+          <div className="overflow-x-auto rounded border dark:border-slate-800">
+            <table className="w-full dark:bg-slate-800/80 table-auto">
+              <thead>
+                <tr>
+                  <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha Sol.</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
+                    Registros
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Hs. Extras</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
+                  <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {MOCK_REPORTS.map((report) => (
+                  <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
+                    <td className="py-3 px-4">
+                      <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{formatReportId(report.id)}</span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-400">{format(new Date(report.date), "dd MMM yyyy", { locale: es })}</td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                        <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-xs" />
+                        {report.projectName}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                      {(() => {
+                        const absentCount = report.attendance.filter((r) => r.status !== "present").length;
+                        return absentCount > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{absentCount}</span> : "0";
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                      {(() => {
+                        const overtimeCount = report.attendance.filter((r) => r.hasOvertime).length;
+                        return overtimeCount > 0 ? <span className="text-green-600 dark:text-green-400 font-medium">{overtimeCount}</span> : "0";
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                      {report.submittedBy}
+                      <div className="text-xs text-gray-400">{format(new Date(report.submittedAt), "HH:mm")} hs</div>
+                    </td>
+                    <td className="py-3 px-4 text-right">
                       <button className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded" title="Eliminar">
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {MOCK_REPORTS.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-500">
-                    No se encontraron reportes para los filtros seleccionados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                  </tr>
+                ))}
+                {MOCK_REPORTS.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-gray-500">
+                      No se encontraron reportes para los filtros seleccionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      <Modal isOpen={showStatsModal} onClose={() => setShowStatsModal(false)} title="Resumen de Novedades" size="md">
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-4">
+            {[
+              { label: "Reportes", value: stats.totalReports, icon: faFileText, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+              { label: "Ausentes", value: stats.totalAbsences, icon: faUserSlash, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
+              { label: "Hs. Extras", value: stats.totalOvertimeHours, icon: faClock, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
+            ].map((stat, index) => (
+              <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color}`}>
+                <FontAwesomeIcon icon={stat.icon} className="lg:h-5 w-5 opacity-80" />
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm font-medium opacity-80">{stat.label}</span>
+                  <span className="lg:text-lg font-bold">{stat.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 };

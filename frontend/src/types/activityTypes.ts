@@ -11,6 +11,8 @@ export interface AttendanceRecord {
   overtimeHours: number; // Hizo Horas Extras calculation
   hasOvertime: boolean; // Sí/No
   status: AttendanceStatus;
+  overtimeEntryTime?: string; // Hora entrada extra
+  overtimeExitTime?: string; // Hora salida extra
   notes?: string;
   replacementName?: string; // Jornalero por [Reemplazo]
   absenceReason?: string; // Motivo de ausencia
@@ -20,6 +22,7 @@ export interface ActivityReport {
   id: string;
   date: string; // Fecha del reporte
   formName: string; // Área / Formulario (e.g. "Técnica mañana")
+  projectName: string; // Nombre del proyecto
   areaId: string;
   status: "sent" | "pending_signature" | "draft";
   submittedBy: string;

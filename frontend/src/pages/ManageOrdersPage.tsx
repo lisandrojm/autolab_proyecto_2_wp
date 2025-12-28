@@ -774,13 +774,13 @@ export const ManageOrdersPage: React.FC = () => {
                     <thead>
                       <tr>
                         <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                       </tr>
                     </thead>
@@ -799,6 +799,7 @@ export const ManageOrdersPage: React.FC = () => {
                             <td className="py-3 px-4">
                               <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedOrderNumber(order.orderNumber)}</span>
                             </td>
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{formatDateShort(order.requestedAt)}</td>
                             <td className="py-3 px-4">
                               <div className="flex flex-col gap-2">
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{getCategoryName(order)}</span>
@@ -829,7 +830,6 @@ export const ManageOrdersPage: React.FC = () => {
                               })()}
                             </td>
                             <td className="py-3 px-4">{renderSignatureStatus(order)}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{new Date(order.requestedAt).toLocaleDateString()}</td>
                             <td className="py-3 px-4 text-center">
                               <button onClick={(e) => handleDelete(order._id, order.orderNumber, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar pedido" aria-label="Eliminar pedido">
                                 <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />

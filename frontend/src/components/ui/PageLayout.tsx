@@ -10,7 +10,7 @@ interface InfoModalControlledProps {
   onOpen: () => void;
   onClose: () => void;
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   actions?: InfoModalAction[];
   content: React.ReactNode;
@@ -20,7 +20,7 @@ interface ControlledModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   actions?: InfoModalAction[];
   content: React.ReactNode;
@@ -44,7 +44,7 @@ type FaIconSecondaryProps = {
 type ClientMiniAvatarProps = {
   src?: string;
   alt?: string;
-  fallback?: string;
+  fallback?: React.ReactNode;
   label?: string;
 };
 
@@ -55,7 +55,7 @@ type BadgeStateVariant = "default" | "success" | "warning" | "blue" | "info";
 
 interface PageLayoutProps {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   badge?: {
     text: string;
     variant?: BadgeVariant;

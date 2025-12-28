@@ -743,14 +743,14 @@ export const ManageVacationsPage: React.FC = () => {
                 <table className="w-full dark:bg-slate-800/80 table-auto">
                   <thead>
                     <tr>
-                      <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
+                      <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                       {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                     </tr>
                   </thead>
@@ -768,6 +768,7 @@ export const ManageVacationsPage: React.FC = () => {
                         <td className="py-3 px-4">
                           <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
                         </td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }) : "-"}</td>
                         {/*                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-2">
                             {vacation.reglas.map((regla, index) => (
@@ -792,7 +793,6 @@ export const ManageVacationsPage: React.FC = () => {
                             <span className="text-gray-400 dark:text-gray-500">-</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString() : "-"}</td>
                         <td className="py-3 px-4 text-center">
                           {!["rejected", "cancelled"].includes(vacation.estado) && (
                             <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cancelar solicitud" aria-label="Cancelar solicitud">

@@ -18,7 +18,7 @@ interface InfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   actions?: InfoModalAction[];
   children: React.ReactNode;
