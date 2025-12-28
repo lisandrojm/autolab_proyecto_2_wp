@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "./ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faEye, faCalendar, faHeart, faPaperPlane, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faEye, faCalendar, faHeart, faPaperPlane, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { getPostTypeDisplay } from "../utils/postTypeHelpers";
 
 interface Post {
@@ -136,7 +136,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onEdit, onDelete, onAp
         ...(showBreadcrumbs && {
           breadcrumbs: {
             first: {
-              icon: faLayerGroup,
+              icon: faBriefcase,
               text: projectName,
               variant: "gray",
             },

@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faPalette, faLayerGroup, faBullhorn, faImage, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faPalette, faBriefcase, faBullhorn, faImage, faUsers } from "@fortawesome/free-solid-svg-icons";
 import axios from "../api/axiosConfig";
 import { getBrandKitStatus, getBrandKitLabel, getClientStatusLabel } from "../utils/clientStatus";
 import { createNavbarEventListener } from "../utils/navbarEvents";
@@ -188,7 +188,7 @@ export const ClientContextMenu: React.FC = () => {
     {
       path: `/clients/${selectedClient._id}/projects`,
       actualPath: `/clients/${selectedClient._id}/projects`,
-      icon: faLayerGroup,
+      icon: faBriefcase,
       label: "Proyectos",
       permission: "clients:view",
       scope: "cliente" as const,

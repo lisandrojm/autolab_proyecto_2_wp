@@ -10,11 +10,11 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
-import { Card } from "../components/ui/Card";
+
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -179,7 +179,7 @@ export const ProjectTeamPage: React.FC = () => {
   if (loading) return <LoadingSpinner message="Cargando equipo..." />;
 
   if (!project) {
-    return <EmptyState icon={faLayerGroup} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: "Volver", onClick: () => navigate(-1) }} />;
+    return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: "volver", onClick: () => navigate(-1) }} />;
   }
 
   return (

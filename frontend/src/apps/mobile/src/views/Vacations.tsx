@@ -15,6 +15,7 @@ import {
   faCheckCircle,
   faBriefcase,
   faUserTie,
+  faRulerCombined,
 } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
@@ -522,7 +523,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 </span>
                 {/* Proyecto */}
                 <span className="flex items-center gap-1">
-                  <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
+                  <FontAwesomeIcon icon={faRulerCombined} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold uppercase">Reglas:</span>
                   {/* Min Days Project/Global */}
                   {/* Min Days Badge */}

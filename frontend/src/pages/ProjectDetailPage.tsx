@@ -11,7 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup, faBullseye, faEdit, faUsers, faInfoCircle, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faBullseye, faEdit, faUsers, faInfoCircle, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -179,7 +179,7 @@ export const ProjectDetailPage: React.FC = () => {
   if (!project) {
     return (
       <EmptyState
-        icon={faLayerGroup}
+        icon={faBriefcase}
         title="Proyecto no encontrado"
         description="No pudimos encontrar el proyecto solicitado."
         action={{
@@ -255,7 +255,7 @@ export const ProjectDetailPage: React.FC = () => {
     <PageLayout
       title={`Proyecto | ${project.name}`}
       badge={{ text: "Proyecto", variant: "default" }}
-      faIcon={{ icon: faLayerGroup }}
+      faIcon={{ icon: faBriefcase }}
       clientMiniAvatar={{
         src: undefined,
         alt: client?.name ? `${client.name} logo` : undefined,
@@ -326,7 +326,7 @@ export const ProjectDetailPage: React.FC = () => {
                       }
                       className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${projectForm.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400"}`}
                     >
-                      <FontAwesomeIcon icon={projectForm.status === "active" ? faLayerGroup : faLayerGroup} className="mr-2 h-4 w-4" />
+                      <FontAwesomeIcon icon={projectForm.status === "active" ? faBriefcase : faBriefcase} className="mr-2 h-4 w-4" />
                       {projectForm.status === "active" ? "Activo" : "En Espera"}
                     </button>
                   </div>

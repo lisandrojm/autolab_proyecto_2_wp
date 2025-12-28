@@ -6,7 +6,7 @@ import { projectsAPI, Project } from "../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faPlus, faEdit, faLayerGroup, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { Card } from "../components/ui/Card";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -221,7 +221,7 @@ export const ClientProjectsPage: React.FC = () => {
   return (
     <PageLayout
       title={client?.name ? `Proyectos` : "Cliente"}
-      faIcon={{ icon: faLayerGroup }}
+      faIcon={{ icon: faBriefcase }}
       clientMiniAvatar={{
         src: getImageUrl(displayLogo),
         alt: client?.name ? `${client.name} logo` : undefined,
@@ -364,7 +364,7 @@ export const ClientProjectsPage: React.FC = () => {
               header={{
                 title: `Proyecto | ${project.name}`,
                 subtitle: project.description,
-                icon: faLayerGroup,
+                icon: faBriefcase,
                 badges: [
                   {
                     text: project.status === "active" ? "Activo" : project.status === "on_hold" ? "En Espera" : project.status === "completed" ? "Completado" : "Archivado",
@@ -415,7 +415,7 @@ export const ClientProjectsPage: React.FC = () => {
             header={{
               title: "Nuevo Proyecto",
               subtitle: "Crear un nuevo proyecto para este cliente",
-              icon: faLayerGroup,
+              icon: faBriefcase,
             }}
           />
         </div>
@@ -439,7 +439,7 @@ export const ClientProjectsPage: React.FC = () => {
       {/* Empty State */}
       {!loading && visibleProjects.length === 0 && (
         <div className="text-center py-12">
-          <FontAwesomeIcon icon={faLayerGroup} className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <FontAwesomeIcon icon={faBriefcase} className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No hay proyectos</h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">{startDate || endDate ? `No se encontraron proyectos ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea el primer proyecto para este cliente"}</p>
           <button onClick={handleOpenCreate} className="btn-primary">

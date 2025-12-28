@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Upload, X, ChevronLeft, ChevronRight, Save, Calendar, Eye, FileText, Image as ImageIcon } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faClock, faLayerGroup, faPaperPlane, faXmark, faLightbulb } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faClock, faPaperPlane, faXmark, faLightbulb, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../stores/authStore";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { CreativeGalleryPanel } from "./CreativeGalleryPanel";
@@ -274,36 +274,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleContentChange = (field: keyof PostFormData["content"], value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      content: { ...prev.content, [field]: value },
-    }));
-  };
-
   const handleSchedulingChange = (field: keyof PostFormData["scheduling"], value: any) => {
     setFormData((prev) => ({
       ...prev,
       scheduling: { ...prev.scheduling, [field]: value },
     }));
-  };
-
-  const handleHashtagsChange = (value: string) => {
-    setHashtagsInput(value);
-    const hashtags = value
-      .split(",")
-      .map((h) => h.trim().replace(/^#/, ""))
-      .filter(Boolean);
-    handleContentChange("hashtags", hashtags);
-  };
-
-  const handleMentionsChange = (value: string) => {
-    setMentionsInput(value);
-    const mentions = value
-      .split(",")
-      .map((m) => m.trim().replace(/^@/, ""))
-      .filter(Boolean);
-    handleContentChange("mentions", mentions);
   };
 
   const handleChannelSelect = (channel: Channel) => {
@@ -672,7 +647,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{mode === "create" ? "Crear Nueva Publicación" : "Editar publicación"}</h2>
           {projectContext && (
             <div className="flex items-center space-x-2 mt-1 text-sm text-gray-600 dark:text-gray-400">
-              <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5" />
+              <FontAwesomeIcon icon={faBriefcase} className="h-3.5 w-3.5" />
               <span>{projectContext.projectName}</span>
             </div>
           )}
@@ -701,7 +676,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
               <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6">
                 {needsContextSelection && (
                   <button onClick={() => handleTabChange("context")} disabled={!isTabEnabled("context")} className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === "context" ? "border-primary-600 text-primary-600 dark:text-primary-400" : isTabEnabled("context") ? "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 cursor-pointer" : "border-transparent text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"}`}>
-                    <FontAwesomeIcon icon={faLayerGroup} className="h-4 w-4" />
+                    <FontAwesomeIcon icon={faBriefcase} className="h-4 w-4" />
                     Contexto
                     {completedTabs.has("context") && <span className="ml-1 text-blue-500">✓</span>}
                   </button>
@@ -737,7 +712,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        <FontAwesomeIcon icon={faLayerGroup} className="h-4 w-4 mr-2" />
+                        <FontAwesomeIcon icon={faBriefcase} className="h-4 w-4 mr-2" />
                         Proyecto *
                       </label>
                       <select

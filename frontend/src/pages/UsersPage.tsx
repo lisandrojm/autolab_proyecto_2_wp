@@ -570,7 +570,7 @@ export const UsersPage: React.FC = () => {
               {/* Proyectos asignados */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
+                  <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" />
                   Proyectos
                 </label>
                 {viewUser.projectIds && viewUser.projectIds.length > 0 ? (
@@ -1048,7 +1048,7 @@ export const UsersPage: React.FC = () => {
               {/* Proyectos */}
               <div className="mt-3">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                  <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
                   Proyectos
                 </label>
                 {user.projectIds && user.projectIds.length > 0 ? (
