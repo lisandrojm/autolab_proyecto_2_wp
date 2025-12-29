@@ -841,29 +841,76 @@ export const UsersPage: React.FC = () => {
                 {/* ROLES */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
-                    {roles
-                      .filter((role) => role.name.toLowerCase() !== "superadmin")
-                      .map((role) => (
-                        <label key={role._id} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={formData.roles.includes(role._id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData((prev) => ({ ...prev, roles: [...prev.roles, role._id] }));
-                              } else {
-                                setFormData((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== role._id) }));
-                              }
-                            }}
-                            className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{role.name}</span>
-                            {role.description && <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
-                          </div>
-                        </label>
-                      ))}
+                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-64 overflow-y-auto space-y-4">
+                    {/* System Roles */}
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sistema</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {roles
+                          .filter((role) => role.name.toLowerCase() !== "superadmin" && !role.name.toLowerCase().includes("mobile"))
+                          .map((role) => (
+                            <label key={role._id} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={formData.roles.includes(role._id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData((prev) => ({ ...prev, roles: [...prev.roles, role._id] }));
+                                  } else {
+                                    setFormData((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== role._id) }));
+                                  }
+                                }}
+                                className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{role.name}</span>
+                                {role.description && <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
+                              </div>
+                            </label>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Mobile Roles */}
+                    {roles.some((r) => r.name.toLowerCase().includes("mobile")) && (
+                      <div>
+                        <h4 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">Mobile (App)</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {roles
+                            .filter((role) => role.name.toLowerCase().includes("mobile"))
+                            .map((role) => (
+                              <label key={role._id} className="flex items-start space-x-3 p-2 rounded-lg bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-colors border border-indigo-100 dark:border-indigo-800/30">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.roles.includes(role._id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      let newRoles = [...formData.roles, role._id];
+                                      const roleName = role.name.toLowerCase();
+                                      // Regla: Mobile-Coordinador y Mobile-Colaborador son mutuamente excluyentes
+                                      if (roleName.includes("mobile-coordinador")) {
+                                        const conflictRole = roles.find((r) => r.name.toLowerCase().includes("mobile-colaborador"));
+                                        if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
+                                      } else if (roleName.includes("mobile-colaborador")) {
+                                        const conflictRole = roles.find((r) => r.name.toLowerCase().includes("mobile-coordinador"));
+                                        if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
+                                      }
+                                      setFormData((prev) => ({ ...prev, roles: newRoles }));
+                                    } else {
+                                      setFormData((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== role._id) }));
+                                    }
+                                  }}
+                                  className="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{role.name}</span>
+                                  {role.description && <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
+                                </div>
+                              </label>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
