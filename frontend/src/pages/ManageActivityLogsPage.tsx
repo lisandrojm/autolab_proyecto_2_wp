@@ -299,30 +299,40 @@ export const ManageActivityLogsPage: React.FC = () => {
           {/* ... Tabs ... */}
 
           {/* Detail Stats Modal */}
-          <Modal isOpen={showDetailStatsModal} onClose={() => setShowDetailStatsModal(false)} title={`Estadísticas: ${selectedReport.projectName}`} size="md">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 text-center">
-                <div className="text-blue-600 dark:text-blue-400 mb-2">
-                  <FontAwesomeIcon icon={faUser} className="text-xl" />
+          <Modal
+            isOpen={showDetailStatsModal}
+            onClose={() => setShowDetailStatsModal(false)}
+            title={
+              <div className="flex items-center gap-3">
+                <span>Estadísticas: {selectedReport.projectName}</span>
+                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded-full font-medium border border-blue-200 dark:border-blue-800">{format(new Date(selectedReport.date), "dd MMM yyyy", { locale: es })}</span>
+              </div>
+            }
+            size="md"
+          >
+            <div className="flex flex-wrap gap-4 justify-center">
+              <div className="rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                <FontAwesomeIcon icon={faUser} className="lg:h-5 w-5 opacity-80" />
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm font-medium opacity-80">Total Personal</span>
+                  <span className="lg:text-lg font-bold">{selectedReport.attendance.length}</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{selectedReport.attendance.length}</div>
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Personal</div>
               </div>
 
-              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-100 dark:border-red-800 text-center">
-                <div className="text-red-600 dark:text-red-400 mb-2">
-                  <FontAwesomeIcon icon={faUserSlash} className="text-xl" />
+              <div className="rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                <FontAwesomeIcon icon={faUserSlash} className="lg:h-5 w-5 opacity-80" />
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm font-medium opacity-80">Ausentes</span>
+                  <span className="lg:text-lg font-bold">{selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length}</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length}</div>
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ausentes</div>
               </div>
 
-              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800 text-center">
-                <div className="text-green-600 dark:text-green-400 mb-2">
-                  <FontAwesomeIcon icon={faClock} className="text-xl" />
+              <div className="rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">
+                <FontAwesomeIcon icon={faClock} className="lg:h-5 w-5 opacity-80" />
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm font-medium opacity-80">Hs. Extras</span>
+                  <span className="lg:text-lg font-bold">{selectedReport.attendance.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0)}</span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{selectedReport.attendance.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0)}</div>
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hs. Extras</div>
               </div>
             </div>
           </Modal>
@@ -395,9 +405,6 @@ export const ManageActivityLogsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/hr/activity-logs/config")} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" title="Ajustes de Novedades">
-            <FontAwesomeIcon icon={faGear} />
-          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
@@ -522,7 +529,7 @@ export const ManageActivityLogsPage: React.FC = () => {
 
       <Modal isOpen={showStatsModal} onClose={() => setShowStatsModal(false)} title="Resumen de Novedades" size="md">
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 justify-center">
             {[
               { label: "Reportes", value: stats.totalReports, icon: faFileText, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
               { label: "Ausentes", value: stats.totalAbsences, icon: faUserSlash, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },

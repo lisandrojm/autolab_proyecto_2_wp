@@ -2,23 +2,49 @@ import React, { useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faCheckCircle, faTimesCircle, faExclamationCircle } from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { ReportSchedule } from "./ReportingScheduleModal";
 
-// Mock data generator for compliance
-const generateMockCompliance = (date: Date) => {
-  const day = date.getDate();
-  // Random status: complete, partial, missing, none (future)
+// Mock data generator for compliance - now schedule aware
+const generateMockCompliance = (date: Date, schedule?: ReportSchedule): "complete" | "missing" | "partial" | "extra" | "none" => {
+  const dayIndex = getDay(date); // 0 = Sun, 1 = Mon...
+
+  // Determine if this day is required by schedule
+  let isRequired = true;
+  if (schedule) {
+    if (schedule.type === "workdays") {
+      isRequired = dayIndex !== 0 && dayIndex !== 6;
+    } else if (schedule.type === "custom") {
+      isRequired = schedule.days.includes(dayIndex);
+    }
+  }
+
+  // Determine if a report "exists" (Mock logic: random but deterministic based on date)
+  // Let's say odd days have reports, even days don't.
+  const dayNum = date.getDate();
+  const hasReport = dayNum % 3 !== 0; // 2/3rds have reports
+  const isPartial = hasReport && dayNum % 5 === 0;
+
   if (date > new Date()) return "none";
-  if (day % 7 === 0) return "missing"; // Sundays missing
-  if (day % 3 === 0) return "partial";
-  return "complete";
+
+  if (isRequired) {
+    if (hasReport) {
+      return isPartial ? "partial" : "complete";
+    }
+    return "missing";
+  } else {
+    // Not required
+    if (hasReport) return "extra"; // Report sent on non-required day
+    return "none"; // No report, not required -> Neutral
+  }
 };
 
 interface ActivityLogCalendarProps {
-  project?: any; // Replace with proper type
+  project?: any;
+  scheduleConfig?: ReportSchedule;
 }
 
-export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ project }) => {
+export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ project, scheduleConfig }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const firstDay = startOfMonth(currentDate);
@@ -43,7 +69,16 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 capitalize">{format(currentDate, "MMMM yyyy", { locale: es })}</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 capitalize">{format(currentDate, "MMMM yyyy", { locale: es })}</h3>
+          {scheduleConfig && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+              {scheduleConfig.type === "daily" && "Diario (L-D)"}
+              {scheduleConfig.type === "workdays" && "Días Hábiles (L-V)"}
+              {scheduleConfig.type === "custom" && "Personalizado"}
+            </span>
+          )}
+        </div>
         <div className="flex space-x-2">
           <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
             <FontAwesomeIcon icon={faChevronLeft} className="text-gray-600 dark:text-gray-400" />
@@ -69,25 +104,27 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
           <div key={`padding-${i}`} className="h-24 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg"></div>
         ))}
         {days.map((day) => {
-          const status = generateMockCompliance(day);
+          const status = generateMockCompliance(day, scheduleConfig);
           const isToday = isSameDay(day, new Date());
 
-          let statusColor = "bg-gray-50 dark:bg-gray-800"; // default
-          let statusText = "";
+          let statusColor = "bg-gray-50 dark:bg-gray-800"; // default / none
           let statusIcon = null;
 
           if (status === "complete") {
             statusColor = "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
-            statusText = "Reporte OK";
-            statusIcon = <div className="w-2 h-2 rounded-full bg-green-500"></div>;
+            statusIcon = <div className="w-2 h-2 rounded-full bg-green-500" title="Reporte Completo"></div>;
           } else if (status === "missing") {
             statusColor = "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
-            statusText = "Falta Reporte";
-            statusIcon = <div className="w-2 h-2 rounded-full bg-red-500"></div>;
+            statusIcon = <div className="w-2 h-2 rounded-full bg-red-500" title="Falta Reporte"></div>;
           } else if (status === "partial") {
             statusColor = "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800";
-            statusText = "Incompleto";
-            statusIcon = <div className="w-2 h-2 rounded-full bg-yellow-500"></div>;
+            statusIcon = <div className="w-2 h-2 rounded-full bg-yellow-500" title="Parcial"></div>;
+          } else if (status === "extra") {
+            statusColor = "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 opacity-75";
+            statusIcon = <div className="w-2 h-2 rounded-full bg-blue-500" title="Reporte Adicional"></div>;
+          } else {
+            // None (not required, no report)
+            statusColor = "bg-gray-50 dark:bg-gray-800/50 opacity-50";
           }
 
           return (
@@ -102,6 +139,7 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
                   {status === "complete" && <span className="text-green-700 dark:text-green-400 block truncate">100% Asistencia</span>}
                   {status === "missing" && <span className="text-red-700 dark:text-red-400 block truncate">No enviado</span>}
                   {status === "partial" && <span className="text-yellow-700 dark:text-yellow-400 block truncate">Faltan firmas</span>}
+                  {status === "extra" && <span className="text-blue-700 dark:text-blue-400 block truncate">Reporte Extra</span>}
                 </div>
               )}
             </div>
@@ -119,6 +157,9 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-red-500"></div> Faltante
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-blue-500"></div> Extra
         </div>
       </div>
     </div>

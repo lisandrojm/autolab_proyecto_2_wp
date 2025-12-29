@@ -10,11 +10,12 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
+import { InfoModal } from "../components/ui/InfoModal";
 
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -27,12 +28,16 @@ export const ProjectTeamPage: React.FC = () => {
   const [openInfo, setOpenInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
+  // Notifications Info Modal
+  const [showNotifInfo, setShowNotifInfo] = useState(false);
+
   // Data
   const [project, setProject] = useState<Project | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
+  const [teamConfig, setTeamConfig] = useState<any[]>([]);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,6 +60,7 @@ export const ProjectTeamPage: React.FC = () => {
         ]);
 
         setProject(projectData);
+        setTeamConfig(projectData.teamConfig || []);
         setAllUsers(usersData.users);
         setAreas(areasData.areas);
         setPositions(positionsData.positions);
@@ -124,14 +130,64 @@ export const ProjectTeamPage: React.FC = () => {
     });
   }, [allUsers, assignedUserIds, searchTerm, selectedArea, selectedPosition]);
 
-  // Current Team Members (resolved objects)
+  // Current Team Members
   const teamMembers = useMemo(() => {
     if (!project) return [];
-    // We rely on `allUsers` to ensure we have fresh data and correct types,
-    // although `project.assignedUsers` might be populated.
-    // Let's map IDs to the full user objects from `allUsers` to be consistent.
     return assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
   }, [project, assignedUserIds, allUsers]);
+
+  // Check Is Coordinator Helper
+  const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+
+  /* --------------------------- Notifications Logic ------------------------- */
+
+  const updateTeamConfig = async (newConfig: any[]) => {
+    if (!project) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/projects/${project._id}/team-config`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ config: newConfig }),
+      });
+      setTeamConfig(newConfig);
+    } catch (err) {
+      console.error("Error updating team config", err);
+    }
+  };
+
+  const handleToggleNotifier = (userId: string) => {
+    // Logic: Single Selection. Set target true, others false.
+    const newConfig = teamMembers.map((member) => {
+      const existing = teamConfig.find((c) => c.userId === member._id);
+      const isActivating = member._id === userId;
+
+      return {
+        userId: member._id,
+        canRegister: existing ? existing.canRegister : true,
+        isNotifier: isActivating,
+      };
+    });
+
+    updateTeamConfig(newConfig);
+  };
+
+  // Ensure Default Notifier
+  useEffect(() => {
+    if (!loading && teamMembers.length > 0) {
+      const coords = teamMembers.filter(checkIsCoordinator);
+      if (coords.length > 0) {
+        // Check if any coordinator is notifier
+        const hasNotifier = teamConfig.some((c) => c.isNotifier && coords.some((u) => u._id === c.userId));
+        if (!hasNotifier) {
+          // Set first coord as notifier
+          handleToggleNotifier(coords[0]._id);
+        }
+      }
+    }
+  }, [teamMembers, loading]);
 
   /* ------------------------------- Actions -------------------------------- */
 
@@ -144,8 +200,7 @@ export const ProjectTeamPage: React.FC = () => {
     try {
       const newAssigned = [...assignedUserIds, userId];
       await projectsAPI.updateProject(project._id, { assignedUsers: newAssigned });
-      // Update local state without full refetch if possible, or just refetch project
-      // Refetching is safer to keep sync
+
       const updatedProject = await projectsAPI.getProject(project._id);
       setProject(updatedProject);
 
@@ -167,6 +222,10 @@ export const ProjectTeamPage: React.FC = () => {
 
       const updatedProject = await projectsAPI.getProject(project._id);
       setProject(updatedProject);
+
+      const newConfig = teamConfig.filter((c) => c.userId !== userId);
+      updateTeamConfig(newConfig);
+
       sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo.");
     } catch (error) {
       console.error("Error removing user:", error);
@@ -253,7 +312,7 @@ export const ProjectTeamPage: React.FC = () => {
               ) : (
                 <div className="space-y-2">
                   {filteredCandidates.map((user) => {
-                    const isCoordinator = (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+                    const isCoordinator = checkIsCoordinator(user);
 
                     return (
                       <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
@@ -298,41 +357,52 @@ export const ProjectTeamPage: React.FC = () => {
             </h3>
 
             {(() => {
-              const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
-
               const coordinators = teamMembers.filter(checkIsCoordinator);
               const members = teamMembers.filter((u) => !checkIsCoordinator(u));
 
-              const renderUserCard = (user: User, isCoord: boolean) => (
-                <div key={user._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 transition-colors group">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
-                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              const renderUserCard = (user: User, isCoord: boolean) => {
+                const userConfig = teamConfig.find((c) => c.userId === user._id);
+                const isNotifier = userConfig ? userConfig.isNotifier : false;
 
-                      {/* Roles Badges */}
-                      <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
-                        {user.roles?.map((role) => (
-                          <span key={role._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium ${role.name.toLowerCase().includes("coordinador") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"}`}>
-                            {role.name}
-                          </span>
-                        ))}
-                        {isCoord && !user.roles?.some((r) => r.name.toLowerCase().includes("coordinador")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
-                      </div>
+                return (
+                  <div key={user._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 transition-colors group">
+                    <div className="flex items-center gap-3 overflow-hidden flex-1">
+                      <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
 
-                      <div className="flex gap-1">
-                        {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
-                        {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
-                        {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
+                        {/* Roles Badges */}
+                        <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
+                          {user.roles?.map((role) => (
+                            <span key={role._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium ${role.name.toLowerCase().includes("coordinador") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"}`}>
+                              {role.name}
+                            </span>
+                          ))}
+                          {isCoord && !user.roles?.some((r) => r.name.toLowerCase().includes("coordinador")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
+                        </div>
+
+                        <div className="flex gap-1">
+                          {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
+                          {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
+                          {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
+                        </div>
                       </div>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                      {isCoord && (
+                        <button onClick={() => handleToggleNotifier(user._id)} title={isNotifier ? "Recibe notificaciones" : "Activar notificaciones"} className={`p-2 rounded-full transition-all ${isNotifier ? "text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" : "text-gray-300 dark:text-gray-600 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
+                          <FontAwesomeIcon icon={faBell} />
+                        </button>
+                      )}
+                      <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Retirar del equipo">
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
                   </div>
-                  <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Retirar del equipo">
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
-                </div>
-              );
+                );
+              };
 
               return (
                 <div className="bg-white dark:bg-blue-900/20 rounded-xl shadow-sm border border-blue-200 dark:border-blue-700 overflow-hidden p-4 custom-scrollbar">
@@ -346,7 +416,12 @@ export const ProjectTeamPage: React.FC = () => {
                       {/* Coordinators Section */}
                       {coordinators.length > 0 && (
                         <div>
-                          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3 border-b border-indigo-100 dark:border-indigo-800 pb-1">Coordinadores</h4>
+                          <div className="flex items-center gap-2 mb-3 border-b border-indigo-100 dark:border-indigo-800 pb-1">
+                            <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Coordinadores</h4>
+                            <button onClick={() => setShowNotifInfo(true)} className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors focus:outline-none" title="Información sobre notificaciones">
+                              <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                           <div className="space-y-2">{coordinators.map((u) => renderUserCard(u, true))}</div>
                         </div>
                       )}
@@ -364,6 +439,27 @@ export const ProjectTeamPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Notifications Info Modal */}
+      <InfoModal isOpen={showNotifInfo} onClose={() => setShowNotifInfo(false)} title="Gestión de Notificaciones">
+        <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+          <div className="flex items-start gap-3">
+            <div className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full text-yellow-600 dark:text-yellow-400 shrink-0">
+              <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
+            </div>
+            <div>
+              <span className="font-semibold text-gray-900 dark:text-white block mb-1">Notificador Principal</span>
+              El coordinador seleccionado con la campana activa (icono amarillo) será el responsable de recibir todas las notificaciones importantes del proyecto.
+            </div>
+          </div>
+          <p className="pl-[3.25rem]">
+            Solo puede haber <strong>un único coordinador</strong> activo como notificador por proyecto. Al activar uno, se desactivará automáticamente cualquier otro que estuviera seleccionado.
+          </p>
+          <div className="pl-[3.25rem] pt-2">
+            <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-500 border border-gray-200 dark:border-gray-600">Nota: Si no seleccionas a ninguno, el sistema asignará uno por defecto.</span>
+          </div>
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };

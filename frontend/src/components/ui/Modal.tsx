@@ -5,7 +5,7 @@ import React, { useEffect } from "react";
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "fullscreen";
