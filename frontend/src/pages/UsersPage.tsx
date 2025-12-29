@@ -223,9 +223,14 @@ export const UsersPage: React.FC = () => {
     setEditingUser(null);
     setModalMode("edit");
 
-    // Pre-seleccionar el rol por defecto (isDefault: true)
+    // Pre-seleccionar el rol por defecto (isDefault: true) y "Mobile-Colaborador"
     const defaultRole = roles.find((role) => role.isDefault);
-    const defaultRoles = defaultRole ? [defaultRole._id] : [];
+    const mobileCollabRole = roles.find((role) => role.name.toLowerCase() === "mobile-colaborador");
+
+    // Set ensures uniqueness
+    const defaultRolesSet = new Set<string>();
+    if (defaultRole) defaultRolesSet.add(defaultRole._id);
+    if (mobileCollabRole) defaultRolesSet.add(mobileCollabRole._id);
 
     setFormData({
       email: "",
@@ -233,7 +238,7 @@ export const UsersPage: React.FC = () => {
       firstName: "",
       lastName: "",
       isActive: true,
-      roles: defaultRoles,
+      roles: Array.from(defaultRolesSet),
       positionId: undefined,
       levelId: undefined,
       areaId: undefined,
@@ -897,7 +902,18 @@ export const UsersPage: React.FC = () => {
                                       }
                                       setFormData((prev) => ({ ...prev, roles: newRoles }));
                                     } else {
-                                      setFormData((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== role._id) }));
+                                      // Validar que no se quede sin rol mobile
+                                      const remainingRoles = formData.roles.filter((r) => r !== role._id);
+                                      const hasMobile = remainingRoles.some((rId) => {
+                                        const r = roles.find((item) => item._id === rId);
+                                        return r && r.name.toLowerCase().includes("mobile");
+                                      });
+
+                                      if (!hasMobile) {
+                                        alert("El usuario debe tener al menos un rol Mobile asignado (Colaborador o Coordinador).");
+                                        return;
+                                      }
+                                      setFormData((prev) => ({ ...prev, roles: remainingRoles }));
                                     }
                                   }}
                                   className="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"

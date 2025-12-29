@@ -111,24 +111,50 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
   return role;
 }
 
-async function ensureUser(params: { tenantId: Types.ObjectId; email: string; password: string; roleName: "superadmin" | "admin" | "Mobile-Coordinador" | "Mobile-Colaborador"; firstName: string; lastName: string; isActive?: boolean; positionId?: Types.ObjectId; levelId?: Types.ObjectId; areaId?: Types.ObjectId; hireDate?: Date; extraVacationDays?: number; carryOverVacationDays?: number }) {
-  const { tenantId, email, password, roleName, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0, carryOverVacationDays = 0 } = params;
+async function ensureUser(params: {
+  tenantId: Types.ObjectId;
+  email: string;
+  password: string;
+  roleNames: string[]; // Changed from roleName: string
+  firstName: string;
+  lastName: string;
+  isActive?: boolean;
+  positionId?: Types.ObjectId;
+  levelId?: Types.ObjectId;
+  areaId?: Types.ObjectId;
+  hireDate?: Date;
+  extraVacationDays?: number;
+  carryOverVacationDays?: number;
+}) {
+  const { tenantId, email, password, roleNames, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0, carryOverVacationDays = 0 } = params;
 
   let user = await User.findOne({ tenantId, email });
-  let wantedRole: any = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${roleName}$`, "i") } });
 
-  // Si el rol no existe aún (por si cambian nombres), lo creamos con permisos mínimos.
-  if (!wantedRole) {
-    const perms = roleName === "superadmin" ? ["*"] : roleName === "admin" ? [] : []; // Mobile-Coordinador / Mobile-Colaborador sin permisos por defecto (RBAC por scopes específicos)
-    wantedRole = await ensureRole(tenantId, roleName, perms, `${roleName} role`);
+  // Find all requested roles
+  const regexNames = roleNames.map((n) => new RegExp(`^${n}$`, "i"));
+  let wantedRoles = await Role.find({ tenantId, name: { $in: regexNames } });
+
+  // Safety: Ensure roles exist. If not, create them (fallback for 'superadmin' or 'admin' only mostly, or standard mobile)
+  // This is a bit complex if multiple missing. We assume ensureRole was called before.
+  // But strictly following previous logic: "If wantedRole doesn't exist..."
+  if (wantedRoles.length !== roleNames.length) {
+    for (const name of roleNames) {
+      if (!wantedRoles.find((r) => r.name.toLowerCase() === name.toLowerCase())) {
+        const perms = name === "superadmin" ? ["*"] : [];
+        const newRole = await ensureRole(tenantId, name, perms, `${name} role`);
+        wantedRoles.push(newRole);
+      }
+    }
   }
+
+  const wantedRoleIds = wantedRoles.map((r) => r._id);
 
   if (!user) {
     user = new User({
       tenantId,
       email,
       password,
-      roles: [wantedRole._id],
+      roles: wantedRoleIds,
       firstName,
       lastName,
       isActive,
@@ -146,14 +172,20 @@ async function ensureUser(params: { tenantId: Types.ObjectId; email: string; pas
       $inc: { "usage.users.current": 1 },
     });
 
-    console.log(`✅ ensureUser: created ${email} [${roleName}]`);
-    console.log(`✅ ensureUser: created ${email} [${roleName}]`);
+    console.log(`✅ ensureUser: created ${email} [${roleNames.join(", ")}]`);
   } else {
     let isModified = false;
-    const userRoles = user.roles.map((r) => r.toString());
+    const userRoleIdsStr = user.roles.map((r) => r.toString());
 
-    if (!userRoles.includes(String(wantedRole._id))) {
-      user.roles = [wantedRole._id];
+    // Update roles if mismatch (simplistic check: if any wanted is missing or extra?)
+    // User logic: "si o si debe tener por defecto...". We should ADD the wanted roles if missing,
+    // but maybe not remove others if the user manually added them?
+    // "seedOnStart" usually enforces state. I will enforce `wantedRoleIds`.
+    const wantedIdsStr = wantedRoleIds.map((id) => id.toString());
+    const rolesChanged = wantedIdsStr.length !== userRoleIdsStr.length || !wantedIdsStr.every((id) => userRoleIdsStr.includes(id));
+
+    if (rolesChanged) {
+      user.roles = wantedRoleIds; // Enforce exact seed roles
       isModified = true;
     }
     if (user.firstName !== firstName) {
@@ -292,7 +324,7 @@ export async function ensureSuperAdmin() {
       tenantId: superAdminTenantId,
       email: "superadmin@example.com",
       password: "superadmin123",
-      roleName: "superadmin",
+      roleNames: ["superadmin"],
       firstName: "Super",
       lastName: "Admin",
       isActive: true,
@@ -643,7 +675,7 @@ export async function seedOnStart() {
       tenantId,
       email: adminEmail,
       password: adminPassword,
-      roleName: "admin",
+      roleNames: ["admin", "Mobile-Colaborador"],
       firstName: "Admin",
       lastName: "User",
       isActive: true,
@@ -661,7 +693,7 @@ export async function seedOnStart() {
       tenantId,
       email: "colaborador@mobile.com",
       password: "colaborador123",
-      roleName: "Mobile-Colaborador",
+      roleNames: ["Mobile-Colaborador"],
       firstName: "Juan",
       lastName: "Colaborador",
       isActive: true,
@@ -679,7 +711,7 @@ export async function seedOnStart() {
       tenantId,
       email: "coordinador@mobile.com",
       password: "coordinador-123",
-      roleName: "Mobile-Coordinador",
+      roleNames: ["Mobile-Coordinador"],
       firstName: "María",
       lastName: "Coordinadora",
       isActive: true,
@@ -696,7 +728,7 @@ export async function seedOnStart() {
       tenantId,
       email: "colaborador2@mobile.com",
       password: "colaborador123",
-      roleName: "Mobile-Colaborador",
+      roleNames: ["Mobile-Colaborador"],
       firstName: "Pedro",
       lastName: "Colaborador",
       isActive: true,
@@ -713,7 +745,7 @@ export async function seedOnStart() {
       tenantId,
       email: "coordinador2@mobile.com",
       password: "coordinador-123",
-      roleName: "Mobile-Coordinador",
+      roleNames: ["Mobile-Coordinador"],
       firstName: "Ana",
       lastName: "Coordinadora",
       isActive: true,

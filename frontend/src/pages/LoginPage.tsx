@@ -8,7 +8,7 @@ import { Logo } from "../components/ui/Logo";
 import { useAuthStore } from "../stores/authStore";
 import { useThemeStore } from "../stores/themeStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMoon, faSun, faMagicWandSparkles, faCheckCircle, faTimesCircle, faEye, faEyeSlash, faBuilding, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faMoon, faSun, faMagicWandSparkles, faCheckCircle, faTimesCircle, faEye, faEyeSlash, faBuilding, faLayerGroup, faMobileScreen, faLaptop } from "@fortawesome/free-solid-svg-icons";
 
 // ===== Validación =====
 const loginWithClientSchema = z.object({
@@ -68,6 +68,7 @@ export const LoginPage: React.FC = () => {
   const [showClientSelector, setShowClientSelector] = useState(false);
   const [availableTenants, setAvailableTenants] = useState<TenantOption[]>([]);
   const [showTenantSelector, setShowTenantSelector] = useState(false);
+  const [showPortalSelector, setShowPortalSelector] = useState(false);
 
   const {
     register,
@@ -206,8 +207,22 @@ export const LoginPage: React.FC = () => {
       // === Redirección según rol (fallback) ===
       // Intentamos tomar del resultado y, si no, del estado actual del store
       const rolesFromResult: any[] = (result?.user?.roles as any[]) || (useAuthStore.getState().user?.roles as any[]) || [];
+      const roleNames = rolesFromResult.map((r) => (typeof r === "string" ? r : r?.name || "").toLowerCase());
 
-      const isSuperadmin = Array.isArray(rolesFromResult) ? rolesFromResult.some((r) => (typeof r === "string" ? r : r?.name)?.toLowerCase() === "superadmin") : false;
+      const isSuperadmin = roleNames.includes("superadmin");
+      const hasMobileAccess = roleNames.some((n) => n.includes("mobile"));
+      const hasPlatformAccess = roleNames.some((n) => !n.includes("mobile")); // Any non-mobile role implies platform
+
+      if (hasPlatformAccess && hasMobileAccess) {
+        setShowPortalSelector(true);
+        setIsLoading(false); // Enable buttons
+        return;
+      }
+
+      if (hasMobileAccess && !hasPlatformAccess) {
+        navigate("/mobile");
+        return;
+      }
 
       navigate(isSuperadmin ? "/tenants" : "/users");
     } catch (err: any) {
@@ -217,6 +232,17 @@ export const LoginPage: React.FC = () => {
       setError(msg || t("auth.invalidCredentials"));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePortalSelect = (type: "platform" | "mobile") => {
+    if (type === "mobile") {
+      navigate("/mobile");
+    } else {
+      // Re-calculate superadmin for link
+      const roles = (useAuthStore.getState().user?.roles as any[]) || [];
+      const isSuperadmin = roles.some((r) => (typeof r === "string" ? r : r?.name)?.toLowerCase() === "superadmin");
+      navigate(isSuperadmin ? "/tenants" : "/users");
     }
   };
 
@@ -358,6 +384,34 @@ export const LoginPage: React.FC = () => {
               {isLoading ? t("common.loading") : t("auth.signIn")}
             </button>
           </form>
+
+          {/*Portal Selector Modal*/}
+          {showPortalSelector && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform scale-100 animate-scale-in">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">Bienvenido</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-6">Selecciona dónde deseas ingresar</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => handlePortalSelect("platform")} className="flex flex-col items-center justify-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-2 border-transparent hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
+                    <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <FontAwesomeIcon icon={faLaptop} className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">Plataforma</span>
+                    <span className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">Administración y Gestión</span>
+                  </button>
+
+                  <button onClick={() => handlePortalSelect("mobile")} className="flex flex-col items-center justify-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-2 border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 transition-all group">
+                    <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <FontAwesomeIcon icon={faMobileScreen} className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">App Mobile</span>
+                    <span className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1">Portal de Empleado</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* --- Usuarios disponibles --- */}
           <div className="mt-6">
