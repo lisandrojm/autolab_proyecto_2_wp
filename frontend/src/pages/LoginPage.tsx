@@ -197,13 +197,6 @@ export const LoginPage: React.FC = () => {
         return;
       }
 
-      // === Redirección automática ===
-      // Si el backend envía redirectTo, usar ese valor
-      if (result?.redirectTo) {
-        window.location.href = result.redirectTo;
-        return;
-      }
-
       // === Redirección según rol (fallback) ===
       // Intentamos tomar del resultado y, si no, del estado actual del store
       const rolesFromResult: any[] = (result?.user?.roles as any[]) || (useAuthStore.getState().user?.roles as any[]) || [];
@@ -213,17 +206,26 @@ export const LoginPage: React.FC = () => {
       const hasMobileAccess = roleNames.some((n) => n.includes("mobile"));
       const hasPlatformAccess = roleNames.some((n) => !n.includes("mobile")); // Any non-mobile role implies platform
 
+      // 1. Si tiene ambos accesos, mostrar selector (prioridad máxima)
       if (hasPlatformAccess && hasMobileAccess) {
         setShowPortalSelector(true);
         setIsLoading(false); // Enable buttons
         return;
       }
 
+      // 2. Si el backend envía redirectTo explícito (y no es caso dual), usarlo
+      if (result?.redirectTo) {
+        window.location.href = result.redirectTo;
+        return;
+      }
+
+      // 3. Redirección específica si solo tiene mobile
       if (hasMobileAccess && !hasPlatformAccess) {
         navigate("/mobile");
         return;
       }
 
+      // 4. Default a plataforma
       navigate(isSuperadmin ? "/tenants" : "/users");
     } catch (err: any) {
       console.error("[login:error]", err);
@@ -387,12 +389,12 @@ export const LoginPage: React.FC = () => {
 
           {/*Portal Selector Modal*/}
           {showPortalSelector && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform scale-100 animate-scale-in">
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 lg:w-full transform scale-100 animate-scale-in">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">Bienvenido</h3>
                 <p className="text-gray-500 dark:text-gray-400 text-center mb-6">Selecciona dónde deseas ingresar</p>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4">
                   <button onClick={() => handlePortalSelect("platform")} className="flex flex-col items-center justify-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-2 border-transparent hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
                     <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <FontAwesomeIcon icon={faLaptop} className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
