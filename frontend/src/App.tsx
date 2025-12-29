@@ -44,6 +44,8 @@ import { ActivityPage } from "./pages/ActivityPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
+import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPage";
+import { ManageActivityLogsCalendarPage } from "./pages/ManageActivityLogsCalendarPage";
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
@@ -167,6 +169,8 @@ function App() {
             {/* Rutas públicas (SIN Navbar) */}
             <Route element={<PublicLayout />}>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="activity-logs/config" element={<ManageActivityLogsConfigPage />} />
+              <Route path="activity-logs/calendar" element={<ManageActivityLogsCalendarPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/register-client" element={<RegisterClientPage />} />
             </Route>
@@ -423,6 +427,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ManageActivityLogsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/activity-logs/config"
+                element={
+                  <ProtectedRoute>
+                    <ManageActivityLogsConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/activity-logs/calendar"
+                element={
+                  <ProtectedRoute>
+                    <ManageActivityLogsCalendarPage />
                   </ProtectedRoute>
                 }
               />

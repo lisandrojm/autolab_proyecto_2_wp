@@ -696,7 +696,7 @@ export const ManageVacationsPage: React.FC = () => {
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
           <button onClick={() => navigate("/hr/vacations/calendar")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Ver calendario de vacaciones" aria-label="Ver calendario de vacaciones">
-            <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+            <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
           </button>
         </div>
       }

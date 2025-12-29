@@ -151,10 +151,12 @@ const AbsenceBlock: React.FC<{ title: string; type: AttendanceStatus; records: A
   );
 };
 
-// --- MAIN PAGE COMPONENT ---
+import { useNavigate } from "react-router-dom";
+
 export const ManageActivityLogsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
-  const [listLayout, setListLayout] = useState<"table" | "cards">("table"); // New state for Cards/Table toggle
+  const [listLayout, setListLayout] = useState<"table" | "cards">("table");
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
   const [openInfo, setOpenInfo] = useState(false);
   const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
@@ -393,11 +395,14 @@ export const ManageActivityLogsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/hr/activity-logs/config")} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" title="Ajustes de Novedades">
+            <FontAwesomeIcon icon={faGear} />
+          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
-          <button className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" title="Exportar">
-            <FontAwesomeIcon icon={faGear} />
+          <button onClick={() => navigate("/hr/activity-logs/calendar")} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver calendario" title="Ver calendario">
+            <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
           </button>
         </div>
       }

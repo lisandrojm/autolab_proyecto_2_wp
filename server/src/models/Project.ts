@@ -14,6 +14,11 @@ export interface IProject extends Document {
   createdAt: Date;
   updatedAt: Date;
   assignedUsers: Types.ObjectId[];
+  teamConfig?: {
+    userId: Types.ObjectId;
+    isNotifier: boolean;
+    canRegister: boolean;
+  }[];
   favorite?: boolean;
   vacationConfig?: {
     useGlobalConfig: boolean;
@@ -47,6 +52,15 @@ const projectSchema = new Schema<IProject>(
     createdBy: { type: String, required: true },
 
     assignedUsers: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
+
+    // Configuración específica de miembros para Novedades
+    teamConfig: [
+      {
+        userId: { type: Schema.Types.ObjectId, ref: "User" },
+        isNotifier: { type: Boolean, default: false }, // Recibe notificaciones
+        canRegister: { type: Boolean, default: true }, // Puede registrar novedades
+      },
+    ],
 
     favorite: { type: Boolean, default: false, index: true },
     vacationConfig: {

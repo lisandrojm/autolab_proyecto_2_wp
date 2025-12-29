@@ -358,4 +358,66 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
   }
 });
 
+// PATCH /projects/:projectId/team-config
+router.patch("/projects/:projectId/team-config", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId } = req.params;
+    const { config } = req.body; // Expects an array of configs to update
+
+    if (!Array.isArray(config)) {
+      res.status(400).json({ error: "Invalid format. 'config' must be an array" });
+      return;
+    }
+
+    const filter: any = { _id: projectId, tenantId: req.tenantObjectId };
+
+    // Check permissions (Admin or Assigned User)
+    const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const project = await Project.findOne(filter);
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    // Replace entire teamConfig or merge? Let's generic replace for simplicity in this MVP view
+    // But we need to be careful not to wipe existing configs if partial update.
+    // However, the frontend will likely send the full state of the table row toggles.
+    // Let's iterate and update specific users in the array.
+
+    // Better strategy: We completely replace the teamConfig with the new list provided,
+    // assuming the frontend sends the "complete state" or at least we are okay overriding.
+    // Wait, let's allow partial updates by user ID.
+
+    let currentConfig = project.teamConfig || [];
+
+    config.forEach((newItem: any) => {
+      const index = currentConfig.findIndex((c) => c.userId?.toString() === newItem.userId);
+      if (index >= 0) {
+        currentConfig[index].isNotifier = newItem.isNotifier;
+        currentConfig[index].canRegister = newItem.canRegister;
+      } else {
+        currentConfig.push({
+          userId: new Types.ObjectId(newItem.userId),
+          isNotifier: newItem.isNotifier,
+          canRegister: newItem.canRegister,
+        });
+      }
+    });
+
+    project.teamConfig = currentConfig;
+    await project.save();
+
+    res.json(project);
+  } catch (error) {
+    console.error("Update team config error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export { router as projectRoutes };

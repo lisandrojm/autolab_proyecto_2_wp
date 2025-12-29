@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faSpinner, faFilter, faClock, faCheckCircle, faTimesCircle, faBan, faCheck, faTruck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faSpinner, faFilter, faClock, faCheckCircle, faTimesCircle, faBan, faCheck, faTruck, faChevronLeft, faChevronRight, faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { Timeline } from "vis-timeline/standalone";
 import { DataSet } from "vis-data";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
@@ -204,7 +204,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
     <PageLayout
       title="Calendario de Vacaciones"
       subtitle="Vista temporal de todas las solicitudes de vacaciones"
-      faIcon={{ icon: faClock }}
+      faIcon={{ icon: faCalendar }}
       onBack={() => navigate("/hr/vacations")}
       infoModal={{
         isOpen: showHelpInfo,
