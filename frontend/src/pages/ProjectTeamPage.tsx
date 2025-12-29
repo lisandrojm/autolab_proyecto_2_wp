@@ -252,68 +252,115 @@ export const ProjectTeamPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredCandidates.map((user) => (
-                    <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 truncate">
-                            <span className="truncate">{user.email}</span>
-                          </div>
-                          <div className="flex gap-1 mt-1">
-                            {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
-                            {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
-                            {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
+                  {filteredCandidates.map((user) => {
+                    const isCoordinator = (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+
+                    return (
+                      <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
+                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+
+                            {/* Roles Badges */}
+                            <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
+                              {user.roles?.map((role) => (
+                                <span key={role._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium ${role.name.toLowerCase().includes("coordinador") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"}`}>
+                                  {role.name}
+                                </span>
+                              ))}
+                              {isCoordinator && !user.roles?.some((r) => r.name.toLowerCase().includes("coordinador")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
+                            </div>
+
+                            <div className="flex gap-1">
+                              {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
+                              {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
+                              {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
+                            </div>
                           </div>
                         </div>
+                        <button onClick={() => handleAddUser(user._id)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors" title="Agregar al equipo">
+                          <FontAwesomeIcon icon={faUserPlus} />
+                        </button>
                       </div>
-                      <button onClick={() => handleAddUser(user._id)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors" title="Agregar al equipo">
-                        <FontAwesomeIcon icon={faUserPlus} />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
 
           {/* Current Team Column */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
               Equipo Actual | {project.name} ({teamMembers.length})
             </h3>
 
-            <div className="bg-white dark:bg-blue-900/20 rounded-xl shadow-sm border border-blue-200 dark:border-blue-700 overflow-y-auto p-2 custom-scrollbar">
-              {teamMembers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                  <FontAwesomeIcon icon={faUsers} className="h-8 w-8 mb-2 opacity-20" />
-                  <p className="text-sm">Aún no hay miembros en el equipo</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {teamMembers.map((user) => (
-                    <div key={user._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 transition-colors group">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
-                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                          <div className="flex gap-1 mt-1">
-                            {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
-                            {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
-                            {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
-                          </div>
-                        </div>
+            {(() => {
+              const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+
+              const coordinators = teamMembers.filter(checkIsCoordinator);
+              const members = teamMembers.filter((u) => !checkIsCoordinator(u));
+
+              const renderUserCard = (user: User, isCoord: boolean) => (
+                <div key={user._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 transition-colors group">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+
+                      {/* Roles Badges */}
+                      <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
+                        {user.roles?.map((role) => (
+                          <span key={role._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium ${role.name.toLowerCase().includes("coordinador") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"}`}>
+                            {role.name}
+                          </span>
+                        ))}
+                        {isCoord && !user.roles?.some((r) => r.name.toLowerCase().includes("coordinador")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
                       </div>
-                      <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Retirar del equipo">
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
+
+                      <div className="flex gap-1">
+                        {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
+                        {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
+                        {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                  <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Retirar del equipo">
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
                 </div>
-              )}
-            </div>
+              );
+
+              return (
+                <div className="bg-white dark:bg-blue-900/20 rounded-xl shadow-sm border border-blue-200 dark:border-blue-700 overflow-hidden p-4 custom-scrollbar">
+                  {teamMembers.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                      <FontAwesomeIcon icon={faUsers} className="h-8 w-8 mb-2 opacity-20" />
+                      <p className="text-sm">Aún no hay miembros en el equipo</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Coordinators Section */}
+                      {coordinators.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3 border-b border-indigo-100 dark:border-indigo-800 pb-1">Coordinadores</h4>
+                          <div className="space-y-2">{coordinators.map((u) => renderUserCard(u, true))}</div>
+                        </div>
+                      )}
+
+                      {/* Members Section */}
+                      <div>
+                        {coordinators.length > 0 && <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-1">Colaboradores</h4>}
+                        <div className="space-y-2">{members.map((u) => renderUserCard(u, false))}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

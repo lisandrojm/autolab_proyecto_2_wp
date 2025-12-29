@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faPen, faUser, faCalendar, faTrash, faUserSlash, faGear, faGrip, faTable, faBriefcase, faChartSimple, faClock, faCheck, faCheckCircle, faTimesCircle, faBan, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faPen, faUser, faCalendar, faTrash, faUserSlash, faGear, faGrip, faTable, faBriefcase, faChartSimple, faClock, faCheck, faCheckCircle, faTimesCircle, faBan, faTimes, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
@@ -68,9 +68,9 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
             <th className="py-3 px-4">Area</th>
             <th className="py-3 px-4 text-center">Entrada</th>
             <th className="py-3 px-4 text-center">Salida</th>
-            <th className="py-3 px-4 text-center">Hs. Extras</th>
-            <th className="py-3 px-4 text-center">Extra Entrada</th>
-            <th className="py-3 px-4 text-center">Extra Salida</th>
+            <th className="py-3 px-4 text-center">Hs. Exts.</th>
+            <th className="py-3 px-4 text-center">Entrada Exts.</th>
+            <th className="py-3 px-4 text-center">Salida Exts.</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -108,34 +108,43 @@ const AbsenceBlock: React.FC<{ title: string; type: AttendanceStatus; records: A
     return false;
   });
 
-  const hasAbsences = relevantRecords.length > 0;
+  const count = relevantRecords.length;
+  // Default open if there are records
+  const [isOpen, setIsOpen] = useState(count > 0);
 
   return (
-    <div className="flex flex-col group">
-      <div className="px-5 py-3 flex justify-between items-center bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{title}</h3>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded ${hasAbsences ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>{hasAbsences ? "Sí" : "No"}</span>
-      </div>
-      {hasAbsences && (
-        <div className="px-5 pb-4 bg-gray-50/50 dark:bg-gray-900/20 shadow-inner">
-          <div className="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500 font-medium border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  <th className="py-2 px-4 text-left w-1/2">Colaborador</th>
-                  <th className="py-2 px-4 text-left w-1/2">Reemplazo / Detalle</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {relevantRecords.map((rec) => (
-                  <tr key={rec.id}>
-                    <td className="py-2 px-4 font-medium text-gray-800 dark:text-gray-200">{rec.employeeName}</td>
-                    <td className="py-2 px-4 text-gray-600 dark:text-gray-400">{rec.replacementName || "-"}</td>
+    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <button onClick={() => setIsOpen(!isOpen)} className="px-5 py-4 flex justify-between items-center w-full text-left focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {title} <span className={count > 0 ? "text-red-600 dark:text-red-400 font-semibold" : "text-gray-500 font-normal"}>({count})</span>
+        </h3>
+        <FontAwesomeIcon icon={isOpen ? faChevronUp : faChevronDown} className="text-gray-400 text-xs" />
+      </button>
+
+      {isOpen && (
+        <div className="border-t border-gray-100 dark:border-gray-700 animate-fade-in">
+          {count > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-gray-500 font-medium border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                  <tr>
+                    <th className="py-2 px-5 text-left w-1/2 font-semibold">Colaborador</th>
+                    <th className="py-2 px-5 text-left w-1/2 font-semibold">Reemplazo / Detalle</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {relevantRecords.map((rec) => (
+                    <tr key={rec.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                      <td className="py-2.5 px-5 font-medium text-red-600 dark:text-red-400">{rec.employeeName}</td>
+                      <td className="py-2.5 px-5 text-gray-600 dark:text-gray-400">{rec.replacementName || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-4 text-center text-sm text-gray-500 italic bg-gray-50/30 dark:bg-gray-900/10">No hay registro de Ausentes por {title}</div>
+          )}
         </div>
       )}
     </div>
@@ -148,6 +157,7 @@ export const ManageActivityLogsPage: React.FC = () => {
   const [listLayout, setListLayout] = useState<"table" | "cards">("table"); // New state for Cards/Table toggle
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
   const [openInfo, setOpenInfo] = useState(false);
+  const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
   const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments">("attendance");
 
   // Filters
@@ -260,7 +270,7 @@ export const ManageActivityLogsPage: React.FC = () => {
       <PageLayout
         title={selectedReport.projectName}
         badge={{
-          text: format(new Date(selectedReport.date), "EEEE d 'de' MMMM, yyyy", { locale: es }),
+          text: format(new Date(selectedReport.date), "EEEE d 'de' MMMM, yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase()),
           variant: "default",
         }}
         faIcon={{ icon: faBriefcase }}
@@ -275,9 +285,45 @@ export const ManageActivityLogsPage: React.FC = () => {
         }}
         shouldShowInfo={hasHelp(HELP_KEY)}
         onBack={handleBackToList}
+        headerActions={
+          <button onClick={() => setShowDetailStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver estadísticas del reporte" title="Ver estadísticas del reporte">
+            <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+          </button>
+        }
       >
         <div className="space-y-6 animate-fade-in">
           {/* Header Info Card Removed as per request to save space */}
+
+          {/* ... Tabs ... */}
+
+          {/* Detail Stats Modal */}
+          <Modal isOpen={showDetailStatsModal} onClose={() => setShowDetailStatsModal(false)} title={`Estadísticas: ${selectedReport.projectName}`} size="md">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 text-center">
+                <div className="text-blue-600 dark:text-blue-400 mb-2">
+                  <FontAwesomeIcon icon={faUser} className="text-xl" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{selectedReport.attendance.length}</div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Personal</div>
+              </div>
+
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-100 dark:border-red-800 text-center">
+                <div className="text-red-600 dark:text-red-400 mb-2">
+                  <FontAwesomeIcon icon={faUserSlash} className="text-xl" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length}</div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ausentes</div>
+              </div>
+
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800 text-center">
+                <div className="text-green-600 dark:text-green-400 mb-2">
+                  <FontAwesomeIcon icon={faClock} className="text-xl" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{selectedReport.attendance.reduce((acc, curr) => acc + (curr.overtimeHours || 0), 0)}</div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hs. Extras</div>
+              </div>
+            </div>
+          </Modal>
 
           {/* Tabs Navigation */}
           {/* Tabs Navigation */}
@@ -307,18 +353,15 @@ export const ManageActivityLogsPage: React.FC = () => {
 
             {detailTab === "absences" &&
               (selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length > 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden animate-fade-in">
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    <AbsenceBlock type="compensatory" title="Compensatorios" records={selectedReport.attendance} />
-                    <AbsenceBlock type="sick" title="Enfermedad" records={selectedReport.attendance} />
-                    <AbsenceBlock type="unpaid" title="Sin goce de sueldo" records={selectedReport.attendance} />
-                    <AbsenceBlock type="vacation" title="Por Vacaciones" records={selectedReport.attendance} />
-                  </div>
+                <div className="space-y-4 animate-fade-in">
+                  <AbsenceBlock type="compensatory" title="Compensatorios" records={selectedReport.attendance} />
+                  <AbsenceBlock type="sick" title="Enfermedad" records={selectedReport.attendance} />
+                  <AbsenceBlock type="unpaid" title="Sin goce de sueldo" records={selectedReport.attendance} />
+                  <AbsenceBlock type="vacation" title="Por Vacaciones" records={selectedReport.attendance} />
                 </div>
               ) : (
                 <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Ausentes</div>
               ))}
-
             {detailTab === "comments" &&
               (selectedReport.comments ? (
                 <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-5 animate-fade-in">
@@ -411,7 +454,7 @@ export const ManageActivityLogsPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha Sol.</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha Reg.</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
                     Registros
