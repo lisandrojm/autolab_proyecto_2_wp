@@ -107,13 +107,20 @@ function App() {
     console.log("==================");
   }, []);
 
-  // Restaurar sesión si hay token
+  // Restaurar sesión y validar token
   useEffect(() => {
+    // 1. Si tenemos token y user pero no estamos marcados como auténticos,
+    // restauramos la sesión optimísticamente para renderizar rápido.
     if (token && user && !isAuthenticated) {
       useAuthStore.setState({ isAuthenticated: true });
-    } else if (token && !user) {
+    }
+
+    // 2. Siempre verificamos la validez del token en segundo plano si existe.
+    // Esto maneja el caso donde el token es inválido/expirado pero sigue en localStorage.
+    if (token) {
       const checkTokenValidity = async () => {
         try {
+          // Usamos un endpoint ligero para validar el token (ping o similar)
           const response = await fetch(`${import.meta.env.VITE_API_URL}/secure/ping`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -122,34 +129,37 @@ function App() {
           });
 
           if (!response.ok) {
+            console.warn("Token validation failed (ping !ok) -> Logging out");
             useAuthStore.getState().logout();
           } else {
-            const savedUser = localStorage.getItem("user");
-            if (savedUser) {
-              try {
-                const userData = JSON.parse(savedUser);
-                if (userData && (userData.id || userData._id)) {
-                  useAuthStore.setState({ user: userData, isAuthenticated: true });
-                } else {
-                  console.warn("Token valid but user data invalid -> logout");
+            // Token válido. Si faltaba el usuario, intentamos recuperarlo de localStorage o parsearlo.
+            // Si ya lo teníamos, todo bien.
+            if (!user) {
+              const savedUser = localStorage.getItem("user");
+              if (savedUser) {
+                try {
+                  const userData = JSON.parse(savedUser);
+                  if (userData && (userData.id || userData._id)) {
+                    useAuthStore.setState({ user: userData, isAuthenticated: true });
+                  } else {
+                    console.warn("User data invalid in storage -> Logging out");
+                    useAuthStore.getState().logout();
+                  }
+                } catch {
                   useAuthStore.getState().logout();
                 }
-              } catch {
-                useAuthStore.getState().logout();
               }
-            } else {
-              // Token válido pero sin datos de usuario -> Logout
-              console.warn("Token valid but no user data -> logout");
-              useAuthStore.getState().logout();
             }
           }
-        } catch {
+        } catch (error) {
+          console.error("Token validation error (network/server) -> Logging out", error);
           useAuthStore.getState().logout();
         }
       };
+
       checkTokenValidity();
     }
-  }, [token, user, isAuthenticated]);
+  }, [token]); // Dependencia simplificada para correr al inicio o cambio de token
 
   // Sincronizar tema
   useEffect(() => {
