@@ -3,12 +3,14 @@ import React, { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faPen, faUser, faCalendar, faTrash, faUserSlash, faGear, faGrip, faTable, faBriefcase, faChartSimple, faClock, faCheck, faCheckCircle, faTimesCircle, faBan, faTimes, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faCog, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
 import { ActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { ReportingScheduleModal, ReportSchedule } from "../components/activity_logs/ReportingScheduleModal";
+import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
 
 // ... (MOCK_AREAS, MOCK_REPORTS, AttendanceTable, AbsenceBlock components remain identical, omitting for brevity in this replace block if not changing, but since I'm replacing the whole file content structure to be safe with the new function placement, I will include them or rely on the tool to just insert what I need if I were using multi-replace. Since I need to construct the whole page logic for the view toggle, I will replace the main component logic.)
 
@@ -151,10 +153,12 @@ const AbsenceBlock: React.FC<{ title: string; type: AttendanceStatus; records: A
   );
 };
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
 
 export const ManageActivityLogsPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [listLayout, setListLayout] = useState<"table" | "cards">("table");
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
@@ -166,6 +170,37 @@ export const ManageActivityLogsPage: React.FC = () => {
   const [dateFilter, setDateFilter] = useState("daily"); // daily, weekly, monthly
   const [areaFilter, setAreaFilter] = useState("all");
   const [showStatsModal, setShowStatsModal] = useState(false);
+
+  // Check for URL params to auto-open report detail
+  useEffect(() => {
+    const reportId = searchParams.get("report");
+    if (reportId) {
+      const report = MOCK_REPORTS.find((r) => r.id === reportId);
+      if (report) {
+        setSelectedReport(report);
+        setViewMode("detail");
+        setDetailTab("attendance");
+      }
+      // Clean up URL after handling
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Frequency Config Modal state
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [projectSchedules, setProjectSchedules] = useState<Record<string, ReportSchedule>>({});
+
+  const handleSaveSchedule = (schedule: ReportSchedule) => {
+    if (selectedProject) {
+      setProjectSchedules((prev) => ({
+        ...prev,
+        [selectedProject._id]: schedule,
+      }));
+    }
+  };
+
+  const currentSchedule = selectedProject ? projectSchedules[selectedProject._id] : undefined;
 
   // Stats calculation
   const stats = React.useMemo(() => {
@@ -405,6 +440,9 @@ export const ManageActivityLogsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowConfigModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Configurar Frecuencia" title="Configurar Frecuencia">
+            <FontAwesomeIcon icon={faCog} className="h-4 w-4" />
+          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
@@ -546,6 +584,9 @@ export const ManageActivityLogsPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Frequency Configuration Modal */}
+      <ReportingScheduleModal isOpen={showConfigModal} onClose={() => setShowConfigModal(false)} projectName={selectedProject?.name || "Proyecto"} initialSchedule={currentSchedule} onSave={handleSaveSchedule} projectSelector={<ProjectHeaderSelector onSelectProject={setSelectedProject} selectedProjectId={selectedProject?._id} />} />
     </PageLayout>
   );
 };

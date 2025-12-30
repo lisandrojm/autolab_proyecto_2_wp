@@ -441,22 +441,37 @@ export const ProjectTeamPage: React.FC = () => {
       </div>
 
       {/* Notifications Info Modal */}
-      <InfoModal isOpen={showNotifInfo} onClose={() => setShowNotifInfo(false)} title="Gestión de Notificaciones">
-        <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
-          <div className="flex items-start gap-3">
-            <div className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full text-yellow-600 dark:text-yellow-400 shrink-0">
-              <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="font-semibold text-gray-900 dark:text-white block mb-1">Notificador Principal</span>
-              El coordinador seleccionado con la campana activa (icono amarillo) será el responsable de recibir todas las notificaciones importantes del proyecto.
-            </div>
+      <InfoModal isOpen={showNotifInfo} onClose={() => setShowNotifInfo(false)} title="Coordinadores">
+        <div className="space-y-6 text-sm text-gray-600 dark:text-gray-300">
+          {/* Coordinadores Section */}
+          <div className="space-y-3">
+            <p>
+              Los <strong className="text-gray-900 dark:text-white">Coordinadores</strong> son los miembros del equipo responsables de generar el <strong className="text-gray-900 dark:text-white">Reporte Diario de Novedades</strong> para este proyecto.
+            </p>
+            <p>Cada día, el coordinador designado deberá completar el registro de asistencia, horas trabajadas y cualquier novedad relevante del personal asignado.</p>
           </div>
-          <p className="pl-[3.25rem]">
-            Solo puede haber <strong>un único coordinador</strong> activo como notificador por proyecto. Al activar uno, se desactivará automáticamente cualquier otro que estuviera seleccionado.
-          </p>
-          <div className="pl-[3.25rem] pt-2">
-            <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-500 border border-gray-200 dark:border-gray-600">Nota: Si no seleccionas a ninguno, el sistema asignará uno por defecto.</span>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200 dark:border-gray-700"></div>
+
+          {/* Gestión de Notificaciones Subsection */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Gestión de Notificaciones</h3>
+            <div className="flex items-start gap-3">
+              <div className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full text-yellow-600 dark:text-yellow-400 shrink-0">
+                <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="font-semibold text-gray-900 dark:text-white block mb-1">Notificador Principal</span>
+                El coordinador seleccionado con la campana activa (icono amarillo) será el responsable de recibir todas las notificaciones importantes del proyecto.
+              </div>
+            </div>
+            <p className="pl-[3.25rem]">
+              Solo puede haber <strong>un único coordinador</strong> activo como notificador por proyecto. Al activar uno, se desactivará automáticamente cualquier otro que estuviera seleccionado.
+            </p>
+            <div className="pl-[3.25rem] pt-2">
+              <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-500 border border-gray-200 dark:border-gray-600">Nota: Si no seleccionas a ninguno, el sistema asignará uno por defecto.</span>
+            </div>
           </div>
         </div>
       </InfoModal>
