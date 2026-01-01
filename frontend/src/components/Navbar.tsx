@@ -235,7 +235,7 @@ export const MobileNavbar: React.FC = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    if (["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules"].includes(path)) {
+    if (["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(path)) {
       setOpenAdminSection("config");
     }
   }, [location.pathname]);
@@ -298,6 +298,7 @@ export const MobileNavbar: React.FC = () => {
 
       if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
+      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs/config", icon: faFileText, label: "Novedades", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/pdf-templates", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
 
       if (hasPermission("creative:view")) {
@@ -406,7 +407,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
 
     const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item) && !configItems.includes(item) && !managementItems.includes(item));
 

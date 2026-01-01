@@ -36,3 +36,8 @@ export interface AreaOption {
   id: string;
   name: string;
 }
+
+export interface ReportSchedule {
+  type: "daily" | "workdays" | "custom";
+  days: number[]; // 0 = Sunday, 1 = Monday, ...
+}

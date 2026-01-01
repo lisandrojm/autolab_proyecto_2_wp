@@ -156,7 +156,7 @@ export function PdfGlobalConfigTab() {
   if (loading) return <LoadingSpinner message="Cargando configuración..." />;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
         <FontAwesomeIcon icon={faBuilding} className="text-blue-500" />
         Configuración Global y Membrete
