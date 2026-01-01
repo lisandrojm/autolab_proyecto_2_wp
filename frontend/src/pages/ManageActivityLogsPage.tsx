@@ -486,7 +486,8 @@ export const ManageActivityLogsPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha Reg.</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Registro</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
                     Registros
@@ -503,7 +504,8 @@ export const ManageActivityLogsPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{formatReportId(report.id)}</span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-400">{format(new Date(report.date), "dd MMM yyyy", { locale: es })}</td>
+                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-medium">{format(new Date(report.date), "dd MMM yyyy", { locale: es })}</td>
+                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">{format(new Date(report.submittedAt), "dd MMM yyyy", { locale: es })}</td>
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
                         <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-xs" />
@@ -523,10 +525,7 @@ export const ManageActivityLogsPage: React.FC = () => {
                         return overtimeCount > 0 ? <span className="text-green-600 dark:text-green-400 font-medium">{overtimeCount}</span> : "0";
                       })()}
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                      {report.submittedBy}
-                      <div className="text-xs text-gray-400">{format(new Date(report.submittedAt), "HH:mm")} hs</div>
-                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{report.submittedBy}</td>
                     <td className="py-3 px-4 text-right">
                       <button className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded" title="Eliminar">
                         <FontAwesomeIcon icon={faTrash} />
