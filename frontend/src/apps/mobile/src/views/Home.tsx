@@ -42,17 +42,19 @@ export default function Home({ onNavigate }: HomeProps) {
   const latestNotification = notifications.find((n) => !n.isRead);
 
   // ⬇️ QUICK ACTIONS — badgeBg y badgeText
+  const novedadesAction = {
+    icon: faFileAlt,
+    title: "Novedades",
+    description: "Gestión de novedades",
+    view: "activity_logs" as ViewType,
+    roles: ["coordinator"],
+    disabled: false,
+    badge: "New",
+    badgeBg: "bg-green-500",
+    badgeText: "text-white",
+  };
+
   const baseActions = [
-    {
-      icon: faShoppingCart,
-      title: "Pedidos",
-      description: "Gestiona tus pedidos",
-      view: "orders" as ViewType,
-      roles: ["coordinator", "collaborator"],
-      /*       badge: "Finish", */
-      badgeBg: "bg-blue-500",
-      badgeText: "text-white",
-    },
     {
       icon: faUmbrellaBeach,
       title: "Vacaciones",
@@ -62,6 +64,16 @@ export default function Home({ onNavigate }: HomeProps) {
       disabled: false,
       /*       badge: "New", */
       badgeBg: "bg-red-500",
+      badgeText: "text-white",
+    },
+    {
+      icon: faShoppingCart,
+      title: "Pedidos",
+      description: "Gestiona tus pedidos",
+      view: "orders" as ViewType,
+      roles: ["coordinator", "collaborator"],
+      /*       badge: "Finish", */
+      badgeBg: "bg-blue-500",
       badgeText: "text-white",
     },
     {
@@ -101,7 +113,20 @@ export default function Home({ onNavigate }: HomeProps) {
     },
   ];
 
-  const quickActions = isMobileCoordinator ? [...baseActions, ...coordinatorActions] : baseActions;
+  // Construct quickActions based on role and desired order
+  const quickActions = [];
+
+  if (isMobileCoordinator) {
+    quickActions.push(novedadesAction);
+  }
+
+  // Add base actions (Vacaciones, Pedidos, etc)
+  quickActions.push(...baseActions);
+
+  // Add remaining coordinator actions
+  if (isMobileCoordinator) {
+    quickActions.push(...coordinatorActions);
+  }
 
   const getActivityIcon = (action: string) => {
     if (action.includes("vacation")) return faCheckCircle;

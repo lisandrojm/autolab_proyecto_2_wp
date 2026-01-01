@@ -45,6 +45,7 @@ import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
 import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPage";
+import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
 
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
@@ -447,7 +448,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
+              <Route
+                path="/hr/activity-logs/create"
+                element={
+                  <ProtectedRoute>
+                    <CreateActivityReportPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/hr/employee-profiles"
                 element={
