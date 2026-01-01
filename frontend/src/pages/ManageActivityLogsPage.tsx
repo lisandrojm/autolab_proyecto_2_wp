@@ -411,7 +411,7 @@ export const ManageActivityLogsPage: React.FC = () => {
   // --- RENDER LIST VIEW ---
   return (
     <PageLayout
-      title="Registro de Novedades"
+      title="Novedades"
       subtitle="Historial de reportes diarios de asistencia y novedades"
       faIcon={{ icon: faFileText }}
       infoModal={{
