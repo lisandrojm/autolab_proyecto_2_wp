@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { activityLogTypesAPI, ActivityLogType } from "../../../../api/activityLogTypes";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faCog } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faPlus, faTimes, faTrash, faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -58,6 +59,7 @@ interface CategorySection {
   isActive: boolean;
   type: "simple_selection" | "replacement_selection" | "overtime_selection";
   items: EmployeeSelection[];
+  requiresReplacement?: boolean;
 }
 
 interface ActivityLogsProps {
@@ -74,64 +76,48 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [hasActivity, setHasActivity] = useState<boolean | null>(null);
   const [comments, setComments] = useState("");
 
-  const [categories, setCategories] = useState<CategorySection[]>([
-    {
-      id: "shift_change",
-      title: "Cambios de Turno",
-      question: "¿Hubo ausentes por cambio de turno?",
+  const [categories, setCategories] = useState<CategorySection[]>([]);
+  const [logTypes, setLogTypes] = useState<ActivityLogType[]>([]);
+
+  useEffect(() => {
+    fetchTypes();
+  }, []);
+
+  const fetchTypes = async () => {
+    try {
+      const types = await activityLogTypesAPI.getAll();
+      // Filter only active types
+      const activeTypes = types.filter((t) => t.isActive);
+      setLogTypes(activeTypes);
+
+      // Initialize categories based on types
+      const initialCategories = activeTypes.map((t) => mapTypeToCategory(t));
+      setCategories(initialCategories);
+      return activeTypes;
+    } catch (error) {
+      console.error("Error loading activity definitions", error);
+      return [];
+    }
+  };
+
+  const mapTypeToCategory = (t: ActivityLogType): CategorySection => {
+    let type: "simple_selection" | "replacement_selection" | "overtime_selection" = "simple_selection";
+    if (t.name.toLowerCase().includes("horas extra")) {
+      type = "overtime_selection";
+    } else if (t.requiresReplacement) {
+      type = "replacement_selection";
+    }
+
+    return {
+      id: t._id,
+      title: t.name,
+      question: `¿Hubo novedades de ${t.name}?`,
       isActive: false,
-      type: "simple_selection",
+      type,
       items: [],
-    },
-    {
-      id: "compensatory",
-      title: "Compensatorios",
-      question: "¿Hubo ausentes por compensatorios?",
-      isActive: false,
-      type: "simple_selection",
-      items: [],
-    },
-    {
-      id: "sick_leave",
-      title: "Enfermedad",
-      question: "¿Hubo ausentes por enfermedad?",
-      isActive: false,
-      type: "replacement_selection",
-      items: [],
-    },
-    {
-      id: "vacation",
-      title: "Vacaciones",
-      question: "¿Hubo ausentes por vacaciones?",
-      isActive: false,
-      type: "simple_selection",
-      items: [],
-    },
-    {
-      id: "unpaid_leave",
-      title: "Sin Goce de Sueldo",
-      question: "¿Hubo ausentes sin goce de sueldo?",
-      isActive: false,
-      type: "simple_selection",
-      items: [],
-    },
-    {
-      id: "overtime",
-      title: "Horas Extras y Feriados",
-      question: "¿El equipo realizó horas extras o trabajó un feriado?",
-      isActive: false,
-      type: "overtime_selection",
-      items: [],
-    },
-    {
-      id: "other_present",
-      title: "Otros Presentes",
-      question: "¿Hubo algún colaborador no mencionado anteriormente?",
-      isActive: false,
-      type: "simple_selection",
-      items: [],
-    },
-  ]);
+      requiresReplacement: t.requiresReplacement,
+    };
+  };
 
   const handleToggleCategory = (id: string, value: boolean) => {
     setCategories((prev) =>
@@ -197,33 +183,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       setHasActivity(true);
 
       // Map existing attendance to categories
-      const newCategories = categories.map((cat) => ({ ...cat, isActive: false, items: [] as EmployeeSelection[] }));
+      // Reset categories first
+      const newCategories = logTypes.map((t) => mapTypeToCategory(t));
 
       report.attendance.forEach((rec: any) => {
-        // Determine category based on status/reason
-        let catId = "other_present";
-        if (rec.status === "absent" && rec.absenceReason === "Compensatorio") catId = "compensatory";
-        else if (rec.status === "absent" && rec.absenceReason === "Enfermedad") catId = "sick_leave";
-        else if (rec.status === "absent" && rec.absenceReason === "Vacaciones") catId = "vacation";
-        else if (rec.status === "absent" && rec.absenceReason === "Sin Goce de Sueldo") catId = "unpaid_leave";
-        else if (rec.status === "absent" && rec.absenceReason === "Cambio de Turno")
-          catId = "shift_change"; // Assuming this mapping
-        else if (rec.hasOvertime || rec.overtimeHours > 0) catId = "overtime";
-        else if (rec.status === "present") catId = "other_present"; // Default presents to other? Or maybe we don't map them all back perfectly in this mock
+        // Here we need to match the report record reasonable to the Category ID (which is now a Mongo ID)
+        // This is tricky if MOCK_REPORTS use legacy IDs.
+        // For now, we will try to find a category by fuzzy matching the title or just generic fallback.
+        // Since we switched to dynamic IDs, matching MOCK data is hard.
+        // We will match by Name if possible.
+        const foundCat = newCategories.find((c) => c.title === rec.absenceReason || (rec.absenceReason === "Cambio de Turno" && c.title === "Cambios de Turno"));
 
-        // Find the category
-        const catIndex = newCategories.findIndex((c) => c.id === catId);
-        if (catIndex !== -1) {
-          newCategories[catIndex].isActive = true;
-          // Map employee data
-          // We need employee ID, if we only have name in report.attendance we try to find it in MOCK_EMPLOYEES or just put name if we could (but interface expects ID)
-          // For this mock, let's try to match by name or default to first if not found, or just put id if present
+        if (foundCat) {
+          foundCat.isActive = true;
+          // ... (add item logic same as before, adapted)
           const emp = MOCK_EMPLOYEES.find((e) => e.name === rec.employeeName);
-          const empId = emp ? emp.id : rec.employeeId || ""; // Fallback
+          const empId = emp ? emp.id : rec.employeeId || "";
 
-          newCategories[catIndex].items.push({
+          foundCat.items.push({
             employeeId: empId,
-            replacementId: rec.replacementId, // Assuming this field exists in attendance record if applicable
+            replacementId: rec.replacementId,
             notes: rec.notes,
             overtimeHours: rec.overtimeHours,
           });
@@ -239,100 +218,21 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setShowForm(true);
   };
 
-  // Config State
-  const [showConfig, setShowConfig] = useState(false);
-  const [newCatTitle, setNewCatTitle] = useState("");
-  const [newCatHasReplacement, setNewCatHasReplacement] = useState(false);
-
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
     setSelectedReportId(null);
     setReportDate(new Date().toISOString().split("T")[0]);
     setHasActivity(null);
-    setCategories(categories.map((c) => ({ ...c, isActive: false, items: [] })));
+
+    // Fetch and use latest types
+    const freshTypes = await fetchTypes();
+    setCategories(freshTypes.map((t) => mapTypeToCategory(t)));
+
     setComments("");
     setShowForm(true);
   };
 
-  const handleAddCategory = () => {
-    if (!newCatTitle.trim()) return;
-
-    const newId = newCatTitle.toLowerCase().replace(/\s+/g, "_");
-    const newCategory: CategorySection = {
-      id: newId,
-      title: newCatTitle,
-      question: `¿Hubo novedades de ${newCatTitle}?`,
-      isActive: false,
-      type: newCatHasReplacement ? "replacement_selection" : "simple_selection",
-      items: [],
-    };
-
-    setCategories([...categories, newCategory]);
-    setNewCatTitle("");
-    setNewCatHasReplacement(false);
-  };
-
-  const handleDeleteCategory = (id: string) => {
-    setCategories(categories.filter((c) => c.id !== id));
-  };
-
   return (
     <div className="flex-1 pb-24">
-      {/* Config Modal */}
-      {showConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">Gestionar Tipos de Novedad</h3>
-              <button onClick={() => setShowConfig(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto flex-1 space-y-6">
-              {/* Add New */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
-                <h4 className="font-medium text-slate-900 dark:text-white mb-2">Crear Nuevo Tipo</h4>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Nombre</label>
-                  <input type="text" value={newCatTitle} onChange={(e) => setNewCatTitle(e.target.value)} placeholder="Ej: Llegada Tarde" className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500" />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-700 dark:text-slate-300">¿Requiere Reemplazo?</span>
-                  <button onClick={() => setNewCatHasReplacement(!newCatHasReplacement)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${newCatHasReplacement ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600"}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${newCatHasReplacement ? "translate-x-6" : "translate-x-1"}`} />
-                  </button>
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  <button onClick={handleAddCategory} disabled={!newCatTitle.trim()} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                    Agregar
-                  </button>
-                </div>
-              </div>
-
-              {/* List */}
-              <div>
-                <h4 className="font-medium text-slate-900 dark:text-white mb-3">Tipos Existentes</h4>
-                <div className="space-y-2">
-                  {categories.map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">{cat.title}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{cat.type === "replacement_selection" ? "Requiere Reemplazo" : "Selección Simple"}</p>
-                      </div>
-                      <button onClick={() => handleDeleteCategory(cat.id)} className="text-slate-400 hover:text-red-500 p-2 transition-colors">
-                        <FontAwesomeIcon icon={faTrash} size="sm" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
@@ -350,9 +250,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowConfig(true)} className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-              <FontAwesomeIcon icon={faCog} />
-            </button>
             <button onClick={handleCreateNew} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 shadow-lg shadow-blue-500/20">
               <FontAwesomeIcon icon={faPlus} />
               <span className="hidden sm:inline">Nueva Novedad</span>
@@ -432,7 +329,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   ))}
                                 </select>
 
-                                {cat.type === "replacement_selection" && (
+                                {cat.requiresReplacement && (
                                   <select className="w-full p-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-colors" value={item.replacementId || ""} onChange={(e) => handleItemChange(cat.id, idx, "replacementId", e.target.value)}>
                                     <option value="" className="dark:bg-slate-800">
                                       Reemplazo (Opcional)...

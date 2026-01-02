@@ -57,6 +57,7 @@ import { pdfTemplatePreviewRoutes } from "./routes/pdfPreview.js";
 import { globalVacationConfigRoutes } from "./routes/globalVacationConfig.js";
 import { vacationsRoutes } from "./routes/vacations.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
+import { activityLogTypeRoutes } from "./routes/activityLogTypes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -171,6 +172,7 @@ app.use("/api/v1/pdf-preview", pdfTemplatePreviewRoutes);
 app.use("/api/v1/global-vacation-config", globalVacationConfigRoutes);
 app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
+app.use("/api/v1/activity-log-types", activityLogTypeRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

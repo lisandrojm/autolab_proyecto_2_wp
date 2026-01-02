@@ -24,6 +24,7 @@ import { Vacation } from "../models/Vacation.js";
 
 import { VacationCounter } from "../models/VacationCounter.js";
 import { VacationOverlap } from "../models/VacationOverlap.js";
+import { ActivityLogType } from "../models/ActivityLogType.js";
 import { Types } from "mongoose";
 import { migrateSubcategoriesToArray } from "./migrateSubcategories.js";
 import { migrateOrderCategoryImprovements } from "./migrateOrderCategoryImprovements.js";
@@ -242,6 +243,29 @@ async function ensureUser(params: {
   return user!;
 }
 
+async function ensureActivityLogTypes(tenantId: Types.ObjectId) {
+  console.log("📋 Ensuring default Activity Log Types...");
+  const defaults = ["Cambios de Turno", "Compensatorios", "Enfermedad", "Vacaciones", "Sin Goce de Sueldo", "Horas Extras y Feriados", "Otros Presentes"];
+
+  let currentOrder = 1;
+  for (const name of defaults) {
+    const exists = await ActivityLogType.findOne({ tenantId, name });
+    if (!exists) {
+      await ActivityLogType.create({
+        tenantId,
+        name,
+        requiresReplacement: false,
+        isActive: true,
+        order: currentOrder,
+      });
+      console.log(`✅ Created ActivityLogType: ${name}`);
+    } else {
+      console.log(`✔️ ActivityLogType exists: ${name}`);
+    }
+    currentOrder++;
+  }
+}
+
 /* ----------------------------- seed main ---------------------------- */
 
 export async function ensureSuperAdmin() {
@@ -368,6 +392,9 @@ export async function seedOnStart() {
     });
     const tenantId = new Types.ObjectId(tenant._id as any);
     console.log(`🏢 Tenant ready - Slug: ${tenantSlug}, ObjectId: ${String(tenantId)}`);
+
+    // Ensure Activity Types
+    await ensureActivityLogTypes(tenantId);
 
     // I1: Limpieza datos prueba - Eliminar solicitudes de vacaciones de María y Juan para empezar de cero
     // Primero obtenemos sus IDs (si existen) para borrar sus datos
