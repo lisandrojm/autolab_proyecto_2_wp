@@ -92,6 +92,31 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
   }
 });
 
+// GET /miniprojects - Get minimal project info by IDs (for mobile/dropdowns)
+router.get("/miniprojects", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { ids } = req.query;
+    if (!ids) return res.json([]);
+
+    const idList = String(ids)
+      .split(",")
+      .filter((id) => Types.ObjectId.isValid(id));
+    if (idList.length === 0) return res.json([]);
+
+    const projects = await Project.find({
+      _id: { $in: idList },
+      tenantId: req.tenantObjectId,
+    })
+      .select("name status clientId")
+      .populate("clientId", "name");
+
+    res.json(projects);
+  } catch (error) {
+    console.error("Get miniprojects error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /clients/:clientId/projects/count
 router.get("/clients/:clientId/projects/count", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

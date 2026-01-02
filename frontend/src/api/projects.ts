@@ -172,6 +172,12 @@ class ProjectsAPI {
     };
   }
 
+  async getMiniProjects(ids: string[]): Promise<{ _id: string; name: string; clientId?: { _id: string; name: string } }[]> {
+    if (ids.length === 0) return [];
+    const { data } = await axios.get(`/miniprojects?ids=${ids.join(",")}`, { headers: this.getHeaders() });
+    return data;
+  }
+
   async listAll(params: { q?: string; limit?: number } = {}): Promise<Project[]> {
     const pageSize = params.limit ?? 200;
     let resp = await this.list({ ...params, page: 1, limit: pageSize });

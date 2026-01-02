@@ -1,5 +1,5 @@
 // ... imports
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -7,9 +7,18 @@ import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlas
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
-import { ActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
+import { ActivityReport as BaseActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-// Imports removed
+import { activityReportsAPI } from "../api/activityReports";
+import { activityLogTypesAPI, ActivityLogType } from "../api/activityLogTypes";
+import { usersAPI, User } from "../api/users";
+import { sweetAlert } from "../utils/sweetAlert";
+
+interface ActivityReport extends Omit<BaseActivityReport, "id"> {
+  id: string; // Ensure id compatibility if needed
+  projectIdRaw?: string; // Add this field
+  // .. other fields are inherited
+}
 
 // ... (MOCK_AREAS, MOCK_REPORTS, AttendanceTable, AbsenceBlock components remain identical, omitting for brevity in this replace block if not changing, but since I'm replacing the whole file content structure to be safe with the new function placement, I will include them or rely on the tool to just insert what I need if I were using multi-replace. Since I need to construct the whole page logic for the view toggle, I will replace the main component logic.)
 
@@ -21,41 +30,6 @@ const MOCK_AREAS = [
   { id: "4", name: "Técnica Mañana" },
   { id: "5", name: "Técnica Noche" },
   { id: "6", name: "Vestuario" },
-];
-
-const MOCK_REPORTS: ActivityReport[] = [
-  {
-    id: "REP-001",
-    date: "2024-05-15",
-    formName: "Técnica Mañana",
-    projectName: "Gran Hermano",
-    areaId: "4",
-    status: "sent",
-    submittedBy: "Juan Perez",
-    submittedAt: "2024-05-15T09:00:00Z",
-    comments: "6 am Oscar Rodriguez - Paula Riofrio (1 h Extra)\n10 pm Gabriela Romero - Victoria Raffo (1 h extra)\nDamian Tiero vino en lugar de Mauricio Aquino\nRodrigo Aguirre entro 18 hs\nDejo por aca quienes trabajaron hoy siendo feriado:\nJosé Alessio Silva",
-    attendance: [
-      { id: "1", employeeId: "E001", employeeName: "BARBONA AGUSTIN", areaId: "2", areaName: "Libertador", hasOvertime: false, overtimeHours: 0, status: "absent", absenceReason: "Compensatorio", replacementName: "JALUF Guido" },
-      { id: "2", employeeId: "E002", employeeName: "GIUNTA Lucas", areaId: "2", areaName: "Libertador", hasOvertime: false, overtimeHours: 0, status: "present", entryTime: "08:00", exitTime: "17:00" },
-      { id: "3", employeeId: "E003", employeeName: "JORDAN Alejandro", areaId: "2", areaName: "Libertador", hasOvertime: false, overtimeHours: 0, status: "present", entryTime: "08:00", exitTime: "17:00" },
-      { id: "4", employeeId: "E004", employeeName: "BOREA Hector", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00", overtimeEntryTime: "13:00", overtimeExitTime: "14:00" },
-      { id: "5", employeeId: "E005", employeeName: "EANDI AXEL", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00", overtimeEntryTime: "13:00", overtimeExitTime: "14:00" },
-      { id: "6", employeeId: "E006", employeeName: "HENRIQUEZ ALISTE Andres", areaId: "4", areaName: "Técnica Mañana", hasOvertime: false, overtimeHours: 0, status: "absent", absenceReason: "Enfermedad", notes: "Avisó por whatsapp" },
-      { id: "7", employeeId: "E007", employeeName: "HERNANDEZ DUNN Facundo Ariel", areaId: "4", areaName: "Técnica Mañana", hasOvertime: true, overtimeHours: 1, status: "present", entryTime: "06:30", exitTime: "13:00", overtimeEntryTime: "13:00", overtimeExitTime: "14:00" },
-    ],
-  },
-  {
-    id: "REP-002",
-    date: "2024-05-16",
-    formName: "Libertador",
-    projectName: "Got Talent",
-    areaId: "2",
-    status: "pending_signature",
-    submittedBy: "Maria Gonzalez",
-    submittedAt: "2024-05-16T18:00:00Z",
-    comments: "Todo normal en la jornada.",
-    attendance: [],
-  },
 ];
 
 const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attendance }) => {
@@ -77,13 +51,20 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
           {attendance.map((record) => {
             const isAbsent = record.status !== "present" && record.status !== "late";
+            // Check if status implies absence but maybe check absenceReason too?
+            // "late" is usually present but late. "present" is present.
+            // All others (sick, vacation, etc) are absent.
+
             return (
               <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>{record.employeeName}</td>
+                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
+                  {record.employeeName}
+                  {isAbsent && <span className="block text-xs font-normal text-red-500 italic">({record.absenceReason || "Ausente"})</span>}
+                </td>
                 <td className="py-3 px-4 text-center">
                   <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
                 <td className="py-3 px-4 text-center">
@@ -100,14 +81,8 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
   );
 };
 
-const AbsenceBlock: React.FC<{ title: string; type: AttendanceStatus; records: AttendanceRecord[] }> = ({ title, type, records }) => {
-  const relevantRecords = records.filter((r) => {
-    if (type === "compensatory") return r.status === "compensatory" || r.absenceReason === "Compensatorio";
-    if (type === "sick") return r.status === "sick" || r.absenceReason === "Enfermedad";
-    if (type === "unpaid") return r.status === "unpaid" || r.absenceReason === "Sin Goce de Sueldo";
-    if (type === "vacation") return r.status === "vacation" || r.absenceReason === "Vacaciones";
-    return false;
-  });
+const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = ({ title, records }) => {
+  const relevantRecords = records;
 
   const count = relevantRecords.length;
   // Default open if there are records
@@ -164,6 +139,10 @@ export const ManageActivityLogsPage: React.FC = () => {
   const [openInfo, setOpenInfo] = useState(false);
   const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
   const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments">("attendance");
+  const [reports, setReports] = useState<ActivityReport[]>([]);
+  const [logTypes, setLogTypes] = useState<ActivityLogType[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Filters
   const [dateFilter, setDateFilter] = useState("daily"); // daily, weekly, monthly
@@ -174,7 +153,7 @@ export const ManageActivityLogsPage: React.FC = () => {
   useEffect(() => {
     const reportId = searchParams.get("report");
     if (reportId) {
-      const report = MOCK_REPORTS.find((r) => r.id === reportId);
+      const report = reports.find((r) => r.id === reportId);
       if (report) {
         setSelectedReport(report);
         setViewMode("detail");
@@ -183,17 +162,82 @@ export const ManageActivityLogsPage: React.FC = () => {
       // Clean up URL after handling
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, reports]);
+
+  useEffect(() => {
+    fetchReports();
+    fetchLogTypes();
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const users = await usersAPI.getDirectory();
+      setAllUsers(users);
+    } catch (e) {
+      console.error("Error loading users", e);
+    }
+  };
+
+  const fetchLogTypes = async () => {
+    try {
+      const types = await activityLogTypesAPI.getAll();
+      setLogTypes(types);
+    } catch (e) {
+      console.error("Error loading log types", e);
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const data = await activityReportsAPI.getAll();
+      // Map API response to Component Type if necessary, or ensure Types match
+      // API returns _id, component expects id?
+      const formatted = data.map((r: any) => ({
+        id: r._id,
+        date: r.date,
+        formName: r.areaId?.name || "General", // Area or generic
+        projectIdRaw: r.projectId?._id || (typeof r.projectId === "string" ? r.projectId : ""),
+        projectName: r.projectId?.name || "Sin Proyecto",
+        areaId: r.areaId?._id || "",
+        status: "sent" as "sent", // Default status for now
+        submittedBy: `${r.userId?.firstName || ""} ${r.userId?.lastName || ""}`.trim(),
+        submittedAt: r.createdAt || r.submittedAt,
+        comments: r.comments,
+        attendance: r.attendance
+          ? r.attendance.map((att: any, idx: number) => ({
+              id: att._id || idx.toString(),
+              employeeId: att.employeeId?._id || att.employeeId,
+              employeeName: att.employeeId ? `${att.employeeId.firstName} ${att.employeeId.lastName}` : "Desconocido",
+              areaId: "", // Not in attendance record usually
+              areaName: "",
+              hasOvertime: (att.overtimeHours || 0) > 0,
+              overtimeHours: att.overtimeHours || 0,
+              status: att.status || "present",
+              absenceReason: att.absenceReason,
+              notes: att.notes,
+              replacementName: att.replacementId ? `${att.replacementId.firstName} ${att.replacementId.lastName}` : undefined,
+            }))
+          : [],
+      }));
+      setReports(formatted);
+    } catch (error) {
+      console.error("Error fetching reports", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Frequency Config Modal state removed
 
   // Stats calculation
   const stats = React.useMemo(() => {
-    let totalReports = MOCK_REPORTS.length;
+    let totalReports = reports.length;
     let totalAbsences = 0;
     let totalOvertimeHours = 0;
 
-    MOCK_REPORTS.forEach((report) => {
+    reports.forEach((report) => {
       report.attendance.forEach((record) => {
         if (record.status !== "present" && record.status !== "late") {
           totalAbsences++;
@@ -205,7 +249,67 @@ export const ManageActivityLogsPage: React.FC = () => {
     });
 
     return { totalReports, totalAbsences, totalOvertimeHours };
-  }, []);
+  }, [reports]);
+
+  // Compute merged attendance for selected report
+  const mergedAttendance = useMemo(() => {
+    if (!selectedReport) return [];
+
+    // 1. Get filtered users for this project
+    const targetProjId = selectedReport.projectIdRaw;
+    const projectUsers = allUsers.filter((u) => u.projectIds?.some((p) => p._id === targetProjId));
+
+    // 2. Map users to attendance records
+    const fullAttendance = projectUsers.map((user) => {
+      const existing = selectedReport.attendance.find((a) => {
+        const empId = typeof a.employeeId === "object" && a.employeeId ? (a.employeeId as any)._id : a.employeeId;
+        return empId === user._id;
+      });
+
+      // Helper to get area name
+      const getAreaName = (u: User) => {
+        if (!u.areaId) return "-";
+        return typeof u.areaId === "string" ? "Area " + u.areaId.slice(-4) : u.areaId.name;
+      };
+
+      if (existing) {
+        return {
+          ...existing,
+          areaName: getAreaName(user),
+        };
+      }
+
+      // Create default Present record
+      return {
+        id: `virtual-${user._id}`,
+        employeeId: user._id,
+        employeeName: `${user.firstName} ${user.lastName}`,
+        areaName: getAreaName(user),
+        status: "present" as AttendanceStatus,
+        overtimeHours: 0,
+        hasOvertime: false,
+      } as AttendanceRecord;
+    });
+
+    // Also include any records in report that might NOT be in projectUsers
+    const processedIds = new Set(projectUsers.map((u) => u._id));
+    const orphans = selectedReport.attendance
+      .filter((a) => {
+        const empId = typeof a.employeeId === "object" && a.employeeId ? (a.employeeId as any)._id : a.employeeId;
+        return !processedIds.has(empId);
+      })
+      .map((orphan) => {
+        const empId = typeof orphan.employeeId === "object" && orphan.employeeId ? (orphan.employeeId as any)._id : orphan.employeeId;
+        const user = allUsers.find((u) => u._id === empId);
+        if (user) {
+          const aName = !user.areaId ? "-" : typeof user.areaId === "string" ? "Area " + user.areaId.slice(-4) : user.areaId.name;
+          return { ...orphan, areaName: aName };
+        }
+        return orphan;
+      });
+
+    return [...fullAttendance, ...orphans].sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+  }, [selectedReport, allUsers]);
 
   // Help integration
   const HELP_KEY = "activityLogs";
@@ -238,11 +342,25 @@ export const ManageActivityLogsPage: React.FC = () => {
       .slice(0, 2);
   };
 
+  const handleDeleteReport = async (id: string) => {
+    const confirm = await sweetAlert.confirm("¿Eliminar reporte?", "Esta acción no se puede deshacer.", "Sí, eliminar", "Cancelar");
+    if (confirm) {
+      try {
+        await activityReportsAPI.delete(id);
+        await sweetAlert.success("Eliminado", "El reporte ha sido eliminado.");
+        fetchReports();
+      } catch (error) {
+        console.error("Error deleting report", error);
+        await sweetAlert.error("Error", "No se pudo eliminar el reporte.");
+      }
+    }
+  };
+
   // --- RENDER CARDS VIEW ---
   const renderCardsView = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {MOCK_REPORTS.map((report) => {
+        {reports.map((report) => {
           const badgesTop = [
             <span key="id" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
               {formatReportId(report.id)}
@@ -267,7 +385,7 @@ export const ManageActivityLogsPage: React.FC = () => {
                   icon: faTrash,
                   onClick: (e) => {
                     e?.stopPropagation();
-                    // Delete logic would go here
+                    handleDeleteReport(report.id);
                   },
                   title: "Eliminar",
                   variant: "default",
@@ -281,7 +399,7 @@ export const ManageActivityLogsPage: React.FC = () => {
             </CardItemGeneric>
           );
         })}
-        {MOCK_REPORTS.length === 0 && <div className="col-span-full py-12 text-center text-gray-500">No se encontraron reportes.</div>}
+        {!loading && reports.length === 0 && <div className="col-span-full py-12 text-center text-gray-500">No se encontraron reportes.</div>}
       </div>
     );
   };
@@ -335,7 +453,7 @@ export const ManageActivityLogsPage: React.FC = () => {
                 <FontAwesomeIcon icon={faUser} className="lg:h-5 w-5 opacity-80" />
                 <div className="flex gap-2 items-center">
                   <span className="text-sm font-medium opacity-80">Total Personal</span>
-                  <span className="lg:text-lg font-bold">{selectedReport.attendance.length}</span>
+                  <span className="lg:text-lg font-bold">{mergedAttendance.length}</span>
                 </div>
               </div>
 
@@ -361,7 +479,7 @@ export const ManageActivityLogsPage: React.FC = () => {
           {/* Tabs Navigation */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 bg-white dark:bg-gray-800 rounded-t-lg px-2 pt-2">
             <button onClick={() => setDetailTab("attendance")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "attendance" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Asistencia del Personal ({selectedReport.attendance.length})
+              Asistencia del Personal ({mergedAttendance.length})
             </button>
             <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Ausentes ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
@@ -373,10 +491,10 @@ export const ManageActivityLogsPage: React.FC = () => {
 
           <div className="space-y-6">
             {detailTab === "attendance" &&
-              (selectedReport.attendance.length > 0 ? (
+              (mergedAttendance.length > 0 ? (
                 <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden animate-fade-in">
                   <div className="p-4">
-                    <AttendanceTable attendance={selectedReport.attendance} />
+                    <AttendanceTable attendance={mergedAttendance} />
                   </div>
                 </div>
               ) : (
@@ -384,16 +502,29 @@ export const ManageActivityLogsPage: React.FC = () => {
               ))}
 
             {detailTab === "absences" &&
-              (selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length > 0 ? (
-                <div className="space-y-4 animate-fade-in">
-                  <AbsenceBlock type="compensatory" title="Compensatorios" records={selectedReport.attendance} />
-                  <AbsenceBlock type="sick" title="Enfermedad" records={selectedReport.attendance} />
-                  <AbsenceBlock type="unpaid" title="Sin goce de sueldo" records={selectedReport.attendance} />
-                  <AbsenceBlock type="vacation" title="Por Vacaciones" records={selectedReport.attendance} />
-                </div>
-              ) : (
-                <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Ausentes</div>
-              ))}
+              (() => {
+                const absentRecords = selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late");
+
+                // Group by available log types
+                const dynamicBlocks = logTypes
+                  .map((type) => {
+                    const typeRecords = absentRecords.filter((r) => r.absenceReason === type.name);
+                    if (typeRecords.length === 0) return null;
+                    return <AbsenceBlock key={type._id} title={type.name} records={typeRecords} />;
+                  })
+                  .filter(Boolean);
+
+                // Also handle "Unknown" or types not in the list if any?
+                // For now, based on request "Dinamizar con el AMB", we show what's configured.
+                // Maybe catch others?
+                const knownNames = logTypes.map((t) => t.name);
+                const otherRecords = absentRecords.filter((r) => !r.absenceReason || !knownNames.includes(r.absenceReason));
+                if (otherRecords.length > 0) {
+                  dynamicBlocks.push(<AbsenceBlock key="others" title="Otros / Sin Clasificar" records={otherRecords} />);
+                }
+
+                return dynamicBlocks.length > 0 ? <div className="space-y-4 animate-fade-in">{dynamicBlocks}</div> : <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Ausentes</div>;
+              })()}
             {detailTab === "comments" &&
               (selectedReport.comments ? (
                 <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-5 animate-fade-in">
@@ -499,7 +630,7 @@ export const ManageActivityLogsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_REPORTS.map((report) => (
+                {reports.map((report) => (
                   <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
                     <td className="py-3 px-4">
                       <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{formatReportId(report.id)}</span>
@@ -527,13 +658,20 @@ export const ManageActivityLogsPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{report.submittedBy}</td>
                     <td className="py-3 px-4 text-right">
-                      <button className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded" title="Eliminar">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteReport(report.id);
+                        }}
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors px-2 py-1 rounded"
+                        title="Eliminar"
+                      >
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
                     </td>
                   </tr>
                 ))}
-                {MOCK_REPORTS.length === 0 && (
+                {!loading && reports.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-gray-500">
                       No se encontraron reportes para los filtros seleccionados.

@@ -503,26 +503,26 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               </div>
 
               {/* METADATOS: Antigüedad y Área (Separados de las métricas de días) */}
-              <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1 mb-1">
+              <div className="text-xs text-slate-500 dark:text-slate-400 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 mb-1">
                 {/* Antigüedad */}
-                <span className="flex items-center gap-1">
+                <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold">Antigüedad:</span> {calculateAntiguedad()} Años
-                </span>
+                </div>
                 {/* Cargo */}
-                <span className="flex items-center gap-1">
+                <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
-                </span>
+                </div>
                 {/* Área / Miembros */}
-                <span className="flex items-center gap-1">
+                <div className="flex items-start gap-1">
                   <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold uppercase">Área:</span>
                   {profile?.areaName || profile?.department || "Sin Área"}
                   {profile?.areaMembers !== undefined && <span className="ml-1">| {profile.areaMembers} Miembro(s)</span>}
-                </span>
+                </div>
                 {/* Proyecto */}
-                <span className="flex items-center gap-1">
+                <div className="flex items-start gap-1">
                   <FontAwesomeIcon icon={faRulerCombined} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold uppercase">Reglas:</span>
                   {/* Min Days Project/Global */}
@@ -540,7 +540,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || "Global";
 
                     return (
-                      <>
+                      <div className="flex flex-col items-start gap-1">
                         {fractionalAllowed ? (
                           <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                             Min: {minDays} días <span className="opacity-70">({minDaysSource})</span>
@@ -554,10 +554,10 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                         <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                           {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({typeSource})</span>
                         </span>
-                      </>
+                      </div>
                     );
                   })()}
-                </span>
+                </div>
               </div>
             </div>
             {/* Controles de Año (opcionales) */}
