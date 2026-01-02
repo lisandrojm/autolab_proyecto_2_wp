@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { PageLayout } from "../components/ui/PageLayout";
 import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faBars, faCog, faPlus, faGripLines, faGripVertical, faTrash, faToggleOn, faToggleOff, faInfoCircle, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faBars, faCog, faPlus, faGripVertical, faTrash, faToggleOn, faToggleOff, faInfoCircle, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import { ReportSchedule } from "../types/activityTypes";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -382,60 +382,60 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Seleccionar Proyecto</h3>
               <ProjectHeaderSelector onSelectProject={setSelectedProject} selectedProjectId={selectedProject?._id} />
-            </div>
 
-            {selectedProject && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-8">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Frecuencia de Reporte</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <button onClick={() => handleTypeChange("daily")} className={`p-4 rounded-lg border text-sm font-medium transition-all ${type === "daily" ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-2 ring-blue-600" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"}`}>
-                      <div className="mb-1 text-lg">Todos los días</div>
-                      <div className="text-sm opacity-70">Lunes a Domingo</div>
-                    </button>
-                    <button onClick={() => handleTypeChange("workdays")} className={`p-4 rounded-lg border text-sm font-medium transition-all ${type === "workdays" ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-2 ring-blue-600" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"}`}>
-                      <div className="mb-1 text-lg">Días Hábiles</div>
-                      <div className="text-sm opacity-70">Lunes a Viernes</div>
-                    </button>
-                    <button onClick={() => handleTypeChange("custom")} className={`p-4 rounded-lg border text-sm font-medium transition-all ${type === "custom" ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-2 ring-blue-600" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"}`}>
-                      <div className="mb-1 text-lg">Personalizado</div>
-                      <div className="text-sm opacity-70">Elegir días específicos</div>
-                    </button>
+              {selectedProject && (
+                <div className="bg-white dark:bg-gray-800  space-y-8">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Frecuencia de Reporte</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
+                      <button onClick={() => handleTypeChange("daily")} className={`p-4 rounded-lg border text-sm font-medium transition-all ${type === "daily" ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-2 ring-blue-600" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"}`}>
+                        <div className="mb-1 text-lg">Todos los días</div>
+                        <div className="text-sm opacity-70">Lunes a Domingo</div>
+                      </button>
+                      <button onClick={() => handleTypeChange("workdays")} className={`p-4 rounded-lg border text-sm font-medium transition-all ${type === "workdays" ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-2 ring-blue-600" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"}`}>
+                        <div className="mb-1 text-lg">Días Hábiles</div>
+                        <div className="text-sm opacity-70">Lunes a Viernes</div>
+                      </button>
+                      <button onClick={() => handleTypeChange("custom")} className={`p-4 rounded-lg border text-sm font-medium transition-all ${type === "custom" ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-2 ring-blue-600" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"}`}>
+                        <div className="mb-1 text-lg">Personalizado</div>
+                        <div className="text-sm opacity-70">Elegir días específicos</div>
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className={`transition-opacity duration-300 ${type === "custom" ? "opacity-100" : "opacity-50 pointer-events-none grayscale"}`}>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Días requeridos</label>
-                  <div className="flex flex-wrap gap-3">
-                    {DAYS_OF_WEEK.map((day) => {
-                      const isSelected = selectedDays.includes(day.id);
-                      return (
-                        <button
-                          key={day.id}
-                          onClick={() => toggleDay(day.id)}
-                          disabled={type !== "custom"}
-                          className={`
+                  <div className={`transition-opacity duration-300 ${type === "custom" ? "opacity-100" : "opacity-50 pointer-events-none grayscale"}`}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Días requeridos</label>
+                    <div className="flex flex-wrap gap-3">
+                      {DAYS_OF_WEEK.map((day) => {
+                        const isSelected = selectedDays.includes(day.id);
+                        return (
+                          <button
+                            key={day.id}
+                            onClick={() => toggleDay(day.id)}
+                            disabled={type !== "custom"}
+                            className={`
                             w-12 h-12 rounded-full flex items-center justify-center text-base font-semibold transition-all
                             ${isSelected ? "bg-blue-600 text-white shadow-md scale-110" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}
                           `}
-                          title={day.label}
-                        >
-                          {day.label.charAt(0)}
-                        </button>
-                      );
-                    })}
+                            title={day.label}
+                          >
+                            {day.label.charAt(0)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {type !== "custom" && <p className="text-sm text-gray-500 mt-3">Selecciona "Personalizado" para editar días específicos.</p>}
                   </div>
-                  {type !== "custom" && <p className="text-sm text-gray-500 mt-3">Selecciona "Personalizado" para editar días específicos.</p>}
-                </div>
 
-                <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <button onClick={handleSave} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm">
-                    <FontAwesomeIcon icon={faCheck} />
-                    Guardar Configuración
-                  </button>
+                  <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <button onClick={handleSave} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm">
+                      <FontAwesomeIcon icon={faCheck} />
+                      Guardar Configuración
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </>
         )}
 
@@ -444,6 +444,16 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
               <div className="flex items-center gap-4 w-full">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-semibold text-gray-900 dark:text-white">Tipos de Novedades</span>
+                  <button onClick={() => setOpenTypesInfo(true)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Más información">
+                    <FontAwesomeIcon icon={faInfoCircle} />
+                  </button>
+                </div>
+                <button onClick={openCreateModal} disabled={isReorderMode} className="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" title="Agregar Nuevo Tipo">
+                  <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                </button>
+                <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
                 {isReorderMode ? (
                   <>
                     <button onClick={handleCancelReorder} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
@@ -455,22 +465,10 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
                     </button>
                   </>
                 ) : (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl font-semibold text-gray-900 dark:text-white">Tipos de Novedades</span>
-                      <button onClick={() => setOpenTypesInfo(true)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Más información">
-                        <FontAwesomeIcon icon={faInfoCircle} />
-                      </button>
-                    </div>
-                    <button onClick={openCreateModal} className="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm" title="Agregar Nuevo Tipo">
-                      <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                    </button>
-                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
-                    <button onClick={handleStartReorder} disabled={activityTypes.length < 2} className="flex items-center gap-2 px-4 py-2 bg-transparent border border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      <FontAwesomeIcon icon={faGripLines} />
-                      <span>Ordenar</span>
-                    </button>
-                  </>
+                  <button onClick={handleStartReorder} disabled={activityTypes.length < 2} className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                    <FontAwesomeIcon icon={faGripVertical} />
+                    <span>Ordenar</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -514,14 +512,14 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
               title={currentType.id ? "Editar Tipo de Novedad" : "Nuevo Tipo de Novedad"}
               size="md"
               footer={
-                <>
-                  <button onClick={() => setIsAbmModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                <div className="flex gap-3 w-full">
+                  <button type="button" onClick={() => setIsAbmModalOpen(false)} className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     Cancelar
                   </button>
-                  <button onClick={handleSaveType} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm">
+                  <button type="button" onClick={handleSaveType} className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
                     {currentType.id ? "Guardar Cambios" : "Crear Tipo"}
                   </button>
-                </>
+                </div>
               }
             >
               <div className="space-y-6">

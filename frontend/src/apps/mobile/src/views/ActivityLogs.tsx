@@ -343,22 +343,24 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 )}
 
                                 {cat.type === "overtime_selection" && (
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 mt-2">
                                     <label className="text-xs text-slate-500 dark:text-slate-400">Horas:</label>
                                     <input type="number" className="w-20 p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100" value={item.overtimeHours || 0} onChange={(e) => handleItemChange(cat.id, idx, "overtimeHours", parseFloat(e.target.value))} />
                                   </div>
                                 )}
 
                                 <div className="flex justify-end mt-1">
-                                  <button onClick={() => handleRemoveItem(cat.id, idx)} className="text-slate-400 hover:text-red-500 transition-colors p-2" title="Eliminar">
+                                  <button onClick={() => handleRemoveItem(cat.id, idx)} className="text-slate-400 hover:text-slate-500 transition-colors p-2" title="Eliminar">
                                     <FontAwesomeIcon icon={faTrash} />
                                   </button>
                                 </div>
                               </div>
                             ))}
-                            <button onClick={() => handleAddItem(cat.id)} className="text-sm text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1 mt-2">
-                              <FontAwesomeIcon icon={faPlus} /> Agregar otro
-                            </button>
+                            <div className="flex justify-end mt-2">
+                              <button onClick={() => handleAddItem(cat.id)} className="text-sm p-1 px-2 rounded-lg text-white dark:text-white bg-blue-600 dark:bg-blue-600 font-medium flex items-center gap-1 mt-2">
+                                <FontAwesomeIcon icon={faPlus} /> Agregar otro
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

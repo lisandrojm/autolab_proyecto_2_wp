@@ -113,7 +113,7 @@ export const ProjectHeaderSelector: React.FC<ProjectHeaderSelectorProps> = ({ on
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+    <div className="flex flex-col md:flex-row gap-4 bg-white dark:bg-gray-800 mb-6">
       {/* Client Selector */}
       <div className="flex-1 relative">
         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</label>
