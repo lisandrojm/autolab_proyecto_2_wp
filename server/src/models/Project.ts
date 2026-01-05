@@ -48,6 +48,10 @@ export interface IProject extends Document {
     minDiasFraccion?: number;
     diasCorridos?: boolean;
   };
+  activityLogConfig?: {
+    useGlobalConfig: boolean;
+    enableFastEntry?: boolean;
+  };
   workSchedule?: IWorkSchedule;
 }
 
@@ -91,6 +95,10 @@ const projectSchema = new Schema<IProject>(
       permiteFraccionadas: { type: Boolean, default: true },
       minDiasFraccion: { type: Number },
       diasCorridos: { type: Boolean },
+    },
+    activityLogConfig: {
+      useGlobalConfig: { type: Boolean, default: true },
+      enableFastEntry: { type: Boolean, default: true },
     },
     workSchedule: {
       mode: { type: String, enum: ["weekdays", "all_week", "per_day"], default: "weekdays" },

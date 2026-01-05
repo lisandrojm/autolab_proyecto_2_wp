@@ -64,6 +64,10 @@ export interface Project {
     minDiasFraccion?: number;
     diasCorridos?: boolean;
   };
+  activityLogConfig?: {
+    useGlobalConfig: boolean;
+    enableFastEntry?: boolean;
+  };
   workSchedule?: WorkSchedule;
 }
 
@@ -110,6 +114,7 @@ function normalizeProject(raw: any): Project {
     assignedUsers: Array.isArray(raw?.assignedUsers) ? raw.assignedUsers : [],
     updatedAt: String(raw?.updatedAt ?? ""),
     vacationConfig: raw?.vacationConfig,
+    activityLogConfig: raw?.activityLogConfig,
     workSchedule: raw?.workSchedule,
   };
 }
@@ -254,6 +259,10 @@ class ProjectsAPI {
         permiteFraccionadas: boolean;
         minDiasFraccion?: number;
         diasCorridos?: boolean;
+      };
+      activityLogConfig?: {
+        useGlobalConfig: boolean;
+        enableFastEntry?: boolean;
       };
       workSchedule?: WorkSchedule;
     }

@@ -3,11 +3,12 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
 import { SortableActivityTypeRow, ActivityType } from "../components/activity_logs_config/SortableActivityTypeRow";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faProjectDiagram, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faProjectDiagram, faBriefcase, faMobileAlt } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import { ReportSchedule } from "../types/activityTypes";
 import { sweetAlert } from "../utils/sweetAlert";
 import { activityLogTypesAPI } from "../api/activityLogTypes";
+
 import { projectsAPI, Project } from "../api/projects";
 import { Modal } from "../components/ui/Modal";
 import { InfoModal } from "../components/ui/InfoModal";
@@ -26,9 +27,13 @@ const DAYS_OF_WEEK = [
 
 export const ManageActivityLogsConfigPage: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"types" | "project">("types");
+  const [activeTab, setActiveTab] = useState<"general" | "types" | "project">("general");
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+
+  // Config State (Removed Global)
+  // const [config, setConfig] = useState<ActivityLogConfig | null>(null);
+  // const [loadingConfig, setLoadingConfig] = useState(false);
 
   // Schedule Config State
   const [type, setType] = useState<ReportSchedule["type"]>("daily");
@@ -244,8 +249,11 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
         <div className="mx-auto">
           {/* Tabs Header */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[140px] z-20 bg-white dark:bg-gray-900">
+            <button className={tabClass(activeTab === "general")} onClick={() => setActiveTab("general")}>
+              General
+            </button>
             <button className={tabClass(activeTab === "types")} onClick={() => setActiveTab("types")}>
-              Configuración Global
+              Tipos de Novedades
             </button>
             <button className={tabClass(activeTab === "project")} onClick={() => setActiveTab("project")}>
               Frecuencia
@@ -254,6 +262,118 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
 
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
+            {/* ===================== GENERAL SETTINGS TAB ===================== */}
+            {activeTab === "general" && (
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <FontAwesomeIcon icon={faMobileAlt} size="lg" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configuración Aplicación Mobile</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Opciones generales para la carga de novedades.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  {/* Intro Section (Explanation) */}
+                  <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-start gap-4">
+                      <div className="mt-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FontAwesomeIcon icon={faMobileAlt} size="lg" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white mb-2">Modos de Reporte en App Mobile</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-3">Define cómo cada proyecto reporta sus novedades.</p>
+                        <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-2 mb-0">
+                          <li className="flex items-start gap-2">
+                            <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded uppercase mt-0.5">Activado</span>
+                            <div>
+                              <strong className="text-gray-700 dark:text-gray-300">Reporte Rápido (Acortador):</strong>
+                              <span className="block text-xs mt-0.5">La App pregunta "¿Hubo novedades?". Si respondes "NO", el reporte se cierra automáticamente. Ideal para proyectos con pocas incidencias.</span>
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-0.5 rounded uppercase mt-0.5">Desactivado</span>
+                            <div>
+                              <strong className="text-gray-700 dark:text-gray-300">Wizard Detallado (Uno por uno):</strong>
+                              <span className="block text-xs mt-0.5">Obliga a confirmar la asistencia de cada colaborador individualmente. Ideal para control estricto de asistencia.</span>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Projects List Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                        <FontAwesomeIcon icon={faProjectDiagram} />
+                        Listado de Proyectos
+                      </h4>
+                      <span className="text-xs text-gray-400">Total: {allProjects.length}</span>
+                    </div>
+
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                      {allProjects.map((project) => {
+                        // Logic: usage of config on project level.
+                        // Default to TRUE (Fast Entry) if no specific config is set (since we removed global fallback from UI)
+                        const conf = project.activityLogConfig;
+                        // If useGlobalConfig is true (legacy) or undefined, we assume Default behavior (Fast Entry = True)
+                        // Unless we want to force explicit choice? Let's assume Default is Fast Entry.
+
+                        let isActive = true; // Default
+                        if (conf && conf.useGlobalConfig === false && conf.enableFastEntry !== undefined) {
+                          isActive = conf.enableFastEntry;
+                        } else if (conf && conf.useGlobalConfig === true) {
+                          // Fallback to what allows the UI to show 'Active' by default for migration
+                          isActive = true;
+                        }
+
+                        const handleToggle = async () => {
+                          try {
+                            const newState = !isActive;
+                            const newConfig = {
+                              useGlobalConfig: false,
+                              enableFastEntry: newState,
+                            };
+
+                            // Optimistic UI
+                            setAllProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p)));
+
+                            await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
+                            // sweetAlert.toast? No, too intrusive.
+                          } catch (e) {
+                            sweetAlert.error("Error", "No se pudo actualizar el proyecto.");
+                            loadProjects(); // Revert
+                          }
+                        };
+
+                        return (
+                          <div key={project._id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm ${isActive ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}`}>{project.name.charAt(0)}</div>
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isActive ? "Reporte Rápido Activado" : "Modo Wizard Detallado"}</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <button onClick={handleToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"}`} title={isActive ? "Desactivar Reporte Rápido" : "Activar Reporte Rápido"}>
+                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? "translate-x-5" : "translate-x-0"}`} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ===================== TIPOS DE NOVEDADES TAB ===================== */}
             {activeTab === "types" && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">

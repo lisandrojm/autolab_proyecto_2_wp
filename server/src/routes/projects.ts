@@ -45,6 +45,13 @@ const createProjectSchema = z.object({
     })
     .optional()
     .nullable(),
+  activityLogConfig: z
+    .object({
+      useGlobalConfig: z.boolean(),
+      enableFastEntry: z.boolean().optional(),
+    })
+    .optional()
+    .nullable(),
   workSchedule: z
     .object({
       mode: z.enum(["weekdays", "all_week", "per_day"]),
