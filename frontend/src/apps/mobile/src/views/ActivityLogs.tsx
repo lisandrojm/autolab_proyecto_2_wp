@@ -890,7 +890,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             </div>
           </div>
 
-          {hasActivity && (
+          {hasActivity ? (
             <div className="space-y-2">
               <h4 className="font-medium text-sm text-gray-900 dark:text-white border-b pb-1 dark:border-gray-700">Resumen de Asistencia</h4>
               <div className="max-h-50 overflow-y-auto text-sm space-y-2">
@@ -907,6 +907,36 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 ) : (
                   <p className="text-gray-500 italic">Sin colaboradores seleccionados.</p>
                 )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 text-sm text-blue-800 dark:text-blue-200">
+                <p className="font-bold flex items-center gap-2 mb-1">
+                  <FontAwesomeIcon icon={faInfoCircle} />
+                  Sin Novedades
+                </p>
+                <p className="leading-snug opacity-90">
+                  Al confirmar, se registrará <strong>asistencia completa (Presente)</strong> para todo el equipo asignado al proyecto. Verifique la lista a continuación.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 pb-2 mb-2 flex justify-between items-center">
+                  Equipo Asignado
+                  <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-[10px]">{employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)).length}</span>
+                </h4>
+                <div className="max-h-60 overflow-y-auto space-y-0.5 pr-1">
+                  {employees
+                    .filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId))
+                    .map((emp) => (
+                      <div key={emp.id} className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors group">
+                        <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 uppercase tracking-wide border border-green-200 dark:border-green-900/50">Presente</span>
+                      </div>
+                    ))}
+                  {employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)).length === 0 && <p className="text-sm text-gray-500 italic text-center py-4">No hay colaboradores asignados a este proyecto.</p>}
+                </div>
               </div>
             </div>
           )}

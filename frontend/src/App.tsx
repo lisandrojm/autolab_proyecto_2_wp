@@ -23,6 +23,7 @@ import { ProjectTeamPage } from "./pages/ProjectTeamPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
+import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
 import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
 
@@ -549,10 +550,7 @@ function App() {
                   <Suspense
                     fallback={
                       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                        <div className="text-center">
-                          <div className="inline-block h-8 w-8 animate-spin rounded border-4 border-solid border-primary-600 border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-                          <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando aplicación mobile...</p>
-                        </div>
+                        <LoadingSpinner message="Cargando aplicación mobile..." />
                       </div>
                     }
                   >
