@@ -258,6 +258,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     const isOvertime = type.name.toLowerCase().includes("horas extra");
     const needsReplacement = type.requiresReplacement;
 
+    // Pre-fill Out Time for Overtime
+    if (isOvertime) {
+      const project = userProjects.find((p) => p._id === selectedProjectId);
+      if (project) {
+        const endTime = getProjectEndTime(project, reportDate);
+        if (endTime) setDraftOutTime(endTime);
+      }
+    }
+
     // If it's a simple type (no extra fields needed), add immediately
     if (!isOvertime && !needsReplacement) {
       // Use setTimeout to allow UI to update briefly or just fire
@@ -275,6 +284,34 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     if (!selectedProjectId && userProjects.length > 0) {
       await sweetAlert.error("Falta Proyecto", "Por favor selecciona un proyecto.");
+      return;
+    }
+
+    // Auto-save pending draft if valid
+    if (hasActivity && selectedEmployee && draftTypeId) {
+      handleAddRecord();
+    }
+
+    // Check for empty activity report
+    // If hasActivity is true, we expect at least one entry (either already in entries or just added via draft)
+    // Since we just called handleAddRecord (which updates state synchronously BUT react batching might delay it for this closures check)
+    // We should check entries.length combined with the draft valid check.
+    // However, setEntries inside addRecordInternal is async in React terms for the next render, but immediate for state updater if we used functional.
+    // Better logic: if hasActivity is true, and entries is empty AND we didn't just add one...
+    // Actually, simple check:
+    if (hasActivity && entries.length === 0 && !draftTypeId) {
+      await sweetAlert.error("Reporte Vacío", "Si hubo novedades, debes agregar al menos un registro. Si no hubo, selecciona 'NO'.");
+      return;
+    }
+
+    // Note: If we just added a draft above, entries.length is still old value in this closure.
+    // But draftTypeId would be reset? No, addRecordInternal resets it.
+    // So if we had a draft, we added it, reset draftTypeId.
+    // So 'entries' here is still empty if it was empty.
+    // Correct fix: check if we added a draft.
+    const justAdded = hasActivity && selectedEmployee && draftTypeId;
+    if (hasActivity && entries.length === 0 && !justAdded) {
+      await sweetAlert.error("Reporte Vacío", "Si hubo novedades, debes agregar al menos un registro. Si no hubo, selecciona 'NO'.");
       return;
     }
 
@@ -701,7 +738,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                                         <div>
                                           <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Efectivo</label>
-                                          <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)} />
+                                          <input
+                                            type="text"
+                                            maxLength={5}
+                                            placeholder="HH:mm"
+                                            className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider"
+                                            value={draftOutTime}
+                                            onChange={(e) => {
+                                              let val = e.target.value;
+                                              // Simple mask for HH:mm
+                                              if (val.length === 2 && draftOutTime.length === 1) val += ":";
+                                              setDraftOutTime(val);
+                                            }}
+                                            onBlur={() => {
+                                              // Basic validation/fix on blur
+                                              if (draftOutTime.length === 4 && !draftOutTime.includes(":")) {
+                                                setDraftOutTime(draftOutTime.slice(0, 2) + ":" + draftOutTime.slice(2));
+                                              }
+                                            }}
+                                          />
                                         </div>
 
                                         <div>
