@@ -57,12 +57,12 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
 
             return (
               <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
+                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>
                   {record.employeeName}
                   {isAbsent && <span className="block text-xs font-normal text-red-500 italic">({record.absenceReason || "Ausente"})</span>}
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{!isAbsent ? "Sí" : "No"}</span>
+                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-gray-300"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
@@ -92,7 +92,7 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
     <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <button onClick={() => setIsOpen(!isOpen)} className="px-5 py-4 flex justify-between items-center w-full text-left focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {title} <span className={count > 0 ? "text-red-600 dark:text-red-400 font-semibold" : "text-gray-500 font-normal"}>({count})</span>
+          {title} <span className={count > 0 ? "text-red-600 dark:text-gray-300 font-semibold" : "text-gray-500 font-normal"}>({count})</span>
         </h3>
         <FontAwesomeIcon icon={isOpen ? faChevronUp : faChevronDown} className="text-gray-400 text-xs" />
       </button>
@@ -111,7 +111,7 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {relevantRecords.map((rec) => (
                     <tr key={rec.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                      <td className="py-2.5 px-5 font-medium text-red-600 dark:text-red-400">{rec.employeeName}</td>
+                      <td className="py-2.5 px-5 font-medium text-red-600 dark:text-gray-300">{rec.employeeName}</td>
                       <td className="py-2.5 px-5 text-gray-600 dark:text-gray-400">{rec.replacementName || "-"}</td>
                     </tr>
                   ))}
@@ -393,8 +393,16 @@ export const ManageActivityLogsPage: React.FC = () => {
               ]}
               onClick={() => handleViewDetail(report)}
             >
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                <span className="font-medium">{report.attendance.length}</span> registros de asistencia
+              <div className="flex flex-col gap-2 mt-2">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                    <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
+                    {report.projectName}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">{report.attendance.length}</span> registros de asistencia
+                </div>
               </div>
             </CardItemGeneric>
           );
@@ -457,7 +465,7 @@ export const ManageActivityLogsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+              <div className="rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-gray-300">
                 <FontAwesomeIcon icon={faUserSlash} className="lg:h-5 w-5 opacity-80" />
                 <div className="flex gap-2 items-center">
                   <span className="text-sm font-medium opacity-80">Ausentes</span>
@@ -647,7 +655,7 @@ export const ManageActivityLogsPage: React.FC = () => {
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
                         const absentCount = report.attendance.filter((r) => r.status !== "present").length;
-                        return absentCount > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{absentCount}</span> : "0";
+                        return absentCount > 0 ? <span className="text-red-600 dark:text-gray-300 font-medium">{absentCount}</span> : "0";
                       })()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
@@ -663,7 +671,7 @@ export const ManageActivityLogsPage: React.FC = () => {
                           e.stopPropagation();
                           handleDeleteReport(report.id);
                         }}
-                        className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors px-2 py-1 rounded"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
                         title="Eliminar"
                       >
                         <FontAwesomeIcon icon={faTrash} />
@@ -689,7 +697,7 @@ export const ManageActivityLogsPage: React.FC = () => {
           <div className="flex flex-wrap gap-4 justify-center">
             {[
               { label: "Reportes", value: stats.totalReports, icon: faFileText, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
-              { label: "Ausentes", value: stats.totalAbsences, icon: faUserSlash, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
+              { label: "Ausentes", value: stats.totalAbsences, icon: faUserSlash, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-gray-300" },
               { label: "Hs. Extras", value: stats.totalOvertimeHours, icon: faClock, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
             ].map((stat, index) => (
               <div key={index} className={`rounded-xl shadow-sm p-4 py-2 flex items-center gap-3 ${stat.color}`}>
