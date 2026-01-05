@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "../stores/authStore";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { BarChart3, TrendingUp, TrendingDown, Eye, Heart, Share, MessageCircle, DollarSign, Target, Users } from "lucide-react";
 
 interface AnalyticsData {
@@ -90,14 +91,7 @@ export const AnalyticsPage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">{t("common.loading")}</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message={t("common.loading")} />;
   }
 
   return (
@@ -111,7 +105,7 @@ export const AnalyticsPage: React.FC = () => {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t("nav.analytics")}</h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">Analiza el rendimiento de tus proyectos y contenido</p>
               </div>
-              <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
+              <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
                 <option value="7d">Últimos 7 días</option>
                 <option value="30d">Últimos 30 días</option>
                 <option value="90d">Últimos 90 días</option>
@@ -202,7 +196,7 @@ export const AnalyticsPage: React.FC = () => {
                 {/* Trends Chart */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tendencias de Rendimiento</h3>
-                  <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded">
                     <div className="text-center">
                       <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-500 dark:text-gray-400">Gráfico de tendencias</p>
@@ -216,9 +210,9 @@ export const AnalyticsPage: React.FC = () => {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Mejores Proyectos</h3>
                   <div className="space-y-4">
                     {analytics.topProjects.map((project, index) => (
-                      <div key={project.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div key={project.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
                         <div className="flex items-center space-x-3">
-                          <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full">
+                          <div className="flex items-center justify-center w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded">
                             <span className="text-sm font-bold text-primary-600 dark:text-primary-400">{index + 1}</span>
                           </div>
                           <div>

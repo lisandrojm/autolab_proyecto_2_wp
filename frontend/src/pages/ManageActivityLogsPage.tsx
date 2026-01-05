@@ -362,7 +362,7 @@ export const ManageActivityLogsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {reports.map((report) => {
           const badgesTop = [
-            <span key="id" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+            <span key="id" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
               {formatReportId(report.id)}
             </span>,
           ];
@@ -426,7 +426,7 @@ export const ManageActivityLogsPage: React.FC = () => {
         shouldShowInfo={hasHelp(HELP_KEY)}
         onBack={handleBackToList}
         headerActions={
-          <button onClick={() => setShowDetailStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver estadísticas del reporte" title="Ver estadísticas del reporte">
+          <button onClick={() => setShowDetailStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver estadísticas del reporte" title="Ver estadísticas del reporte">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
         }
@@ -443,7 +443,7 @@ export const ManageActivityLogsPage: React.FC = () => {
             title={
               <div className="flex items-center gap-3">
                 <span>Estadísticas: {selectedReport.projectName}</span>
-                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded-full font-medium border border-blue-200 dark:border-blue-800">{format(new Date(selectedReport.date), "dd MMM yyyy", { locale: es })}</span>
+                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded font-medium border border-blue-200 dark:border-blue-800">{format(new Date(selectedReport.date), "dd MMM yyyy", { locale: es })}</span>
               </div>
             }
             size="md"
@@ -556,10 +556,10 @@ export const ManageActivityLogsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/hr/activity-logs/config")} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Configurar Frecuencia" title="Configurar Frecuencia">
+          <button onClick={() => navigate("/hr/activity-logs/config")} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Configurar Frecuencia" title="Configurar Frecuencia">
             <FontAwesomeIcon icon={faCog} className="h-4 w-4" />
           </button>
-          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
+          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
         </div>
@@ -573,13 +573,13 @@ export const ManageActivityLogsPage: React.FC = () => {
             <input
               type="text"
               placeholder="Buscar solicitudes..." // Matching text from request/image
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
 
           <div className="relative">
             <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+            <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
               <option value="all">Todas las Areas</option>
               {MOCK_AREAS.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -591,7 +591,7 @@ export const ManageActivityLogsPage: React.FC = () => {
 
           <div className="relative">
             <FontAwesomeIcon icon={faCalendar} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+            <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
               <option value="daily">Diario</option>
               <option value="weekly">Semanal</option>
               <option value="monthly">Mensual</option>

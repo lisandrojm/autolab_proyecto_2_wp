@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { assetsAPI, Asset } from "../api/assets";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Upload, Search, Filter, Image, Video, FileText, File, Download, Trash2, Copy, Eye, MoreVertical, X } from "lucide-react";
 
 export const AssetsLibrary: React.FC = () => {
@@ -159,11 +160,11 @@ export const AssetsLibrary: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input type="text" placeholder="Buscar assets..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
+                <input type="text" placeholder="Buscar assets..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
               </div>
               <div className="flex items-center space-x-2">
                 <Filter className="h-5 w-5 text-gray-400" />
-                <select value={filterKind} onChange={(e) => setFilterKind(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
+                <select value={filterKind} onChange={(e) => setFilterKind(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
                   <option value="all">Todos los tipos</option>
                   <option value="image">Imágenes</option>
                   <option value="video">Videos</option>
@@ -185,10 +186,7 @@ export const AssetsLibrary: React.FC = () => {
 
           {/* Assets Grid */}
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-400">Cargando assets...</p>
-            </div>
+            <LoadingSpinner message="Cargando assets..." />
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6 mt-4mt-2">
@@ -199,7 +197,7 @@ export const AssetsLibrary: React.FC = () => {
                       {asset.kind === "image" && asset.status === "ready" ? <img src={`/api/v1/assets/serve/${encodeURIComponent(asset.path)}`} alt={asset.filename} className="w-full h-full object-cover" /> : <div className="text-gray-400">{getKindIcon(asset.kind)}</div>}
 
                       {/* Status indicator */}
-                      <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${asset.status === "ready" ? "bg-blue-500" : asset.status === "processing" ? "bg-blue-500" : "bg-red-500"}`} />
+                      <div className={`absolute top-2 right-2 w-3 h-3 rounded ${asset.status === "ready" ? "bg-blue-500" : asset.status === "processing" ? "bg-blue-500" : "bg-red-500"}`} />
                     </div>
 
                     {/* Asset Info */}
@@ -224,13 +222,13 @@ export const AssetsLibrary: React.FC = () => {
 
                       {/* Actions */}
                       <div className="flex items-center justify-between">
-                        <button onClick={() => setSelectedAsset(asset)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Ver detalles">
+                        <button onClick={() => setSelectedAsset(asset)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Ver detalles">
                           <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                         </button>
-                        <button onClick={() => copyAssetUrl(asset)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Copiar URL">
+                        <button onClick={() => copyAssetUrl(asset)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Copiar URL">
                           <Copy className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                         </button>
-                        <button onClick={() => deleteAsset(asset._id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Eliminar">
+                        <button onClick={() => deleteAsset(asset._id)} className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Eliminar">
                           <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                         </button>
                       </div>
@@ -242,13 +240,13 @@ export const AssetsLibrary: React.FC = () => {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center space-x-2 mt-8">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50">
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-2 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50">
                     Anterior
                   </button>
                   <span className="px-4 py-2 text-gray-600 dark:text-gray-400">
                     Página {page} de {totalPages}
                   </span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50">
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-2 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50">
                     Siguiente
                   </button>
                 </div>
@@ -265,7 +263,7 @@ export const AssetsLibrary: React.FC = () => {
                 <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl">
                   <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles del Asset</h2>
-                    <button onClick={() => setSelectedAsset(null)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <button onClick={() => setSelectedAsset(null)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
                       <X className="h-5 w-5 text-gray-500" />
                     </button>
                   </div>

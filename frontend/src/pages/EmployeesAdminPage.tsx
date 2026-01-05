@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { PageLayout } from '../components/ui/PageLayout';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Card } from '../components/ui/Card';
+import React, { useEffect, useState } from "react";
+import { PageLayout } from "../components/ui/PageLayout";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
 // USANDO MOCKS - API real comentada
 // import { personnelAPI, EmployeeData } from '../api/personnel';
-import { mockPersonnelAPI } from '../mocks';
-import type { EmployeeDataAPI as EmployeeData } from '../mocks';
-import { sweetAlert } from '../utils/sweetAlert';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUsers, faEdit, faTrash, faUser } from '@fortawesome/free-solid-svg-icons';
+import { mockPersonnelAPI } from "../mocks";
+import type { EmployeeDataAPI as EmployeeData } from "../mocks";
+import { sweetAlert } from "../utils/sweetAlert";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUsers, faEdit, faTrash, faUser } from "@fortawesome/free-solid-svg-icons";
 
 export const EmployeesAdminPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -31,8 +31,8 @@ export const EmployeesAdminPage: React.FC = () => {
       const data = await mockPersonnelAPI.getEmployees();
       setEmployees(data);
     } catch (error) {
-      console.error('Error fetching employees:', error);
-      sweetAlert.error('Error', 'No se pudieron cargar los empleados');
+      console.error("Error fetching employees:", error);
+      sweetAlert.error("Error", "No se pudieron cargar los empleados");
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,7 @@ export const EmployeesAdminPage: React.FC = () => {
       setIsEditing(false);
       setShowModal(true);
     } catch (error) {
-      sweetAlert.error('Error', 'No se pudieron cargar los detalles');
+      sweetAlert.error("Error", "No se pudieron cargar los detalles");
     }
   };
 
@@ -59,37 +59,32 @@ export const EmployeesAdminPage: React.FC = () => {
       // USANDO MOCKS - API real comentada
       // await personnelAPI.updateEmployee(selectedEmployee._id, formData);
       await mockPersonnelAPI.updateEmployee(selectedEmployee._id, formData);
-      sweetAlert.success('Empleado actualizado', 'Los cambios se guardaron correctamente');
+      sweetAlert.success("Empleado actualizado", "Los cambios se guardaron correctamente");
       setIsEditing(false);
       fetchEmployees();
     } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo actualizar el empleado');
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el empleado");
     }
   };
 
   const handleDelete = async (employee: EmployeeData) => {
-    const result = await sweetAlert.confirm('¿Eliminar empleado?', `¿Estás seguro de eliminar a ${employee.firstName} ${employee.lastName}?`);
+    const result = await sweetAlert.confirm("¿Eliminar empleado?", `¿Estás seguro de eliminar a ${employee.firstName} ${employee.lastName}?`);
     if (!result.isConfirmed) return;
 
     try {
       // USANDO MOCKS - API real comentada
       // await personnelAPI.deleteEmployee(employee._id);
       await mockPersonnelAPI.deleteEmployee(employee._id);
-      sweetAlert.success('Empleado eliminado', 'El empleado se eliminó correctamente');
+      sweetAlert.success("Empleado eliminado", "El empleado se eliminó correctamente");
       fetchEmployees();
     } catch (error) {
-      sweetAlert.error('Error', 'No se pudo eliminar el empleado');
+      sweetAlert.error("Error", "No se pudo eliminar el empleado");
     }
   };
 
   const filteredEmployees = employees.filter((emp) => {
     const search = searchTerm.toLowerCase();
-    return (
-      emp.firstName?.toLowerCase().includes(search) ||
-      emp.lastName?.toLowerCase().includes(search) ||
-      emp.email?.toLowerCase().includes(search) ||
-      emp.department?.toLowerCase().includes(search)
-    );
+    return emp.firstName?.toLowerCase().includes(search) || emp.lastName?.toLowerCase().includes(search) || emp.email?.toLowerCase().includes(search) || emp.department?.toLowerCase().includes(search);
   });
 
   if (loading) {
@@ -109,103 +104,68 @@ export const EmployeesAdminPage: React.FC = () => {
           setIsEditing(false);
         },
         title: `${selectedEmployee?.firstName} ${selectedEmployee?.lastName}`,
-        subtitle: isEditing ? 'Editando información del empleado' : 'Detalles del empleado',
-        size: 'md',
+        subtitle: isEditing ? "Editando información del empleado" : "Detalles del empleado",
+        size: "md",
         actions: [
           ...(isEditing
             ? [
                 {
-                  label: 'Guardar',
+                  label: "Guardar",
                   onClick: handleSave,
-                  variant: 'primary' as const,
+                  variant: "primary" as const,
                 },
                 {
-                  label: 'Cancelar',
+                  label: "Cancelar",
                   onClick: () => {
                     setIsEditing(false);
                     setFormData(selectedEmployee || {});
                   },
-                  variant: 'ghost' as const,
+                  variant: "ghost" as const,
                 },
               ]
             : [
                 {
-                  label: 'Editar',
+                  label: "Editar",
                   onClick: () => setIsEditing(true),
-                  variant: 'primary' as const,
+                  variant: "primary" as const,
                 },
                 {
-                  label: 'Cerrar',
+                  label: "Cerrar",
                   onClick: () => setShowModal(false),
-                  variant: 'ghost' as const,
+                  variant: "ghost" as const,
                 },
               ]),
         ],
         content: selectedEmployee ? (
           <div className="space-y-4">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                {selectedEmployee.photoUrl ? (
-                  <img src={selectedEmployee.photoUrl} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-3xl font-bold text-gray-400">{selectedEmployee.firstName?.charAt(0) || '?'}</span>
-                )}
-              </div>
+              <div className="w-24 h-24 rounded overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">{selectedEmployee.photoUrl ? <img src={selectedEmployee.photoUrl} alt="Profile" className="w-full h-full object-cover" /> : <span className="text-3xl font-bold text-gray-400">{selectedEmployee.firstName?.charAt(0) || "?"}</span>}</div>
             </div>
             {isEditing ? (
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
-                  <input
-                    type="text"
-                    value={formData.firstName || ''}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="input-field"
-                  />
+                  <input type="text" value={formData.firstName || ""} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="input-field" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Apellido</label>
-                  <input
-                    type="text"
-                    value={formData.lastName || ''}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="input-field"
-                  />
+                  <input type="text" value={formData.lastName || ""} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="input-field" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="input-field"
-                  />
+                  <input type="email" value={formData.email || ""} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="input-field" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Posición</label>
-                  <input
-                    type="text"
-                    value={formData.position || ''}
-                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                    className="input-field"
-                  />
+                  <input type="text" value={formData.position || ""} onChange={(e) => setFormData({ ...formData, position: e.target.value })} className="input-field" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Departamento</label>
-                  <input
-                    type="text"
-                    value={formData.department || ''}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="input-field"
-                  />
+                  <input type="text" value={formData.department || ""} onChange={(e) => setFormData({ ...formData, department: e.target.value })} className="input-field" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
-                  <select
-                    value={formData.status || 'active'}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                    className="input-field"
-                  >
+                  <select value={formData.status || "active"} onChange={(e) => setFormData({ ...formData, status: e.target.value as "active" | "inactive" })} className="input-field">
                     <option value="active">Activo</option>
                     <option value="inactive">Inactivo</option>
                   </select>
@@ -219,23 +179,15 @@ export const EmployeesAdminPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Posición</label>
-                  <p className="text-gray-900 dark:text-white">{selectedEmployee.position || 'Sin posición'}</p>
+                  <p className="text-gray-900 dark:text-white">{selectedEmployee.position || "Sin posición"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Departamento</label>
-                  <p className="text-gray-900 dark:text-white">{selectedEmployee.department || 'Sin departamento'}</p>
+                  <p className="text-gray-900 dark:text-white">{selectedEmployee.department || "Sin departamento"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Estado</label>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      selectedEmployee.status === 'active'
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                    }`}
-                  >
-                    {selectedEmployee.status === 'active' ? 'Activo' : 'Inactivo'}
-                  </span>
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${selectedEmployee.status === "active" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"}`}>{selectedEmployee.status === "active" ? "Activo" : "Inactivo"}</span>
                 </div>
               </div>
             )}
@@ -245,13 +197,7 @@ export const EmployeesAdminPage: React.FC = () => {
     >
       <div className="space-y-6">
         <div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar empleados..."
-            className="input-field"
-          />
+          <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar empleados..." className="input-field" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -261,12 +207,12 @@ export const EmployeesAdminPage: React.FC = () => {
               onClick={() => handleViewEmployee(employee)}
               header={{
                 title: `${employee.firstName} ${employee.lastName}`,
-                subtitle: employee.position || 'Sin posición',
+                subtitle: employee.position || "Sin posición",
                 icon: faUser,
                 badges: [
                   {
-                    text: employee.status === 'active' ? 'Activo' : 'Inactivo',
-                    variant: employee.status === 'active' ? 'success' : 'default',
+                    text: employee.status === "active" ? "Activo" : "Inactivo",
+                    variant: employee.status === "active" ? "success" : "default",
                   },
                 ],
               }}
@@ -279,8 +225,8 @@ export const EmployeesAdminPage: React.FC = () => {
                       handleViewEmployee(employee);
                       setTimeout(() => setIsEditing(true), 100);
                     },
-                    title: 'Editar',
-                    variant: 'default',
+                    title: "Editar",
+                    variant: "default",
                   },
                   {
                     icon: faTrash,
@@ -288,8 +234,8 @@ export const EmployeesAdminPage: React.FC = () => {
                       e.stopPropagation();
                       handleDelete(employee);
                     },
-                    title: 'Eliminar',
-                    variant: 'blue',
+                    title: "Eliminar",
+                    variant: "blue",
                   },
                 ],
               }}

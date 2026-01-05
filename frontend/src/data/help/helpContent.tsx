@@ -278,7 +278,7 @@ const buildHelpContent = (key: HelpKey): React.ReactNode => {
       <ul className="space-y-3">
         {items.map((item: string, index: number) => (
           <li key={index} className="flex items-start space-x-2">
-            <span className="w-1.5 h-1.5 bg-primary-600 rounded-full mt-2 flex-shrink-0"></span>
+            <span className="w-1.5 h-1.5 bg-primary-600 rounded mt-2 flex-shrink-0"></span>
             <span className="text-gray-700 dark:text-gray-300 leading-relaxed">{processMarkdown(item)}</span>
           </li>
         ))}

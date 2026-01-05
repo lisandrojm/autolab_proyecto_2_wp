@@ -285,10 +285,10 @@ export const LoginPage: React.FC = () => {
       {/* Controles globales */}
       <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
         <div className="flex gap-2">
-          {/* <button onClick={handleLanguageToggle} className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Language">
+          {/* <button onClick={handleLanguageToggle} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Language">
             <FontAwesomeIcon icon={faGlobe} className="h-5 w-5 text-gray-600 dark:text-gray-300" />
           </button> */}
-          <button onClick={toggleTheme} className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Theme">
+          <button onClick={toggleTheme} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Theme">
             {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
           </button>
         </div>
@@ -351,7 +351,7 @@ export const LoginPage: React.FC = () => {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-800 dark:border-red-800 rounded-lg">
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-800 dark:border-red-800 rounded">
                 <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
 
                 {/* Solo en desarrollo: ver objeto de error completo */}
@@ -396,7 +396,7 @@ export const LoginPage: React.FC = () => {
 
                 <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4">
                   <button onClick={() => handlePortalSelect("platform")} className="flex flex-col items-center justify-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-2 border-transparent hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
-                    <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 rounded bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <FontAwesomeIcon icon={faLaptop} className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <span className="font-semibold text-gray-900 dark:text-gray-100">Plataforma</span>
@@ -404,7 +404,7 @@ export const LoginPage: React.FC = () => {
                   </button>
 
                   <button onClick={() => handlePortalSelect("mobile")} className="flex flex-col items-center justify-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-2 border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 transition-all group">
-                    <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 rounded bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <FontAwesomeIcon icon={faMobileScreen} className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <span className="font-semibold text-gray-900 dark:text-gray-100">App Mobile</span>
@@ -428,15 +428,15 @@ export const LoginPage: React.FC = () => {
           {/* Solo mostrar usuarios disponibles en modo development */}
           {import.meta.env.DEV && demoUsers.length > 0 && (
             <div className="mt-4">
-              <details className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
+              <details className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
                 <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">Usuarios disponibles ({demoUsers.length})</summary>
                 <div className="p-4 space-y-3">
                   {demoUsers.map((user) => (
-                    <div key={user._id} className="flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+                    <div key={user._id} className="flex items-center justify-between gap-3 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
                       <div className="flex-1">
                         {/* Tenant Badge - destacado arriba */}
                         {user.tenant && (
-                          <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700">
+                          <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-700">
                             <FontAwesomeIcon icon={faBuilding} className="h-3 w-3" />
                             {user.tenant.name}
                           </div>

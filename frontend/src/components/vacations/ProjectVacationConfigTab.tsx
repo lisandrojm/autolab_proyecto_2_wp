@@ -127,7 +127,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
     const effectiveMinDays = config.useGlobalConfig ? globalConfig?.minDiasFraccion : (config.minDiasFraccion ?? 1);
 
     return (
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <div className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex-1">
             <h4 className="font-medium text-gray-900 dark:text-gray-100">{title}</h4>
@@ -152,7 +152,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
 
                 onUpdate(updates);
               }}
-              className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${config.useGlobalConfig ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
+              className={`px-3 py-1.5 rounded border text-sm font-medium flex items-center gap-2 transition-colors ${config.useGlobalConfig ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
             >
               <FontAwesomeIcon icon={config.useGlobalConfig ? faToggleOn : faToggleOff} />
               Usar Global
@@ -174,7 +174,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                     }
                     onUpdate(updates);
                   }}
-                  className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${config.permiteFraccionadas ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
+                  className={`px-3 py-1.5 rounded border text-sm font-medium flex items-center gap-2 transition-colors ${config.permiteFraccionadas ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
                 >
                   <FontAwesomeIcon icon={config.permiteFraccionadas ? faToggleOn : faToggleOff} />
                   Permitir Fraccionamiento
@@ -201,7 +201,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                         onUpdate({ minDiasFraccion: finalVal });
                       }}
                       disabled={savingId === id}
-                      className="w-28 px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      className="w-28 px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     >
                       {savingId === id ? (
                         <>
@@ -237,7 +237,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Configuración de Fraccionamiento</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">Personaliza las reglas de fraccionamiento para cada entidad. Si se activa la configuración personalizada, anulará la configuración global.</p>
@@ -250,7 +250,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
       </div>
 
       {globalConfig && (
-        <div className="mb-8 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+        <div className="mb-8 bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-100 dark:border-blue-800">
           <h4 className="text-md font-semibold text-blue-900 dark:text-blue-100 mb-3">Configuración Global</h4>
           <div className="flex items-center gap-4 flex-wrap">
             <button
@@ -265,7 +265,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                   setGlobalConfig(globalConfig); // revert
                 }
               }}
-              className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${globalConfig.permiteFraccionadas ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
+              className={`px-3 py-1.5 rounded border text-sm font-medium flex items-center gap-2 transition-colors ${globalConfig.permiteFraccionadas ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
             >
               <FontAwesomeIcon icon={globalConfig.permiteFraccionadas ? faToggleOn : faToggleOff} />
               {globalConfig.permiteFraccionadas ? "Permitido" : "No permitido"}
@@ -297,7 +297,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                       setIsSavingGlobal(false);
                     }
                   }}
-                  className="w-28 px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-28 px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium transition-colors flex items-center justify-center gap-2"
                   disabled={isSavingGlobal}
                 >
                   {isSavingGlobal ? (

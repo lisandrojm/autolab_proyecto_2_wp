@@ -40,6 +40,8 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       requiresReplacement: !!requiresReplacement,
       isActive: status === "Activa" || status === true, // Handle "Activa"/"Inactiva" string or boolean
       order: newOrder,
+      visibility: req.body.visibility || "all",
+      allowedProjectIds: req.body.allowedProjectIds || [],
     });
 
     await newType.save();
@@ -63,11 +65,12 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     if (name !== undefined) updateData.name = name;
     if (requiresReplacement !== undefined) updateData.requiresReplacement = requiresReplacement;
     if (status !== undefined) {
-      // Accept "Activa" | "Inactiva" or boolean
       if (typeof status === "string") updateData.isActive = status === "Activa";
       else updateData.isActive = !!status;
     }
     if (order !== undefined) updateData.order = order;
+    if (req.body.visibility !== undefined) updateData.visibility = req.body.visibility;
+    if (req.body.allowedProjectIds !== undefined) updateData.allowedProjectIds = req.body.allowedProjectIds;
 
     const updatedType = await ActivityLogType.findOneAndUpdate({ _id: id, tenantId: req.tenantObjectId }, updateData, { new: true });
 

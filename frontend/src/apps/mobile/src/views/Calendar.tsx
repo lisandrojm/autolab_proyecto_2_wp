@@ -101,13 +101,13 @@ export default function Calendar() {
 
         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-4">
-            <button onClick={previousMonth} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+            <button onClick={previousMonth} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
               <FontAwesomeIcon icon={faChevronLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
-            <button onClick={nextMonth} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+            <button onClick={nextMonth} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
               <FontAwesomeIcon icon={faChevronRight} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
           </div>
@@ -129,7 +129,7 @@ export default function Calendar() {
               const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
 
               return (
-                <button key={day} className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${isToday ? "bg-primary text-white" : "text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"}`}>
+                <button key={day} className={`aspect-square flex items-center justify-center rounded text-sm font-medium transition-colors ${isToday ? "bg-primary text-white" : "text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"}`}>
                   {day}
                 </button>
               );

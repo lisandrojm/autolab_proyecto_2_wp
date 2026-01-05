@@ -155,7 +155,7 @@ export const UserVacationConfigTab: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Configuración Individual de Días Extra</h3>
       </div>
@@ -164,12 +164,12 @@ export const UserVacationConfigTab: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="relative">
           <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input type="text" placeholder="Buscar usuario..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+          <input type="text" placeholder="Buscar usuario..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
         </div>
 
         <div className="relative">
           <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+          <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
             <option value="">Todas las Areas</option>
             {areas.map((a) => (
               <option key={a._id} value={a._id}>
@@ -181,7 +181,7 @@ export const UserVacationConfigTab: React.FC = () => {
 
         <div className="relative">
           <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select value={selectedPosition} onChange={(e) => setSelectedPosition(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+          <select value={selectedPosition} onChange={(e) => setSelectedPosition(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
             <option value="">Todos los Cargos</option>
             {positions.map((p) => (
               <option key={p._id} value={p._id}>
@@ -193,7 +193,7 @@ export const UserVacationConfigTab: React.FC = () => {
 
         <div className="relative">
           <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+          <select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
             <option value="">Todos los Niveles</option>
             {levels.map((l) => (
               <option key={l._id} value={l._id}>
@@ -205,7 +205,7 @@ export const UserVacationConfigTab: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 mb-6 max-h-[600px] overflow-y-auto">
+      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 max-h-[600px] overflow-y-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
             <tr>
@@ -245,7 +245,7 @@ export const UserVacationConfigTab: React.FC = () => {
                         min="0"
                         value={currentValue}
                         onChange={(e) => handleValueChange(user._id, e.target.value)}
-                        className={`w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white text-right
+                        className={`w-24 px-3 py-1.5 border rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white text-right
                                         ${isModified ? "border-amber-400 bg-amber-50 dark:bg-amber-900/10" : "border-gray-300 dark:border-gray-600"}
                                     `}
                       />
@@ -265,7 +265,7 @@ export const UserVacationConfigTab: React.FC = () => {
       </div>
 
       <div className="flex justify-end gap-3 py-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
-        <button onClick={handleSaveAll} disabled={submitting || !hasAnyChanges} className="px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-sm">
+        <button onClick={handleSaveAll} disabled={submitting || !hasAnyChanges} className="px-6 py-2.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-sm">
           {submitting ? (
             <>
               <FontAwesomeIcon icon={faSpinner} spin />

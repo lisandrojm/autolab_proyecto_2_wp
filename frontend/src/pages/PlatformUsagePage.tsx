@@ -115,7 +115,7 @@ export const PlatformUsagePage: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${planColor.bg} ${planColor.text} border ${planColor.border} capitalize`}>{tenant.plan}</span>
+                        <span className={`inline-flex items-center px-3 py-1 rounded text-xs font-medium ${planColor.bg} ${planColor.text} border ${planColor.border} capitalize`}>{tenant.plan}</span>
                       </td>
                       <td className="py-4 px-6">
                         <div className="text-right">
@@ -123,8 +123,8 @@ export const PlatformUsagePage: React.FC = () => {
                             {tenant.storageUsedMB} / {tenant.storageLimitMB} MB
                           </div>
                           <div className="flex items-center justify-end gap-2 mt-1">
-                            <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                              <div className={`h-1.5 rounded-full ${storagePercent > 90 ? "bg-red-500" : storagePercent > 70 ? "bg-blue-500" : "bg-blue-500"}`} style={{ width: `${Math.min(storagePercent, 100)}%` }}></div>
+                            <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded h-1.5">
+                              <div className={`h-1.5 rounded ${storagePercent > 90 ? "bg-red-500" : storagePercent > 70 ? "bg-blue-500" : "bg-blue-500"}`} style={{ width: `${Math.min(storagePercent, 100)}%` }}></div>
                             </div>
                             <span className="text-xs text-gray-500 dark:text-gray-400">{storagePercent.toFixed(0)}%</span>
                           </div>
@@ -137,7 +137,7 @@ export const PlatformUsagePage: React.FC = () => {
                         <span className="text-sm font-medium text-gray-900 dark:text-white">{tenant.clients}</span>
                       </td>
                       <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tenant.isActive ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"}`}>{tenant.isActive ? "Activo" : "Inactivo"}</span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${tenant.isActive ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"}`}>{tenant.isActive ? "Activo" : "Inactivo"}</span>
                       </td>
                     </tr>
                   );
@@ -151,17 +151,17 @@ export const PlatformUsagePage: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Resumen de Recursos Globales</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded">
               <FontAwesomeIcon icon={faUsers} className="h-8 w-8 text-blue-600 dark:text-blue-400 mb-3" />
               <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{metrics.resources.totalUsers}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Usuarios Totales</p>
             </div>
-            <div className="text-center p-6 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg">
+            <div className="text-center p-6 bg-cyan-50 dark:bg-cyan-900/20 rounded">
               <FontAwesomeIcon icon={faUsers} className="h-8 w-8 text-cyan-600 dark:text-cyan-400 mb-3" />
               <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{metrics.resources.totalClients}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Clientes Totales</p>
             </div>
-            <div className="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded">
               <FontAwesomeIcon icon={faBullhorn} className="h-8 w-8 text-blue-600 dark:text-blue-400 mb-3" />
               <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{metrics.resources.totalCampaigns}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Campañas Totales</p>

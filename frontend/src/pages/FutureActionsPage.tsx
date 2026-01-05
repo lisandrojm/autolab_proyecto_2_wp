@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Clock, CheckCircle, XCircle, AlertTriangle, Filter, Calendar } from "lucide-react";
 import { getFutureActions, getFutureActionStats, updateFutureAction } from "../api/futureActions";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import type { FutureAction, FutureActionStats, EstadoAccion, TipoAccionFutura } from "../types/futureAction";
 import { estadoAccionLabels, tipoAccionFuturaLabels, responsableAccionLabels } from "../types/futureAction";
 
@@ -99,7 +100,7 @@ export default function FutureActionsPage() {
 
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Pendientes</p>
@@ -109,7 +110,7 @@ export default function FutureActionsPage() {
             </div>
           </div>
 
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-600 dark:text-green-400">Cumplidas</p>
@@ -119,7 +120,7 @@ export default function FutureActionsPage() {
             </div>
           </div>
 
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-600 dark:text-red-400">Vencidas</p>
@@ -129,7 +130,7 @@ export default function FutureActionsPage() {
             </div>
           </div>
 
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-orange-600 dark:text-orange-400">En Revisión</p>
@@ -139,7 +140,7 @@ export default function FutureActionsPage() {
             </div>
           </div>
 
-          <div className="bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg p-4">
+          <div className="bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-cyan-600 dark:text-cyan-400">Vencidas (Hoy)</p>
@@ -151,7 +152,7 @@ export default function FutureActionsPage() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 mb-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 mb-6">
         <div className="flex items-center gap-4 mb-4">
           <Filter className="w-5 h-5 text-slate-600 dark:text-slate-400" />
           <span className="font-medium text-slate-900 dark:text-slate-100">Filtros</span>
@@ -159,7 +160,7 @@ export default function FutureActionsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Estado</label>
-            <select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value as EstadoAccion | "all")} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100">
+            <select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value as EstadoAccion | "all")} className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100">
               <option value="all">Todos</option>
               {Object.entries(estadoAccionLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -170,7 +171,7 @@ export default function FutureActionsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tipo de Acción</label>
-            <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value as TipoAccionFutura | "all")} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100">
+            <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value as TipoAccionFutura | "all")} className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100">
               <option value="all">Todos</option>
               {Object.entries(tipoAccionFuturaLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -183,12 +184,9 @@ export default function FutureActionsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Cargando acciones...</p>
-        </div>
+        <LoadingSpinner message="Cargando acciones..." />
       ) : futureActions.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
+        <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
           <AlertTriangle className="w-16 h-16 text-slate-400 mx-auto mb-4" />
           <p className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No hay acciones futuras</p>
           <p className="text-slate-600 dark:text-slate-400">No se encontraron acciones con los filtros seleccionados</p>
@@ -198,14 +196,14 @@ export default function FutureActionsPage() {
           {futureActions.map((action) => {
             const daysRemaining = calculateDaysRemaining(action.fechaLimite);
             return (
-              <div key={action._id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-6 hover:shadow-md transition-shadow">
+              <div key={action._id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-3 flex-1">
                     {getStatusIcon(action.estadoAccion)}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(action.estadoAccion)}`}>{estadoAccionLabels[action.estadoAccion]}</span>
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">{tipoAccionFuturaLabels[action.tipoAccionFutura]}</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(action.estadoAccion)}`}>{estadoAccionLabels[action.estadoAccion]}</span>
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">{tipoAccionFuturaLabels[action.tipoAccionFutura]}</span>
                       </div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">{action.descripcionAccion}</h3>
                       <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
@@ -235,7 +233,7 @@ export default function FutureActionsPage() {
                     </div>
                   </div>
                   {action.estadoAccion === "pendiente" && (
-                    <button onClick={() => handleMarkCompleted(action._id)} className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <button onClick={() => handleMarkCompleted(action._id)} className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                       Marcar como Cumplida
                     </button>
                   )}

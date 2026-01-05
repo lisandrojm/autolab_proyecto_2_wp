@@ -260,12 +260,12 @@ export const ClientContextMenu: React.FC = () => {
           if (!hasPermission(item.permission)) return null;
           const active = isActive(item.path);
           return (
-            <button key={item.path} onClick={() => handleNavigation(item.actualPath)} aria-current={active ? "page" : undefined} className={`group w-full relative flex items-center justify-between px-2 py-2 rounded-lg text-left transition-all ${active ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-l-3 border-primary-600 dark:border-primary-400" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/30"}`}>
+            <button key={item.path} onClick={() => handleNavigation(item.actualPath)} aria-current={active ? "page" : undefined} className={`group w-full relative flex items-center justify-between px-2 py-2 rounded text-left transition-all ${active ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-l-3 border-primary-600 dark:border-primary-400" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/30"}`}>
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <FontAwesomeIcon icon={item.icon} className="h-4 w-4 flex-shrink-0" />
                 <span className="text-sm font-medium truncate">{item.label}</span>
               </div>
-              {item.badge && <div className="ml-2 flex-shrink-0">{item.badge.type === "count" ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${item.badge.value > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.badge.value}</span> : <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getBadgeStyles(item.badge.value)}`}>{getBadgeLabel(item.badge.value)}</span>}</div>}
+              {item.badge && <div className="ml-2 flex-shrink-0">{item.badge.type === "count" ? <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.badge.value > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.badge.value}</span> : <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getBadgeStyles(item.badge.value)}`}>{getBadgeLabel(item.badge.value)}</span>}</div>}
             </button>
           );
         })}

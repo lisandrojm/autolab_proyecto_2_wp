@@ -156,7 +156,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
     if (order.status === "pending") {
       return (
-        <button onClick={handleCancelOrder} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <button onClick={handleCancelOrder} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           Cancelar Pedido
         </button>
       );
@@ -188,11 +188,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           onNavigate ? (
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
               <div className="flex items-center gap-3">
-                {/*                 <button onClick={() => onNavigate("prev")} disabled={!hasPrevious} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior">
+                {/*                 <button onClick={() => onNavigate("prev")} disabled={!hasPrevious} className="p-2 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Pedido anterior">
                   <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </button> */}
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles del Pedido</h2>
-                {/*                 <button onClick={() => onNavigate("next")} disabled={!hasNext} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido">
+                {/*                 <button onClick={() => onNavigate("next")} disabled={!hasNext} className="p-2 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Siguiente pedido">
                   <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </button> */}
                 {currentIndex >= 0 && totalOrders > 0 && (
@@ -201,7 +201,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   </span>
                 )}
               </div>
-              <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
+              <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
                 <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
               </button>
             </div>
@@ -247,9 +247,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           <div className="flex items-center gap-3">
             <div>
               {getUserAvatar(order.userId) ? (
-                <img alt={`Foto de perfil de ${getUserName(order.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(order.userId)}`} />
+                <img alt={`Foto de perfil de ${getUserName(order.userId)}`} className="w-10 h-10 rounded object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(order.userId)}`} />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
                   {getUserName(order.userId)
                     .split(" ")
                     .map((n) => n[0])
@@ -270,9 +270,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(order)}</span>
                 {getSubcategoriesArray(order).map((subcategory, index) => (
-                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                     {subcategory}
                   </span>
                 ))}
@@ -300,7 +300,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               {order.photoUrl && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
-                  <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt="Imagen del pedido" className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
+                  <img src={`${import.meta.env.VITE_API_URL}${order.photoUrl}`} alt="Imagen del pedido" className="max-w-xs w-full h-auto rounded border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.photoUrl}`)} />
                 </div>
               )}
             </div>
@@ -308,7 +308,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
           {/* Descripción */}
           {order.description && order.description.trim() !== "" && (
-            <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
+            <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded">
               <div className="flex justify-between items-start">
                 <div className="flex justify-between items-center w-full">
                   <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
@@ -328,7 +328,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
             return (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-500/50 p-4 rounded-lg">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-500/50 p-4 rounded">
                 <div className="flex items-start gap-3 mb-3">
                   <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                   <div className="flex-1">
@@ -346,13 +346,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
                 {documentPreview ? (
                   <div className="space-y-3">
-                    <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                    <div className="relative rounded overflow-hidden border-2 border-slate-300 dark:border-slate-600">
                       <img src={documentPreview} alt="Preview" className="w-full h-48 object-cover" />
-                      <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
+                      <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
                         <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                       </button>
                     </div>
-                    <button onClick={handleUploadDocument} disabled={uploadingDocument} className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={handleUploadDocument} disabled={uploadingDocument} className="w-full flex items-center justify-center gap-2 rounded h-10 px-4 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                       {uploadingDocument ? (
                         <>
                           <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
@@ -369,13 +369,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 ) : (
                   <div className="flex flex-col lg:flex-row gap-3">
                     <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
                       <span className="text-sm font-medium">Tomar Foto</span>
                     </button>
 
                     <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                       <span className="text-sm font-medium">Subir Archivo</span>
                     </button>
@@ -394,7 +394,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             }
 
             return (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded">
                 <div className="flex items-start gap-3 mb-3">
                   <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                   <div className="flex-1">
@@ -408,11 +408,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className="flex-1 flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors">
+                  <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className="flex-1 flex items-center justify-center gap-2 rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors">
                     <FontAwesomeIcon icon={faFileArrowUp} className="w-4 h-4" />
                     <span>Ver Documento</span>
                   </button>
-                  <a href={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
+                  <a href={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
                     <FontAwesomeIcon icon={faDownload} className="w-4 h-4" />
                   </a>
                 </div>
@@ -437,7 +437,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
             if (alreadyNotified) {
               return (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded">
                   <div className="flex items-start gap-3">
                     <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                     <div className="flex-1">
@@ -447,7 +447,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                     </div>
                   </div>
                   <div className="mt-3">
-                    <button disabled className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-amber-600/50 text-white text-sm font-medium leading-normal cursor-not-allowed opacity-60">
+                    <button disabled className="w-full flex items-center justify-center gap-2 rounded h-10 px-4 bg-amber-600/50 text-white text-sm font-medium leading-normal cursor-not-allowed opacity-60">
                       <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
                       <span>Ya Notificado</span>
                     </button>
@@ -457,7 +457,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             }
 
             return (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded">
                 <div className="flex items-start gap-3 mb-3">
                   <FontAwesomeIcon icon={faBell} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                   <div className="flex-1">
@@ -466,7 +466,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                     <p className="text-sm text-blue-700 dark:text-blue-300">Una vez que hayas completado la firma, avisá al supervisor presionando el botón de abajo.</p>
                   </div>
                 </div>
-                <button onClick={handleNotifySignature} disabled={notifyingSignature} className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={handleNotifySignature} disabled={notifyingSignature} className="w-full flex items-center justify-center gap-2 rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {notifyingSignature ? (
                     <>
                       <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
@@ -485,11 +485,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
           {/* Show uploaded document */}
           {/*           {order.documentoUrl && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-semibold text-green-800 dark:text-green-300">Documento Presentado</p>
               </div>
-              <img src={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} alt="Documento subido" className="w-full h-auto rounded-lg border border-green-200 dark:border-green-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} />
+              <img src={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} alt="Documento subido" className="w-full h-auto rounded border border-green-200 dark:border-green-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} />
             </div>
           )} */}
 
@@ -515,10 +515,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
       {viewingImage && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 w-full" onClick={() => setViewingImage(null)}>
           <div className="relative w-full flex justify-center max-h-[70svh]" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-0 p-2 rounded-full text-gray-400">
+            <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-0 p-2 rounded text-gray-400">
               <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
             </button>
-            {viewingImage.toLowerCase().endsWith(".pdf") ? <iframe src={viewingImage} className="w-full h-[90vh] rounded-lg shadow-2xl bg-white" title="Documento" /> : <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />}
+            {viewingImage.toLowerCase().endsWith(".pdf") ? <iframe src={viewingImage} className="w-full h-[90vh] rounded shadow-2xl bg-white" title="Documento" /> : <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" />}
           </div>
         </div>
       )}

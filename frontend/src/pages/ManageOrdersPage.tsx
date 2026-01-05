@@ -555,7 +555,7 @@ export const ManageOrdersPage: React.FC = () => {
           const isInFinalState = isOrderInFinalState(order.status);
 
           const badgesTop = [
-            <span key="order-number" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+            <span key="order-number" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
               {getFormattedOrderNumber(order.orderNumber)}
             </span>,
             <StatusBadge key="status" type={mapOrderStatusToStatusType(order.status)} size="sm" />,
@@ -566,11 +566,11 @@ export const ManageOrdersPage: React.FC = () => {
           ].filter(Boolean);
 
           const badgesBottom = [
-            <span key="category" className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
+            <span key="category" className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
               {getCategoryName(order)}
             </span>,
             ...getSubcategoriesArray(order).map((subcategory, index) => (
-              <span key={`subcategory-${index}`} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+              <span key={`subcategory-${index}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                 {subcategory}
               </span>
             )),
@@ -630,11 +630,11 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "pending") {
       return (
         <>
-          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
-          <button onClick={handlePreApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handlePreApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faCheck} className="text-lg" />
             Pre-Aprobar
           </button>
@@ -645,11 +645,11 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "pre_approved") {
       return (
         <>
-          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
-          <button onClick={handleApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleApprove} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faCheck} className="text-lg" />
             Aprobar
           </button>
@@ -660,7 +660,7 @@ export const ManageOrdersPage: React.FC = () => {
     if (selectedOrder.status === "approved") {
       return (
         <>
-          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
@@ -668,13 +668,13 @@ export const ManageOrdersPage: React.FC = () => {
           {selectedOrder.requiresSignature && (
             <>
               {selectedOrder.signatureStatus === "pending" && (
-                <button onClick={handleSendSignature} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onClick={handleSendSignature} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-gray-500 text-white font-semibold text-sm hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   <FontAwesomeIcon icon={faFileArrowUp} />
                   Enviar para Firma
                 </button>
               )}
               {selectedOrder.signatureStatus === "sent" && (
-                <button onClick={handleMarkSigned} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onClick={handleMarkSigned} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   <FontAwesomeIcon icon={faCheckCircle} />
                   Firmado
                 </button>
@@ -683,7 +683,7 @@ export const ManageOrdersPage: React.FC = () => {
           )}
 
           {(!selectedOrder.requiresSignature || selectedOrder.signatureStatus === "signed") && (
-            <button onClick={handleDeliver} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <button onClick={handleDeliver} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               <FontAwesomeIcon icon={faTruck} />
               Marcar como Entregado
             </button>
@@ -694,7 +694,7 @@ export const ManageOrdersPage: React.FC = () => {
 
     if (selectedOrder.status === "delivered") {
       return (
-        <button onClick={handleCancel} disabled={updatingStatus} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+        <button onClick={handleCancel} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
           <FontAwesomeIcon icon={faBan} className="text-lg" />
           Cancelar Pedido
         </button>
@@ -720,10 +720,10 @@ export const ManageOrdersPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/hr/order-categories")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full">
+          <button onClick={() => navigate("/hr/order-categories")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full">
             <FontAwesomeIcon icon={faGear} />
           </button>
-          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de pedidos" title="Ver resumen de pedidos">
+          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de pedidos" title="Ver resumen de pedidos">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
         </div>
@@ -734,11 +734,11 @@ export const ManageOrdersPage: React.FC = () => {
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Buscar pedidos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              <input type="text" placeholder="Buscar pedidos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
             </div>
             <div className="relative">
               <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                 <option value="all">Todos los estados</option>
                 <option value="pending">Pendientes</option>
                 <option value="pre_approved">Preaprobados</option>
@@ -802,10 +802,10 @@ export const ManageOrdersPage: React.FC = () => {
                             <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{formatDateShort(order.requestedAt)}</td>
                             <td className="py-3 px-4">
                               <div className="flex flex-col gap-2">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{getCategoryName(order)}</span>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{getCategoryName(order)}</span>
 
                                 {getSubcategoriesArray(order).map((subcategory, index) => (
-                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 text-nowrap w-fit">
+                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 text-nowrap w-fit">
                                     {subcategory}
                                   </span>
                                 ))}
@@ -852,13 +852,13 @@ export const ManageOrdersPage: React.FC = () => {
 
               {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-6">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     Anterior
                   </button>
                   <span className="text-gray-600 dark:text-gray-400">
                     Página {page} de {totalPages}
                   </span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     Siguiente
                   </button>
                 </div>
@@ -886,7 +886,7 @@ export const ManageOrdersPage: React.FC = () => {
                 </span>
               )}
             </div>
-            <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
+            <button onClick={() => setShowDetailModal(false)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
               <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
             </button>
           </div>
@@ -929,9 +929,9 @@ export const ManageOrdersPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <div>
                 {getUserAvatar(selectedOrder.userId) ? (
-                  <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded-full object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
+                  <img alt={`Foto de perfil de ${getUserName(selectedOrder.userId)}`} className="w-10 h-10 rounded object-cover" src={`${import.meta.env.VITE_API_URL}${getUserAvatar(selectedOrder.userId)}`} />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                  <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
                     {getUserName(selectedOrder.userId)
                       .split(" ")
                       .map((n) => n[0])
@@ -950,9 +950,9 @@ export const ManageOrdersPage: React.FC = () => {
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de pedido</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(selectedOrder)}</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">{getCategoryName(selectedOrder)}</span>
                   {getSubcategoriesArray(selectedOrder).map((subcategory, index) => (
-                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+                    <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
                       {subcategory}
                     </span>
                   ))}
@@ -960,7 +960,7 @@ export const ManageOrdersPage: React.FC = () => {
               </div>
               {selectedOrder.pdfPreAprobacionUrl && (
                 <div className="border-slate-200 dark:border-slate-700">
-                  <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
+                  <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
                     <FontAwesomeIcon icon={faDownload} />
                     Descargar
                     <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
@@ -999,14 +999,14 @@ export const ManageOrdersPage: React.FC = () => {
                 {selectedOrder.photoUrl && (
                   <div className="md:col-span-2">
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
-                    <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded-lg border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
+                    <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
                   </div>
                 )}
               </div>
             </div>
 
             {selectedOrder.description && selectedOrder.description.trim() !== "" && (
-              <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
+              <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded">
                 <div className="flex justify-between items-start">
                   <div className="flex justify-between items-center w-full">
                     <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Comentario</p>
@@ -1026,7 +1026,7 @@ export const ManageOrdersPage: React.FC = () => {
               const daysRemaining = futureAction.fechaLimite ? Math.ceil((new Date(futureAction.fechaLimite).getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
 
               return (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-500/50 p-4 rounded-lg">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-500/50 p-4 rounded">
                   <div className="flex items-start gap-3">
                     <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                     <div className="flex-1">
@@ -1053,7 +1053,7 @@ export const ManageOrdersPage: React.FC = () => {
               }
 
               return (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded">
                   <div className="flex items-start gap-3">
                     <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                     <div className="flex-1">
@@ -1065,11 +1065,11 @@ export const ManageOrdersPage: React.FC = () => {
                       )}
                       <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">El usuario ha subido el documento solicitado. Podés revisarlo haciendo clic en el botón de abajo.</p>
                       <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm">
                           <FontAwesomeIcon icon={faFileArrowUp} />
                           Ver Documento
                         </button>
-                        <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                        <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm">
                           <FontAwesomeIcon icon={faDownload} />
                         </a>
                       </div>
@@ -1090,7 +1090,7 @@ export const ManageOrdersPage: React.FC = () => {
                 categoryInfo?.requiresSignature &&
                 selectedOrder.signatureStatus === "sent" &&
                 selectedOrder.signatureNotifiedAt && (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded">
                     <div className="flex items-start gap-3">
                       <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                       <div className="flex-1">
@@ -1124,7 +1124,7 @@ export const ManageOrdersPage: React.FC = () => {
 
       <Modal isOpen={showDocModal} onClose={() => setShowDocModal(false)} title="Estado de Documentos">
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-400">
+          <div className="flex items-center justify-between p-4 rounded bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-400">
             <div className="flex items-center gap-3">
               <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-red-600 dark:text-red-400" />
               <div>
@@ -1135,7 +1135,7 @@ export const ManageOrdersPage: React.FC = () => {
             <span className="text-2xl font-bold text-red-600 dark:text-red-400">{docStats.overdue}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-center justify-between p-4 rounded bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
             <div className="flex items-center gap-3">
               <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
               <div>
@@ -1146,7 +1146,7 @@ export const ManageOrdersPage: React.FC = () => {
             <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{docStats.urgent}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <div className="flex items-center justify-between p-4 rounded bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
             <div className="flex items-center gap-3">
               <FontAwesomeIcon icon={faFileArrowUp} className="h-5 w-5 text-green-600 dark:text-green-400" />
               <div>
@@ -1157,7 +1157,7 @@ export const ManageOrdersPage: React.FC = () => {
             <span className="text-2xl font-bold text-green-600 dark:text-green-400">{docStats.normal}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between p-4 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-3">
               <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <div>

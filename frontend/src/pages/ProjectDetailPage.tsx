@@ -11,7 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBullseye, faEdit, faUsers, faInfoCircle, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faBullseye, faEdit, faUsers, faInfoCircle, faBriefcase, faFileLines, faClock } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -51,6 +51,21 @@ export const ProjectDetailPage: React.FC = () => {
   const [modalMode, setModalMode] = useState<ModalMode>(null);
 
   // form states
+  const defaultWorkSchedule = {
+    mode: "weekdays" as "weekdays" | "all_week" | "per_day",
+    weekdays: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
+    weekend: { startTime: "", endTime: "", isWorkDay: false },
+    days: {
+      monday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
+      tuesday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
+      wednesday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
+      thursday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
+      friday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
+      saturday: { startTime: "", endTime: "", isWorkDay: false },
+      sunday: { startTime: "", endTime: "", isWorkDay: false },
+    },
+  };
+
   const [projectForm, setProjectForm] = useState({
     name: "",
     description: "",
@@ -59,6 +74,7 @@ export const ProjectDetailPage: React.FC = () => {
     endDate: "",
     objectives: [""],
     targetAudience: "",
+    workSchedule: defaultWorkSchedule,
   });
 
   /* ------------------------------ Fetchers ------------------------------- */
@@ -85,6 +101,13 @@ export const ProjectDetailPage: React.FC = () => {
         endDate: data.endDate ? data.endDate.split("T")[0] : "",
         objectives: data.objectives?.length ? data.objectives : [""],
         targetAudience: data.targetAudience || "",
+        workSchedule: {
+          ...defaultWorkSchedule,
+          ...data.workSchedule,
+          weekdays: { ...defaultWorkSchedule.weekdays, ...data.workSchedule?.weekdays },
+          weekend: { ...defaultWorkSchedule.weekend, ...data.workSchedule?.weekend },
+          days: { ...defaultWorkSchedule.days, ...data.workSchedule?.days },
+        },
       });
 
       // si viene populado, evitamos otra request
@@ -276,7 +299,17 @@ export const ProjectDetailPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={openEditProject} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+          <button
+            onClick={() => {
+              setModalMode("viewProjectInfo");
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center justify-center text-sm p-2 gap-2"
+            title="Ver información del proyecto"
+          >
+            <FontAwesomeIcon icon={faFileLines} className="h-3 w-3 lg:h-4 lg:w-4" />
+          </button>
+          <button onClick={openEditProject} className="btn-primary flex items-center justify-center text-sm p-2 gap-2" title="Editar proyecto">
             <FontAwesomeIcon icon={faEdit} className="h-3 w-3 lg:h-4 lg:w-4" />
           </button>
         </div>
@@ -313,7 +346,146 @@ export const ProjectDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
+                {/* Horario de Trabajo */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">Horario de Trabajo</label>
+
+                  <div className="flex gap-2 mb-4">
+                    <button type="button" onClick={() => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, mode: "weekdays" as any } }))} className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${(projectForm.workSchedule.mode as string) === "weekdays" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      L a V
+                    </button>
+                    <button type="button" onClick={() => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, mode: "all_week" as any } }))} className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${(projectForm.workSchedule.mode as string) === "all_week" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      L a D
+                    </button>
+                    <button type="button" onClick={() => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, mode: "per_day" } }))} className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${projectForm.workSchedule.mode === "per_day" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      Por Día
+                    </button>
+                  </div>
+
+                  {(projectForm.workSchedule.mode as string) === "weekdays" && (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                      <div className="text-xs font-medium mb-2 text-center">Lunes a Viernes</div>
+                      <div className="flex gap-2 items-center">
+                        <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.weekdays.startTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, startTime: e.target.value } } }))} />
+                        <span className="text-gray-400">a</span>
+                        <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.weekdays.endTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, endTime: e.target.value } } }))} />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2 text-center">Sábado y Domingo: No laboral</p>
+                    </div>
+                  )}
+
+                  {(projectForm.workSchedule.mode as string) === "all_week" && (
+                    <div className="space-y-3">
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="text-xs font-medium mb-2 text-gray-600 dark:text-gray-400">Lunes a Viernes</div>
+                        <div className="flex gap-2 items-center">
+                          <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.weekdays.startTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, startTime: e.target.value } } }))} />
+                          <span className="text-gray-400">a</span>
+                          <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.weekdays.endTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, endTime: e.target.value } } }))} />
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Sábado</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProjectForm((p) => {
+                                const newIsWorkDay = !p.workSchedule.days.saturday.isWorkDay;
+                                const newData = { ...p.workSchedule.days.saturday, isWorkDay: newIsWorkDay };
+                                if (newIsWorkDay && (!newData.startTime || newData.startTime === "")) {
+                                  newData.startTime = "09:00";
+                                  newData.endTime = "18:00";
+                                }
+                                return { ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, saturday: newData } } };
+                              })
+                            }
+                            className={`px-2 py-0.5 rounded text-[10px] font-medium ${projectForm.workSchedule.days.saturday.isWorkDay ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}
+                          >
+                            {projectForm.workSchedule.days.saturday.isWorkDay ? "Laboral" : "No Laboral"}
+                          </button>
+                        </div>
+                        {projectForm.workSchedule.days.saturday.isWorkDay && (
+                          <div className="flex gap-2 items-center">
+                            <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.days.saturday.startTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, saturday: { ...p.workSchedule.days.saturday, startTime: e.target.value } } } }))} />
+                            <span className="text-gray-400">a</span>
+                            <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.days.saturday.endTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, saturday: { ...p.workSchedule.days.saturday, endTime: e.target.value } } } }))} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Domingo</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProjectForm((p) => {
+                                const newIsWorkDay = !p.workSchedule.days.sunday.isWorkDay;
+                                const newData = { ...p.workSchedule.days.sunday, isWorkDay: newIsWorkDay };
+                                if (newIsWorkDay && (!newData.startTime || newData.startTime === "")) {
+                                  newData.startTime = "09:00";
+                                  newData.endTime = "18:00";
+                                }
+                                return { ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, sunday: newData } } };
+                              })
+                            }
+                            className={`px-2 py-0.5 rounded text-[10px] font-medium ${projectForm.workSchedule.days.sunday.isWorkDay ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}
+                          >
+                            {projectForm.workSchedule.days.sunday.isWorkDay ? "Laboral" : "No Laboral"}
+                          </button>
+                        </div>
+                        {projectForm.workSchedule.days.sunday.isWorkDay && (
+                          <div className="flex gap-2 items-center">
+                            <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.days.sunday.startTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, sunday: { ...p.workSchedule.days.sunday, startTime: e.target.value } } } }))} />
+                            <span className="text-gray-400">a</span>
+                            <input type="time" className="input-field text-sm flex-1" value={projectForm.workSchedule.days.sunday.endTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, sunday: { ...p.workSchedule.days.sunday, endTime: e.target.value } } } }))} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {projectForm.workSchedule.mode === "per_day" && (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const).map((day) => {
+                        const dayLabels: Record<string, string> = { monday: "Lunes", tuesday: "Martes", wednesday: "Miércoles", thursday: "Jueves", friday: "Viernes", saturday: "Sábado", sunday: "Domingo" };
+                        const dayData = projectForm.workSchedule.days[day];
+                        return (
+                          <div key={day} className="bg-gray-50 dark:bg-gray-800 p-2 rounded flex items-center gap-2">
+                            <span className="text-xs font-medium w-20">{dayLabels[day]}</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProjectForm((p) => {
+                                  const newIsWorkDay = !p.workSchedule.days[day].isWorkDay;
+                                  const newData = { ...p.workSchedule.days[day], isWorkDay: newIsWorkDay };
+                                  if (newIsWorkDay && (!newData.startTime || newData.startTime === "")) {
+                                    newData.startTime = "09:00";
+                                    newData.endTime = "18:00";
+                                  }
+                                  return { ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, [day]: newData } } };
+                                })
+                              }
+                              className={`px-2 py-1 rounded text-[10px] font-medium ${dayData.isWorkDay ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}
+                            >
+                              {dayData.isWorkDay ? "Sí" : "No"}
+                            </button>
+                            {dayData.isWorkDay && (
+                              <>
+                                <input type="time" className="input-field text-xs flex-1 py-1" value={dayData.startTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, [day]: { ...p.workSchedule.days[day], startTime: e.target.value } } } }))} />
+                                <span className="text-gray-400 text-xs">-</span>
+                                <input type="time" className="input-field text-xs flex-1 py-1" value={dayData.endTime} onChange={(e) => setProjectForm((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, [day]: { ...p.workSchedule.days[day], endTime: e.target.value } } } }))} />
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Estado - al final */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
                     <button
@@ -335,37 +507,127 @@ export const ProjectDetailPage: React.FC = () => {
             )}
 
             {modalMode === "viewProjectInfo" && (
-              <div className="space-y-6">
-                <div>
+              <div className="space-y-4">
+                {/* Descripción */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
                   <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Descripción</h4>
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{project.description || "Sin descripción proporcionada."}</p>
                 </div>
 
-                {project.objectives && project.objectives.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Objetivos</h4>
+                {/* Objetivos */}
+                {project.objectives && project.objectives.length > 0 && project.objectives.some((o) => o.trim()) && (
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FontAwesomeIcon icon={faBullseye} className="text-blue-500 h-4 w-4" />
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Objetivos</h4>
+                    </div>
                     <ul className="space-y-2">
-                      {project.objectives.map((obj, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                          <FontAwesomeIcon icon={faBullseye} className="text-primary-500 mt-1 h-3 w-3" />
-                          {obj}
-                        </li>
-                      ))}
+                      {project.objectives
+                        .filter((o) => o.trim())
+                        .map((obj, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <span className="text-blue-500 mt-1">•</span>
+                            {obj}
+                          </li>
+                        ))}
                     </ul>
                   </div>
                 )}
 
-                {project.targetAudience && (
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Público Objetivo</h4>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{project.targetAudience}</p>
+                {/* Horario de Trabajo */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FontAwesomeIcon icon={faClock} className="text-blue-500 h-4 w-4" />
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Horario de Trabajo</h4>
                   </div>
-                )}
+                  {project.workSchedule ? (
+                    <div className="space-y-2 text-sm">
+                      {(project.workSchedule.mode === "weekdays" || !project.workSchedule.mode) && (
+                        <>
+                          <div className="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700">
+                            <span className="text-gray-600 dark:text-gray-400">Lunes a Viernes</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {project.workSchedule.weekdays?.startTime || "09:00"} - {project.workSchedule.weekdays?.endTime || "18:00"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600 dark:text-gray-400">Sábado y Domingo</span>
+                            <span className="text-gray-500">No laboral</span>
+                          </div>
+                        </>
+                      )}
+                      {project.workSchedule.mode === "all_week" && (
+                        <>
+                          <div className="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700">
+                            <span className="text-gray-600 dark:text-gray-400">Lunes a Viernes</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {project.workSchedule.weekdays?.startTime || "09:00"} - {project.workSchedule.weekdays?.endTime || "18:00"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700">
+                            <span className="text-gray-600 dark:text-gray-400">Sábado</span>
+                            {project.workSchedule.days?.saturday?.isWorkDay ? (
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {project.workSchedule.days.saturday.startTime} - {project.workSchedule.days.saturday.endTime}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">No laboral</span>
+                            )}
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600 dark:text-gray-400">Domingo</span>
+                            {project.workSchedule.days?.sunday?.isWorkDay ? (
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {project.workSchedule.days.sunday.startTime} - {project.workSchedule.days.sunday.endTime}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">No laboral</span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                      {project.workSchedule.mode === "per_day" && (
+                        <>
+                          {(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const).map((day, idx, arr) => {
+                            const dayLabels: Record<string, string> = { monday: "Lunes", tuesday: "Martes", wednesday: "Miércoles", thursday: "Jueves", friday: "Viernes", saturday: "Sábado", sunday: "Domingo" };
+                            const dayData = project.workSchedule?.days?.[day];
+                            return (
+                              <div key={day} className={`flex justify-between items-center py-1 ${idx < arr.length - 1 ? "border-b border-gray-200 dark:border-gray-700" : ""}`}>
+                                <span className="text-gray-600 dark:text-gray-400">{dayLabels[day]}</span>
+                                {dayData?.isWorkDay ? (
+                                  <span className="font-medium text-gray-900 dark:text-white">
+                                    {dayData.startTime} - {dayData.endTime}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500">No laboral</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Horario no configurado</p>
+                  )}
+                </div>
 
-                <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <p className="text-xs text-gray-500">
-                    Duración: {project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}
-                  </p>
+                {/* Estadísticas */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{assignedUsers.length}</div>
+                      <div className="text-xs text-gray-500">Personas</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{project.objectives?.filter((o) => o.trim()).length || 0}</div>
+                      <div className="text-xs text-gray-500">Objetivos</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">{project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"}</div>
+                      <div className="text-xs text-gray-500">Creado</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -385,7 +647,7 @@ export const ProjectDetailPage: React.FC = () => {
 
                       return (
                         <div key={idx} className="flex items-center gap-3 py-3">
-                          <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-xs">{initial}</div>
+                          <div className="w-8 h-8 rounded bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-xs">{initial}</div>
                           <div>
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{name}</p>
                             <p className="text-xs text-gray-500">{email}</p>

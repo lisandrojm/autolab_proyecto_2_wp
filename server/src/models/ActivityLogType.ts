@@ -6,6 +6,8 @@ export interface IActivityLogType extends Document {
   order: number;
   requiresReplacement: boolean;
   isActive: boolean;
+  visibility: "all" | "specific";
+  allowedProjectIds: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,6 +19,12 @@ const activityLogTypeSchema = new Schema<IActivityLogType>(
     order: { type: Number, default: 0 },
     requiresReplacement: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    visibility: {
+      type: String,
+      enum: ["all", "specific"],
+      default: "all",
+    },
+    allowedProjectIds: [{ type: Schema.Types.ObjectId, ref: "Project", default: [] }],
   },
   { timestamps: true }
 );

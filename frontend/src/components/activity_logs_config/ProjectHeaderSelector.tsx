@@ -120,7 +120,7 @@ export const ProjectHeaderSelector: React.FC<ProjectHeaderSelectorProps> = ({ on
         {clients.length === 0 ? (
           <button
             onClick={() => navigate("/register-client")} // Correct route for client creation
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-blue-500 border-dashed rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-blue-500 border-dashed rounded text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
           >
             <FontAwesomeIcon icon={faPlus} />
             <span>Crear Cliente</span>
@@ -135,7 +135,7 @@ export const ProjectHeaderSelector: React.FC<ProjectHeaderSelectorProps> = ({ on
                 setSelectedProject(""); // Reset project when client changes
                 onSelectProject(null);
               }}
-              className="w-full pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
+              className="w-full pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
             >
               {/* Remove 'Todos los Clientes' if strictly forcing selection, but keeping it as fallback or explicit 'All' (though logic seems to filter projects by client) */}
               {/* If requirements are strict about 'always selected', we might remove the default option if lists are non-empty. But keeping it as 'Select' is fine if autoselect works. */}
@@ -157,7 +157,7 @@ export const ProjectHeaderSelector: React.FC<ProjectHeaderSelectorProps> = ({ on
         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Proyecto</label>
         <div className="relative">
           <FontAwesomeIcon icon={faBriefcase} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select value={selectedProject} onChange={(e) => handleProjectChange(e.target.value)} disabled={loading} className="w-full pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none disabled:opacity-50">
+          <select value={selectedProject} onChange={(e) => handleProjectChange(e.target.value)} disabled={loading} className="w-full pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none disabled:opacity-50">
             <option value="">{loading ? "Cargando..." : "Seleccionar Proyecto"}</option>
             {projects.map((project) => (
               <option key={project._id} value={project._id}>

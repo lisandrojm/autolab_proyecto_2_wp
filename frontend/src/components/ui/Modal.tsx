@@ -78,7 +78,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
                     </div>
                   ))}
               </div>
-              <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
+              <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
                 <FontAwesomeIcon icon={faXmark} className="h-5 w-5 text-gray-500" />
               </button>
             </div>

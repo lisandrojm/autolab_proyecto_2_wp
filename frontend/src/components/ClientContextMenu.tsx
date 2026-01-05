@@ -55,7 +55,7 @@ export const ClientContextMenu: React.FC = () => {
           if (!hasPermission(item.permission)) return null;
           const active = isActive(item.actualPath);
           return (
-            <button key={item.path} onClick={() => handleNavigation(item.actualPath)} aria-current={active ? "page" : undefined} className={`group w-full relative flex items-center justify-between px-2 py-2 rounded-lg text-left transition-all ${active ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300" : "text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-blue-900/30"}`}>
+            <button key={item.path} onClick={() => handleNavigation(item.actualPath)} aria-current={active ? "page" : undefined} className={`group w-full relative flex items-center justify-between px-2 py-2 rounded text-left transition-all ${active ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300" : "text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-blue-900/30"}`}>
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <FontAwesomeIcon icon={item.icon} className={`h-4 w-4 flex-shrink-0 ${active ? "text-primary-600 dark:text-primary-400" : "text-gray-400"}`} />
                 <span className="text-sm font-medium truncate">{item.label}</span>

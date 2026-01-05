@@ -173,15 +173,15 @@ export const PositionsPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <button onClick={openCreate} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
             </button>
           )}
-          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Usuarios</span>
           </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
           </button>
@@ -254,7 +254,7 @@ export const PositionsPage: React.FC = () => {
                 return (
                   <div className="space-y-6">
                     {/* Específicos */}
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/30">
+                    <div className="border border-gray-200 dark:border-gray-700 rounded p-4 bg-gray-50 dark:bg-gray-800/30">
                       <div className="flex items-center gap-2 mb-3">
                         <FontAwesomeIcon icon={faUserTie} className="text-blue-500 dark:text-blue-400" />
                         <h5 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Específicos</h5>
@@ -279,7 +279,7 @@ export const PositionsPage: React.FC = () => {
                     </div>
 
                     {/* Generales */}
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/30">
+                    <div className="border border-gray-200 dark:border-gray-700 rounded p-4 bg-gray-50 dark:bg-gray-800/30">
                       <div className="flex items-center gap-2 mb-3">
                         <FontAwesomeIcon icon={faGlobe} className="text-blue-400 dark:text-blue-300" />
                         <h5 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Generales</h5>
@@ -397,7 +397,7 @@ export const PositionsPage: React.FC = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {specificLevels.map((level) => (
-                      <span key={level._id} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-xs text-blue-100">
+                      <span key={level._id} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-blue-500/20 text-xs text-blue-100">
                         <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 text-blue-200" />
                         <span className="font-medium">{level.name}</span>
                       </span>

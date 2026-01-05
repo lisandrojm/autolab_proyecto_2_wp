@@ -405,23 +405,23 @@ export const UsersPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <button onClick={openCreate} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
             </button>
           )}
-          <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Roles</span>
           </button>
-          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Cargos</span>
           </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
           </button>
-          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Areas</span>
           </button>
@@ -846,7 +846,7 @@ export const UsersPage: React.FC = () => {
                 {/* ROLES */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
-                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-64 overflow-y-auto space-y-4">
+                  <div className="border border-gray-300 dark:border-gray-600 rounded p-3 max-h-64 overflow-y-auto space-y-4">
                     {/* System Roles */}
                     <div>
                       <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sistema</h4>
@@ -854,7 +854,7 @@ export const UsersPage: React.FC = () => {
                         {roles
                           .filter((role) => role.name.toLowerCase() !== "superadmin" && !role.name.toLowerCase().includes("mobile"))
                           .map((role) => (
-                            <label key={role._id} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                            <label key={role._id} className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
                               <input
                                 type="checkbox"
                                 checked={formData.roles.includes(role._id)}
@@ -884,7 +884,7 @@ export const UsersPage: React.FC = () => {
                           {roles
                             .filter((role) => role.name.toLowerCase().includes("mobile"))
                             .map((role) => (
-                              <label key={role._id} className="flex items-start space-x-3 p-2 rounded-lg bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-colors border border-indigo-100 dark:border-indigo-800/30">
+                              <label key={role._id} className="flex items-start space-x-3 p-2 rounded bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-colors border border-indigo-100 dark:border-indigo-800/30">
                                 <input
                                   type="checkbox"
                                   checked={formData.roles.includes(role._id)}
@@ -933,7 +933,7 @@ export const UsersPage: React.FC = () => {
                 {/* PROYECTOS */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proyectos</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded p-3 max-h-48 overflow-y-auto">
                     {allProjects.length === 0 ? (
                       <p className="text-xs text-gray-500 dark:text-gray-400 p-2">No hay proyectos disponibles.</p>
                     ) : (
@@ -959,7 +959,7 @@ export const UsersPage: React.FC = () => {
                                   setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
                                 }
                               }}
-                              className={`w-full flex flex-col items-start px-3 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm text-left ${isSelected ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-300 ring-1 ring-blue-300 dark:ring-blue-700" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                              className={`w-full flex flex-col items-start px-3 py-2 rounded text-sm font-medium transition-colors shadow-sm text-left ${isSelected ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-300 ring-1 ring-blue-300 dark:ring-blue-700" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
                             >
                               <div className="flex items-center w-full">
                                 <FontAwesomeIcon icon={isSelected ? faToggleOn : faToggleOff} className={`mr-2.5 text-lg ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`} />

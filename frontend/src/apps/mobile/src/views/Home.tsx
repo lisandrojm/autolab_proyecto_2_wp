@@ -168,11 +168,11 @@ export default function Home({ onNavigate }: HomeProps) {
         <UserHeader user={user} />
 
         <div className="flex items-center gap-1">
-          <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
           </button>
 
-          <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
             <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>
         </div>
@@ -188,7 +188,7 @@ export default function Home({ onNavigate }: HomeProps) {
               <p className="text-sm text-green-700 dark:text-green-300">{latestNotification.message}</p>
             </div>
             {unreadCount > 1 && (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 dark:bg-green-500">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 dark:bg-green-500">
                 <span className="text-xs font-bold text-white">{unreadCount}</span>
               </div>
             )}
@@ -210,7 +210,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
               {/* BADGE */}
-              <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
+              <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
               <div className="flex-col gap-1 items-center space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center">
@@ -234,7 +234,7 @@ export default function Home({ onNavigate }: HomeProps) {
         <div className="flex flex-col gap-3 px-4">
           {[1, 2].map((i) => (
             <div key={i} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-              <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="h-10 w-10 rounded bg-slate-200 dark:bg-slate-700" />
               <div className="flex-1">
                 <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
                 <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
@@ -250,7 +250,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
             return (
               <div key={activity._id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${colors.bg}`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded ${colors.bg}`}>
                   <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${colors.icon}`} />
                 </div>
                 <div className="flex-1">

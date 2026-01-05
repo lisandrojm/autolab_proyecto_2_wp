@@ -35,7 +35,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, tit
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="md" footer={footer}>
       <div className="text-center py-4">
         <div className="flex justify-center mb-4">
-          <div className="rounded-full bg-blue-100 dark:bg-blue-900/20 p-3">
+          <div className="rounded bg-blue-100 dark:bg-blue-900/20 p-3">
             <FontAwesomeIcon icon={faCheckCircle} className="h-12 w-12 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
@@ -43,7 +43,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, tit
         <p className="text-base text-gray-700 dark:text-gray-300 mb-4">{message}</p>
 
         {email && (
-          <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-900/40 rounded p-4 border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Credenciales de acceso:</p>
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">

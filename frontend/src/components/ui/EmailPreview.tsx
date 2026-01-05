@@ -30,8 +30,8 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({ config, images = [] 
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Así es como los destinatarios verán tu email</p>
       </div>
 
-      <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-6 space-y-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden max-w-3xl mx-auto">
+      <div className="bg-gray-100 dark:bg-gray-900 rounded p-6 space-y-4">
+        <div className="bg-white dark:bg-gray-800 rounded shadow-lg overflow-hidden max-w-3xl mx-auto">
           <div className="bg-gray-50 dark:bg-gray-900 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">De: {config.replyTo || "noreply@ejemplo.com"}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Para: {config.recipients && config.recipients.length > 0 ? config.recipients.slice(0, 3).join(", ") + (config.recipients.length > 3 ? ` y ${config.recipients.length - 3} más` : "") : "destinatarios@ejemplo.com"}</div>
@@ -65,7 +65,7 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({ config, images = [] 
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Imágenes adjuntas:</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {images.slice(0, 6).map((img, index) => (
-                    <div key={index} className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                    <div key={index} className="aspect-video rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
                       <img src={img} alt={`Adjunto ${index + 1}`} className="w-full h-full object-cover" />
                     </div>
                   ))}
@@ -85,7 +85,7 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({ config, images = [] 
         </div>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
         <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Información del Email</h4>
         <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
           <div>
@@ -112,7 +112,7 @@ export const EmailPreview: React.FC<EmailPreviewProps> = ({ config, images = [] 
         </div>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
         <div className="flex gap-2 text-sm text-blue-800 dark:text-blue-300">
           <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4 text-blue-300" />
           <div>

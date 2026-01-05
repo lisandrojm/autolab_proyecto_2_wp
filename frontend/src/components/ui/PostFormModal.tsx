@@ -654,7 +654,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button onClick={handleCancel} disabled={isSaving} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" title={isSaving ? "Guardando..." : "Cerrar"}>
+        <button onClick={handleCancel} disabled={isSaving} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" title={isSaving ? "Guardando..." : "Cerrar"}>
           <FontAwesomeIcon icon={faXmark} className="h-6 w-6 text-gray-500" />
         </button>
       </div>
@@ -706,7 +706,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
               <div className="flex-1 overflow-y-auto p-6">
                 {activeTab === "context" && needsContextSelection && (
                   <div className="max-w-4xl mx-auto space-y-6">
-                    {/*          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                    {/*          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4 mb-6">
                       <p className="text-sm text-blue-800 dark:text-blue-300">Selecciona el proyecto y la campaña donde se publicará este post</p>
                     </div> */}
 
@@ -720,7 +720,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                         onChange={(e) => {
                           setSelectedProjectId(e.target.value);
                         }}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                       >
                         <option value="">Selecciona un proyecto</option>
                         {availableProjects.map((project) => (
@@ -765,7 +765,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                     {/*                     {(formData.postType === "email" || formData.postType === "push" || (formData.postType === "social" && formData.contentFormat && formData.platforms && formData.platforms.length > 0)) && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
-                        <select value={formData.status} onChange={(e) => handleInputChange("status", e.target.value as PostStatus)} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
+                        <select value={formData.status} onChange={(e) => handleInputChange("status", e.target.value as PostStatus)} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
                           <option value="draft">Borrador</option>
                           <option value="pending_approval">Pendiente de aprobación</option>
                           <option value="approved">Aprobado</option>
@@ -786,18 +786,18 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                       {existingImageUrls.length > 0 || imagePreviews.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
                           {existingImageUrls.map((url, index) => (
-                            <div key={`existing-${index}`} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            <div key={`existing-${index}`} className="relative group aspect-square rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
                               <img src={url} alt={`Existing ${index + 1}`} className="w-full h-full object-cover" />
-                              <button type="button" onClick={() => handleRemoveExistingImage(index)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
+                              <button type="button" onClick={() => handleRemoveExistingImage(index)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
                                 <X className="h-4 w-4" />
                               </button>
                               {index === 0 && existingImageUrls.length > 0 && imagePreviews.length === 0 && <div className="absolute top-2 left-2 px-2 py-1 bg-primary-600 text-white text-xs font-medium rounded shadow">Principal</div>}
                             </div>
                           ))}
                           {imagePreviews.map((preview, index) => (
-                            <div key={`new-${index}`} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            <div key={`new-${index}`} className="relative group aspect-square rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
                               <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
-                              <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
+                              <button type="button" onClick={() => handleRemoveImage(index)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600">
                                 <X className="h-4 w-4" />
                               </button>
                               {index === 0 && existingImageUrls.length === 0 && <div className="absolute top-2 left-2 px-2 py-1 bg-primary-600 text-white text-xs font-medium rounded shadow">Principal</div>}
@@ -806,7 +806,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 mb-6">
+                        <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded border-2 border-dashed border-gray-300 dark:border-gray-700 mb-6">
                           <ImageIcon className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                           <p className="text-gray-500 dark:text-gray-400 mb-2">No hay imágenes seleccionadas</p>
                           <p className="text-sm text-gray-400 dark:text-gray-500">Arrastra imágenes aquí o selecciónalas desde la galería lateral</p>
@@ -827,7 +827,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                       <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 10MB</p>
                     </div>
 
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
                       <p className="text-sm text-blue-800 dark:text-blue-300">
                         <FontAwesomeIcon icon={faLightbulb} className="h-3.5 w-3.5" /> También puedes seleccionar imágenes generadas con IA desde el panel lateral de la galería
                       </p>
@@ -838,9 +838,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                 {activeTab === "scheduling" && (
                   <div className="max-w-4xl mx-auto space-y-6">
                     <div className="space-y-3">
-                      <label className={`relative flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.publicationType === "immediate" ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md"}`}>
+                      <label className={`relative flex items-center gap-3 p-4 border-2 rounded cursor-pointer transition-all ${formData.publicationType === "immediate" ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md"}`}>
                         {formData.publicationType === "immediate" && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800 z-10">
+                          <div className="absolute -top-2 -right-2 w-6 h-6 rounded bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800 z-10">
                             <span className="text-white text-xs font-bold">✓</span>
                           </div>
                         )}
@@ -866,9 +866,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                         </div>
                       </label>
 
-                      <label className={`relative flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.publicationType === "scheduled" ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md"}`}>
+                      <label className={`relative flex items-center gap-3 p-4 border-2 rounded cursor-pointer transition-all ${formData.publicationType === "scheduled" ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md"}`}>
                         {formData.publicationType === "scheduled" && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800 z-10">
+                          <div className="absolute -top-2 -right-2 w-6 h-6 rounded bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800 z-10">
                             <span className="text-white text-xs font-bold">✓</span>
                           </div>
                         )}
@@ -894,9 +894,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                         </div>
                       </label>
 
-                      <label className={`relative flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.publicationType === "draft" ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md"}`}>
+                      <label className={`relative flex items-center gap-3 p-4 border-2 rounded cursor-pointer transition-all ${formData.publicationType === "draft" ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md"}`}>
                         {formData.publicationType === "draft" && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800 z-10">
+                          <div className="absolute -top-2 -right-2 w-6 h-6 rounded bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-gray-800 z-10">
                             <span className="text-white text-xs font-bold">✓</span>
                           </div>
                         )}
@@ -930,12 +930,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                             <FontAwesomeIcon icon={faCalendar} className="h-4 w-4 mr-2" />
                             Fecha y hora de publicación *
                           </label>
-                          <input type="datetime-local" value={formData.scheduling.publishAt} onChange={(e) => handleSchedulingChange("publishAt", e.target.value)} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
+                          <input type="datetime-local" value={formData.scheduling.publishAt} onChange={(e) => handleSchedulingChange("publishAt", e.target.value)} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zona horaria</label>
-                          <select value={formData.scheduling.timezone} onChange={(e) => handleSchedulingChange("timezone", e.target.value)} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
+                          <select value={formData.scheduling.timezone} onChange={(e) => handleSchedulingChange("timezone", e.target.value)} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white">
                             <option value="UTC">UTC</option>
                             <option value="America/New_York">America/New_York (EST)</option>
                             <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
@@ -963,7 +963,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                           </label>
 
                           {formData.scheduling.recurrence?.enabled && (
-                            <div className="mt-4 ml-8 space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                            <div className="mt-4 ml-8 space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded">
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
                                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frecuencia</label>
@@ -973,7 +973,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                                       const newRecurrence = { ...formData.scheduling.recurrence, frequency: e.target.value as any };
                                       handleSchedulingChange("recurrence", newRecurrence);
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
                                   >
                                     <option value="daily">Diariamente</option>
                                     <option value="weekly">Semanalmente</option>
@@ -993,7 +993,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                                         const newRecurrence = { ...formData.scheduling.recurrence, interval: parseInt(e.target.value) || 1 };
                                         handleSchedulingChange("recurrence", newRecurrence);
                                       }}
-                                      className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
+                                      className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
                                     />
                                     <span className="text-sm text-gray-600 dark:text-gray-400">
                                       {formData.scheduling.recurrence.frequency === "daily" && (formData.scheduling.recurrence.interval === 1 ? "día" : "días")}
@@ -1021,7 +1021,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                                             const newRecurrence = { ...formData.scheduling.recurrence, daysOfWeek: newDays };
                                             handleSchedulingChange("recurrence", newRecurrence);
                                           }}
-                                          className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${isSelected ? "bg-primary-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"}`}
+                                          className={`px-3 py-2 rounded font-medium text-sm transition-colors ${isSelected ? "bg-primary-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"}`}
                                         >
                                           {day}
                                         </button>
@@ -1043,7 +1043,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                                       const newRecurrence = { ...formData.scheduling.recurrence, dayOfMonth: parseInt(e.target.value) || 1 };
                                       handleSchedulingChange("recurrence", newRecurrence);
                                     }}
-                                    className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
+                                    className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
                                   />
                                 </div>
                               )}
@@ -1088,7 +1088,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                                           const newRecurrence = { ...formData.scheduling.recurrence, endDate: e.target.value };
                                           handleSchedulingChange("recurrence", newRecurrence);
                                         }}
-                                        className="ml-2 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white text-sm"
+                                        className="ml-2 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white text-sm"
                                       />
                                     )}
                                   </label>
@@ -1116,7 +1116,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                                             const newRecurrence = { ...formData.scheduling.recurrence, endAfterOccurrences: parseInt(e.target.value) || 1 };
                                             handleSchedulingChange("recurrence", newRecurrence);
                                           }}
-                                          className="ml-2 w-20 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white text-sm"
+                                          className="ml-2 w-20 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white text-sm"
                                         />
                                         <span className="text-sm text-gray-600 dark:text-gray-400">ocurrencias</span>
                                       </>
@@ -1125,7 +1125,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                                 </div>
                               </div>
 
-                              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
                                 <p className="text-xs text-blue-800 dark:text-blue-300">
                                   💡 <strong>Resumen:</strong> Este post se publicará {formData.scheduling.recurrence.frequency === "daily" && `cada ${formData.scheduling.recurrence.interval === 1 ? "" : formData.scheduling.recurrence.interval} ${formData.scheduling.recurrence.interval === 1 ? "día" : "días"}`}
                                   {formData.scheduling.recurrence.frequency === "weekly" && `cada ${formData.scheduling.recurrence.interval === 1 ? "" : formData.scheduling.recurrence.interval} ${formData.scheduling.recurrence.interval === 1 ? "semana" : "semanas"}`}
@@ -1138,7 +1138,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                           )}
                         </div>
 
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
                           <p className="text-sm text-blue-800 dark:text-blue-300">
                             ⚠️ <strong>Importante:</strong> El post se publicará automáticamente en la fecha y hora seleccionada. Asegúrate de revisar todo antes de programar.
                           </p>
@@ -1147,7 +1147,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                     )}
 
                     {formData.publicationType === "immediate" && (
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-8 text-center">
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded p-8 text-center">
                         <FontAwesomeIcon icon={faPaperPlane} className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                         <p className="text-gray-500 dark:text-gray-400 mb-2">Publicación inmediata</p>
                         <p className="text-sm text-gray-400 dark:text-gray-500">Este post se publicará inmediatamente al guardar</p>
@@ -1155,7 +1155,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                     )}
 
                     {formData.publicationType === "draft" && (
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-8 text-center">
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded p-8 text-center">
                         <Save className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                         <p className="text-gray-500 dark:text-gray-400 mb-2">Guardar </p>
                         <p className="text-sm text-gray-400 dark:text-gray-500">Este post se guardará sin programación. Podrás publicarlo o programarlo cuando lo decidas</p>
@@ -1188,7 +1188,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                 <div className="flex items-center gap-4">
                   <p className="text-xs text-gray-500 dark:text-gray-500">* Campos obligatorios</p>
                   {(existingImageUrls.length > 0 || imagePreviews.length > 0) && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-100 dark:bg-primary-900/30 rounded">
                       <ImageIcon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
                       <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
                         {existingImageUrls.length + imagePreviews.length} {existingImageUrls.length + imagePreviews.length === 1 ? "imagen" : "imágenes"}
@@ -1211,7 +1211,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                           }
                           setActiveTab(previousTab);
                         }}
-                        className="px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+                        className="px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
                       >
                         <ChevronLeft className="h-4 w-4" />
                         Volver
@@ -1219,15 +1219,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                     ) : null;
                   })()}
 
-                  <button onClick={handleCancel} disabled={isSaving} className="px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  <button onClick={handleCancel} disabled={isSaving} className="px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     Cancelar
                   </button>
 
                   {mode === "edit" && activeTab !== "preview" && (
-                    <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+                    <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
                       {isSaving ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded h-4 w-4 border-b-2 border-white"></div>
                           Guardando...
                         </>
                       ) : (
@@ -1240,15 +1240,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({ isOpen, onClose, o
                   )}
 
                   {activeTab !== "preview" ? (
-                    <button onClick={handleContinueToNextTab} disabled={!canContinueFromCurrentTab() || isSaving} className="px-6 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed disabled:opacity-60 transition-colors flex items-center gap-2" title={activeTab === "scheduling" && formData.publicationType === "scheduled" && !formData.scheduling.publishAt ? "Debes seleccionar una fecha y hora de publicación" : ""}>
+                    <button onClick={handleContinueToNextTab} disabled={!canContinueFromCurrentTab() || isSaving} className="px-6 py-2.5 text-sm font-medium bg-primary-600 text-white rounded hover:bg-primary-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed disabled:opacity-60 transition-colors flex items-center gap-2" title={activeTab === "scheduling" && formData.publicationType === "scheduled" && !formData.scheduling.publishAt ? "Debes seleccionar una fecha y hora de publicación" : ""}>
                       Continuar
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   ) : (
-                    <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
+                    <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 text-sm font-medium bg-primary-600 text-white rounded hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
                       {isSaving ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded h-4 w-4 border-b-2 border-white"></div>
                           Guardando...
                         </>
                       ) : (

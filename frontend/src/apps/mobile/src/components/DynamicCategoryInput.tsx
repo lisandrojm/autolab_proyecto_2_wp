@@ -89,7 +89,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                       onDynamicValueChange(newValue);
                     }}
                     required
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                    className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -108,7 +108,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     }}
                     min={fechaDesde || ""}
                     required
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                    className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
                   />
                 </div>
               </div>
@@ -118,7 +118,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           return (
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha</label>
-              <input type="date" value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+              <input type="date" value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
             </div>
           );
         }
@@ -131,14 +131,14 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         return (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Monto ($)</label>
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 mb-3">
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded p-4 mb-3">
               <div className="text-center mb-4">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">$ {currentMonto.toLocaleString("es-ES")}</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Monto seleccionado</div>
               </div>
 
               <div className="space-y-2">
-                <input type="range" min="0" max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onAmountChange?.(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider-thumb" required />
+                <input type="range" min="0" max={maxMonto} step={stepMonto} value={currentMonto} onChange={(e) => onAmountChange?.(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded appearance-none cursor-pointer slider-thumb" required />
 
                 <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>$ 0</span>
@@ -182,7 +182,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         return (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Especifica el objeto</label>
-            <input type="text" value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Ej: Laptop Dell XPS 15, Mouse Logitech..." />
+            <input type="text" value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" placeholder="Ej: Laptop Dell XPS 15, Mouse Logitech..." />
           </div>
         );
 
@@ -190,7 +190,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         return (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Detalles adicionales</label>
-            <textarea value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required rows={4} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe tu solicitud con el mayor detalle posible..." />
+            <textarea value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required rows={4} className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none" placeholder="Describe tu solicitud con el mayor detalle posible..." />
           </div>
         );
 
@@ -241,7 +241,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
       {hasSubcategories && (
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Opciones</label>
-          <select value={subcategories} onChange={(e) => onSubcategoriesChange(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none">
+          <select value={subcategories} onChange={(e) => onSubcategoriesChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none">
             <option value="">Selecciona una opción</option>
             {category.config.subtipos?.map((subtipo) => (
               <option key={subtipo.id} value={subtipo.id}>
@@ -258,29 +258,29 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
         <div className="space-y-3">
           {/* Presentación de Documento */}
           {category.futureActionType === "documento" && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1"> Presentar "{category.documentoRequerido && <span>{category.documentoRequerido}"</span>}</p>
               {renderDeadlineInfo()}
 
               {/*               <div className="mt-3">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subir Documento</label>
                 {documentPreview ? (
-                  <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                  <div className="relative rounded overflow-hidden border-2 border-slate-300 dark:border-slate-600">
                     <img src={documentPreview} alt="Preview" className="w-full h-48 object-cover" />
-                    <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
+                    <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
                       <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
                       <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-slate-400" />
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
                     </button>
 
                     <inpt ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
                       <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Archivo</span>
                     </button>
@@ -291,7 +291,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           )}
 
           {category.futureActionType === "otra" && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-3">
               <div className="flex items-start gap-2">
                 <span className="text-xl">⚠️</span>
                 <div className="flex-1">

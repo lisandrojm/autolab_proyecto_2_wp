@@ -254,7 +254,7 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({ selectedChanne
               type="button"
               onClick={() => handleCategorySelect(key)}
               className={`
-                p-4 rounded-lg border-2 transition-all duration-200
+                p-4 rounded border-2 transition-all duration-200
                 flex flex-col items-center gap-2 text-center
                 ${selectedCategory === key ? "border-blue-300 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700 scale-[1.01]" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-300 hover:shadow-md"}
               `}
@@ -297,7 +297,7 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({ selectedChanne
                     type="button"
                     onClick={() => handleFormatSelect(format)}
                     className={`
-                      p-4 rounded-lg border-2 transition-all duration-200
+                      p-4 rounded border-2 transition-all duration-200
                       flex flex-col items-center gap-2 text-center min-h-[140px]
                       ${isSelected ? "border-blue-300 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700 scale-[1.01]" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-300 hover:shadow-md"}
                     `}
@@ -342,7 +342,7 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({ selectedChanne
                       type="button"
                       onClick={() => handlePlatformToggle(platform)}
                       className={`
-                        p-4 rounded-lg border-2 transition-all duration-200
+                        p-4 rounded border-2 transition-all duration-200
                         flex items-center gap-3 text-left
                         ${isSelected ? "border-blue-300 bg-blue-50 dark:bg-blue-900/30 shadow-lg ring-2 ring-blue-300 dark:ring-blue-700 scale-[1.01]" : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-300 hover:shadow-md"}
                       `}

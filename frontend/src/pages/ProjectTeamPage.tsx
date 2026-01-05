@@ -300,7 +300,7 @@ export const ProjectTeamPage: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Disponibles ({filteredCandidates.length})</h3>
-              {(searchTerm || selectedArea || selectedPosition) && <span className="text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-1 rounded-full">Filtros activos</span>}
+              {(searchTerm || selectedArea || selectedPosition) && <span className="text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-1 rounded">Filtros activos</span>}
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-y-auto p-2 custom-scrollbar">
@@ -315,9 +315,9 @@ export const ProjectTeamPage: React.FC = () => {
                     const isCoordinator = checkIsCoordinator(user);
 
                     return (
-                      <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
+                      <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
                         <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                          <div className="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
                             <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -339,7 +339,7 @@ export const ProjectTeamPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <button onClick={() => handleAddUser(user._id)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors" title="Agregar al equipo">
+                        <button onClick={() => handleAddUser(user._id)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors" title="Agregar al equipo">
                           <FontAwesomeIcon icon={faUserPlus} />
                         </button>
                       </div>
@@ -365,9 +365,9 @@ export const ProjectTeamPage: React.FC = () => {
                 const isNotifier = userConfig ? userConfig.isNotifier : false;
 
                 return (
-                  <div key={user._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 transition-colors group">
+                  <div key={user._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/20 rounded border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 transition-colors group">
                     <div className="flex items-center gap-3 overflow-hidden flex-1">
-                      <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                      <div className="w-10 h-10 rounded bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -392,11 +392,11 @@ export const ProjectTeamPage: React.FC = () => {
 
                     <div className="flex items-center gap-2">
                       {isCoord && (
-                        <button onClick={() => handleToggleNotifier(user._id)} title={isNotifier ? "Recibe notificaciones" : "Activar notificaciones"} className={`p-2 rounded-full transition-all ${isNotifier ? "text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" : "text-gray-300 dark:text-gray-600 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
+                        <button onClick={() => handleToggleNotifier(user._id)} title={isNotifier ? "Recibe notificaciones" : "Activar notificaciones"} className={`p-2 rounded transition-all ${isNotifier ? "text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" : "text-gray-300 dark:text-gray-600 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
                           <FontAwesomeIcon icon={faBell} />
                         </button>
                       )}
-                      <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Retirar del equipo">
+                      <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Retirar del equipo">
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
                     </div>
@@ -458,7 +458,7 @@ export const ProjectTeamPage: React.FC = () => {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Gestión de Notificaciones</h3>
             <div className="flex items-start gap-3">
-              <div className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full text-yellow-600 dark:text-yellow-400 shrink-0">
+              <div className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-yellow-600 dark:text-yellow-400 shrink-0">
                 <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
               </div>
               <div>

@@ -160,7 +160,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onEdit, onDelete, onAp
           <div className="flex justify-start">
             <div className="flex flex-wrap justify-center gap-2">
               {post.media[0].urls.slice(0, 4).map((url, idx) => (
-                <div key={idx} className="relative w-40 aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                <div key={idx} className="relative w-40 aspect-square rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
                   <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
                   {idx === 3 && post.media[0].urls.length > 4 && (
                     <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">

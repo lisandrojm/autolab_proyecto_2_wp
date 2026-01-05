@@ -162,7 +162,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
     return (
       <div className="flex flex-wrap gap-2 w-full justify-between">
         {header.badges.map((badge, index) => (
-          <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
+          <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
             {badge.icon && <FontAwesomeIcon icon={badge.icon} className="h-3 w-3" />}
             <span className="text-nowrap">{badge.text}</span>
           </span>
@@ -187,7 +187,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                         e.stopPropagation();
                         header.onToggleFavorite?.();
                       }}
-                      className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       title={header.favorite ? "Desanclar" : "Anclar"}
                     >
                       <FontAwesomeIcon icon={header.favorite ? faThumbtack : faThumbtackSlash} className={`h-4 w-4 ${header.favorite ? "text-blue-600 rotate-45" : "text-gray-400"}`} />
@@ -203,9 +203,9 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                 {header.avatar && (
                   <div className="w-10 h-10 flex-shrink-0">
                     {header.avatar.src ? (
-                      <img src={getImageUrl(header.avatar.src)} alt={header.avatar.alt || header.title} className="w-full h-full object-cover rounded-full border-2 border-gray-200 dark:border-gray-600" />
+                      <img src={getImageUrl(header.avatar.src)} alt={header.avatar.alt || header.title} className="w-full h-full object-cover rounded border-2 border-gray-200 dark:border-gray-600" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded flex items-center justify-center">
                         <span className="text-white font-bold text-sm">{header.avatar.fallback}</span>
                       </div>
                     )}
@@ -236,7 +236,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                               e.stopPropagation();
                               action.onClick(e);
                             }}
-                            className={`p-1.5 rounded-lg transition-colors ${getActionClasses(action.variant)}`}
+                            className={`p-1.5 rounded transition-colors ${getActionClasses(action.variant)}`}
                             title={action.title}
                           >
                             <FontAwesomeIcon icon={action.icon} className="h-3.5 w-3.5" />
@@ -270,7 +270,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                     action.onClick(e);
                   }}
                   disabled={action.disabled}
-                  className={`p-1 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${getActionClasses(action.variant)}`}
+                  className={`p-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${getActionClasses(action.variant)}`}
                   title={action.title}
                 >
                   <FontAwesomeIcon icon={action.icon} className="h-4 w-4" />

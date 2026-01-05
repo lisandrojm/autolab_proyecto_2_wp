@@ -68,7 +68,7 @@ export const RequestTable: React.FC<RequestTableProps> = ({ requests, onApprove,
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{request.daysCount || 0}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>{statusBadge.label}</span>
+                  <span className={`px-3 py-1 rounded text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>{statusBadge.label}</span>
                 </td>
                 {showActions && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

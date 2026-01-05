@@ -37,7 +37,7 @@ const FilterSelect: React.FC<FilterProps> = ({ value, onChange, options, placeho
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none w-full px-3 py-2 pe-8 border border-gray-300 dark:border-gray-600 rounded-lg
+        className="appearance-none w-full px-3 py-2 pe-8 border border-gray-300 dark:border-gray-600 rounded
                    focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
       >
         {placeholder && <option value="">{placeholder}</option>}
@@ -96,7 +96,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
               placeholder={searchPlaceholder}
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded
                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
@@ -111,14 +111,14 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
               <button
                 onClick={() => setShowDateModal(true)}
                 className={`relative inline-flex items-center gap-2 
-                   px-3 py-2 border rounded-lg 
+                   px-3 py-2 border rounded 
                    transition-all duration-200
                    w-auto
                    ${hasActiveFilters ? "bg-primary-50 dark:bg-primary-900/20 border-primary-500 dark:border-primary-600 text-primary-700 dark:text-primary-300" : "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"}`}
                 title="Filtrar por fecha"
               >
                 <FontAwesomeIcon icon={faFilter} className="h-4 w-4" />
-                {hasActiveFilters && <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary-500 rounded-full"></span>}
+                {hasActiveFilters && <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary-500 rounded"></span>}
               </button>
             )}
           </div>
@@ -128,12 +128,12 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
         {hasActiveFilters && (
           <div className="flex items-center gap-2">
             <span
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium
                            bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200
                            border border-primary-300 dark:border-primary-700"
             >
               {getDateBadgeText()}
-              <button onClick={handleClearDates} className="p-0.5 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800/50 transition-colors" title="Quitar filtro de fecha">
+              <button onClick={handleClearDates} className="p-0.5 rounded hover:bg-primary-200 dark:hover:bg-primary-800/50 transition-colors" title="Quitar filtro de fecha">
                 <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
               </button>
             </span>
@@ -167,7 +167,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 type="date"
                 value={dateFilter.startDate}
                 onChange={(e) => dateFilter.onStartDateChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded
                            focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
@@ -178,13 +178,13 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 type="date"
                 value={dateFilter.endDate}
                 onChange={(e) => dateFilter.onEndDateChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded
                            focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
 
             {hasActiveFilters && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   <strong>Filtro activo:</strong>
                   {dateFilter.startDate && dateFilter.endDate ? ` Del ${new Date(dateFilter.startDate).toLocaleDateString()} al ${new Date(dateFilter.endDate).toLocaleDateString()}` : dateFilter.startDate ? ` Desde ${new Date(dateFilter.startDate).toLocaleDateString()}` : ` Hasta ${new Date(dateFilter.endDate).toLocaleDateString()}`}

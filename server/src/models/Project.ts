@@ -1,5 +1,27 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
+export interface IWorkScheduleDay {
+  startTime: string; // "HH:mm" format
+  endTime: string; // "HH:mm" format
+  isWorkDay: boolean;
+}
+
+export interface IWorkSchedule {
+  mode: "weekdays" | "all_week" | "per_day"; // weekdays = L-V only, all_week = L-D same hours, per_day = individual
+  weekdays?: IWorkScheduleDay; // Lunes a Viernes (when mode is weekdays_weekend)
+  weekend?: IWorkScheduleDay; // Sábado y Domingo (when mode is weekdays_weekend)
+  days?: {
+    // Individual days (when mode is per_day)
+    monday?: IWorkScheduleDay;
+    tuesday?: IWorkScheduleDay;
+    wednesday?: IWorkScheduleDay;
+    thursday?: IWorkScheduleDay;
+    friday?: IWorkScheduleDay;
+    saturday?: IWorkScheduleDay;
+    sunday?: IWorkScheduleDay;
+  };
+}
+
 export interface IProject extends Document {
   tenantId: Types.ObjectId;
   clientId: Types.ObjectId;
@@ -26,6 +48,7 @@ export interface IProject extends Document {
     minDiasFraccion?: number;
     diasCorridos?: boolean;
   };
+  workSchedule?: IWorkSchedule;
 }
 
 const projectSchema = new Schema<IProject>(
@@ -68,6 +91,28 @@ const projectSchema = new Schema<IProject>(
       permiteFraccionadas: { type: Boolean, default: true },
       minDiasFraccion: { type: Number },
       diasCorridos: { type: Boolean },
+    },
+    workSchedule: {
+      mode: { type: String, enum: ["weekdays", "all_week", "per_day"], default: "weekdays" },
+      weekdays: {
+        startTime: { type: String },
+        endTime: { type: String },
+        isWorkDay: { type: Boolean, default: true },
+      },
+      weekend: {
+        startTime: { type: String },
+        endTime: { type: String },
+        isWorkDay: { type: Boolean, default: false },
+      },
+      days: {
+        monday: { startTime: String, endTime: String, isWorkDay: { type: Boolean, default: true } },
+        tuesday: { startTime: String, endTime: String, isWorkDay: { type: Boolean, default: true } },
+        wednesday: { startTime: String, endTime: String, isWorkDay: { type: Boolean, default: true } },
+        thursday: { startTime: String, endTime: String, isWorkDay: { type: Boolean, default: true } },
+        friday: { startTime: String, endTime: String, isWorkDay: { type: Boolean, default: true } },
+        saturday: { startTime: String, endTime: String, isWorkDay: { type: Boolean, default: false } },
+        sunday: { startTime: String, endTime: String, isWorkDay: { type: Boolean, default: false } },
+      },
     },
   },
   { timestamps: true }

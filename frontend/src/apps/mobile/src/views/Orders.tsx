@@ -221,7 +221,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
       <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
               <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
             <div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
             <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nuevo Pedido</h3>
-                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                   <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
@@ -257,9 +257,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tipo de pedido</label>
 
                     {loadingCategories ? (
-                      <div className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-500 dark:text-slate-400">Cargando categorías...</div>
+                      <div className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-500 dark:text-slate-400">Cargando categorías...</div>
                     ) : categories.length > 0 ? (
-                      <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} required className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2">
+                      <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2">
                         {categories.map((cat) => (
                           <option key={cat._id} value={cat._id}>
                             {cat.name}
@@ -267,7 +267,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                         ))}
                       </select>
                     ) : (
-                      <div className="w-full rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
+                      <div className="w-full rounded border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
                     )}
 
                     <div className="pt-3">
@@ -277,12 +277,12 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Comentario (Opcional)</label>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border bg-white dark:border-slate-700 dark:bg-slate-800 px-4 py-2 resize-none" placeholder="Escribí tu comentario..." />
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded border bg-white dark:border-slate-700 dark:bg-slate-800 px-4 py-2 resize-none" placeholder="Escribí tu comentario..." />
                   </div>
 
                   {/* Bloque REQUIERE FIRMA con Info Modal */}
                   {selectedCategory?.requiresSignature && (
-                    <div onClick={() => setShowSignatureInfo(true)} className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-colors">
+                    <div onClick={() => setShowSignatureInfo(true)} className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-colors">
                       <span className="font-bold text-sm">Requiere FIRMA</span>
                       <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
                     </div>
@@ -292,22 +292,22 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     <div>
                       <label className="block text-sm font-medium mb-2">Foto (opcional)</label>
                       {photoPreview ? (
-                        <div className="relative rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-600">
+                        <div className="relative rounded overflow-hidden border-2 border-slate-300 dark:border-slate-600">
                           <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
-                          <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 p-2 rounded-full bg-red-500 text-white">
+                          <button type="button" onClick={handleRemovePhoto} className="absolute top-2 right-2 p-2 rounded bg-red-500 text-white">
                             <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                           </button>
                         </div>
                       ) : (
                         <div className="flex gap-2">
                           <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
-                          <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-4 px-3">
+                          <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed py-4 px-3">
                             <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-slate-400" />
                             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
                           </button>
 
                           <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                          <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-4 px-3">
+                          <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed py-4 px-3">
                             <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
                             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Imagen</span>
                           </button>
@@ -317,10 +317,10 @@ export default function Orders({ onNavigate }: OrdersProps) {
                   )}
 
                   <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                       Cancelar
                     </button>
-                    <button type="submit" disabled={submitting} className="flex-1 rounded-lg h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
+                    <button type="submit" disabled={submitting} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
                       {submitting ? "Enviando..." : "Enviar Pedido"}
                     </button>
                   </div>
@@ -369,10 +369,10 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
                       <div className="flex items-center w-full">
                         <div className="flex flex-wrap gap-1.5">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 dark:bg-gray-600/50">{getCategoryName(order)}</span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-gray-50 dark:bg-gray-600/50">{getCategoryName(order)}</span>
 
                           {getSubcategoriesArray(order).map((s, i) => (
-                            <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-sm bg-gray-50 dark:bg-gray-600/20">
+                            <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-sm bg-gray-50 dark:bg-gray-600/20">
                               {s}
                             </span>
                           ))}
@@ -430,10 +430,10 @@ export default function Orders({ onNavigate }: OrdersProps) {
       {viewingImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-90 p-4" onClick={() => setViewingImage(null)}>
           <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-4 p-2 rounded-full bg-red-500 text-white shadow-lg">
+            <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-4 p-2 rounded bg-red-500 text-white shadow-lg">
               <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
             </button>
-            <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+            <img src={viewingImage} alt="Order" className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" />
           </div>
         </div>
       )}

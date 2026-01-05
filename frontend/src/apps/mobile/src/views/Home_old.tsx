@@ -138,10 +138,10 @@ export default function Home({ onNavigate }: HomeProps) {
         <UserHeader user={user} />
 
         <div className="flex items-center gap-1">
-          <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
+          <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
             <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
           </button>
-          <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
+          <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
             <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>
         </div>
@@ -156,7 +156,7 @@ export default function Home({ onNavigate }: HomeProps) {
               <p className="text-sm text-green-700 dark:text-green-300">{latestNotification.message}</p>
             </div>
             {unreadCount > 1 && (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 dark:bg-green-500">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 dark:bg-green-500">
                 <span className="text-xs font-bold text-white">{unreadCount}</span>
               </div>
             )}
@@ -186,7 +186,7 @@ export default function Home({ onNavigate }: HomeProps) {
               className={`relative flex flex-col flex-1 gap-3 rounded-xl border p-4 text-left shadow-sm transition-transform
     ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
-              {(action as any).badge && <span className="absolute top-4 right-4 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-500 text-white uppercase z-10">{(action as any).badge}</span>}
+              {(action as any).badge && <span className="absolute top-4 right-4 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500 text-white uppercase z-10">{(action as any).badge}</span>}
               <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
               <div className="flex flex-col gap-1">
                 <h2 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">{action.title}</h2>
@@ -203,7 +203,7 @@ export default function Home({ onNavigate }: HomeProps) {
         <div className="flex flex-col gap-3 px-4">
           {[1, 2].map((i) => (
             <div key={i} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-slate-200 dark:bg-slate-700" />
               <div className="flex-1">
                 <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
                 <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
@@ -218,7 +218,7 @@ export default function Home({ onNavigate }: HomeProps) {
             const colors = getActivityColor(activity.action);
             return (
               <div key={activity._id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${colors.bg}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded ${colors.bg}`}>
                   <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${colors.icon}`} />
                 </div>
                 <div className="flex-1">

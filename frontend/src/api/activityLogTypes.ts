@@ -7,6 +7,8 @@ export interface ActivityLogType {
   order: number;
   requiresReplacement: boolean;
   isActive: boolean;
+  visibility: "all" | "specific";
+  allowedProjectIds: string[];
 }
 
 export const activityLogTypesAPI = {

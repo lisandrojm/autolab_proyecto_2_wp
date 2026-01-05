@@ -159,16 +159,16 @@ export const CreateActivityReportPage: React.FC = () => {
     <PageLayout title="Nuevo Reporte de Novedades" subtitle="Complete el formulario diario de asistencia y novedades." faIcon={{ icon: faCheck }} onBack={() => navigate("/hr/activity-logs")}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
         {/* Header Config Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
-              <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
               <p className="mt-1 text-xs text-gray-500">La fecha corresponde al día de actividad, no necesariamente a la fecha de hoy.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Area / Proyecto</label>
-              <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">
+              <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 font-medium">
                 Técnica - Turno Noche
                 {/* Dynamic based on logged in user */}
               </div>
@@ -177,7 +177,7 @@ export const CreateActivityReportPage: React.FC = () => {
         </div>
 
         {/* Main Activity Toggle */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">¿Hubo alguna novedad o ausencia en el turno?</h2>
 
           <div className="flex justify-center gap-6">
@@ -205,10 +205,10 @@ export const CreateActivityReportPage: React.FC = () => {
         {hasActivity && (
           <div className="space-y-4 animate-fade-in-up">
             {categories.map((cat) => (
-              <div key={cat.id} className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border transition-all duration-300 ${cat.isActive ? "border-blue-500 ring-1 ring-blue-500" : "border-gray-200 dark:border-gray-700"}`}>
+              <div key={cat.id} className={`bg-white dark:bg-gray-800 rounded shadow-sm border transition-all duration-300 ${cat.isActive ? "border-blue-500 ring-1 ring-blue-500" : "border-gray-200 dark:border-gray-700"}`}>
                 <div className="p-4 flex items-center justify-between cursor-pointer" onClick={() => handleToggleCategory(cat.id, !cat.isActive)}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${cat.isActive ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400 dark:bg-gray-700"}`}>
+                    <div className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${cat.isActive ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400 dark:bg-gray-700"}`}>
                       <FontAwesomeIcon icon={cat.isActive ? faCheck : faUser} />
                     </div>
                     <div>
@@ -219,8 +219,8 @@ export const CreateActivityReportPage: React.FC = () => {
 
                   <div className="flex items-center gap-4">
                     {/* Toggle Switch */}
-                    <div className={`w-12 h-6 rounded-full p-1 transition-colors ${cat.isActive ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
-                      <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${cat.isActive ? "translate-x-6" : "translate-x-0"}`} />
+                    <div className={`w-12 h-6 rounded p-1 transition-colors ${cat.isActive ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
+                      <div className={`w-4 h-4 bg-white rounded shadow-sm transform transition-transform ${cat.isActive ? "translate-x-6" : "translate-x-0"}`} />
                     </div>
                   </div>
                 </div>
@@ -280,9 +280,9 @@ export const CreateActivityReportPage: React.FC = () => {
             ))}
 
             {/* Additional Comments */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="font-medium text-gray-900 dark:text-white mb-2">Comentarios Adicionales</h3>
-              <textarea rows={4} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-none" placeholder="Ingrese cualquier otra información relevante del turno..." value={comments} onChange={(e) => setComments(e.target.value)} />
+              <textarea rows={4} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-none" placeholder="Ingrese cualquier otra información relevante del turno..." value={comments} onChange={(e) => setComments(e.target.value)} />
             </div>
           </div>
         )}
@@ -293,7 +293,7 @@ export const CreateActivityReportPage: React.FC = () => {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className={`px-8 py-3 rounded-lg text-white font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-3
+              className={`px-8 py-3 rounded text-white font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-3
                     ${submitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 transform hover:-translate-y-0.5"}
                  `}
             >

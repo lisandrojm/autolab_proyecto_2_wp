@@ -75,10 +75,10 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <button onClick={() => onEdit(category)} disabled={isReorderMode} className={`p-1.5 rounded-lg text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
+          <button onClick={() => onEdit(category)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
-          <button onClick={() => onDelete(category)} disabled={isReorderMode} className={`p-1.5 rounded-lg text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
+          <button onClick={() => onDelete(category)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
           </button>
         </div>
@@ -458,27 +458,27 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
         <div className="flex items-center gap-3">
           {isReorderMode ? (
             <>
-              <button onClick={handleCancelReorder} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+              <button onClick={handleCancelReorder} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
                 <span>Cancelar</span>
               </button>
-              <button onClick={handleSaveReorder} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2">
+              <button onClick={handleSaveReorder} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2">
                 <span>Guardar Orden</span>
               </button>
             </>
           ) : (
             <>
-              <button onClick={openCreateModal} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              <button onClick={openCreateModal} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faPlus} />
               </button>
-              <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faFilePdf} />
                 <span className="hidden lg:block">Plantillas PDF</span>
               </button>
-              <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+              <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                 <FontAwesomeIcon icon={faGripVertical} />
                 <span className="hidden lg:block">Ordenar</span>
               </button>
-              {/*               <button onClick={() => navigate("/hr/orders")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+              {/*               <button onClick={() => navigate("/hr/orders")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faShoppingCart} className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden lg:block">Volver a Pedidos</span>
               </button> */}
@@ -496,7 +496,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
           ) : (
             <>
               {isReorderMode && (
-                <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                   <p className="text-blue-900 dark:text-blue-100 text-sm">
                     <FontAwesomeIcon icon={faGripVertical} className="mr-2" />
                     <strong>Modo de reordenamiento activo:</strong> Arrastra las filas para cambiar el orden. Haz clic en "Guardar Orden" para confirmar los cambios o "Cancelar" para descartarlos.
@@ -551,10 +551,10 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
         size="lg"
         footer={
           <div className="flex gap-3 w-full">
-            <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               Cancelar
             </button>
-            <button type="submit" form="order-category-form" disabled={submitting} className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" form="order-category-form" disabled={submitting} className="flex-1 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? "Guardando..." : editingCategory ? "Actualizar" : "Crear"}
             </button>
           </div>

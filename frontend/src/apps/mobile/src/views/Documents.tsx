@@ -131,7 +131,7 @@ export default function Documents() {
                     })}
                   </p>
                 </div>
-                <button onClick={() => handleDownload(doc.name)} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <button onClick={() => handleDownload(doc.name)} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                   <FontAwesomeIcon icon={faDownload} className="w-5 h-5 text-primary" />
                 </button>
               </div>

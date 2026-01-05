@@ -42,7 +42,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request, onApprove, on
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 cursor-pointer" onClick={() => onView?.(request)}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+          <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded">
             <FontAwesomeIcon icon={faCalendar} className="h-5 w-5 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
@@ -55,7 +55,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request, onApprove, on
             )}
           </div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>{statusBadge.label}</span>
+        <span className={`px-3 py-1 rounded text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>{statusBadge.label}</span>
       </div>
 
       <div className="space-y-2 mb-4">
@@ -83,7 +83,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request, onApprove, on
                 e.stopPropagation();
                 onApprove(request);
               }}
-              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors duration-200"
             >
               <FontAwesomeIcon icon={faCheck} className="mr-2" />
               Aprobar
@@ -95,7 +95,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request, onApprove, on
                 e.stopPropagation();
                 onReject(request);
               }}
-              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors duration-200"
             >
               <FontAwesomeIcon icon={faTimes} className="mr-2" />
               Rechazar

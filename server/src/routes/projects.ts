@@ -13,11 +13,12 @@ const router = Router();
 
 const createProjectSchema = z.object({
   name: z.string().min(1),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   status: z.enum(["active", "completed", "on_hold", "archived"]).optional(),
   startDate: z
     .string()
     .optional()
+    .nullable()
     .transform((s) => {
       if (!s) return undefined;
       const d = new Date(s);
@@ -26,13 +27,14 @@ const createProjectSchema = z.object({
   endDate: z
     .string()
     .optional()
+    .nullable()
     .transform((s) => {
       if (!s) return undefined;
       const d = new Date(s);
       return isNaN(d.getTime()) ? undefined : d;
     }),
   objectives: z.array(z.string()).default([]),
-  targetAudience: z.string().optional(),
+  targetAudience: z.string().optional().nullable(),
   assignedUsers: z.array(z.string()).optional(),
   vacationConfig: z
     .object({
@@ -41,7 +43,42 @@ const createProjectSchema = z.object({
       minDiasFraccion: z.number().min(1).nullable().optional(),
       diasCorridos: z.boolean().optional(),
     })
-    .optional(),
+    .optional()
+    .nullable(),
+  workSchedule: z
+    .object({
+      mode: z.enum(["weekdays", "all_week", "per_day"]),
+      weekdays: z
+        .object({
+          startTime: z.string().optional().nullable(),
+          endTime: z.string().optional().nullable(),
+          isWorkDay: z.boolean().optional(),
+        })
+        .optional()
+        .nullable(),
+      weekend: z
+        .object({
+          startTime: z.string().optional().nullable(),
+          endTime: z.string().optional().nullable(),
+          isWorkDay: z.boolean().optional(),
+        })
+        .optional()
+        .nullable(),
+      days: z
+        .object({
+          monday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          tuesday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          wednesday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          thursday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          friday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          saturday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          sunday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+        })
+        .optional()
+        .nullable(),
+    })
+    .optional()
+    .nullable(),
 });
 
 // GET /projects

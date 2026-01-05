@@ -41,8 +41,8 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
                     {/* 🔥 Puntito rojo de notificaciones */}
                     {notifications && (
                       <span className="absolute right-0 top-0 flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded bg-orange-400 opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded bg-orange-500" />
                       </span>
                     )}
                   </div>

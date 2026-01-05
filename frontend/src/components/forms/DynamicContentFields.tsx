@@ -24,7 +24,7 @@ export const DynamicContentFields: React.FC<DynamicContentFieldsProps> = ({ form
     const charCount = typeof value === "string" ? value.length : 0;
     const maxChars = field.maxLength || characterLimit;
 
-    const baseInputClasses = `w-full px-4 py-3 border ${error ? "border-red-500 dark:border-red-500" : "border-gray-300 dark:border-gray-600"} rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white`;
+    const baseInputClasses = `w-full px-4 py-3 border ${error ? "border-red-500 dark:border-red-500" : "border-gray-300 dark:border-gray-600"} rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white`;
 
     switch (field.type) {
       case "text":
@@ -104,7 +104,7 @@ export const DynamicContentFields: React.FC<DynamicContentFieldsProps> = ({ form
               placeholder={field.placeholder}
               className={baseInputClasses}
             />
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
               <p className="text-xs text-blue-800 dark:text-blue-300">
                 <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3 mr-1" />
                 <strong>Formato:</strong> {field.hint || `Escribe ${symbolHint}, separados por comas`}
@@ -168,13 +168,13 @@ export const DynamicContentFields: React.FC<DynamicContentFieldsProps> = ({ form
   return (
     <div className="space-y-6">
       {description && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
           <p className="text-sm text-blue-800 dark:text-blue-300 font-medium">{description}</p>
         </div>
       )}
 
       {tips.length > 0 && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
           <div className="flex items-start gap-2">
             <FontAwesomeIcon icon={faLightbulb} className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
@@ -195,7 +195,7 @@ export const DynamicContentFields: React.FC<DynamicContentFieldsProps> = ({ form
       <div className="space-y-6">{fields.map((field) => renderField(field))}</div>
 
       {platforms.length > 0 && (
-        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
           <p className="text-xs text-gray-600 dark:text-gray-400">
             <strong>Plataformas seleccionadas:</strong> {platforms.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(", ")}
           </p>

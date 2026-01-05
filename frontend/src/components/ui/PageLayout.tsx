@@ -121,7 +121,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
 
   const renderAvatar = () => {
     if (!avatar) return null;
-    return <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center">{avatar.src ? <img src={getImageUrl(avatar.src)} alt={avatar.alt || title} className="w-full h-full object-cover" /> : <span className="text-sm sm:text-base font-semibold text-white bg-primary-600 w-full h-full flex items-center justify-center">{avatar.fallback || title?.charAt(0)?.toUpperCase?.() || "?"}</span>}</div>;
+    return <div className="w-8 h-8 sm:w-10 sm:h-10 rounded overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center">{avatar.src ? <img src={getImageUrl(avatar.src)} alt={avatar.alt || title} className="w-full h-full object-cover" /> : <span className="text-sm sm:text-base font-semibold text-white bg-primary-600 w-full h-full flex items-center justify-center">{avatar.fallback || title?.charAt(0)?.toUpperCase?.() || "?"}</span>}</div>;
   };
 
   const renderFaIcon = () => {
@@ -143,7 +143,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
     if (!clientMiniAvatar) return null;
     return (
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-primary-600 text-white text-xs font-semibold">{clientMiniAvatar.src ? <img src={clientMiniAvatar.src} alt={clientMiniAvatar.alt || clientMiniAvatar.label || "Cliente"} className="w-full h-full object-cover" /> : clientMiniAvatar.fallback || "?"}</div>
+        <div className="w-6 h-6 rounded overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-primary-600 text-white text-xs font-semibold">{clientMiniAvatar.src ? <img src={clientMiniAvatar.src} alt={clientMiniAvatar.alt || clientMiniAvatar.label || "Cliente"} className="w-full h-full object-cover" /> : clientMiniAvatar.fallback || "?"}</div>
         {clientMiniAvatar.label && <span className="text-md text-gray-700 dark:text-gray-300 font-bold">{clientMiniAvatar.label}</span>}
       </div>
     );
@@ -160,19 +160,19 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                 {renderClientMiniAvatar()}
 
                 {badge && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${BADGE_CLASSES[badge.variant ?? "default"]} min-w-0`} title={badge.text}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badge.variant ?? "default"]} min-w-0`} title={badge.text}>
                     <span className="truncate max-w-[30vw] sm:max-w-[40vw] md:max-w-[50vw]">{badge.text}</span>
                   </span>
                 )}
 
                 {badgeSecondary && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${BADGE_CLASSES[badgeSecondary.variant ?? "default"]} min-w-0`} title={badgeSecondary.text}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeSecondary.variant ?? "default"]} min-w-0`} title={badgeSecondary.text}>
                     <span className="truncate max-w-[30vw] sm:max-w-[40vw] md:max-w-[50vw]">{badgeSecondary.text}</span>
                   </span>
                 )}
 
                 {badgeTertiary && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${BADGE_CLASSES[badgeTertiary.variant ?? "default"]} min-w-0`} title={badgeTertiary.text}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeTertiary.variant ?? "default"]} min-w-0`} title={badgeTertiary.text}>
                     <span className="truncate max-w-[30vw] sm:max-w-[40vw] md:max-w-[50vw]">{badgeTertiary.text}</span>
                   </span>
                 )}
@@ -196,10 +196,10 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                           >
                             {title}
                           </h2>
-                          {badgeState && <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${BADGE_CLASSES[badgeState.variant ?? "default"]}`}>{badgeState.text}</span>}
+                          {badgeState && <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeState.variant ?? "default"]}`}>{badgeState.text}</span>}
                         </div>
                         {shouldShowInfoButton && (
-                          <button type="button" onClick={() => infoModal?.onOpen?.()} className="inline-flex items-center justify-center rounded-full" title="Ver información" aria-label="Ver información">
+                          <button type="button" onClick={() => infoModal?.onOpen?.()} className="inline-flex items-center justify-center rounded" title="Ver información" aria-label="Ver información">
                             <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4 text-slate-500" />
                           </button>
                         )}

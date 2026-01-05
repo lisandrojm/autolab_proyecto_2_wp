@@ -41,37 +41,37 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ projectId }) => {
     <div className="h-full flex flex-col space-y-6">
       {/* KPIs Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 uppercase font-semibold">Cumplimiento</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{kpis.compliance}%</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
+          <div className="h-10 w-10 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
             <FontAwesomeIcon icon={faCheckCircle} />
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 uppercase font-semibold">Reportes</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{kpis.totalReports}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+          <div className="h-10 w-10 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
             <FontAwesomeIcon icon={faCalendarAlt} />
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 uppercase font-semibold">Faltantes</p>
             <p className="text-2xl font-bold text-red-600 dark:text-red-400">{kpis.missing}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600">
+          <div className="h-10 w-10 rounded bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600">
             <FontAwesomeIcon icon={faExclamationTriangle} />
           </div>
         </div>
       </div>
 
       {/* Calendar Visualization */}
-      <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
+      <div className="flex-1 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-6 flex flex-col">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100 capitalize">{format(currentDate, "MMMM yyyy", { locale: es })}</h3>
           {/* Controls would go here */}
@@ -113,7 +113,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ projectId }) => {
             }
 
             return (
-              <div key={day.toISOString()} className={`aspect-square rounded-lg border ${border} ${bg} flex flex-col items-center justify-center relative group`}>
+              <div key={day.toISOString()} className={`aspect-square rounded border ${border} ${bg} flex flex-col items-center justify-center relative group`}>
                 <span className={`text-xs absolute top-1 left-2 ${status === "weekend" ? "text-gray-300" : "text-gray-500"}`}>{day.getDate()}</span>
                 {content}
 
