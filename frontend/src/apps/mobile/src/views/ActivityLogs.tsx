@@ -5,7 +5,7 @@ import { activityReportsAPI, ActivityReport } from "../../../../api/activityRepo
 import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -113,6 +113,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [draftOutTime, setDraftOutTime] = useState<string>("");
 
   // Config & Wizard State
+  const [showProcessedHistory, setShowProcessedHistory] = useState(false);
 
   const [wizardIndex, setWizardIndex] = useState<number>(-1); // -1: Not started, 0+: Employee Index
   const [wizardData, setWizardData] = useState<Record<string, WizardEntry>>({});
@@ -371,10 +372,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   const handleWizardNext = () => {
-    if (wizardIndex < projectEmployees.length - 1) {
-      setWizardIndex(wizardIndex + 1);
-    } else {
+    // If we are at the last employee, finalize instead of going to next index
+    if (wizardIndex >= projectEmployees.length - 1) {
       finalizeWizard();
+    } else {
+      setWizardIndex(wizardIndex + 1);
     }
   };
 
@@ -448,22 +450,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     }
 
     // Check for empty activity report
-    // If hasActivity is true, we expect at least one entry (either already in entries or just added via draft)
-    // Since we just called handleAddRecord (which updates state synchronously BUT react batching might delay it for this closures check)
-    // We should check entries.length combined with the draft valid check.
-    // However, setEntries inside addRecordInternal is async in React terms for the next render, but immediate for state updater if we used functional.
-    // Better logic: if hasActivity is true, and entries is empty AND we didn't just add one...
-    // Actually, simple check:
-    if (hasActivity && entries.length === 0 && !draftTypeId) {
-      await sweetAlert.error("Reporte Vacío", "Si hubo novedades, debes agregar al menos un registro. Si no hubo, selecciona 'NO'.");
-      return;
-    }
-
-    // Note: If we just added a draft above, entries.length is still old value in this closure.
-    // But draftTypeId would be reset? No, addRecordInternal resets it.
-    // So if we had a draft, we added it, reset draftTypeId.
-    // So 'entries' here is still empty if it was empty.
-    // Correct fix: check if we added a draft.
     const justAdded = hasActivity && selectedEmployee && draftTypeId;
     if (hasActivity && entries.length === 0 && !justAdded) {
       await sweetAlert.error("Reporte Vacío", "Si hubo novedades, debes agregar al menos un registro. Si no hubo, selecciona 'NO'.");
@@ -498,9 +484,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         attendance,
         projectId: selectedProjectId || undefined,
       };
-
-      // Validation moved to pre-submit, but good to keep safe check or just proceed.
-      // Already checked projectId.
 
       if (selectedReportId) {
         await activityReportsAPI.update(selectedReportId, payload);
@@ -683,7 +666,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
         {showForm && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] min-h-[600px] flex flex-col">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] h-[80vh] flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">{selectedReportId ? "Editar Reporte" : "Nuevo Reporte"}</h3>
                 <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -747,184 +730,196 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   <>
                     {/* ===================== LOGIC BRANCH: WIZARD VS FAST ENTRY ===================== */}
                     {!isFastEntryEnabled ? (
-                      /* --------------------- DETAILED WIZARD MODE --------------------- */
                       <div className="space-y-4">
                         {wizardIndex === -1 ? (
                           <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <FontAwesomeIcon icon={faUsers} className="text-2xl" />
-                            </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Reporte Detallado de Asistencia</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs mx-auto">
                               Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
                             </p>
-                            <button onClick={startWizard} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-lg shadow-blue-500/30 transition-all active:scale-95">
+                            <button onClick={startWizard} className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-md transition-all active:scale-95">
                               Comenzar Reporte
                             </button>
                           </div>
                         ) : (
-                          /* WIZARD CARD */
-                          (() => {
-                            const currentEmp = projectEmployees[wizardIndex];
-                            const data = wizardData[currentEmp.id] || { status: "present" };
-                            const isPresent = data.status === "present";
+                          <>
+                            {/* WIZARD CARD */}
+                            {(() => {
+                              // Check if it is the Comments Step (Last Step)
 
-                            return (
-                              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
-                                {/* Header: Progress & Name */}
-                                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-700">
-                                  <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                      Colaborador {wizardIndex + 1} de {projectEmployees.length}
-                                    </span>
-                                    <div className="flex gap-1">
-                                      {Array.from({ length: Math.min(projectEmployees.length, 5) }).map((_, i) => (
-                                        <div key={i} className={`h-1.5 w-6 rounded-full ${i <= (wizardIndex * 4) / projectEmployees.length ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"}`} />
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
-                                    {currentEmp.name}
-                                  </h3>
-                                  <p className="text-xs text-slate-500 dark:text-gray-400 mt-1 ml-10">{currentEmp.positionName || "Colaborador"}</p>
-                                </div>
+                              // Normal Employee Step
+                              const currentEmp = projectEmployees[wizardIndex];
+                              const data = wizardData[currentEmp.id] || { status: "present" };
+                              const isPresent = data.status === "present";
 
-                                <div className="p-5 space-y-6">
-                                  {/* 1. Presence Toggle */}
-                                  <div>
-                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
-                                    <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                                      <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-3 rounded-md font-bold text-sm transition-all shadow-sm ${isPresent ? "bg-white dark:bg-slate-600 text-green-600 dark:text-green-400 shadow" : "text-gray-500 hover:text-gray-700"}`}>
-                                        <FontAwesomeIcon icon={faCheck} className="mr-2" />
-                                        SÍ, Asistió
-                                      </button>
-                                      <button onClick={() => updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 })} className={`flex-1 py-3 rounded-md font-bold text-sm transition-all shadow-sm ${!isPresent ? "bg-white dark:bg-slate-600 text-red-500 shadow" : "text-gray-500 hover:text-gray-700"}`}>
-                                        <FontAwesomeIcon icon={faTimes} className="mr-2" />
-                                        NO Asistió
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* 2. Logic based on Presence */}
-                                  {isPresent ? (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                      {/* Overtime Toggle */}
-                                      <div className="flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
-                                        <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                                          <input
-                                            type="checkbox"
-                                            name="toggle"
-                                            id="toggle-ot"
-                                            checked={(data.overtimeHours || 0) > 0}
-                                            onChange={(e) => {
-                                              if (e.target.checked) {
-                                                // Enable OT
-                                                updateWizardEntry(currentEmp.id, { overtimeHours: 1 }); // Default 1
-                                              } else {
-                                                updateWizardEntry(currentEmp.id, { overtimeHours: 0, outTime: undefined });
-                                              }
-                                            }}
-                                            className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                                            style={{ right: (data.overtimeHours || 0) > 0 ? "0" : "auto", left: (data.overtimeHours || 0) > 0 ? "auto" : "0" }}
-                                          />
-                                          <label htmlFor="toggle-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${(data.overtimeHours || 0) > 0 ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
-                                        </div>
+                              return (
+                                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+                                  {/* Header: Progress & Name */}
+                                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-700">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                          Colaborador {wizardIndex + 1} de {projectEmployees.length}
+                                        </span>
+                                        {wizardIndex > 0 && (
+                                          <div onClick={() => setShowProcessedHistory(true)} className="flex items-center gap-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors">
+                                            <span className="text-[10px] font-bold">{wizardIndex} Cargados</span>
+                                            <FontAwesomeIcon icon={faInfoCircle} className="text-[10px]" />
+                                          </div>
+                                        )}
                                       </div>
+                                      <div className="flex gap-1">
+                                        {Array.from({ length: Math.min(projectEmployees.length + 1, 6) }).map((_, i) => (
+                                          <div key={i} className={`h-1.5 w-6 rounded-full ${i <= (wizardIndex * 5) / projectEmployees.length ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"}`} />
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
+                                      {currentEmp.name}
+                                    </h3>
+                                    <span className="text-xs text-slate-500 dark:text-gray-400 mt-1 ml-10">{currentEmp.positionName || "Colaborador"}</span>
+                                  </div>
 
-                                      {/* Overtime Details */}
-                                      {(data.overtimeHours || 0) > 0 && (
-                                        <div className="pl-4 border-l-2 border-blue-500 space-y-3">
-                                          <div>
-                                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600">Horario Salida Real</label>
+                                  <div className="p-5 space-y-6">
+                                    {/* 1. Presence Toggle */}
+                                    <div>
+                                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
+                                      <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                        <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm ${isPresent ? "bg-white dark:bg-slate-600 text-green-600 dark:text-green-400 shadow" : "text-gray-500"}`}>
+                                          {/*                                           <FontAwesomeIcon icon={faCheck} className="mr-2" /> */}
+                                          SÍ
+                                        </button>
+                                        <button onClick={() => updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm ${!isPresent ? "bg-white dark:bg-slate-600 text-red-500 shadow" : "text-gray-500"}`}>
+                                          {/*                                           <FontAwesomeIcon icon={faTimes} className="mr-2" /> */}
+                                          NO
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* 2. Logic based on Presence */}
+                                    {isPresent ? (
+                                      <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        {/* Overtime Toggle */}
+                                        <div className="flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
+                                          <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                                             <input
-                                              type="time"
-                                              className="w-full p-2 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white"
-                                              value={data.outTime || ""}
+                                              type="checkbox"
+                                              name="toggle"
+                                              id="toggle-ot"
+                                              checked={(data.overtimeHours || 0) > 0}
                                               onChange={(e) => {
-                                                const val = e.target.value;
-                                                updateWizardEntry(currentEmp.id, { outTime: val });
-                                                // Optional: Auto calc hours logic could be reused here
+                                                if (e.target.checked) {
+                                                  // Enable OT
+                                                  updateWizardEntry(currentEmp.id, { overtimeHours: 1 }); // Default 1
+                                                } else {
+                                                  updateWizardEntry(currentEmp.id, { overtimeHours: 0, outTime: undefined });
+                                                }
                                               }}
+                                              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                                              style={{ right: (data.overtimeHours || 0) > 0 ? "0" : "auto", left: (data.overtimeHours || 0) > 0 ? "auto" : "0" }}
                                             />
-                                          </div>
-                                          <div>
-                                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cant. Horas</label>
-                                            <input type="number" step="0.5" className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.overtimeHours || 0} onChange={(e) => updateWizardEntry(currentEmp.id, { overtimeHours: parseFloat(e.target.value) })} />
+                                            <label htmlFor="toggle-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${(data.overtimeHours || 0) > 0 ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
                                           </div>
                                         </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    /* Absent Logic */
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                      <div>
-                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
-                                        <select
-                                          className="w-full p-3 rounded border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500"
-                                          value={data.typeId || ""}
-                                          onChange={(e) => {
-                                            const newId = e.target.value;
-                                            // Reset replacement if type doesn't need it
-                                            const type = logTypes.find((t) => t._id === newId);
-                                            updateWizardEntry(currentEmp.id, {
-                                              typeId: newId,
-                                              replacementId: type?.requiresReplacement ? data.replacementId : undefined,
-                                            });
-                                          }}
-                                        >
-                                          <option value="">Seleccionar motivo...</option>
-                                          {logTypes
-                                            .filter((t) => !t.name.toLowerCase().includes("horas extra") && t.isActive) // Filter out Overtime type
-                                            .map((t) => (
-                                              <option key={t._id} value={t._id}>
-                                                {t.name}
-                                              </option>
-                                            ))}
-                                        </select>
-                                      </div>
 
-                                      {/* Replacement */}
-                                      {(() => {
-                                        const type = logTypes.find((t) => t._id === data.typeId);
-                                        if (type?.requiresReplacement) {
-                                          return (
-                                            <div>
-                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Reemplazo (Opcional)</label>
-                                              <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.replacementId || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementId: e.target.value })}>
-                                                <option value="">Sin reemplazo</option>
-                                                {employees
-                                                  .filter((e) => e.id !== currentEmp.id)
-                                                  .map((e) => (
-                                                    <option key={e.id} value={e.id}>
-                                                      {e.name}
-                                                    </option>
-                                                  ))}
-                                              </select>
+                                        {/* Overtime Details */}
+                                        {(data.overtimeHours || 0) > 0 && (
+                                          <div className="space-y-4 pt-2">
+                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 pb-2">
+                                              <span>Horario Salida Proyecto:</span>
+                                              <span className="font-bold text-slate-700 dark:text-slate-200">
+                                                {(() => {
+                                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                                  return proj ? getProjectEndTime(proj, reportDate) || "No laboral" : "—";
+                                                })()}
+                                              </span>
                                             </div>
-                                          );
-                                        }
-                                        return null;
-                                      })()}
-                                    </div>
-                                  )}
 
-                                  {/* Navigation Buttons */}
-                                  <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-                                    <button onClick={handleWizardPrev} disabled={wizardIndex === 0} className="flex-1 py-3 rounded bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                                      <FontAwesomeIcon icon={faChevronLeft} />
-                                      Anterior
-                                    </button>
-                                    <button onClick={handleWizardNext} className="flex-1 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-colors flex items-center justify-center gap-2">
-                                      {wizardIndex === projectEmployees.length - 1 ? "Finalizar" : "Siguiente"}
-                                      <FontAwesomeIcon icon={faChevronRight} />
-                                    </button>
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Real</label>
+                                              <input
+                                                type="time"
+                                                className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                                                value={data.outTime || ""}
+                                                onChange={(e) => {
+                                                  const val = e.target.value;
+                                                  updateWizardEntry(currentEmp.id, { outTime: val });
+                                                }}
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                                              <div className="flex gap-2 items-center">
+                                                <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white font-bold text-blue-600 dark:text-blue-400" value={data.overtimeHours || 0} onChange={(e) => updateWizardEntry(currentEmp.id, { overtimeHours: parseFloat(e.target.value) })} />
+                                              </div>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 italic">Este valor se puede ajustar manualmente.</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      /* Absent Logic */
+                                      <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        <div>
+                                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
+                                          <select
+                                            className="w-full p-3 rounded border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500"
+                                            value={data.typeId || ""}
+                                            onChange={(e) => {
+                                              const newId = e.target.value;
+                                              // Reset replacement if type doesn't need it
+                                              const type = logTypes.find((t) => t._id === newId);
+                                              updateWizardEntry(currentEmp.id, {
+                                                typeId: newId,
+                                                replacementId: type?.requiresReplacement ? data.replacementId : undefined,
+                                              });
+                                            }}
+                                          >
+                                            <option value="">Seleccionar motivo...</option>
+                                            {logTypes
+                                              .filter((t) => !t.name.toLowerCase().includes("horas extra") && t.isActive) // Filter out Overtime type
+                                              .map((t) => (
+                                                <option key={t._id} value={t._id}>
+                                                  {t.name}
+                                                </option>
+                                              ))}
+                                          </select>
+                                        </div>
+
+                                        {/* Replacement */}
+                                        {(() => {
+                                          const type = logTypes.find((t) => t._id === data.typeId);
+                                          if (type?.requiresReplacement) {
+                                            return (
+                                              <div>
+                                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Reemplazo (Opcional)</label>
+                                                <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.replacementId || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementId: e.target.value })}>
+                                                  <option value="">Sin reemplazo</option>
+                                                  {employees
+                                                    .filter((e) => e.id !== currentEmp.id)
+                                                    .map((e) => (
+                                                      <option key={e.id} value={e.id}>
+                                                        {e.name}
+                                                      </option>
+                                                    ))}
+                                                </select>
+                                              </div>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
+                                      </div>
+                                    )}
+
+                                    {/* Processed History Summary (Moved Inside Content) */}
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })()
+                              );
+                            })()}
+                            {/* History List was here, moved inside local Wizard block */}
+                          </>
                         )}
                       </div>
                     ) : (
@@ -1107,7 +1102,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
                                               <div className="flex gap-2 items-center">
                                                 <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftOvertimeHours} onChange={(e) => setDraftOvertimeHours(parseFloat(e.target.value))} />
-                                                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">horas totales</span>
                                               </div>
                                               <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se calcula automáticamente, pero puedes ajustarlo si es necesario.</p>
                                             </div>
@@ -1148,11 +1142,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         )}
                       </>
                     )}
-
-                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comentarios Generales</label>
-                      <textarea rows={3} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm" placeholder="Comentarios adicionales..." value={comments} onChange={(e) => setComments(e.target.value)} />
-                    </div>
                   </>
                 ) : (
                   <div className="bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 p-6 text-center animate-fade-in my-4">
@@ -1168,17 +1157,35 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
               {/* Footer Actions */}
               <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
-                {isWorkDay && hasActivity !== null && (
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
-                      Cancelar
+                {/* Wizard Navigation Footer */}
+                {!isFastEntryEnabled && wizardIndex >= 0 ? (
+                  <div className="flex gap-3 items-center w-full">
+                    <button onClick={handleWizardPrev} disabled={wizardIndex === 0} className="flex-1 py-3 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                      <FontAwesomeIcon icon={faChevronLeft} />
+                      Anterior
                     </button>
-                    <button onClick={handlePreSubmit} disabled={submitting} className="flex-1 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors disabled:opacity-70 text-sm">
-                      Revisar y Enviar
+
+                    {/* Summary in Footer */}
+
+                    <button onClick={handleWizardNext} className="flex-1 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-colors flex items-center justify-center gap-2 text-sm">
+                      Siguiente
+                      <FontAwesomeIcon icon={faChevronRight} />
                     </button>
                   </div>
+                ) : (
+                  // Fast Entry / Default Footer
+                  isWorkDay &&
+                  hasActivity !== null && (
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+                        Cancelar
+                      </button>
+                      <button onClick={handlePreSubmit} disabled={submitting} className="flex-1 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors disabled:opacity-70 text-sm">
+                        Revisar y Enviar
+                      </button>
+                    </div>
+                  )
                 )}
-                {isWorkDay && hasActivity === null && <div className="text-center text-sm text-gray-500 dark:text-gray-400">Selecciona una opción arriba para continuar</div>}
                 {!isWorkDay && (
                   <button type="button" onClick={() => setShowForm(false)} className="w-full py-2 rounded bg-slate-900 dark:bg-slate-700 text-white font-bold hover:bg-slate-800 transition-all active:scale-95 text-sm">
                     Cerrar Formulario
@@ -1287,12 +1294,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             </div>
           )}
 
-          {comments && (
-            <div>
-              <h4 className="font-medium text-sm text-gray-900 dark:text-white border-b pb-1 dark:border-gray-700 mb-1">Comentarios</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded italic">"{comments}"</p>
-            </div>
-          )}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Comentarios Generales</label>
+            <textarea rows={3} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 transition-shadow resize-none" placeholder="Ingrese comentarios finales para el reporte..." value={comments} onChange={(e) => setComments(e.target.value)} />
+          </div>
 
           <div className="flex gap-3 pt-4">
             <button onClick={() => setShowSummaryModal(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 transition-colors text-sm">
@@ -1604,6 +1609,47 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Processed History Modal */}
+      <Modal isOpen={showProcessedHistory} onClose={() => setShowProcessedHistory(false)} title="Registros Cargados" size="md">
+        <div className="space-y-6">
+          <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
+            <span className="text-3xl font-bold text-green-500">{wizardIndex}</span>
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Registros procesados hasta ahora</p>
+          </div>
+
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            {projectEmployees
+              .slice(0, wizardIndex)
+              .reverse()
+              .map((emp) => {
+                const data = wizardData[emp.id];
+                if (!data) return null;
+                const isPresent = data.status === "present";
+                const isOvertime = (data.overtimeHours || 0) > 0;
+                const typeName = isPresent ? (isOvertime ? `Horas Extra (${data.overtimeHours}h)` : "Presente") : logTypes.find((t) => t._id === data.typeId)?.name || "Ausente";
+
+                return (
+                  <div key={emp.id} className="bg-white dark:bg-slate-800/50 rounded-xl p-3 flex justify-between items-center border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <div>
+                      <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{emp.name}</div>
+                      <div className={`text-xs font-medium ${isPresent ? (isOvertime ? "text-blue-600" : "text-green-600") : "text-red-500"}`}>{typeName}</div>
+                    </div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-inner ${isPresent ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}>
+                      <FontAwesomeIcon icon={isPresent ? faCheck : faTimes} className="text-sm" />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button onClick={() => setShowProcessedHistory(false)} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded-lg font-bold">
+              Cerrar
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

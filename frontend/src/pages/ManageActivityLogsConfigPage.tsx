@@ -265,25 +265,15 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
             {/* ===================== GENERAL SETTINGS TAB ===================== */}
             {activeTab === "general" && (
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <FontAwesomeIcon icon={faMobileAlt} size="lg" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configuración Aplicación Mobile</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Opciones generales para la carga de novedades.</p>
-                  </div>
-                </div>
-
                 <div className="space-y-8">
                   {/* Intro Section (Explanation) */}
-                  <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div>
                     <div className="flex items-start gap-4">
                       <div className="mt-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <FontAwesomeIcon icon={faMobileAlt} size="lg" />
                       </div>
                       <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white mb-2">Modos de Reporte en App Mobile</h4>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configuración Aplicación Mobile</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-3">Define cómo cada proyecto reporta sus novedades.</p>
                         <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-2 mb-0">
                           <li className="flex items-start gap-2">
@@ -309,7 +299,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                        <FontAwesomeIcon icon={faProjectDiagram} />
+                        <FontAwesomeIcon icon={faBriefcase} />
                         Listado de Proyectos
                       </h4>
                       <span className="text-xs text-gray-400">Total: {allProjects.length}</span>
@@ -354,13 +344,23 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
                           <div key={project._id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm ${isActive ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}`}>{project.name.charAt(0)}</div>
-                              <div className="flex flex-col">
-                                <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{isActive ? "Reporte Rápido Activado" : "Modo Wizard Detallado"}</span>
-                              </div>
+                              <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
                             </div>
 
-                            <div>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                {isActive ? (
+                                  <>
+                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Activado</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Reporte Rápido</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="bg-gray-200 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Desactivado</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Wizard Detallado</span>
+                                  </>
+                                )}
+                              </div>
                               <button onClick={handleToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"}`} title={isActive ? "Desactivar Reporte Rápido" : "Activar Reporte Rápido"}>
                                 <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? "translate-x-5" : "translate-x-0"}`} />
                               </button>

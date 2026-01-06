@@ -569,7 +569,7 @@ export const MobileNavbar: React.FC = () => {
               </button>
             </div>
             <div>
-              <Logo sizeClass="text-3xl" wrapperClassName="flex items-center cursor-pointer hover:opacity-80 transition-opacity" />
+              <Logo sizeClass="text-3xl" wrapperClassName="flex items-center select-none" />
             </div>
             <div className="flex items-center justify-center space-x-2">
               <div className="hidden lg:block">
