@@ -3,7 +3,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
 import { SortableActivityTypeRow, ActivityType } from "../components/activity_logs_config/SortableActivityTypeRow";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faProjectDiagram, faBriefcase, faMobileAlt } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import { ReportSchedule } from "../types/activityTypes";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -291,6 +291,23 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
                             </div>
                           </li>
                         </ul>
+                        {/* Personal Adicional Explanation */}
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-start gap-3">
+                            <div className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <FontAwesomeIcon icon={faUserPlus} />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Personal Adicional</h4>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1">
+                                Cuando está <strong className="text-green-600 dark:text-green-400">activado</strong>, al finalizar el wizard de novedades se mostrará una pantalla adicional donde el coordinador puede incluir colaboradores que <em>no están asignados</em> al proyecto. Útil para registrar personal prestado de otros equipos o reemplazos temporales.
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                Si está <strong>desactivado</strong>, solo se podrá reportar sobre el personal asignado al proyecto.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -321,12 +338,16 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
                           isActive = true;
                         }
 
+                        // Additional Staff Config
+                        const allowsAdditionalStaff = conf?.allowsAdditionalStaff ?? false;
+
                         const handleToggle = async () => {
                           try {
                             const newState = !isActive;
                             const newConfig = {
                               useGlobalConfig: false,
                               enableFastEntry: newState,
+                              allowsAdditionalStaff: conf?.allowsAdditionalStaff ?? false,
                             };
 
                             // Optimistic UI
@@ -340,30 +361,57 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
                           }
                         };
 
+                        const handleToggleAdditionalStaff = async () => {
+                          try {
+                            const newState = !allowsAdditionalStaff;
+                            const newConfig = {
+                              useGlobalConfig: false,
+                              enableFastEntry: conf?.enableFastEntry ?? true,
+                              allowsAdditionalStaff: newState,
+                            };
+
+                            // Optimistic UI
+                            setAllProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, activityLogConfig: newConfig } : p)));
+
+                            await projectsAPI.updateProject(project._id, { activityLogConfig: newConfig });
+                          } catch (e) {
+                            sweetAlert.error("Error", "No se pudo actualizar el proyecto.");
+                            loadProjects(); // Revert
+                          }
+                        };
+
                         return (
-                          <div key={project._id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm ${isActive ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}`}>{project.name.charAt(0)}</div>
-                              <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
+                          <div key={project._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm ${isActive ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"}`}>{project.name.charAt(0)}</div>
+                                <span className="font-semibold text-gray-900 dark:text-white">{project.name}</span>
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                {isActive ? (
-                                  <>
-                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Activado</span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Reporte Rápido</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="bg-gray-200 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Desactivado</span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Wizard Detallado</span>
-                                  </>
-                                )}
+                            {/* Configuration Options Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-13 ml-10">
+                              {/* Fast Entry Toggle */}
+                              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Reporte Rápido</span>
+                                  <span className="text-[10px] text-gray-400">{isActive ? "Pregunta si hubo novedades" : "Uno por uno"}</span>
+                                </div>
+                                <button onClick={handleToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`} title={isActive ? "Desactivar Reporte Rápido" : "Activar Reporte Rápido"}>
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? "translate-x-5" : "translate-x-0"}`} />
+                                </button>
                               </div>
-                              <button onClick={handleToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"}`} title={isActive ? "Desactivar Reporte Rápido" : "Activar Reporte Rápido"}>
-                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isActive ? "translate-x-5" : "translate-x-0"}`} />
-                              </button>
+
+                              {/* Additional Staff Toggle */}
+                              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Personal Adicional</span>
+                                  <span className="text-[10px] text-gray-400">{allowsAdditionalStaff ? "Permite agregar personal externo" : "Solo personal asignado"}</span>
+                                </div>
+                                <button onClick={handleToggleAdditionalStaff} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${allowsAdditionalStaff ? "bg-green-600" : "bg-gray-300 dark:bg-gray-600"}`} title={allowsAdditionalStaff ? "Desactivar Personal Adicional" : "Activar Personal Adicional"}>
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${allowsAdditionalStaff ? "translate-x-5" : "translate-x-0"}`} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );

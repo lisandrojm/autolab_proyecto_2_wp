@@ -67,7 +67,16 @@ export interface Project {
   activityLogConfig?: {
     useGlobalConfig: boolean;
     enableFastEntry?: boolean;
+    allowsAdditionalStaff?: boolean;
   };
+  teamConfig?: {
+    userId: string;
+    isNotifier: boolean;
+    canRegister: boolean;
+    useProjectSchedule?: boolean;
+    startTime?: string;
+    endTime?: string;
+  }[];
   workSchedule?: WorkSchedule;
 }
 
@@ -116,6 +125,7 @@ function normalizeProject(raw: any): Project {
     vacationConfig: raw?.vacationConfig,
     activityLogConfig: raw?.activityLogConfig,
     workSchedule: raw?.workSchedule,
+    teamConfig: raw?.teamConfig,
   };
 }
 
@@ -263,6 +273,7 @@ class ProjectsAPI {
       activityLogConfig?: {
         useGlobalConfig: boolean;
         enableFastEntry?: boolean;
+        allowsAdditionalStaff?: boolean;
       };
       workSchedule?: WorkSchedule;
     }
@@ -274,6 +285,27 @@ class ProjectsAPI {
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", project._id, clientId);
     return project;
+  }
+
+  async updateTeamConfig(
+    projectId: string,
+    config: {
+      userId: string;
+      isNotifier: boolean;
+      canRegister: boolean;
+      useProjectSchedule?: boolean;
+      startTime?: string;
+      endTime?: string;
+    }[]
+  ): Promise<Project> {
+    const resp = await axios.patch(
+      `/projects/${projectId}/team-config`,
+      { config },
+      {
+        headers: this.getHeaders(),
+      }
+    );
+    return normalizeProject(resp.data);
   }
 
   async getProjectCampaigns(projectId: string): Promise<any[]> {

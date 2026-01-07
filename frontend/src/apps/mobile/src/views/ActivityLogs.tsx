@@ -5,7 +5,7 @@ import { activityReportsAPI, ActivityReport } from "../../../../api/activityRepo
 import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -57,15 +57,22 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
 
   const { mode, weekdays, weekend, days } = project.workSchedule;
 
+  // Helper to check if it's a work day (defaults to true if endTime is present)
+  const isWorkDay = (dayConfig: any) => {
+    if (!dayConfig) return false;
+    if (dayConfig.isWorkDay === false) return false;
+    return !!dayConfig.endTime;
+  };
+
   // 1. Per day mode
   if (mode === "per_day" && days) {
     const dayData = (days as any)[dayName];
-    return dayData?.isWorkDay ? dayData.endTime : "";
+    return isWorkDay(dayData) ? dayData.endTime : "";
   }
 
   // 2. All week mode (Monday to Sunday)
   if (mode === "all_week") {
-    return weekdays?.isWorkDay ? weekdays.endTime : "";
+    return isWorkDay(weekdays) ? weekdays.endTime : "";
   }
 
   // 3. Weekdays mode (usually M-V + optional Saturday)
@@ -73,16 +80,32 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
     if (dayIndex === 0) return ""; // Sunday strictly off in this mode
     if (dayIndex === 6) {
       // Saturday uses 'weekend' config
-      return weekend?.isWorkDay ? weekend.endTime : "";
+      return isWorkDay(weekend) ? weekend.endTime : "";
     }
     // Monday to Friday
-    return weekdays?.isWorkDay ? weekdays.endTime : "";
+    return isWorkDay(weekdays) ? weekdays.endTime : "";
   }
 
   // Fallback
   return weekdays?.endTime || "18:00";
 };
 
+const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: string): string => {
+  if (!project.teamConfig) return getProjectEndTime(project, dateStr);
+
+  // 1. Check if user has a specific schedule in teamConfig
+  const userConfig = project.teamConfig.find((c) => {
+    const configUserId = typeof c.userId === "object" ? (c.userId as any)._id : c.userId;
+    return String(configUserId) === String(employeeId);
+  });
+
+  if (userConfig && userConfig.useProjectSchedule === false && userConfig.endTime) {
+    return userConfig.endTime;
+  }
+
+  // 2. Otherwise use project general schedule
+  return getProjectEndTime(project, dateStr);
+};
 export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -117,6 +140,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const [wizardIndex, setWizardIndex] = useState<number>(-1); // -1: Not started, 0+: Employee Index
   const [wizardData, setWizardData] = useState<Record<string, WizardEntry>>({});
+
+  // Additional Staff State
+  const [showAdditionalStaffModal, setShowAdditionalStaffModal] = useState(false);
+  const [selectedAdditionalStaff, setSelectedAdditionalStaff] = useState<string[]>([]);
+  const [additionalStaffSearchTerm, setAdditionalStaffSearchTerm] = useState("");
 
   const [logTypes, setLogTypes] = useState<ActivityLogType[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
@@ -211,7 +239,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     if (type?.name.toLowerCase().includes("horas extra") && selectedProjectId && draftOutTime) {
       const project = userProjects.find((p) => p._id === selectedProjectId);
       if (project) {
-        const endTime = getProjectEndTime(project, reportDate);
+        const endTime = selectedEmployee ? getEmployeeEndTime(project, selectedEmployee.id, reportDate) : getProjectEndTime(project, reportDate);
         if (endTime) {
           const [outH, outM] = draftOutTime.split(":").map(Number);
           const [endH, endM] = endTime.split(":").map(Number);
@@ -222,14 +250,53 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           let diff = (outTotal - endTotal) / 60;
           if (diff < 0) diff = 0;
           setDraftOvertimeHours(parseFloat(diff.toFixed(2)));
-        } else {
-          // If no end time (non-work day), we can't auto-calculate from "Out Time" alone
-          // unless we assume a start time. For now, we'll leave it to manual if they want,
-          // but the user's request focuses on "posterior to exit time".
         }
       }
     }
-  }, [draftOutTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes]);
+  }, [draftOutTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee]);
+
+  // Pre-fill Out Time for Overtime when employee or type changes
+  useEffect(() => {
+    if (selectedEmployee && draftTypeId && selectedProjectId) {
+      const type = logTypes.find((t) => t._id === draftTypeId);
+      if (type?.name.toLowerCase().includes("horas extra")) {
+        const project = userProjects.find((p) => p._id === selectedProjectId);
+        if (project) {
+          const endTime = getEmployeeEndTime(project, selectedEmployee.id, reportDate);
+          if (endTime) {
+            setDraftOutTime(endTime);
+          }
+        }
+      }
+    }
+  }, [selectedEmployee?.id, draftTypeId, selectedProjectId, reportDate]);
+
+  // Wizard OT calculation
+  useEffect(() => {
+    if (wizardIndex < 0 || !selectedProject) return;
+    const currentEmp = projectEmployees[wizardIndex];
+    if (!currentEmp) return;
+
+    const data = wizardData[currentEmp.id];
+    if (data?.status === "present" && data.outTime) {
+      const endTime = getEmployeeEndTime(selectedProject, currentEmp.id, reportDate);
+      if (endTime) {
+        const [outH, outM] = data.outTime.split(":").map(Number);
+        const [endH, endM] = endTime.split(":").map(Number);
+
+        const outTotal = outH * 60 + outM;
+        const endTotal = endH * 60 + endM;
+
+        let diff = (outTotal - endTotal) / 60;
+        if (diff < 0) diff = 0;
+
+        // Only update if it's different to avoid infinite loops
+        if (parseFloat(diff.toFixed(2)) !== data.overtimeHours) {
+          updateWizardEntry(currentEmp.id, { overtimeHours: parseFloat(diff.toFixed(2)) });
+        }
+      }
+    }
+  }, [wizardIndex, wizardData, selectedProject, reportDate]);
 
   // Derived state to check if Fast Entry is enabled for the current project
   // Derived state to check if Fast Entry is enabled for the current project
@@ -250,6 +317,17 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     // to maintain backward compatibility with standard behavior.
     return true;
   }, [selectedProject]);
+
+  // Check if project allows additional staff
+  const allowsAdditionalStaff = useMemo(() => {
+    return selectedProject?.activityLogConfig?.allowsAdditionalStaff ?? false;
+  }, [selectedProject]);
+
+  // Get employees NOT assigned to the current project (for additional staff selection)
+  const nonProjectEmployees = useMemo(() => {
+    if (!selectedProjectId) return [];
+    return employees.filter((e) => !e.projectIds || !e.projectIds.includes(selectedProjectId));
+  }, [employees, selectedProjectId]);
 
   const addRecordInternal = (employee: EmployeeOption, type: ActivityLogType, replacementId?: string, overtimeHours?: number, notes?: string) => {
     const replacement = employees.find((e) => e.id === replacementId);
@@ -298,15 +376,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     const isOvertime = type.name.toLowerCase().includes("horas extra");
     const needsReplacement = type.requiresReplacement;
-
-    // Pre-fill Out Time for Overtime
-    if (isOvertime) {
-      const project = userProjects.find((p) => p._id === selectedProjectId);
-      if (project) {
-        const endTime = getProjectEndTime(project, reportDate);
-        if (endTime) setDraftOutTime(endTime);
-      }
-    }
 
     // If it's a simple type (no extra fields needed), add immediately
     if (!isOvertime && !needsReplacement) {
@@ -432,7 +501,21 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     setEntries(newEntries);
     setHasActivity(hasAnomalies);
-    setShowSummaryModal(true);
+
+    // Debug: log values to verify additional staff logic
+    console.log("[DEBUG] Additional Staff Check:", {
+      allowsAdditionalStaff,
+      nonProjectEmployeesCount: nonProjectEmployees.length,
+      selectedProjectConfig: selectedProject?.activityLogConfig,
+      shouldShowModal: allowsAdditionalStaff && nonProjectEmployees.length > 0,
+    });
+
+    // If project allows additional staff, show additional staff modal first
+    if (allowsAdditionalStaff && nonProjectEmployees.length > 0) {
+      setShowAdditionalStaffModal(true);
+    } else {
+      setShowSummaryModal(true);
+    }
   };
   // ========================================================
 
@@ -456,7 +539,20 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return;
     }
 
-    setShowSummaryModal(true);
+    // Debug: log values to verify additional staff logic (Fast Entry mode)
+    console.log("[DEBUG] Additional Staff Check (Fast Entry):", {
+      allowsAdditionalStaff,
+      nonProjectEmployeesCount: nonProjectEmployees.length,
+      selectedProjectConfig: selectedProject?.activityLogConfig,
+      shouldShowModal: allowsAdditionalStaff && nonProjectEmployees.length > 0,
+    });
+
+    // If project allows additional staff, show additional staff modal first
+    if (allowsAdditionalStaff && nonProjectEmployees.length > 0) {
+      setShowAdditionalStaffModal(true);
+    } else {
+      setShowSummaryModal(true);
+    }
   };
 
   const handleConfirmSubmit = async () => {
@@ -585,15 +681,30 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     }
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
     setSelectedReportId(null);
     setReportDate(new Date().toISOString().split("T")[0]);
-    // Reset Project Selection
-    if (userProjects.length > 0) {
-      setSelectedProjectId(userProjects[0]._id);
-    } else {
-      setSelectedProjectId("");
+
+    // Refresh projects to get latest config (allowsAdditionalStaff, etc.)
+    try {
+      const allProjs = await projectsAPI.listAll();
+      setUserProjects(allProjs);
+      // Reset Project Selection with fresh data
+      if (allProjs.length > 0) {
+        setSelectedProjectId(allProjs[0]._id);
+      } else {
+        setSelectedProjectId("");
+      }
+    } catch (e) {
+      console.error("Error refreshing projects", e);
+      // Fallback to existing data
+      if (userProjects.length > 0) {
+        setSelectedProjectId(userProjects[0]._id);
+      } else {
+        setSelectedProjectId("");
+      }
     }
+
     setHasActivity(null);
     setEntries([]); // Clear entries for new report
     setSelectedEmployee(null);
@@ -602,6 +713,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     // Wizard Reset
     setWizardIndex(-1);
     setWizardData({});
+    // Additional Staff Reset
+    setSelectedAdditionalStaff([]);
+    setAdditionalStaffSearchTerm("");
     setShowForm(true);
   };
 
@@ -832,7 +946,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               <span className="font-bold text-slate-700 dark:text-slate-200">
                                                 {(() => {
                                                   const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                                  return proj ? getProjectEndTime(proj, reportDate) || "No laboral" : "—";
+                                                  return proj ? getEmployeeEndTime(proj, currentEmp.id, reportDate) || "No laboral" : "—";
                                                 })()}
                                               </span>
                                             </div>
@@ -1070,7 +1184,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               <span className="font-bold text-slate-700 dark:text-slate-200">
                                                 {(() => {
                                                   const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                                  return proj ? getProjectEndTime(proj, reportDate) || "No laboral" : "—";
+                                                  return proj ? (selectedEmployee ? getEmployeeEndTime(proj, selectedEmployee.id, reportDate) : getProjectEndTime(proj, reportDate)) || "No laboral" : "—";
                                                 })()}
                                               </span>
                                             </div>
@@ -1647,6 +1761,118 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
             <button onClick={() => setShowProcessedHistory(false)} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded-lg font-bold">
               Cerrar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Additional Staff Modal */}
+      <Modal
+        isOpen={showAdditionalStaffModal}
+        onClose={() => {
+          setShowAdditionalStaffModal(false);
+          setSelectedAdditionalStaff([]);
+          setAdditionalStaffSearchTerm("");
+        }}
+        title="Personal Adicional"
+        size="md"
+      >
+        <div className="space-y-4">
+          {/* Info Box */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 text-sm text-blue-800 dark:text-blue-200">
+            <p className="font-bold flex items-center gap-2 mb-1">
+              <FontAwesomeIcon icon={faUserPlus} />
+              ¿Agregar Personal Adicional?
+            </p>
+            <p className="leading-snug opacity-90">Puedes incluir colaboradores que no están asignados a este proyecto en el reporte de novedades.</p>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <input type="text" placeholder="Buscar personal..." className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 transition-shadow" value={additionalStaffSearchTerm} onChange={(e) => setAdditionalStaffSearchTerm(e.target.value)} />
+          </div>
+
+          {/* Staff List */}
+          <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+            {nonProjectEmployees
+              .filter((emp) => (additionalStaffSearchTerm ? emp.name.toLowerCase().includes(additionalStaffSearchTerm.toLowerCase()) : true))
+              .map((emp) => {
+                const isSelected = selectedAdditionalStaff.includes(emp.id);
+                return (
+                  <div
+                    key={emp.id}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedAdditionalStaff((prev) => prev.filter((id) => id !== emp.id));
+                      } else {
+                        setSelectedAdditionalStaff((prev) => [...prev, emp.id]);
+                      }
+                    }}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-800" : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50"}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isSelected ? "bg-green-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"}`}>{emp.name.charAt(0)}</div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                        {emp.positionName && <p className="text-[10px] text-gray-500 dark:text-gray-400">{emp.positionName}</p>}
+                      </div>
+                    </div>
+                    <div className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${isSelected ? "bg-green-500 text-white" : "border-2 border-gray-300 dark:border-gray-600"}`}>{isSelected && <FontAwesomeIcon icon={faCheck} className="text-xs" />}</div>
+                  </div>
+                );
+              })}
+            {nonProjectEmployees.filter((emp) => (additionalStaffSearchTerm ? emp.name.toLowerCase().includes(additionalStaffSearchTerm.toLowerCase()) : true)).length === 0 && <div className="text-center py-8 text-gray-500 dark:text-gray-400">No hay personal adicional disponible</div>}
+          </div>
+
+          {/* Selected Count */}
+          {selectedAdditionalStaff.length > 0 && (
+            <div className="text-sm text-gray-600 dark:text-gray-400 text-center bg-gray-50 dark:bg-gray-800 py-2 rounded-lg">
+              <span className="font-bold text-green-600 dark:text-green-400">{selectedAdditionalStaff.length}</span> colaborador(es) seleccionado(s)
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => {
+                // Skip adding additional staff, go directly to summary
+                setShowAdditionalStaffModal(false);
+                setSelectedAdditionalStaff([]);
+                setAdditionalStaffSearchTerm("");
+                setShowSummaryModal(true);
+              }}
+              className="flex-1 py-3 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 transition-colors text-sm"
+            >
+              Omitir
+            </button>
+            <button
+              onClick={() => {
+                // Add selected staff as "Present" entries
+                if (selectedAdditionalStaff.length > 0) {
+                  const newEntries: LocalAttendanceRecord[] = selectedAdditionalStaff.map((empId) => {
+                    const emp = nonProjectEmployees.find((e) => e.id === empId);
+                    return {
+                      tempId: `additional-${empId}-${Date.now()}`,
+                      employeeId: empId,
+                      employeeName: emp?.name || "Colaborador Adicional",
+                      typeId: "",
+                      typeName: "Presente (Adicional)",
+                      notes: "Personal adicional agregado al reporte",
+                    };
+                  });
+                  setEntries((prev) => [...prev, ...newEntries]);
+                  setHasActivity(true); // Force hasActivity since we added people
+                }
+                setShowAdditionalStaffModal(false);
+                setSelectedAdditionalStaff([]);
+                setAdditionalStaffSearchTerm("");
+                setShowSummaryModal(true);
+              }}
+              disabled={selectedAdditionalStaff.length === 0}
+              className="flex-1 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold shadow-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <FontAwesomeIcon icon={faUserPlus} />
+              Agregar y Continuar
             </button>
           </div>
         </div>

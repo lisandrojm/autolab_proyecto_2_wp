@@ -11,11 +11,12 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { InfoModal } from "../components/ui/InfoModal";
+import { Modal } from "../components/ui/Modal";
 
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock } from "@fortawesome/free-solid-svg-icons";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -43,6 +44,12 @@ export const ProjectTeamPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedArea, setSelectedArea] = useState<string>("");
   const [selectedPosition, setSelectedPosition] = useState<string>("");
+  const [editingScheduleUser, setEditingScheduleUser] = useState<User | null>(null);
+  const [userScheduleData, setUserScheduleData] = useState({
+    useProjectSchedule: true,
+    startTime: "09:00",
+    endTime: "18:00",
+  });
 
   /* ------------------------------ Fetchers ------------------------------- */
 
@@ -144,20 +151,13 @@ export const ProjectTeamPage: React.FC = () => {
   const updateTeamConfig = async (newConfig: any[]) => {
     if (!project) return;
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/projects/${project._id}/team-config`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ config: newConfig }),
-      });
-      setTeamConfig(newConfig);
+      const updatedProject = await projectsAPI.updateTeamConfig(project._id, newConfig);
+      setTeamConfig(updatedProject.teamConfig || []);
     } catch (err) {
       console.error("Error updating team config", err);
+      sweetAlert.error("Error", "No se pudo guardar la configuración del equipo.");
     }
   };
-
   const handleToggleNotifier = (userId: string) => {
     // Logic: Single Selection. Set target true, others false.
     const newConfig = teamMembers.map((member) => {
@@ -168,10 +168,52 @@ export const ProjectTeamPage: React.FC = () => {
         userId: member._id,
         canRegister: existing ? existing.canRegister : true,
         isNotifier: isActivating,
+        // Preserve other fields with defaults if missing
+        useProjectSchedule: existing?.useProjectSchedule ?? true,
+        startTime: existing?.startTime || "09:00",
+        endTime: existing?.endTime || "18:00",
       };
     });
 
     updateTeamConfig(newConfig);
+  };
+
+  const handleOpenScheduleModal = (user: User) => {
+    const existing = teamConfig.find((c) => c.userId === user._id);
+    setEditingScheduleUser(user);
+    setUserScheduleData({
+      useProjectSchedule: existing ? (existing.useProjectSchedule !== undefined ? existing.useProjectSchedule : true) : true,
+      startTime: existing?.startTime || project?.workSchedule?.weekdays?.startTime || "09:00",
+      endTime: existing?.endTime || project?.workSchedule?.weekdays?.endTime || "18:00",
+    });
+  };
+
+  const handleSaveUserSchedule = () => {
+    if (!editingScheduleUser) return;
+
+    const newConfig = teamMembers.map((member) => {
+      const existing = teamConfig.find((c) => c.userId === member._id);
+      if (member._id === editingScheduleUser._id) {
+        return {
+          userId: member._id,
+          isNotifier: existing ? existing.isNotifier : false,
+          canRegister: existing ? existing.canRegister : true,
+          ...userScheduleData,
+        };
+      }
+      return {
+        userId: member._id,
+        isNotifier: existing ? existing.isNotifier : false,
+        canRegister: existing ? existing.canRegister : true,
+        useProjectSchedule: existing?.useProjectSchedule ?? true,
+        startTime: existing?.startTime || "09:00",
+        endTime: existing?.endTime || "18:00",
+      };
+    });
+
+    updateTeamConfig(newConfig);
+    setEditingScheduleUser(null);
+    sweetAlert.success("Horario Actualizado", `El horario de ${editingScheduleUser.firstName} ha sido actualizado.`);
   };
 
   // Ensure Default Notifier
@@ -385,8 +427,17 @@ export const ProjectTeamPage: React.FC = () => {
                         <div className="flex gap-1">
                           {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
                           {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
-                          {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
                         </div>
+
+                        {/* Individual Schedule Display */}
+                        {userConfig && userConfig.useProjectSchedule === false && userConfig.startTime && (
+                          <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-full w-fit">
+                            <FontAwesomeIcon icon={faClock} className="text-[9px]" />
+                            <span>
+                              Horario: {userConfig.startTime} - {userConfig.endTime}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -396,6 +447,9 @@ export const ProjectTeamPage: React.FC = () => {
                           <FontAwesomeIcon icon={faBell} />
                         </button>
                       )}
+                      <button onClick={() => handleOpenScheduleModal(user)} className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors" title="Configurar horario">
+                        <FontAwesomeIcon icon={faClock} />
+                      </button>
                       <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Retirar del equipo">
                         <FontAwesomeIcon icon={faTrash} />
                       </button>
@@ -475,6 +529,53 @@ export const ProjectTeamPage: React.FC = () => {
           </div>
         </div>
       </InfoModal>
+
+      {/* User Schedule Modal */}
+      <Modal isOpen={!!editingScheduleUser} onClose={() => setEditingScheduleUser(null)} title={`Horario de ${editingScheduleUser?.firstName || "Usuario"}`} size="sm">
+        <div className="space-y-6 py-2">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 flex gap-3">
+            <FontAwesomeIcon icon={faClock} className="text-blue-500 mt-1" />
+            <div className="text-sm">
+              <p className="font-semibold text-blue-900 dark:text-blue-200">Configurar Horario Laboral</p>
+              <p className="text-blue-700 dark:text-blue-400 opacity-80 mt-0.5 leading-relaxed">Este horario se usará como base para el cálculo automático de horas extras en el reporte diario.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Usar Horario del Proyecto</p>
+                <p className="text-xs text-gray-500">Usa el horario definido en la configuración general.</p>
+              </div>
+              <button onClick={() => setUserScheduleData((prev) => ({ ...prev, useProjectSchedule: !prev.useProjectSchedule }))} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${userScheduleData.useProjectSchedule ? "bg-primary-600" : "bg-gray-200 dark:bg-gray-700"}`}>
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${userScheduleData.useProjectSchedule ? "translate-x-5" : "translate-x-0"}`} />
+              </button>
+            </div>
+
+            {!userScheduleData.useProjectSchedule && (
+              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-1">Entrada</label>
+                  <input type="time" className="input-field w-full" value={userScheduleData.startTime} onChange={(e) => setUserScheduleData((prev) => ({ ...prev, startTime: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-1">Salida</label>
+                  <input type="time" className="input-field w-full" value={userScheduleData.endTime} onChange={(e) => setUserScheduleData((prev) => ({ ...prev, endTime: e.target.value }))} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setEditingScheduleUser(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              Cancelar
+            </button>
+            <button onClick={handleSaveUserSchedule} className="flex-1 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all active:scale-95">
+              Guardar Horario
+            </button>
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 };

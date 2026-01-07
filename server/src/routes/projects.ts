@@ -49,6 +49,7 @@ const createProjectSchema = z.object({
     .object({
       useGlobalConfig: z.boolean(),
       enableFastEntry: z.boolean().optional(),
+      allowsAdditionalStaff: z.boolean().optional(),
     })
     .optional()
     .nullable(),
@@ -86,6 +87,18 @@ const createProjectSchema = z.object({
     })
     .optional()
     .nullable(),
+  teamConfig: z
+    .array(
+      z.object({
+        userId: z.string(),
+        isNotifier: z.boolean().optional(),
+        canRegister: z.boolean().optional(),
+        useProjectSchedule: z.boolean().optional(),
+        startTime: z.string().optional().nullable(),
+        endTime: z.string().optional().nullable(),
+      })
+    )
+    .optional(),
 });
 
 // GET /projects
@@ -470,16 +483,24 @@ router.patch("/projects/:projectId/team-config", requireTenant, authenticateToke
       if (index >= 0) {
         currentConfig[index].isNotifier = newItem.isNotifier;
         currentConfig[index].canRegister = newItem.canRegister;
+        // Individual work schedule
+        currentConfig[index].useProjectSchedule = newItem.useProjectSchedule;
+        currentConfig[index].startTime = newItem.startTime;
+        currentConfig[index].endTime = newItem.endTime;
       } else {
         currentConfig.push({
           userId: new Types.ObjectId(newItem.userId),
           isNotifier: newItem.isNotifier,
           canRegister: newItem.canRegister,
+          useProjectSchedule: newItem.useProjectSchedule,
+          startTime: newItem.startTime,
+          endTime: newItem.endTime,
         });
       }
     });
 
     project.teamConfig = currentConfig;
+    project.markModified("teamConfig");
     await project.save();
 
     res.json(project);

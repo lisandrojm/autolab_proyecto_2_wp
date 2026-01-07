@@ -40,6 +40,10 @@ export interface IProject extends Document {
     userId: Types.ObjectId;
     isNotifier: boolean;
     canRegister: boolean;
+    // Individual work schedule for this user in this project
+    useProjectSchedule?: boolean; // If true, use project's workSchedule. Default true.
+    startTime?: string; // "HH:mm" format - overrides project schedule
+    endTime?: string; // "HH:mm" format - overrides project schedule
   }[];
   favorite?: boolean;
   vacationConfig?: {
@@ -51,6 +55,7 @@ export interface IProject extends Document {
   activityLogConfig?: {
     useGlobalConfig: boolean;
     enableFastEntry?: boolean;
+    allowsAdditionalStaff?: boolean; // Allows adding non-assigned staff during report
   };
   workSchedule?: IWorkSchedule;
 }
@@ -86,6 +91,10 @@ const projectSchema = new Schema<IProject>(
         userId: { type: Schema.Types.ObjectId, ref: "User" },
         isNotifier: { type: Boolean, default: false }, // Recibe notificaciones
         canRegister: { type: Boolean, default: true }, // Puede registrar novedades
+        // Individual work schedule
+        useProjectSchedule: { type: Boolean, default: true }, // Use project's schedule by default
+        startTime: { type: String }, // "HH:mm" format
+        endTime: { type: String }, // "HH:mm" format
       },
     ],
 
@@ -99,6 +108,7 @@ const projectSchema = new Schema<IProject>(
     activityLogConfig: {
       useGlobalConfig: { type: Boolean, default: true },
       enableFastEntry: { type: Boolean, default: true },
+      allowsAdditionalStaff: { type: Boolean, default: false },
     },
     workSchedule: {
       mode: { type: String, enum: ["weekdays", "all_week", "per_day"], default: "weekdays" },
