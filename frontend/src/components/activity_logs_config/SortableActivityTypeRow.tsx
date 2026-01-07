@@ -112,10 +112,10 @@ export const SortableActivityTypeRow: React.FC<SortableRowProps> = ({ item, inde
       </td>
       <td className="py-4 px-6 text-right">
         <div className={`flex items-center justify-end gap-3 ${isReorderMode ? "opacity-30" : ""}`}>
-          <button onClick={() => !isReorderMode && onEdit(item)} disabled={isReorderMode} className={`text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${isReorderMode ? "cursor-not-allowed" : ""}`} title="Editar">
+          <button onClick={() => !isReorderMode && onEdit(item)} disabled={isReorderMode} className={`text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors ${isReorderMode ? "cursor-not-allowed" : ""}`} title="Editar">
             <FontAwesomeIcon icon={faPenToSquare} />
           </button>
-          <button onClick={() => !isReorderMode && onDelete(item.id)} disabled={isReorderMode} className={`text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors ${isReorderMode ? "cursor-not-allowed" : ""}`} title="Eliminar">
+          <button onClick={() => !isReorderMode && onDelete(item.id)} disabled={isReorderMode} className={`text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors ${isReorderMode ? "cursor-not-allowed" : ""}`} title="Eliminar">
             <FontAwesomeIcon icon={faTrash} />
           </button>
         </div>

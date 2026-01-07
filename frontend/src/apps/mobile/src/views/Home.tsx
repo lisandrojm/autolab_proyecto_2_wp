@@ -214,7 +214,7 @@ export default function Home({ onNavigate }: HomeProps) {
               <div className="flex-col gap-1 items-center space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center">
-                    <FontAwesomeIcon icon={action.icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
+                    <FontAwesomeIcon icon={action.icon} className="h-5 w-5 text-primary" />
                   </div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{action.title}</h2>
                 </div>
