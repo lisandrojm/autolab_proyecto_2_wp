@@ -23,6 +23,7 @@ export interface IUser extends Document {
   updatedAt: Date;
   vacationDays: { lawDays: number; extraDays: number; carryOverDays: number; totalDays: number };
   seniorityAtEndOfYear: number;
+  metadata?: Record<string, any>;
   comparePassword(candidatePassword: string): Promise<boolean>;
   closeYear(maxDiasArrastre?: number): Promise<void>;
 }
@@ -53,6 +54,7 @@ const userSchema = new Schema<IUser>(
     extraVacationDays: { type: Number, default: 0 },
     carryOverVacationDays: { type: Number, default: 0 },
     lastLoginAt: { type: Date },
+    metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

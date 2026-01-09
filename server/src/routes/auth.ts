@@ -342,6 +342,7 @@ router.post("/register-client", requireTenant, validate(registerClientSchema), a
       firstName: name.split(" ")[0],
       lastName: name.split(" ").slice(1).join(" ") || undefined,
       isActive: true,
+      hireDate: new Date(),
     });
 
     // Vincular usuario con cliente en Client.usuarios
@@ -442,6 +443,7 @@ router.post("/register", async (req, res) => {
       role: "user",
       roles: defaultRole ? [defaultRole._id] : [],
       isActive: true,
+      hireDate: new Date(),
     });
 
     // Obtener permisos
@@ -601,6 +603,7 @@ router.post("/register-tenant", async (req, res) => {
       lastName: data.lastName,
       roles: [adminRole._id],
       isActive: true,
+      hireDate: new Date(),
     });
 
     await adminUser.save();
