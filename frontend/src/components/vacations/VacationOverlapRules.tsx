@@ -179,7 +179,7 @@ export const VacationOverlapRules: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Reglas de Solapamiento por Área</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Define cuántas personas por área pueden estar de vacaciones simultáneamente.</p>
         </div>
-        <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+        <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 text-sm font-medium transition-colors">
           <FontAwesomeIcon icon={faPlus} />
           Nueva Regla
         </button>
@@ -188,7 +188,7 @@ export const VacationOverlapRules: React.FC = () => {
       {rules.length === 0 ? (
         <EmptyState icon={faBan} title="No hay reglas definidas" description="Crea reglas para restringir el solapamiento de vacaciones por área." action={{ label: "Crear Regla", onClick: openCreate }} />
       ) : (
-        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 shadow-sm rounded overflow-hidden border border-gray-200 dark:border-gray-700">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -204,7 +204,7 @@ export const VacationOverlapRules: React.FC = () => {
                 <tr key={rule._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
+                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600 dark:text-blue-400">
                         <FontAwesomeIcon icon={faLayerGroup} />
                       </div>
                       <div>
@@ -279,7 +279,7 @@ export const VacationOverlapRules: React.FC = () => {
 
           {/* User List Section */}
           {selectedAreaId && (
-            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-600 text-sm">
+            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded border border-gray-200 dark:border-gray-600 text-sm">
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold text-gray-700 dark:text-gray-300">Usuarios en el área</h4>
@@ -297,9 +297,9 @@ export const VacationOverlapRules: React.FC = () => {
               {!loadingUsers && areaUsers.length > 0 && (
                 <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                   {areaUsers.map((user) => (
-                    <div key={user._id} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center flex-wrap gap-3">
+                    <div key={user._id} className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700 flex items-center flex-wrap gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs">
+                        <div className="h-8 w-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs">
                           {user.firstName?.charAt(0)}
                           {user.lastName?.charAt(0)}
                         </div>

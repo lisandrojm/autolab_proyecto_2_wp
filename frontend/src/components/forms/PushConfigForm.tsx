@@ -89,7 +89,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
           <Bell className="inline h-4 w-4 mr-2" />
           Título de la Notificación *
         </label>
-        <input type="text" value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} placeholder="Ej: Nueva actualización disponible" maxLength={65} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
+        <input type="text" value={config.title || ""} onChange={(e) => onChange({ ...config, title: e.target.value })} placeholder="Ej: Nueva actualización disponible" maxLength={65} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
         <div className="flex justify-between mt-1">
           <p className="text-xs text-gray-500">Máximo 65 caracteres</p>
           <p className={`text-xs font-medium ${titleLength > 65 ? "text-red-600" : "text-gray-500"}`}>{titleLength}/65</p>
@@ -98,7 +98,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mensaje *</label>
-        <textarea value={config.body || ""} onChange={(e) => onChange({ ...config, body: e.target.value })} placeholder="Escribe el mensaje de tu notificación aquí..." rows={4} maxLength={240} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none" />
+        <textarea value={config.body || ""} onChange={(e) => onChange({ ...config, body: e.target.value })} placeholder="Escribe el mensaje de tu notificación aquí..." rows={4} maxLength={240} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none" />
         <div className="flex justify-between mt-1">
           <p className="text-xs text-gray-500">Máximo 240 caracteres</p>
           <p className={`text-xs font-medium ${bodyLength > 240 ? "text-red-600" : "text-gray-500"}`}>{bodyLength}/240</p>
@@ -122,7 +122,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
               })
             }
             placeholder="miapp://pantalla/detalle"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
           />
           <p className="text-xs text-gray-500 mt-1">Destino al tocar la notificación</p>
         </div>
@@ -140,7 +140,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
                 priority: e.target.value as "high" | "normal" | "low",
               })
             }
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
           >
             <option value="low">Baja</option>
             <option value="normal">Normal</option>
@@ -152,18 +152,18 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">URL de la Imagen</label>
-          <input type="url" value={config.imageUrl || ""} onChange={(e) => onChange({ ...config, imageUrl: e.target.value })} placeholder={existingImages.length > 0 ? "Usando imagen del post" : "https://ejemplo.com/imagen.jpg"} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
+          <input type="url" value={config.imageUrl || ""} onChange={(e) => onChange({ ...config, imageUrl: e.target.value })} placeholder={existingImages.length > 0 ? "Usando imagen del post" : "https://ejemplo.com/imagen.jpg"} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
           <p className="text-xs text-gray-500 mt-1">{existingImages.length > 0 && !config.imageUrl ? <span className="text-green-600 dark:text-green-400">✓ Usando imagen del multimedia: {existingImages[0]}</span> : "Imagen grande que se muestra en la notificación"}</p>
           {displayImageUrl && (
             <div className="mt-2">
-              <img src={displayImageUrl} alt="Preview" className="h-24 w-auto rounded-lg border border-gray-300 dark:border-gray-600" />
+              <img src={displayImageUrl} alt="Preview" className="h-24 w-auto rounded border border-gray-300 dark:border-gray-600" />
             </div>
           )}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Badge (iOS)</label>
-          <input type="number" min="0" value={config.badge || 0} onChange={(e) => onChange({ ...config, badge: parseInt(e.target.value) || 0 })} placeholder="0" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
+          <input type="number" min="0" value={config.badge || 0} onChange={(e) => onChange({ ...config, badge: parseInt(e.target.value) || 0 })} placeholder="0" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
           <p className="text-xs text-gray-500 mt-1">Número que se muestra en el ícono de la app</p>
         </div>
       </div>
@@ -175,7 +175,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
         </label>
 
         <div className="space-y-3">
-          <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-gray-400 dark:hover:border-gray-500">
+          <label className="flex items-center gap-3 p-4 border-2 rounded cursor-pointer transition-all hover:border-gray-400 dark:hover:border-gray-500">
             <input
               type="radio"
               name="segmentation"
@@ -194,7 +194,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
             </div>
           </label>
 
-          <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-gray-400 dark:hover:border-gray-500">
+          <label className="flex items-center gap-3 p-4 border-2 rounded cursor-pointer transition-all hover:border-gray-400 dark:hover:border-gray-500">
             <input
               type="radio"
               name="segmentation"
@@ -224,9 +224,9 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
                         }
                       }}
                       placeholder="user123 (separados por coma)"
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                     />
-                    <button type="button" onClick={handleAddUserId} className="px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    <button type="button" onClick={handleAddUserId} className="px-3 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors">
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
@@ -247,7 +247,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
             </div>
           </label>
 
-          <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-gray-400 dark:hover:border-gray-500">
+          <label className="flex items-center gap-3 p-4 border-2 rounded cursor-pointer transition-all hover:border-gray-400 dark:hover:border-gray-500">
             <input
               type="radio"
               name="segmentation"
@@ -280,9 +280,9 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
                         }
                       }}
                       placeholder="vip, premium, new-users"
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                     />
-                    <button type="button" onClick={handleAddTag} className="px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    <button type="button" onClick={handleAddTag} className="px-3 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors">
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
@@ -305,13 +305,13 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
         </div>
       </div>
 
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+      <div className="bg-gray-50 dark:bg-gray-900 rounded p-4">
         <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
           <Smartphone className="h-5 w-5" />
           Vista Previa
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded p-3 shadow border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
               <FontAwesomeIcon icon={faApple} className="h-4 w-4" />
               <span>iOS</span>
@@ -320,7 +320,7 @@ export const PushConfigForm: React.FC<PushConfigFormProps> = ({ config, onChange
             <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{config.body || "Mensaje de la notificación"}</div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded p-3 shadow border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
               <FontAwesomeIcon icon={faAndroid} className="h-4 w-4" />
               <span>Android</span>

@@ -131,7 +131,7 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
             const isEditing = selectedPlatform === platform;
 
             return (
-              <div key={platform} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all">
+              <div key={platform} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 transition-all">
                 <FontAwesomeIcon icon={config.icon} className={`h-5 w-5 mt-0.5 ${config.color}`} />
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
@@ -141,10 +141,10 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
                         {urlError && <p className="text-xs text-red-500 dark:text-red-400">{urlError}</p>}
                       </div>
                       <div className="flex items-center gap-2">
-                        <button type="button" onClick={handleSavePlatform} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Guardar">
+                        <button type="button" onClick={handleSavePlatform} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors" title="Guardar">
                           <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                         </button>
-                        <button type="button" onClick={handleCancelAdd} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Cancelar">
+                        <button type="button" onClick={handleCancelAdd} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Cancelar">
                           <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
                         </button>
                       </div>
@@ -159,10 +159,10 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
                         </a>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => handleEditPlatform(platform)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors text-xs font-medium whitespace-nowrap" title="Editar">
+                        <button type="button" onClick={() => handleEditPlatform(platform)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors text-xs font-medium whitespace-nowrap" title="Editar">
                           Editar
                         </button>
-                        <button type="button" onClick={() => handleRemovePlatform(platform)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Eliminar">
+                        <button type="button" onClick={() => handleRemovePlatform(platform)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Eliminar">
                           <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                         </button>
                       </div>
@@ -177,13 +177,13 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
 
       {/* Agregar nueva plataforma - Solo si no hay una en edición */}
       {!selectedPlatform && availablePlatforms.length > 0 && (
-        <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4">
+        <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded p-4">
           <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Agregar red social</div>
           <div className="flex flex-wrap gap-2">
             {availablePlatforms.map((platform) => {
               const config = PLATFORMS[platform];
               return (
-                <button key={platform} type="button" onClick={() => handleAddPlatform(platform)} className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transition-all text-sm">
+                <button key={platform} type="button" onClick={() => handleAddPlatform(platform)} className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transition-all text-sm">
                   <FontAwesomeIcon icon={config.icon} className={`h-4 w-4 ${config.color}`} />
                   <span className="text-gray-700 dark:text-gray-300">{config.name}</span>
                   <FontAwesomeIcon icon={faPlus} className="h-3 w-3 text-gray-400" />
@@ -196,7 +196,7 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
 
       {/* Formulario de nueva plataforma - Cuando se selecciona agregar */}
       {selectedPlatform && !value[selectedPlatform] && (
-        <div className="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg">
+        <div className="p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded">
           <div className="flex items-center gap-2 mb-3">
             <FontAwesomeIcon icon={PLATFORMS[selectedPlatform].icon} className="h-5 w-5 text-white" />
             <span className="text-sm font-medium text-gray-900 dark:text-white">{PLATFORMS[selectedPlatform].name}</span>
@@ -207,10 +207,10 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
               {urlError && <p className="text-xs text-red-500 dark:text-red-400">{urlError}</p>}
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={handleSavePlatform} className="p-2 h-10 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Guardar">
+              <button type="button" onClick={handleSavePlatform} className="p-2 h-10 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors" title="Guardar">
                 <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
               </button>
-              <button type="button" onClick={handleCancelAdd} className="p-2 h-10 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Cancelar">
+              <button type="button" onClick={handleCancelAdd} className="p-2 h-10 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Cancelar">
                 <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
               </button>
             </div>

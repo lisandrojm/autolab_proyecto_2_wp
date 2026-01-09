@@ -117,14 +117,14 @@ export const GlobalVacationConfigTab: React.FC = () => {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* ...Form fields... */}
           <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Escala Legal (LCT N° 20.744)</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">El cálculo de días base se ajusta estrictamente a la Ley de Contrato de Trabajo de Argentina.</p>
 
-            <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+            <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700 mb-6">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
@@ -168,7 +168,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                   <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                 </button>
               </div>
-              <input type="number" value={config.diasBeneficio || 0} onChange={(e) => updateConfig("diasBeneficio", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="0" />
+              <input type="number" value={config.diasBeneficio || 0} onChange={(e) => updateConfig("diasBeneficio", parseInt(e.target.value) || 0)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="0" />
               <p className="text-xs text-gray-500 mt-1">Días adicionales que la empresa otorga por encima de la ley.</p>
             </div>
           </div>
@@ -183,7 +183,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" value={config.maxDiasGozados || ""} onChange={(e) => updateConfig("maxDiasGozados", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                <input type="number" value={config.maxDiasGozados || ""} onChange={(e) => updateConfig("maxDiasGozados", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
               </div>
 
               <div>
@@ -193,7 +193,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <input type="number" value={config.anticipacionMinimaDias || ""} onChange={(e) => updateConfig("anticipacionMinimaDias", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                <input type="number" value={config.anticipacionMinimaDias || ""} onChange={(e) => updateConfig("anticipacionMinimaDias", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
               </div>
             </div>
           </div>
@@ -220,7 +220,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                         <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                       </button>
                     </div>
-                    <input type="number" value={config.maxDiasArrastre || ""} onChange={(e) => updateConfig("maxDiasArrastre", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                    <input type="number" value={config.maxDiasArrastre || ""} onChange={(e) => updateConfig("maxDiasArrastre", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
                   </div>
 
                   <div>
@@ -230,7 +230,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                         <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                       </button>
                     </div>
-                    <input type="number" value={config.vencimientoArrastreDias || ""} onChange={(e) => updateConfig("vencimientoArrastreDias", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
+                    <input type="number" value={config.vencimientoArrastreDias || ""} onChange={(e) => updateConfig("vencimientoArrastreDias", e.target.value ? parseInt(e.target.value) : undefined)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" min="0" placeholder="Opcional" />
                   </div>
                 </div>
               )}
@@ -258,7 +258,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
 
                     if (matchingTemplate) {
                       return (
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
                             <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
@@ -270,7 +270,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                       );
                     } else {
                       return (
-                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
                           <div className="flex items-start gap-2">
                             <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5" />
                             <div>
@@ -294,7 +294,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
 
           <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Resolución de Conflictos en Multiproyecto</h3>
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
               <div className="flex gap-3">
                 <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-1" />
                 <div className="space-y-3">
@@ -310,7 +310,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                   </ul>
 
                   {/* Table */}
-                  <div className="mt-4 overflow-hidden rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="mt-4 overflow-hidden rounded border border-blue-200 dark:border-blue-700">
                     <table className="min-w-full divide-y divide-blue-200 dark:divide-blue-700 text-sm">
                       <thead className="bg-blue-100 dark:bg-blue-800/50">
                         <tr>
@@ -347,8 +347,8 @@ export const GlobalVacationConfigTab: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+          <div className="flex justify-end gap-3 py-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
+            <button type="submit" disabled={submitting} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               {submitting ? (
                 <>
                   <FontAwesomeIcon icon={faSpinner} spin />

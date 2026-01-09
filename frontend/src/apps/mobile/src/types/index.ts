@@ -2,7 +2,7 @@ export interface Vacation {
   id: string;
   startDate: string;
   endDate: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   reason: string;
   createdAt: string;
 }
@@ -11,7 +11,7 @@ export interface Order {
   id: string;
   product: string;
   quantity: number;
-  status: 'pending' | 'approved' | 'delivered' | 'rejected' | 'cancelled';
+  status: "pending" | "approved" | "delivered" | "rejected" | "cancelled";
   date: string;
   description: string;
 }
@@ -19,7 +19,7 @@ export interface Order {
 export interface Document {
   id: string;
   name: string;
-  type: 'contract' | 'payslip' | 'certificate';
+  type: "contract" | "payslip" | "certificate";
   date: string;
   url: string;
 }
@@ -30,7 +30,7 @@ export interface Notification {
   description: string;
   date: string;
   read: boolean;
-  type: 'info' | 'success' | 'warning';
+  type: "info" | "success" | "warning";
 }
 
-export type ViewType = 'home' | 'calendar' | 'documents' | 'profile' | 'vacations' | 'orders' | 'requests';
+export type ViewType = "home" | "calendar" | "documents" | "profile" | "vacations" | "orders" | "requests" | "activity_logs";

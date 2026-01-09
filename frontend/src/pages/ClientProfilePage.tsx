@@ -298,7 +298,7 @@ export const ClientProfilePage: React.FC = () => {
                     {Object.entries((client as any).socialMedia).map(([platform, url]) => {
                       if (!url) return null;
                       return (
-                        <a key={platform} href={url as string} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600">
+                        <a key={platform} href={url as string} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 p-3 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600">
                           <FontAwesomeIcon icon={getSocialIcon(platform)} className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                           <span className="capitalize text-sm text-gray-900 dark:text-white font-medium">{platform}</span>
                           <FontAwesomeIcon icon={faExternalLink} className="h-3 w-3 text-gray-400 ml-auto" />

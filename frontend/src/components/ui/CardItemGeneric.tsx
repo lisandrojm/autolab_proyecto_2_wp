@@ -23,19 +23,7 @@ interface CardItemGenericProps {
   className?: string;
 }
 
-export const CardItemGeneric: React.FC<CardItemGenericProps> = ({
-  title,
-  subtitle,
-  avatarUrl,
-  avatarFallback = "?",
-  badgesTop = [],
-  badgesBottom = [],
-  children,
-  footerLeft,
-  footerActions = [],
-  onClick,
-  className = "",
-}) => {
+export const CardItemGeneric: React.FC<CardItemGenericProps> = ({ title, subtitle, avatarUrl, avatarFallback = "?", badgesTop = [], badgesBottom = [], children, footerLeft, footerActions = [], onClick, className = "" }) => {
   const getActionClasses = (variant: string = "default") => {
     switch (variant) {
       case "danger":
@@ -46,12 +34,7 @@ export const CardItemGeneric: React.FC<CardItemGenericProps> = ({
   };
 
   return (
-    <div
-      className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
-        onClick ? "cursor-pointer hover:scale-[1.01]" : ""
-      } ${className} h-full flex flex-col`}
-      onClick={onClick}
-    >
+    <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${onClick ? "cursor-pointer hover:scale-[1.01]" : ""} ${className} h-full flex flex-col`} onClick={onClick}>
       <div className="p-4 flex-1 flex flex-col gap-3">
         {/* Badges Top */}
         {badgesTop.length > 0 && (
@@ -67,13 +50,9 @@ export const CardItemGeneric: React.FC<CardItemGenericProps> = ({
           {/* Avatar */}
           <div className="w-10 h-10 flex-shrink-0">
             {avatarUrl ? (
-              <img
-                src={`${import.meta.env.VITE_API_URL}${avatarUrl}`}
-                alt={title}
-                className="w-full h-full object-cover rounded-full border-2 border-gray-200 dark:border-gray-600"
-              />
+              <img src={`${import.meta.env.VITE_API_URL}${avatarUrl}`} alt={title} className="w-full h-full object-cover rounded border-2 border-gray-200 dark:border-gray-600" />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
                 <span className="text-white font-bold text-sm">{avatarFallback}</span>
               </div>
             )}
@@ -81,12 +60,8 @@ export const CardItemGeneric: React.FC<CardItemGenericProps> = ({
 
           {/* Title + Subtitle */}
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
-              {title}
-            </h3>
-            {subtitle && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{subtitle}</p>
-            )}
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{title}</h3>
+            {subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{subtitle}</p>}
           </div>
         </div>
 
@@ -117,7 +92,7 @@ export const CardItemGeneric: React.FC<CardItemGenericProps> = ({
                     e.stopPropagation();
                     action.onClick(e);
                   }}
-                  className={`p-1 rounded-lg transition-colors ${getActionClasses(action.variant)}`}
+                  className={`p-1 rounded transition-colors ${getActionClasses(action.variant)}`}
                   title={action.title}
                 >
                   <FontAwesomeIcon icon={action.icon} className="h-4 w-4" />

@@ -508,11 +508,11 @@ export const ManageVacationsPage: React.FC = () => {
     if (selectedVacation.estado === "pending") {
       return (
         <>
-          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
-          <button onClick={handlePreApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handlePreApprove} disabled={updating} className="px-6 py-2.5 rounded bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faCheck} className="text-lg" />
             Pre-Aprobar
           </button>
@@ -523,11 +523,11 @@ export const ManageVacationsPage: React.FC = () => {
     if (selectedVacation.estado === "pre_approved") {
       return (
         <>
-          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
-          <button onClick={handleApprove} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleApprove} disabled={updating} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faCheck} className="text-lg" />
             Aprobar
           </button>
@@ -538,7 +538,7 @@ export const ManageVacationsPage: React.FC = () => {
     if (selectedVacation.estado === "approved") {
       return (
         <>
-          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
@@ -546,13 +546,13 @@ export const ManageVacationsPage: React.FC = () => {
           {selectedVacation.requiresSignature && (
             <>
               {selectedVacation.firmaEstado === "pending" && (
-                <button onClick={handleSendSignature} disabled={updating} className="px-6 py-2.5 rounded-lg bg-purple-500 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onClick={handleSendSignature} disabled={updating} className="px-6 py-2.5 rounded bg-gray-500 text-white font-semibold text-sm hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   <FontAwesomeIcon icon={faFileArrowUp} />
                   Enviar para Firma
                 </button>
               )}
               {selectedVacation.firmaEstado === "sent" && (
-                <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onClick={handleMarkSigned} disabled={updating} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   <FontAwesomeIcon icon={faCheckCircle} />
                   Firmado
                 </button>
@@ -561,7 +561,7 @@ export const ManageVacationsPage: React.FC = () => {
           )}
 
           {(!selectedVacation.requiresSignature || selectedVacation.firmaEstado === "signed") && (
-            <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <button onClick={handleDeliver} disabled={updating} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               <FontAwesomeIcon icon={faTruck} />
               Marcar como Entregado
             </button>
@@ -572,7 +572,7 @@ export const ManageVacationsPage: React.FC = () => {
 
     if (selectedVacation.estado === "delivered") {
       return (
-        <button onClick={(e) => handleDelete(selectedVacation.id, selectedVacation.numeroPedido, selectedVacation.estado, e)} disabled={updating} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+        <button onClick={(e) => handleDelete(selectedVacation.id, selectedVacation.numeroPedido, selectedVacation.estado, e)} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
           Cancelar Solicitud
         </button>
       );
@@ -588,7 +588,7 @@ export const ManageVacationsPage: React.FC = () => {
           const isInFinalState = isVacationInFinalState(vacation.estado);
 
           const badgesTop = [
-            <span key="vacation-number" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
+            <span key="vacation-number" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
               {getFormattedVacationNumber(vacation.numeroPedido)}
             </span>,
             <StatusBadge key="status" type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />,
@@ -607,7 +607,7 @@ export const ManageVacationsPage: React.FC = () => {
           ].filter(Boolean);
 
           const badgesBottom = vacation.reglas.map((regla, index) => (
-            <span key={`regla-${index}`} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
+            <span key={`regla-${index}`} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
               {regla}
             </span>
           ));
@@ -689,14 +689,14 @@ export const ManageVacationsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/hr/vacations-rules")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Configurar reglas de vacaciones" aria-label="Configurar reglas de vacaciones">
+          <button onClick={() => navigate("/hr/vacations-rules")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Configurar reglas de vacaciones" aria-label="Configurar reglas de vacaciones">
             <FontAwesomeIcon icon={faGear} />
           </button>
-          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de vacaciones" title="Ver resumen de vacaciones">
+          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de vacaciones" title="Ver resumen de vacaciones">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
-          <button onClick={() => navigate("/hr/vacations/calendar")} className="hidden lg:flex p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Ver calendario de vacaciones" aria-label="Ver calendario de vacaciones">
-            <FontAwesomeIcon icon={faCalendarDays} className="h-4 w-4" />
+          <button onClick={() => navigate("/hr/vacations/calendar")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Ver calendario de vacaciones" aria-label="Ver calendario de vacaciones">
+            <FontAwesomeIcon icon={faCalendar} className="h-4 w-4" />
           </button>
         </div>
       }
@@ -706,12 +706,12 @@ export const ManageVacationsPage: React.FC = () => {
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
             </div>
 
             <div className="relative">
               <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                 <option value="all">Todos los estados</option>
                 <option value="pending">Pendientes</option>
                 <option value="approved">Aprobadas</option>
@@ -743,14 +743,14 @@ export const ManageVacationsPage: React.FC = () => {
                 <table className="w-full dark:bg-slate-800/80 table-auto">
                   <thead>
                     <tr>
-                      <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
+                      <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                       {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                     </tr>
                   </thead>
@@ -768,10 +768,11 @@ export const ManageVacationsPage: React.FC = () => {
                         <td className="py-3 px-4">
                           <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
                         </td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }) : "-"}</td>
                         {/*                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-2">
                             {vacation.reglas.map((regla, index) => (
-                              <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">
+                              <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">
                                 {regla}
                               </span>
                             ))}
@@ -792,7 +793,6 @@ export const ManageVacationsPage: React.FC = () => {
                             <span className="text-gray-400 dark:text-gray-500">-</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString() : "-"}</td>
                         <td className="py-3 px-4 text-center">
                           {!["rejected", "cancelled"].includes(vacation.estado) && (
                             <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cancelar solicitud" aria-label="Cancelar solicitud">
@@ -815,13 +815,13 @@ export const ManageVacationsPage: React.FC = () => {
 
               {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-2 mt-6">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     Anterior
                   </button>
                   <span className="text-gray-600 dark:text-gray-400">
                     Página {page} de {totalPages}
                   </span>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     Siguiente
                   </button>
                 </div>
@@ -847,7 +847,7 @@ export const ManageVacationsPage: React.FC = () => {
                 </span>
               )}
             </div>
-            <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
+            <button onClick={() => setShowDetailModal(false)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
               <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
             </button>
           </div>
@@ -883,7 +883,7 @@ export const ManageVacationsPage: React.FC = () => {
 
             <div className="flex items-center gap-3">
               <div>
-                <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
+                <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
               </div>
               <div className="bg-slate-800">
                 <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedVacation.solicitante)}</p>
@@ -897,7 +897,7 @@ export const ManageVacationsPage: React.FC = () => {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Reglas aplicadas</p>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {selectedVacation.reglas.map((regla, index) => (
-                      <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
+                      <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
                         {regla}
                       </span>
                     ))}
@@ -907,7 +907,7 @@ export const ManageVacationsPage: React.FC = () => {
 
               {selectedVacation.pdfPreAprobacionUrl && (
                 <div className="border-slate-200 dark:border-slate-700">
-                  <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
+                  <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
                     <FontAwesomeIcon icon={faDownload} />
                     Descargar PDF
                     <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
@@ -944,7 +944,7 @@ export const ManageVacationsPage: React.FC = () => {
             </div>
 
             {selectedVacation.estado === "delivered" && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded">
                 <div className="flex items-start gap-3">
                   <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                   <div className="flex-1">
@@ -956,7 +956,7 @@ export const ManageVacationsPage: React.FC = () => {
             )}
 
             {selectedVacation.estado === "approved" && selectedVacation.requiresSignature && selectedVacation.firmaEstado === "sent" && !selectedVacation.signatureNotifiedAt && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded">
                 <div className="flex items-start gap-3">
                   <FontAwesomeIcon icon={faFileSignature} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                   <div className="flex-1">
@@ -975,7 +975,7 @@ export const ManageVacationsPage: React.FC = () => {
                 selectedVacation.requiresSignature &&
                 selectedVacation.firmaEstado === "sent" &&
                 selectedVacation.signatureNotifiedAt && (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded-lg">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 p-4 rounded">
                     <div className="flex items-start gap-3">
                       <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                       <div className="flex-1">

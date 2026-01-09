@@ -90,7 +90,7 @@ export const PlatformPreview: React.FC<PlatformPreviewProps> = ({ platform, cont
         <div className={`text-xs font-medium ${isOverLimit ? "text-red-600" : "text-gray-500 dark:text-gray-400"}`}>
           {formattedContent.length}/{charLimit}
         </div>
-        <button onClick={handlePublish} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 shadow-sm" title={`Publicar en ${platform}`}>
+        <button onClick={handlePublish} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5 shadow-sm" title={`Publicar en ${platform}`}>
           <Send className="h-3.5 w-3.5" />
           Publicar
         </button>
@@ -100,7 +100,7 @@ export const PlatformPreview: React.FC<PlatformPreviewProps> = ({ platform, cont
       <div className="p-4">
         {/* Profile mockup */}
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">U</div>
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded flex items-center justify-center text-white font-semibold text-sm">U</div>
           <div>
             <p className="font-semibold text-sm text-gray-900 dark:text-white">Usuario</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">Hace unos momentos</p>
@@ -119,7 +119,7 @@ export const PlatformPreview: React.FC<PlatformPreviewProps> = ({ platform, cont
 
         {/* Images Preview */}
         {images.length > 0 && (
-          <div className={`rounded-lg overflow-hidden ${images.length === 1 ? "" : "grid grid-cols-2 gap-1"}`}>
+          <div className={`rounded overflow-hidden ${images.length === 1 ? "" : "grid grid-cols-2 gap-1"}`}>
             {images.slice(0, 4).map((img, idx) => (
               <div key={idx} className="relative bg-gray-100 dark:bg-gray-700" style={{ paddingBottom: images.length === 1 ? "100%" : "100%" }}>
                 <img src={img} alt={`Preview ${idx + 1}`} className="absolute inset-0 w-full h-full object-cover" />
@@ -179,12 +179,12 @@ export const PlatformPreview: React.FC<PlatformPreviewProps> = ({ platform, cont
 
         {/* Warnings */}
         {isOverLimit && (
-          <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
             <p className="text-xs text-red-600 dark:text-red-400">⚠️ El contenido excede el límite de caracteres para {platform}</p>
           </div>
         )}
         {images.length === 0 && (
-          <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
             <p className="text-xs text-blue-600 dark:text-blue-400">ℹ️ Este post no tiene imágenes</p>
           </div>
         )}

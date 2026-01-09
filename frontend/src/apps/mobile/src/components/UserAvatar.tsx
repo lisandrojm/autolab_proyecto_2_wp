@@ -34,11 +34,11 @@ export default function UserAvatar({ firstName, lastName, photoUrl, size = "md",
   const sizeClasses = getSizeClasses(size);
 
   if (photoUrl) {
-    return <img src={photoUrl} alt={`${firstName} ${lastName}`} className={`${sizeClasses.container} rounded-full object-cover ${className}`} />;
+    return <img src={photoUrl} alt={`${firstName} ${lastName}`} className={`${sizeClasses.container} rounded object-cover ${className}`} />;
   }
 
   return (
-    <div className={`${sizeClasses.container} rounded-full ${bgColor} flex items-center justify-center flex-shrink-0 ${className}`} aria-label={`Avatar de ${firstName || "Usuario"}`}>
+    <div className={`${sizeClasses.container} rounded ${bgColor} flex items-center justify-center flex-shrink-0 ${className}`} aria-label={`Avatar de ${firstName || "Usuario"}`}>
       <span className={`${sizeClasses.text} font-bold text-white`}>{initials}</span>
     </div>
   );

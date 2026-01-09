@@ -235,7 +235,7 @@ export const MobileNavbar: React.FC = () => {
 
   useEffect(() => {
     const path = location.pathname;
-    if (["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules"].includes(path)) {
+    if (["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(path)) {
       setOpenAdminSection("config");
     }
   }, [location.pathname]);
@@ -291,13 +291,14 @@ export const MobileNavbar: React.FC = () => {
 
       if (hasPermission("orders:view")) base.push({ path: "/hr/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("vacationRequests:view")) base.push({ path: "/hr/vacations", disabled: false, icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: true, icon: faFileText, label: "Registro de novedades", scope: "global", dividerTop: true });
+      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs", disabled: false, icon: faFileText, label: "Registro de novedades", scope: "global", dividerTop: true });
       if (hasPermission("calendarEvents:view")) base.push({ path: "/hr/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("employeeProfiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("hrDocuments:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
       if (hasPermission("orders:view")) base.push({ path: "/hr/order-categories", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
+      if (hasPermission("activityLogs:view")) base.push({ path: "/hr/activity-logs/config", icon: faFileText, label: "Novedades", scope: "global" });
       if (hasPermission("orders:view")) base.push({ path: "/hr/pdf-templates", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
 
       if (hasPermission("creative:view")) {
@@ -362,7 +363,7 @@ export const MobileNavbar: React.FC = () => {
     userRoleNames.length ? (
       <div className="flex flex-wrap gap-1">
         {userRoleNames.map((label) => (
-          <div key={label} className={`flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded-full ${className} text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300`}>
+          <div key={label} className={`flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded ${className} text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300`}>
             <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 mr-1.5" />
             {label}
           </div>
@@ -370,7 +371,7 @@ export const MobileNavbar: React.FC = () => {
       </div>
     ) : (
       <div className="mt-2">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${className} font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300 uppercase`}>{user?.primaryRole ?? "user"}</span>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded ${className} font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300 uppercase`}>{user?.primaryRole ?? "user"}</span>
       </div>
     );
 
@@ -380,11 +381,11 @@ export const MobileNavbar: React.FC = () => {
       <div>
         {user?.tenantSlug && (
           <div className="flex flex-col lg:flex-row gap-2 w-full lg:justify-between items-center lg:items-start lg:px-2">
-            <div className="hidden lg:flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={user.tenantSlug}>
+            <div className="hidden lg:flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={user.tenantSlug}>
               <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 mr-1.5" />
               {user.tenantSlug}
             </div>
-            <div className="flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded-full text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={displayName}>
+            <div className="flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300" title={displayName}>
               <FontAwesomeIcon icon={faUser} className="h-3 w-3 mr-1.5" /> {displayName}
             </div>
             <div className="hidden lg:block">
@@ -406,7 +407,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
 
     const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item) && !configItems.includes(item) && !managementItems.includes(item));
 
@@ -441,13 +442,13 @@ export const MobileNavbar: React.FC = () => {
               setIsSettingsOpen(true);
               onItemClick?.();
             }}
-            className="group relative flex items-center justify-between px-2 py-2 rounded-lg transition-all w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
+            className="group relative flex items-center justify-between px-2 py-2 rounded transition-all w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
           >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               <FontAwesomeIcon icon={item.icon} className="h-5 w-5 flex-shrink-0" />
               <span className="font-medium truncate">{item.label}</span>
             </div>
-            {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
+            {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
           </button>
         );
       }
@@ -455,7 +456,7 @@ export const MobileNavbar: React.FC = () => {
       // Disabled state
       if (item.disabled) {
         return (
-          <div key={item.path} className="group relative flex items-center justify-between px-2 py-2 rounded-lg transition-all cursor-not-allowed opacity-40 bg-gray-100 dark:bg-gray-700 select-none">
+          <div key={item.path} className="group relative flex items-center justify-between px-2 py-2 rounded transition-all cursor-not-allowed opacity-40 bg-gray-100 dark:bg-gray-700 select-none">
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               <div className="h-8 w-8 flex items-center justify-center rounded-md bg-gray-200 dark:bg-gray-600">
                 <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
@@ -466,16 +467,16 @@ export const MobileNavbar: React.FC = () => {
         );
       }
       return (
-        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? "page" : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded-lg transition-all ${isActive(item.path) ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-blue-300 dark:border-blue-800" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"}`}>
+        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? "page" : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded transition-all ${isActive(item.path) ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-blue-300 dark:border-blue-800" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"}`}>
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${isActive(item.path) ? "bg-primary-600 text-white dark:bg-primary-700/30" : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 group-hover:bg-gray-300 dark:group-hover:bg-blue-800"}`}>
               <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
             </div>
             <span className="font-medium truncate">{item.label}</span>
-            {item.badge && <span className={`ml-1 px-2 py-0.5 rounded-full text-[8px] font-bold ${item.badgeColor || "bg-green-500"} text-white uppercase`}>{item.badge}</span>}
+            {item.badge && <span className={`ml-1 px-2 py-0.5 rounded text-[8px] font-bold ${item.badgeColor || "bg-green-500"} text-white uppercase`}>{item.badge}</span>}
           </div>
 
-          {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
+          {SHOW_MENU_COUNTS && item.count !== undefined && <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.count > 0 ? "bg-slate-500/20 text-slate-500 dark:bg-white/20 dark:text-white" : "bg-red-500/20 text-red-700 dark:bg-red-500/20 dark:text-red-400"}`}>{item.count}</span>}
         </Link>
       );
     };
@@ -550,7 +551,7 @@ export const MobileNavbar: React.FC = () => {
         logout();
         onClick?.();
       }}
-      className={`flex items-center space-x-3 w-full  py-3 rounded-lg text-red-500 dark:text-red-500 hover:text-red-500/70 dark:hover:text-red-500/80 transition-colors ${className}`}
+      className={`flex items-center space-x-3 w-full  py-3 rounded text-red-500 dark:text-red-500 hover:text-red-500/70 dark:hover:text-red-500/80 transition-colors ${className}`}
     >
       <FontAwesomeIcon icon={faRightFromBracket} className="h-5 w-5" />
       <span className="font-medium lg:hidden"></span>
@@ -563,19 +564,19 @@ export const MobileNavbar: React.FC = () => {
         <div className="px-4 sm:px-6">
           <div className="flex justify-between items-center h-16">
             <div className="lg:hidden">
-              <button onClick={() => setOpen((v) => !v)} className="p-2 rounded-lg hover:bg-gray-1 flex-1 overflow-y-auto space-y-4 mb-4000 dark:hover:bg-gray-700 transition-colors">
+              <button onClick={() => setOpen((v) => !v)} className="p-2 rounded hover:bg-gray-1 flex-1 overflow-y-auto space-y-4 mb-4000 dark:hover:bg-gray-700 transition-colors">
                 {open ? <FontAwesomeIcon icon={faXmark} className="h-6 w-6 text-gray-600 dark:text-gray-300" /> : <FontAwesomeIcon icon={faBars} className="h-6 w-6 text-gray-600 dark:text-gray-300" />}
               </button>
             </div>
             <div>
-              <Logo sizeClass="text-3xl" wrapperClassName="flex items-center cursor-pointer hover:opacity-80 transition-opacity" />
+              <Logo sizeClass="text-3xl" wrapperClassName="flex items-center select-none" />
             </div>
             <div className="flex items-center justify-center space-x-2">
               <div className="hidden lg:block">
                 <UserCard />
               </div>
               {isDeployButtonVisible() && (
-                <button onClick={handleRedeploy} onMouseEnter={loadDeployMeta} disabled={isDeploying} className="relative p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group">
+                <button onClick={handleRedeploy} onMouseEnter={loadDeployMeta} disabled={isDeploying} className="relative p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group">
                   <FontAwesomeIcon icon={faRocket} className={`h-5 w-5 text-blue-600 dark:text-blue-400}`} />
                   <div className="absolute top-full left-1/2 mt-2 -translate-x-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
                     <div className="w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800 dark:border-b-gray-700"></div>
@@ -614,11 +615,11 @@ export const MobileNavbar: React.FC = () => {
               )}
 
               {/* 🤖 Robot (por ahora oculto) */}
-              {/*               <button onClick={() => openAssistant?.()} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
+              {/*               <button onClick={() => openAssistant?.()} className="p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors" title="Asistente IA">
                 <FontAwesomeIcon icon={faRobot} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </button> */}
 
-              <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <button onClick={toggleTheme} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
               </button>
               <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 py-2 border-t border-gray-200 lg:border-hidden dark:border-gray-700 px-4 hidden lg:block">
@@ -635,7 +636,7 @@ export const MobileNavbar: React.FC = () => {
               <div>
                 <Logo sizeClass="text-2xl" />
               </div>
-              <button onClick={() => setOpen(false)} className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <button onClick={() => setOpen(false)} className="p-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <FontAwesomeIcon icon={faXmark} className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               </button>
             </div>

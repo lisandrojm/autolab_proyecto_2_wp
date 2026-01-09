@@ -129,7 +129,7 @@ export const RegisterPage: React.FC = () => {
 
       <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
         <div className="flex gap-2">
-          <button onClick={toggleTheme} className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Theme">
+          <button onClick={toggleTheme} className="p-2 rounded bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200" title="Toggle Theme">
             {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
           </button>
         </div>
@@ -147,7 +147,7 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <div className="mb-4 p-4 rounded bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}

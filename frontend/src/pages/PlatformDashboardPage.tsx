@@ -134,7 +134,7 @@ export const PlatformDashboardPage: React.FC = () => {
           {statCards.map((card, idx) => (
             <div key={idx} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
-                <div className={`${card.bgColor} p-3 rounded-lg`}>
+                <div className={`${card.bgColor} p-3 rounded`}>
                   <FontAwesomeIcon icon={card.icon} className={`h-6 w-6 ${card.color}`} />
                 </div>
               </div>
@@ -157,17 +157,17 @@ export const PlatformDashboardPage: React.FC = () => {
             <div className="flex items-center gap-2 mb-4">
               <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-blue-500" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Alertas del Sistema</h2>
-              <span className="ml-auto bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium px-2.5 py-0.5 rounded-full">{metrics.alerts.length}</span>
+              <span className="ml-auto bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium px-2.5 py-0.5 rounded">{metrics.alerts.length}</span>
             </div>
             <div className="space-y-3">
               {metrics.alerts.slice(0, 5).map((alert, idx) => (
-                <div key={idx} className={`p-4 rounded-lg border ${alert.severity === "high" ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800" : "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"}`}>
+                <div key={idx} className={`p-4 rounded border ${alert.severity === "high" ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800" : "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"}`}>
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">{alert.tenant}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{alert.message}</p>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${alert.severity === "high" ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"}`}>{alert.type}</span>
+                    <span className={`text-xs px-2 py-1 rounded ${alert.severity === "high" ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"}`}>{alert.type}</span>
                   </div>
                 </div>
               ))}
@@ -194,8 +194,8 @@ export const PlatformDashboardPage: React.FC = () => {
                         {count} ({percent}%)
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                      <div className={`${planColors[plan] || "bg-gray-500"} h-2.5 rounded-full transition-all`} style={{ width: `${percent}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2.5">
+                      <div className={`${planColors[plan] || "bg-gray-500"} h-2.5 rounded transition-all`} style={{ width: `${percent}%` }}></div>
                     </div>
                   </div>
                 );
@@ -210,21 +210,21 @@ export const PlatformDashboardPage: React.FC = () => {
               Estado de Tenants
             </h2>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
                 <div className="flex items-center gap-3">
                   <FontAwesomeIcon icon={faCheck} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   <span className="font-medium text-gray-900 dark:text-white">Activos</span>
                 </div>
                 <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{metrics.tenants.active}</span>
               </div>
-              <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded">
                 <div className="flex items-center gap-3">
                   <FontAwesomeIcon icon={faPause} className="h-5 w-5 text-red-600 dark:text-red-400" />
                   <span className="font-medium text-gray-900 dark:text-white">Suspendidos</span>
                 </div>
                 <span className="text-2xl font-bold text-red-600 dark:text-red-400">{metrics.tenants.suspended}</span>
               </div>
-              <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
                 <div className="flex items-center gap-3">
                   <FontAwesomeIcon icon={faArrowUp} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   <span className="font-medium text-gray-900 dark:text-white">Nuevos (30 días)</span>
@@ -261,7 +261,7 @@ export const PlatformDashboardPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 capitalize">{tenant.plan}</span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 capitalize">{tenant.plan}</span>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{tenant.storageUsedMB} MB</div>
@@ -271,7 +271,7 @@ export const PlatformDashboardPage: React.FC = () => {
                         <span className="text-sm font-medium text-gray-900 dark:text-white">{tenant.users}</span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tenant.isActive ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"}`}>{tenant.isActive ? "Activo" : "Inactivo"}</span>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${tenant.isActive ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"}`}>{tenant.isActive ? "Activo" : "Inactivo"}</span>
                       </td>
                     </tr>
                   );

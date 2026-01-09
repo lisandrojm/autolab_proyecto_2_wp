@@ -213,12 +213,12 @@ export const ClientDashboardPage: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Acciones Rápidas</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button onClick={() => navigate("/client/aprobaciones")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+            <button onClick={() => navigate("/client/aprobaciones")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
               <FontAwesomeIcon icon={faEye} className="h-5 w-5" />
               <span className="font-medium">Ver Aprobaciones</span>
             </button>
 
-            <button onClick={() => navigate("/client/proyectos")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100/20 dark:hover:bg-blue-900/30 transition-colors">
+            <button onClick={() => navigate("/client/proyectos")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100/20 dark:hover:bg-blue-900/30 transition-colors">
               <FontAwesomeIcon icon={faBullhorn} className="h-5 w-5" />
               <span className="font-medium">Ver Proyectos</span>
             </button>
@@ -236,7 +236,7 @@ export const ClientDashboardPage: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {activities.map((activity) => (
-                <div key={activity._id} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div key={activity._id} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded">
                   <FontAwesomeIcon icon={getActivityIcon(activity.type)} className={`h-5 w-5 ${getActivityColor(activity.type)}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{activity.title}</p>

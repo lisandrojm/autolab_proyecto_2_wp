@@ -258,6 +258,25 @@ router.post("/", requireTenant, authenticateToken, requirePermission("users:view
   }
 });
 
+// GET /users/directory - Listar usuarios activos para selectores (Sin permiso de admin)
+router.get("/directory", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const users = await User.find({
+      tenantId: req.tenantObjectId,
+      isActive: true,
+    })
+      .select("firstName lastName email projectIds areaId")
+      .populate("projectIds", "name")
+      .populate("areaId", "name")
+      .sort({ firstName: 1, lastName: 1 });
+
+    res.json(users);
+  } catch (error) {
+    console.error("Get user directory error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /users/by-area/:areaId - Listar usuarios por área (Endpoint dedicado)
 router.get("/by-area/:areaId", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

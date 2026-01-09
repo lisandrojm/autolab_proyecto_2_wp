@@ -75,7 +75,7 @@ export default function Profile() {
         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-6 shadow-sm mb-6">
           <div className="flex flex-col items-center mb-6">
             <div
-              className="w-24 h-24 rounded-full bg-cover bg-center bg-no-repeat mb-4"
+              className="w-24 h-24 rounded bg-cover bg-center bg-no-repeat mb-4"
               style={{
                 backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDnU5QgjujmeNxIQ7pvt9_qea6WcNgYxkcEOwLGTbpmOMgiHIGlCVJThmfNMwgtI2StbRn_-fsM4f2H7D7V7kzSdBD4nl_ux9WkpBnkzSk7BN0kYBID1tvvY2bitI_6gegGrxmOzHiS4cBqDuzypMZcKskWJpeJXG0rzlDTUzQc-HZBlyLAeYLSuh1IcJJvQzn6IscRJR31tvtB3H3azl8Fs8xuNtTR-PeJrgaFtrYj5-SY0PtflPUrD8ogDtnJCfL_bvQfVpffK5c")',
               }}
@@ -84,18 +84,18 @@ export default function Profile() {
             <p className="text-base text-slate-500 dark:text-slate-400 mb-1">{userInfo.position}</p>
             <p className="text-sm text-slate-400 dark:text-slate-500">{userInfo.department}</p>
             <div className="flex gap-2 mt-4">
-              <div className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 ${roleColor}`}>
+              <div className={`px-3 py-1.5 rounded flex items-center gap-1.5 ${roleColor}`}>
                 <FontAwesomeIcon icon={faUserCheck} className="w-4 h-4" />
                 <p className="text-sm font-semibold">{userRole}</p>
               </div>
-              <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+              <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded">
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">ID: {userInfo.employeeId}</p>
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+            <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
               <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Email</p>
@@ -103,7 +103,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+            <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
               <FontAwesomeIcon icon={faPhone} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Teléfono</p>
@@ -111,7 +111,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+            <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
               <FontAwesomeIcon icon={faMapMarkerAlt} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Ubicación</p>
@@ -119,7 +119,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+            <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
               <FontAwesomeIcon icon={faBriefcase} className="w-5 h-5 text-primary" />
               <div className="flex-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">Fecha de ingreso</p>

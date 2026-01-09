@@ -154,20 +154,20 @@ export const CreativeGalleryPanel: React.FC<CreativeGalleryPanelProps> = ({ imag
 
                   {/* Badges (solo en hover) */}
                   <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {image.isNew && <span className="px-1.5 py-0.5 bg-blue-500 text-white text-[10px] font-medium rounded-full shadow">Nueva</span>}
+                    {image.isNew && <span className="px-1.5 py-0.5 bg-blue-500 text-white text-[10px] font-medium rounded shadow">Nueva</span>}
                     {image.isAiGenerated && (
-                      <span className="px-1.5 py-0.5 bg-primary-500 text-white text-[10px] font-medium rounded-full shadow inline-flex items-center gap-1">
+                      <span className="px-1.5 py-0.5 bg-primary-500 text-white text-[10px] font-medium rounded shadow inline-flex items-center gap-1">
                         <Sparkles className="h-2.5 w-2.5" />
                         IA
                       </span>
                     )}
-                    {image.isUsed && <span className="px-1.5 py-0.5 bg-gray-500 text-white text-[10px] font-medium rounded-full shadow">Usada</span>}
-                    {image.scope && <span className={`px-1.5 py-0.5 ${getScopeBadgeColor(image.scope)} text-white text-[10px] font-medium rounded-full shadow`}>{getScopeLabel(image.scope)}</span>}
+                    {image.isUsed && <span className="px-1.5 py-0.5 bg-gray-500 text-white text-[10px] font-medium rounded shadow">Usada</span>}
+                    {image.scope && <span className={`px-1.5 py-0.5 ${getScopeBadgeColor(image.scope)} text-white text-[10px] font-medium rounded shadow`}>{getScopeLabel(image.scope)}</span>}
                   </div>
 
                   {/* Selección */}
                   {isSelected && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center shadow-lg">
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-primary-600 rounded flex items-center justify-center shadow-lg">
                       <Check className="h-3.5 w-3.5 text-white" />
                     </div>
                   )}

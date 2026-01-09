@@ -24,9 +24,9 @@ export const GitBranchBadge: React.FC = () => {
 
   if (loading && !gitInfo) {
     return (
-      <div className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+      <div className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
         <div className="flex items-center gap-2 w-full">
-          <span className="h-3 w-3 rounded-full bg-gray-400 dark:bg-gray-500" />
+          <span className="h-3 w-3 rounded bg-gray-400 dark:bg-gray-500" />
           <span className="font-medium">Branch: Cargando...</span>
         </div>
       </div>
@@ -35,7 +35,7 @@ export const GitBranchBadge: React.FC = () => {
 
   if ((error || !gitInfo || !gitInfo.branch) && !loading) {
     return (
-      <div className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+      <div className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
         <div className="flex items-center gap-2 w-full justify-between">
           <div className="flex items-center gap-2">
             <span className="font-medium">No Git repo</span>
@@ -60,7 +60,7 @@ export const GitBranchBadge: React.FC = () => {
   const fullTooltip = `Branch: ${branch}\nCommit: ${commitHash}\nMessage: ${commitMessage}\nAuthor: ${commitAuthor}`;
 
   return (
-    <div title={fullTooltip} className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200">
+    <div title={fullTooltip} className="inline-flex flex-col items-start gap-1 px-2 py-1.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200">
       <div className="flex items-center gap-2 w-full justify-between">
         <div className="flex items-center gap-1.5">
           <GitBranch className="h-3 w-3" />

@@ -74,7 +74,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ title, items, isAdmin = false
             <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
             <span>{item.label}</span>
           </div>
-          {item.badge && <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.badgeColor || "bg-green-500"} text-white uppercase`}>{item.badge}</span>}
+          {item.badge && <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.badgeColor || "bg-green-500"} text-white uppercase`}>{item.badge}</span>}
         </Link>
       );
     }
@@ -124,7 +124,7 @@ export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = fa
   return (
     <div className="h-full overflow-y-auto py-4 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
       <div className="px-3 mb-6">
-        <Link to="/admin" className="flex items-center gap-2 px-3 py-3 text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+        <Link to="/admin" className="flex items-center gap-2 px-3 py-3 text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
           <FontAwesomeIcon icon={faIdCard} className="h-5 w-5" />
           <span>Panel de Personal</span>
         </Link>

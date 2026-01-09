@@ -156,7 +156,7 @@ export function PdfGlobalConfigTab() {
   if (loading) return <LoadingSpinner message="Cargando configuración..." />;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="mx-auto p-6 bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
         <FontAwesomeIcon icon={faBuilding} className="text-blue-500" />
         Configuración Global y Membrete
@@ -175,19 +175,19 @@ export function PdfGlobalConfigTab() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razón Social</label>
-              <input {...register("razonSocial")} type="text" className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ej. Mi Empresa S.A." />
+              <input {...register("razonSocial")} type="text" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ej. Mi Empresa S.A." />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CUIT</label>
-              <input {...register("cuit")} type="text" className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ej. 30-12345678-9" />
+              <input {...register("cuit")} type="text" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ej. 30-12345678-9" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ciudad Sede</label>
-              <input {...register("ciudad")} type="text" className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ej. Buenos Aires" />
+              <input {...register("ciudad")} type="text" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ej. Buenos Aires" />
             </div>
           </div>
 
-          <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-sm text-gray-600 dark:text-gray-400">
+          <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded text-sm text-gray-600 dark:text-gray-400">
             <p className="font-semibold mb-2">Variables del Sistema Disponibles:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Configura estos datos para que se completen automáticamente en las plantillas PDF.</li>
@@ -210,7 +210,7 @@ export function PdfGlobalConfigTab() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <FontAwesomeIcon icon={faImage} /> Logo de la Empresa
             </label>
-            <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
+            <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
               {logoPreview ? (
                 <div className="mb-3 relative group h-full flex items-center justify-center">
                   <img src={getImageUrl(logoPreview)} alt="Logo Preview" className="h-32 mx-auto object-contain" />
@@ -229,7 +229,7 @@ export function PdfGlobalConfigTab() {
                   onChange={handleLogoChange}
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
+                    file:rounded file:border-0
                     file:text-sm file:font-semibold
                     file:bg-blue-50 file:text-blue-700
                     hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300
@@ -245,7 +245,7 @@ export function PdfGlobalConfigTab() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <FontAwesomeIcon icon={faSignature} /> Firma por Defecto
             </label>
-            <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
+            <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
               {signaturePreview ? (
                 <div className="mb-3 relative group h-full flex items-center justify-center">
                   <img src={getImageUrl(signaturePreview)} alt="Signature Preview" className="h-24 mx-auto object-contain" />
@@ -264,7 +264,7 @@ export function PdfGlobalConfigTab() {
                   onChange={handleSignatureChange}
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
+                    file:rounded file:border-0
                     file:text-sm file:font-semibold
                     file:bg-blue-50 file:text-blue-700
                     hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300
@@ -277,7 +277,7 @@ export function PdfGlobalConfigTab() {
         </div>
 
         <div className="flex justify-end pt-4 gap-3">
-          <button type="button" onClick={handlePreview} className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+          <button type="button" onClick={handlePreview} className="px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
             <FontAwesomeIcon icon={faEye} />
             Previsualizar Membrete y Firma
           </button>

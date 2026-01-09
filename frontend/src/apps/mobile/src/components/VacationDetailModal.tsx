@@ -89,7 +89,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
 
     if (vacation.status === "pending") {
       return (
-        <button onClick={handleCancelVacation} disabled={cancelling} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <button onClick={handleCancelVacation} disabled={cancelling} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           Cancelar Solicitud
         </button>
       );
@@ -107,7 +107,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
       }
 
       return (
-        <button onClick={handleCancelVacation} disabled={cancelling} className="px-6 py-2.5 rounded-lg bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <button onClick={handleCancelVacation} disabled={cancelling} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           Cancelar Solicitud
         </button>
       );
@@ -145,7 +145,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
         customHeader={
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detalles de Solicitud</h2>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
+            <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
               <FontAwesomeIcon icon={faTimes} className="h-5 w-5 text-gray-500" />
             </button>
           </div>
@@ -167,9 +167,9 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
           <div className="flex items-center gap-3">
             <div>
               {getUserAvatarUrl() ? (
-                <img alt={`Foto de perfil de ${getUserName()}`} className="w-10 h-10 rounded-full object-cover" src={getUserAvatarUrl()!} />
+                <img alt={`Foto de perfil de ${getUserName()}`} className="w-10 h-10 rounded object-cover" src={getUserAvatarUrl()!} />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
+                <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
                   {getUserName()
                     .split(" ")
                     .map((n) => n[0])
@@ -190,8 +190,8 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Tipo de solicitud</p>
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">Vacaciones</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{vacation.daysRequested} días</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">Vacaciones</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">{vacation.daysRequested} días</span>
               </div>
             </div>
             <div className="flex gap-10">
@@ -208,7 +208,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
 
           {/* Motivo / Description */}
           {vacation.reason && (
-            <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded-lg">
+            <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded">
               <div className="flex justify-between items-start">
                 <div className="flex justify-between items-center w-full">
                   <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
@@ -232,7 +232,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
               const daysRemaining = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
               return (
-                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
+                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded">
                   <div className="flex items-start gap-3">
                     <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-500 mt-0.5" />
                     <div className="flex-1">
@@ -257,7 +257,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
             // State: Signed (Verified by Admin)
             if (vacation.signatureStatus === "signed") {
               return (
-                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
+                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded">
                   <div className="flex items-start gap-3 mb-3">
                     <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-green-500 mt-0.5" />
                     <div className="flex-1">
@@ -276,7 +276,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
             // State: Waiting Verification (User notified)
             if (vacation.signatureNotifiedAt) {
               return (
-                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg">
+                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded">
                   <div className="flex items-start gap-3 mb-3">
                     <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-500 mt-0.5" />
                     <div className="flex-1">
@@ -289,7 +289,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
                       </p>
                     </div>
                   </div>
-                  <button disabled className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-amber-900/40 text-amber-500 text-sm font-medium leading-normal shadow-sm transition-colors cursor-not-allowed border border-amber-500/20">
+                  <button disabled className="w-full flex items-center justify-center gap-2 rounded h-10 px-4 bg-amber-900/40 text-amber-500 text-sm font-medium leading-normal shadow-sm transition-colors cursor-not-allowed border border-amber-500/20">
                     <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4" />
                     <span>Ya Notificado</span>
                   </button>
@@ -299,7 +299,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
 
             // State: Document Sent (Needs signature)
             return (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded">
                 <div className="flex items-start gap-3 mb-3">
                   <FontAwesomeIcon icon={faBell} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                   <div className="flex-1">
@@ -308,7 +308,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
                     <p className="text-sm text-blue-700 dark:text-blue-300">Una vez que hayas completado la firma, avisá al supervisor presionando el botón de abajo.</p>
                   </div>
                 </div>
-                <button onClick={handleNotifySignature} disabled={notifyingSignature} className="w-full flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={handleNotifySignature} disabled={notifyingSignature} className="w-full flex items-center justify-center gap-2 rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {notifyingSignature ? (
                     <>
                       <FontAwesomeIcon icon={faSpinner} spin className="w-4 h-4" />
@@ -331,10 +331,10 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
       {viewingFile && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 w-full" onClick={() => setViewingFile(null)}>
           <div className="relative w-full flex justify-center max-h-[90vh] h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setViewingFile(null)} className="absolute -top-4 -right-4 p-2 rounded-full bg-slate-800 text-white shadow-lg z-10 w-8 h-8 flex items-center justify-center">
+            <button onClick={() => setViewingFile(null)} className="absolute -top-4 -right-4 p-2 rounded bg-slate-800 text-white shadow-lg z-10 w-8 h-8 flex items-center justify-center">
               <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
             </button>
-            <iframe src={viewingFile} className="w-full h-full rounded-lg shadow-2xl bg-white" title="Documento" />
+            <iframe src={viewingFile} className="w-full h-full rounded shadow-2xl bg-white" title="Documento" />
           </div>
         </div>
       )}

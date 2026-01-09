@@ -9,8 +9,8 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faLayerGroup, faEdit } from "@fortawesome/free-solid-svg-icons";
+
+import { faUsers, faEdit, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { getClientStatusLabel } from "../utils/clientStatus";
 
@@ -307,7 +307,7 @@ export const ClientDetailPage: React.FC = () => {
           header={{
             title: "Proyectos",
             subtitle: "Gestión de proyectos",
-            icon: faLayerGroup,
+            icon: faBriefcase,
           }}
           footer={{
             leftContent: (

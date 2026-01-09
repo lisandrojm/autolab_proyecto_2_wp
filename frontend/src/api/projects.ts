@@ -17,6 +17,27 @@ export interface Client {
   name: string;
 }
 
+export interface WorkScheduleDay {
+  startTime: string;
+  endTime: string;
+  isWorkDay: boolean;
+}
+
+export interface WorkSchedule {
+  mode: "weekdays" | "all_week" | "per_day";
+  weekdays?: WorkScheduleDay;
+  weekend?: WorkScheduleDay;
+  days?: {
+    monday?: WorkScheduleDay;
+    tuesday?: WorkScheduleDay;
+    wednesday?: WorkScheduleDay;
+    thursday?: WorkScheduleDay;
+    friday?: WorkScheduleDay;
+    saturday?: WorkScheduleDay;
+    sunday?: WorkScheduleDay;
+  };
+}
+
 export interface Project {
   _id: string;
 
@@ -43,6 +64,20 @@ export interface Project {
     minDiasFraccion?: number;
     diasCorridos?: boolean;
   };
+  activityLogConfig?: {
+    useGlobalConfig: boolean;
+    enableFastEntry?: boolean;
+    allowsAdditionalStaff?: boolean;
+  };
+  teamConfig?: {
+    userId: string;
+    isNotifier: boolean;
+    canRegister: boolean;
+    useProjectSchedule?: boolean;
+    startTime?: string;
+    endTime?: string;
+  }[];
+  workSchedule?: WorkSchedule;
 }
 
 export interface ProjectsListResponse {
@@ -88,6 +123,9 @@ function normalizeProject(raw: any): Project {
     assignedUsers: Array.isArray(raw?.assignedUsers) ? raw.assignedUsers : [],
     updatedAt: String(raw?.updatedAt ?? ""),
     vacationConfig: raw?.vacationConfig,
+    activityLogConfig: raw?.activityLogConfig,
+    workSchedule: raw?.workSchedule,
+    teamConfig: raw?.teamConfig,
   };
 }
 
@@ -172,6 +210,12 @@ class ProjectsAPI {
     };
   }
 
+  async getMiniProjects(ids: string[]): Promise<{ _id: string; name: string; clientId?: { _id: string; name: string } }[]> {
+    if (ids.length === 0) return [];
+    const { data } = await axios.get(`/miniprojects?ids=${ids.join(",")}`, { headers: this.getHeaders() });
+    return data;
+  }
+
   async listAll(params: { q?: string; limit?: number } = {}): Promise<Project[]> {
     const pageSize = params.limit ?? 200;
     let resp = await this.list({ ...params, page: 1, limit: pageSize });
@@ -194,6 +238,7 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
+      workSchedule?: WorkSchedule;
     }
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {
@@ -225,6 +270,12 @@ class ProjectsAPI {
         minDiasFraccion?: number;
         diasCorridos?: boolean;
       };
+      activityLogConfig?: {
+        useGlobalConfig: boolean;
+        enableFastEntry?: boolean;
+        allowsAdditionalStaff?: boolean;
+      };
+      workSchedule?: WorkSchedule;
     }
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {
@@ -234,6 +285,27 @@ class ProjectsAPI {
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", project._id, clientId);
     return project;
+  }
+
+  async updateTeamConfig(
+    projectId: string,
+    config: {
+      userId: string;
+      isNotifier: boolean;
+      canRegister: boolean;
+      useProjectSchedule?: boolean;
+      startTime?: string;
+      endTime?: string;
+    }[]
+  ): Promise<Project> {
+    const resp = await axios.patch(
+      `/projects/${projectId}/team-config`,
+      { config },
+      {
+        headers: this.getHeaders(),
+      }
+    );
+    return normalizeProject(resp.data);
   }
 
   async getProjectCampaigns(projectId: string): Promise<any[]> {

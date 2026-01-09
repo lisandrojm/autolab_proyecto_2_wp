@@ -282,6 +282,11 @@ class UsersAPI {
     emitUsersChanged("delete", id);
   }
 
+  async getDirectory(): Promise<User[]> {
+    const { data } = await axios.get("/users/directory", { headers: this.getHeaders() });
+    return Array.isArray(data) ? data.map(normalizeUser) : [];
+  }
+
   async getByArea(areaId: string): Promise<User[]> {
     const { data } = await axios.get(`/users/by-area/${areaId}`, { headers: this.getHeaders() });
     // Normalize logic is expecting full object, but our endpoint returns subsets.

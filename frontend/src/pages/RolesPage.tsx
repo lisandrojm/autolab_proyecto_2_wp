@@ -419,19 +419,19 @@ export const RolesPage: React.FC = () => {
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <button onClick={openCreate} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
             </button>
           )}
-          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Usuarios</span>
           </button>
-          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Cargos</span>
           </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
           </button>
@@ -515,16 +515,16 @@ export const RolesPage: React.FC = () => {
                     const isAdminModule = false;
 
                     return (
-                      <div key={moduleKey} className={`border rounded-lg p-3 ${isSuperAdminModule ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20" : isAdminModule ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"}`}>
+                      <div key={moduleKey} className={`border rounded p-3 ${isSuperAdminModule ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20" : isAdminModule ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50"}`}>
                         <div className="flex items-start gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSuperAdminModule ? "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50" : isAdminModule ? "bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50" : "bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50"}`}>
+                          <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${isSuperAdminModule ? "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50" : isAdminModule ? "bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50" : "bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50"}`}>
                             <FontAwesomeIcon icon={moduleData.icon} className={`h-4 w-4 ${isSuperAdminModule ? "text-blue-600 dark:text-blue-400" : isAdminModule ? "text-green-600 dark:text-green-400" : "text-primary-600 dark:text-primary-400"}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h5 className="font-semibold text-gray-900 dark:text-white text-sm">{moduleData.label}</h5>
-                              {isSuperAdminModule && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>}
-                              {isAdminModule && <span className="text-xs px-2 py-0.5 rounded-full bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium">Admin/SuperAdmin</span>}
+                              {isSuperAdminModule && <span className="text-xs px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>}
+                              {isAdminModule && <span className="text-xs px-2 py-0.5 rounded bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200 font-medium">Admin/SuperAdmin</span>}
                             </div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{moduleData.description}</p>
                           </div>
@@ -604,9 +604,9 @@ export const RolesPage: React.FC = () => {
                   {/* Permisos Generales */}
                   {Object.entries(AVAILABLE_PERMISSIONS).map(([module, moduleData]) => {
                     return (
-                      <div key={module} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                      <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
                         <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 flex items-center justify-center flex-shrink-0">
+                          <div className="w-6 h-6 rounded bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 flex items-center justify-center flex-shrink-0">
                             <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400" />
                           </div>
                           <div className="flex-1">
@@ -636,15 +636,15 @@ export const RolesPage: React.FC = () => {
                     editingRole?.name.toLowerCase() !== "superadmin" &&
                     Object.entries(SUPERADMIN_ONLY_PERMISSIONS).map(([module, moduleData]) => {
                       return (
-                        <div key={module} className="border-2 border-blue-400 dark:border-blue-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-950/30">
+                        <div key={module} className="border-2 border-blue-400 dark:border-blue-600 rounded p-4 bg-blue-50 dark:bg-blue-950/30">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 flex items-center justify-center flex-shrink-0">
+                            <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 flex items-center justify-center flex-shrink-0">
                               <FontAwesomeIcon icon={moduleData.icon} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>
+                                <span className="text-xs px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>
                               </div>
                               <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
                             </div>
@@ -797,7 +797,7 @@ export const RolesPage: React.FC = () => {
           {/* Sistema simplificado - destacado primero */}
           <div className="bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-950/40 dark:to-cyan-950/40 border-2 border-emerald-300 dark:border-emerald-700 rounded-xl p-4">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500 dark:bg-blue-700 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-700 flex items-center justify-center flex-shrink-0">
                 <FontAwesomeIcon icon={faEye} className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
@@ -805,7 +805,7 @@ export const RolesPage: React.FC = () => {
                 <p className="text-emerald-800 dark:text-emerald-200 text-sm">Los permisos ahora son simples y basados en visibilidad</p>
               </div>
             </div>
-            <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3 space-y-2">
+            <div className="bg-white/60 dark:bg-black/20 rounded p-3 space-y-2">
               <div className="flex items-start gap-2">
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
                 <p className="text-emerald-900 dark:text-emerald-100 flex-1">
@@ -828,13 +828,13 @@ export const RolesPage: React.FC = () => {
           </div>
 
           {/* Ejemplo práctico */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded p-4">
             <div className="flex items-center gap-2 mb-3">
               <FontAwesomeIcon icon={faInfoCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <h4 className="font-bold text-blue-900 dark:text-blue-100 text-base">Ejemplo práctico</h4>
             </div>
             <div className="space-y-3 text-blue-900 dark:text-blue-100">
-              <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3">
+              <div className="bg-white/60 dark:bg-black/20 rounded p-3">
                 <p className="text-sm mb-2 font-semibold">Rol "User" (Usuario estándar)</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
                   <strong>Permisos asignados:</strong> Dashboard (Ver), Clientes (Ver), Calendario (Ver), Creative Suite (Ver)
@@ -846,7 +846,7 @@ export const RolesPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3">
+              <div className="bg-white/60 dark:bg-black/20 rounded p-3">
                 <p className="text-sm mb-2 font-semibold">Rol "Admin" (Administrador)</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
                   <strong>Permisos asignados:</strong> Dashboard, Clientes, Calendario, Creative Suite
@@ -855,7 +855,7 @@ export const RolesPage: React.FC = () => {
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ Control completo sobre la configuración del sistema</p>
               </div>
 
-              <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3">
+              <div className="bg-white/60 dark:bg-black/20 rounded p-3">
                 <p className="text-sm mb-2 font-semibold">Rol personalizado "Solo Dashboard"</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
                   <strong>Permisos asignados:</strong> Solo Dashboard (Ver)
@@ -864,7 +864,7 @@ export const RolesPage: React.FC = () => {
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ NO verá selector de clientes, calendario, ni otros módulos</p>
               </div>
 
-              <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3">
+              <div className="bg-white/60 dark:bg-black/20 rounded p-3">
                 <p className="text-sm mb-2 font-semibold">Roles Admin y SuperAdmin</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">
                   → Tienen <strong>acceso completo automático</strong> a todo el sistema, independientemente de los permisos asignados
@@ -885,7 +885,7 @@ export const RolesPage: React.FC = () => {
               <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Permisos Generales</h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {Object.entries(AVAILABLE_PERMISSIONS).map(([key, moduleData]) => (
-                  <div key={key} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
+                  <div key={key} className="flex items-start gap-2 p-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
                     <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
@@ -901,7 +901,7 @@ export const RolesPage: React.FC = () => {
               <h5 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">Permisos de SuperAdmin</h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {Object.entries(SUPERADMIN_ONLY_PERMISSIONS).map(([key, moduleData]) => (
-                  <div key={key} className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-700 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+                  <div key={key} className="flex items-start gap-2 p-2.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-700 rounded hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
                     <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-gray-900 dark:text-white text-xs">{moduleData.label}</div>
@@ -914,7 +914,7 @@ export const RolesPage: React.FC = () => {
           </div>
 
           {/* Rol por defecto */}
-          <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+          <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded p-3">
             <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-2">Rol por defecto</h4>
             <p className="text-gray-700 dark:text-gray-300 text-xs">El rol marcado como "por defecto" se asigna automáticamente a nuevos usuarios cuando se registran. Solo puede haber un rol por defecto por organización.</p>
           </div>

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPlus, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan } from '@fortawesome/free-solid-svg-icons';
-import { requestsAPI, RequestData } from '../../../../../api/requests';
+import { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faPlus, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan } from "@fortawesome/free-solid-svg-icons";
+import { requestsAPI, RequestData } from "../../../../../api/requests";
 
 interface RequestsMobileListPageProps {
-  onNavigate: (view: 'new' | 'detail', id?: string) => void;
+  onNavigate: (view: "new" | "detail", id?: string) => void;
   onBack: () => void;
 }
 
@@ -24,7 +24,7 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
       const data = await requestsAPI.getMyRequests();
       setRequests(data);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al cargar solicitudes');
+      setError(err.response?.data?.error || "Error al cargar solicitudes");
     } finally {
       setLoading(false);
     }
@@ -32,13 +32,13 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'approved':
+      case "approved":
         return <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5 text-green-600 dark:text-green-400" />;
-      case 'pending':
+      case "pending":
         return <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />;
-      case 'rejected':
+      case "rejected":
         return <FontAwesomeIcon icon={faTimesCircle} className="w-5 h-5 text-red-600 dark:text-red-400" />;
-      case 'cancelled':
+      case "cancelled":
         return <FontAwesomeIcon icon={faBan} className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
       default:
         return null;
@@ -47,14 +47,14 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'approved':
-        return 'Aprobada';
-      case 'pending':
-        return 'Pendiente';
-      case 'rejected':
-        return 'Rechazada';
-      case 'cancelled':
-        return 'Cancelada';
+      case "approved":
+        return "Aprobada";
+      case "pending":
+        return "Pendiente";
+      case "rejected":
+        return "Rechazada";
+      case "cancelled":
+        return "Cancelada";
       default:
         return status;
     }
@@ -62,29 +62,29 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
 
   const getStatusBg = (status: string) => {
     switch (status) {
-      case 'approved':
-        return 'bg-green-100 dark:bg-green-900/50';
-      case 'pending':
-        return 'bg-yellow-100 dark:bg-yellow-900/50';
-      case 'rejected':
-        return 'bg-red-100 dark:bg-red-900/50';
-      case 'cancelled':
-        return 'bg-gray-100 dark:bg-gray-800';
+      case "approved":
+        return "bg-green-100 dark:bg-green-900/50";
+      case "pending":
+        return "bg-yellow-100 dark:bg-yellow-900/50";
+      case "rejected":
+        return "bg-red-100 dark:bg-red-900/50";
+      case "cancelled":
+        return "bg-gray-100 dark:bg-gray-800";
       default:
-        return 'bg-gray-100 dark:bg-gray-800';
+        return "bg-gray-100 dark:bg-gray-800";
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'vacation':
-        return 'Vacaciones';
-      case 'compensatory':
-        return 'Compensatorio';
-      case 'special_leave':
-        return 'Permiso Especial';
-      case 'extra':
-        return 'Extra';
+      case "vacation":
+        return "Vacaciones";
+      case "compensatory":
+        return "Compensatorio";
+      case "special_leave":
+        return "Permiso Especial";
+      case "extra":
+        return "Extra";
       default:
         return type;
     }
@@ -95,18 +95,12 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
       <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
+            <button onClick={onBack} className="flex items-center justify-center w-10 h-10 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faArrowLeft} className="w-6 h-6 text-gray-900 dark:text-gray-100" />
             </button>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mis Pedidos</h1>
           </div>
-          <button
-            onClick={() => onNavigate('new')}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-          >
+          <button onClick={() => onNavigate("new")} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors">
             <FontAwesomeIcon icon={faPlus} className="w-5 h-5" />
             Nuevo
           </button>
@@ -115,46 +109,37 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
 
       <div className="p-4">
         {error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <svg className="animate-spin h-8 w-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
           </div>
         ) : requests.length === 0 ? (
           <div className="text-center py-12">
             <FontAwesomeIcon icon={faCalendar} className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 dark:text-gray-400 mb-4">No tienes solicitudes</p>
-            <button
-              onClick={() => onNavigate('new')}
-              className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-            >
+            <button onClick={() => onNavigate("new")} className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors">
               Crear Primera Solicitud
             </button>
           </div>
         ) : (
           <div className="space-y-4">
             {requests.map((request) => (
-              <div
-                key={request._id}
-                onClick={() => onNavigate('detail', request._id)}
-                className={`${getStatusBg(
-                  request.status
-                )} rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow`}
-              >
+              <div key={request._id} onClick={() => onNavigate("detail", request._id)} className={`${getStatusBg(request.status)} rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                      {getTypeLabel(request.type)}
-                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">{getTypeLabel(request.type)}</h3>
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />
                       <span>
-                        {new Date(request.startDate).toLocaleDateString()} -{' '}
-                        {new Date(request.endDate).toLocaleDateString()}
+                        {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
@@ -162,12 +147,8 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {request.daysCount} días
-                  </span>
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {getStatusText(request.status)}
-                  </span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{request.daysCount} días</span>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{getStatusText(request.status)}</span>
                 </div>
 
                 {request.postponeCount > 0 && (

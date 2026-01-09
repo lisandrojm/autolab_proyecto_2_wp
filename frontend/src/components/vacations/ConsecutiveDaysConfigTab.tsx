@@ -104,7 +104,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
   };
 
   const renderConfigRow = (title: string, subtitle: string | undefined, config: any, onUpdate: (updates: any) => void, effectiveValue: boolean | undefined) => (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+    <div className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex-1">
           <h4 className="font-medium text-gray-900 dark:text-gray-100">{title}</h4>
@@ -113,7 +113,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
           {/* Use Global Config Toggle */}
-          <button onClick={() => onUpdate({ useGlobalConfig: !config.useGlobalConfig })} className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${config.useGlobalConfig ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}>
+          <button onClick={() => onUpdate({ useGlobalConfig: !config.useGlobalConfig })} className={`px-3 py-1.5 rounded border text-sm font-medium flex items-center gap-2 transition-colors ${config.useGlobalConfig ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}>
             <FontAwesomeIcon icon={config.useGlobalConfig ? faToggleOn : faToggleOff} />
             Usar Global
           </button>
@@ -122,7 +122,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
             <>
               <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
               {/* Dias Corridos Toggle */}
-              <button onClick={() => onUpdate({ diasCorridos: !config.diasCorridos })} className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${config.diasCorridos ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}>
+              <button onClick={() => onUpdate({ diasCorridos: !config.diasCorridos })} className={`px-3 py-1.5 rounded border text-sm font-medium flex items-center gap-2 transition-colors ${config.diasCorridos ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}>
                 <FontAwesomeIcon icon={config.diasCorridos ? faToggleOn : faToggleOff} />
                 {config.diasCorridos ? "Días Corridos" : "Días Hábiles"}
               </button>
@@ -145,7 +145,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Configuración de Días Corridos</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">Personaliza la regla de días corridos para cada entidad. Si se activa la configuración personalizada, anulará la configuración global.</p>
@@ -161,7 +161,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
       </div>
 
       {globalConfig && (
-        <div className="mb-8 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+        <div className="mb-8 bg-blue-50 dark:bg-blue-900/20 p-4 rounded border border-blue-100 dark:border-blue-800">
           <h4 className="text-md font-semibold text-blue-900 dark:text-blue-100 mb-3">Configuración Global</h4>
           <div className="flex items-center gap-4 flex-wrap">
             <button
@@ -181,7 +181,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
                 }
               }}
               disabled={isSavingGlobal}
-              className={`px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${globalConfig.diasCorridos ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
+              className={`px-3 py-1.5 rounded border text-sm font-medium flex items-center gap-2 transition-colors ${globalConfig.diasCorridos ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300" : "bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"}`}
             >
               {isSavingGlobal ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={globalConfig.diasCorridos ? faToggleOn : faToggleOff} />}
               {globalConfig.diasCorridos ? "Activado (Días corridos)" : "Desactivado (Días hábiles)"}

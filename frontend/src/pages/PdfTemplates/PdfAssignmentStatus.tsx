@@ -17,7 +17,7 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
   ] as const;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Cobertura de Plantillas por Tipo</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Asegúrese de tener al menos una plantilla activa para cada tipo de código para garantizar que todos los pedidos funcionen correctamente.</p>
@@ -41,7 +41,7 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
               return (
                 <tr key={item.code} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <td className="px-4 py-3 text-sm">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.section === "Vacaciones" ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"}`}>{item.section}</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${item.section === "Vacaciones" ? "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300" : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"}`}>{item.section}</span>
                   </td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                     {item.label}
@@ -50,11 +50,11 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{item.description}</td>
                   <td className="px-4 py-3 text-sm">
                     {isCovered ? (
-                      <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-xs">
+                      <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/20 text-xs">
                         <FontAwesomeIcon icon={faCheckCircle} /> Cubierto
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400 font-medium px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-xs">
+                      <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400 font-medium px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/20 text-xs">
                         <FontAwesomeIcon icon={faExclamationTriangle} /> Falta Plantilla
                       </span>
                     )}

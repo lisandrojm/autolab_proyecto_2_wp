@@ -417,7 +417,7 @@ export function PdfTemplatesPage() {
             </label>
 
             {/* variables del pedido */}
-            <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+            <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded p-4">
               <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">{formData.code === "vacaciones" ? "Variables de vacaciones" : "Variables del pedido"}</h4>
 
               <div className="flex flex-wrap gap-1">
@@ -432,7 +432,7 @@ export function PdfTemplatesPage() {
             {/* contenido */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contenido *</label>
-              <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={12} className="w-full px-4 py-3 border rounded-lg font-mono text-sm dark:bg-slate-900" />
+              <textarea value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} rows={12} className="w-full px-4 py-3 border rounded font-mono text-sm dark:bg-slate-900" />
               {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
             </div>
           </div>

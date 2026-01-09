@@ -49,15 +49,15 @@ export const PlatformSettingsPage: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre de la Plataforma</label>
-                      <input type="text" defaultValue="BrandMe" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="text" defaultValue="BrandMe" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">URL de la Plataforma</label>
-                      <input type="url" defaultValue="https://autolab.fun" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="url" defaultValue="https://autolab.fun" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email de Contacto</label>
-                      <input type="email" defaultValue="admin@autolab.fun" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="email" defaultValue="admin@autolab.fun" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -84,11 +84,11 @@ export const PlatformSettingsPage: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expiración de Sesión (minutos)</label>
-                      <input type="number" defaultValue="60" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="number" defaultValue="60" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Intentos de Login Fallidos Permitidos</label>
-                      <input type="number" defaultValue="5" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="number" defaultValue="5" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -102,7 +102,7 @@ export const PlatformSettingsPage: React.FC = () => {
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Requerir contraseñas complejas</span>
                       </label>
                     </div>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
                       <div className="flex items-start gap-3">
                         <FontAwesomeIcon icon={faShield} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                         <div>
@@ -123,11 +123,11 @@ export const PlatformSettingsPage: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Servidor SMTP</label>
-                      <input type="text" placeholder="smtp.example.com" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="text" placeholder="smtp.example.com" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Puerto SMTP</label>
-                      <input type="number" defaultValue="587" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                      <input type="number" defaultValue="587" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
                     </div>
                     <div>
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -152,7 +152,7 @@ export const PlatformSettingsPage: React.FC = () => {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Límites y Cuotas por Plan</h3>
                   <div className="space-y-6">
                     {["free", "basic", "pro", "enterprise"].map((plan) => (
-                      <div key={plan} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                      <div key={plan} className="border border-gray-200 dark:border-gray-700 rounded p-4">
                         <h4 className="font-medium text-gray-900 dark:text-white capitalize mb-3">Plan {plan}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
@@ -178,7 +178,7 @@ export const PlatformSettingsPage: React.FC = () => {
             {/* Botón de Guardar */}
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-end gap-3">
-                <button onClick={handleSave} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                <button onClick={handleSave} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors">
                   Guardar Cambios
                 </button>
               </div>

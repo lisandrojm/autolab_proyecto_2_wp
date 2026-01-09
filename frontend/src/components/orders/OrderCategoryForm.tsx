@@ -149,7 +149,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Documento Requerido *</label>
-              <input type="text" value={formData.documentoRequerido || ""} onChange={(e) => setFormData({ ...formData, documentoRequerido: e.target.value })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: DNI escaneado, Certificado médico..." />
+              <input type="text" value={formData.documentoRequerido || ""} onChange={(e) => setFormData({ ...formData, documentoRequerido: e.target.value })} required className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: DNI escaneado, Certificado médico..." />
             </div>
             {renderDeadlineFields()}
           </div>
@@ -160,7 +160,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Título de la Condición *</label>
-              <input type="text" value={formData.tituloAccion || ""} onChange={(e) => setFormData({ ...formData, tituloAccion: e.target.value })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Completar capacitación de seguridad" />
+              <input type="text" value={formData.tituloAccion || ""} onChange={(e) => setFormData({ ...formData, tituloAccion: e.target.value })} required className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: Completar capacitación de seguridad" />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Este título se mostrará al usuario como alerta en el formulario mobile</p>
             </div>
             {renderDeadlineFields()}
@@ -202,7 +202,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modo de Vencimiento *</label>
-              <select required value={formData.deadlineMode} onChange={(e) => handleDeadlineModeChange(e.target.value as DeadlineMode)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+              <select required value={formData.deadlineMode} onChange={(e) => handleDeadlineModeChange(e.target.value as DeadlineMode)} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                 <option value="plazoDias">{deadlineModeLabels.plazoDias}</option>
                 <option value="fechaEspecifica">{deadlineModeLabels.fechaEspecifica}</option>
               </select>
@@ -211,7 +211,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             {formData.deadlineMode === "plazoDias" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plazo en Días *</label>
-                <input type="number" min="1" max="365" value={formData.plazoDias || ""} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })} required className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: 10" />
+                <input type="number" min="1" max="365" value={formData.plazoDias || ""} onChange={(e) => setFormData({ ...formData, plazoDias: parseInt(e.target.value) || undefined })} required className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Ej: 10" />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El sistema calculará automáticamente la fecha límite</p>
               </div>
             )}
@@ -219,7 +219,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
             {formData.deadlineMode === "fechaEspecifica" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Límite *</label>
-                <input type="date" value={formData.fechaLimite ? new Date(formData.fechaLimite).toISOString().split("T")[0] : ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+                <input type="date" value={formData.fechaLimite ? new Date(formData.fechaLimite).toISOString().split("T")[0] : ""} onChange={(e) => setFormData({ ...formData, fechaLimite: e.target.value })} required min={new Date().toISOString().split("T")[0]} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
               </div>
             )}
           </>
@@ -235,7 +235,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         {/* Nombre */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
-          <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Nombre del tipo de pedido" />
+          <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Nombre del tipo de pedido" />
         </div>
 
         {/* Información de Confirmación */}
@@ -246,7 +246,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
-          <textarea value={formData.informacion} onChange={(e) => setFormData({ ...formData, informacion: e.target.value })} rows={3} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Texto de confirmación..." />
+          <textarea value={formData.informacion} onChange={(e) => setFormData({ ...formData, informacion: e.target.value })} rows={3} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" placeholder="Texto de confirmación..." />
         </div>
 
         {/* Tipo de dato */}
@@ -257,7 +257,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
             </button>
           </div>
-          <select required value={formData.categoryType} onChange={(e) => setFormData({ ...formData, categoryType: e.target.value as CategoryType })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+          <select required value={formData.categoryType} onChange={(e) => setFormData({ ...formData, categoryType: e.target.value as CategoryType })} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
             <option value="fecha">Fecha</option>
             <option value="dinero">Dinero</option>
             <option value="objeto">Objeto</option>
@@ -287,7 +287,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           </div>
 
           {formData.subtipos.length > 0 && (
-            <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-2">
+            <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded p-2">
               {formData.subtipos.map((subtipo, index) => (
                 <div key={subtipo.id} className="flex items-center gap-2">
                   <input
@@ -328,7 +328,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
               </button>
             </div>
-            <select required value={formData.dateMode} onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white">
+            <select required value={formData.dateMode} onChange={(e) => setFormData({ ...formData, dateMode: e.target.value as DateMode })} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white">
               <option value="single">Fecha única</option>
               <option value="range">Rango de fechas</option>
             </select>
@@ -359,7 +359,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                     setFormData({ ...formData, montoMaximo: r > 0 ? r : 50 });
                   }
                 }}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white"
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white"
                 placeholder="Sin límite"
               />
             </div>
@@ -401,7 +401,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
                   if (matchingTemplate) {
                     return (
-                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
                           <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
@@ -413,7 +413,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                     );
                   } else {
                     return (
-                      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
                         <div className="flex items-start gap-2">
                           <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5" />
                           <div>
@@ -472,7 +472,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <select required value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2">
+                <select required value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2">
                   <option value="">Selecciona un tipo...</option>
                   <option value="documento">{tipoAccionFuturaLabels.documento}</option>
                   <option value="otra">{tipoAccionFuturaLabels.otra}</option>
@@ -512,7 +512,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                           <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                         </button>
                       </div>
-                      <input type="text" required={formData.requiresUserConfirmation} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white" placeholder="Ej: Me comprometo a adjuntar el documento..." />
+                      <input type="text" required={formData.requiresUserConfirmation} value={formData.actionText} onChange={(e) => setFormData({ ...formData, actionText: e.target.value })} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white" placeholder="Ej: Me comprometo a adjuntar el documento..." />
                     </div>
                   )}
                 </div>

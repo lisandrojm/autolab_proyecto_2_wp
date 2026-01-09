@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faSpinner, faFilter, faClock, faCheckCircle, faTimesCircle, faBan, faCheck, faTruck, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faSpinner, faFilter, faClock, faCheckCircle, faTimesCircle, faBan, faCheck, faTruck, faChevronLeft, faChevronRight, faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { Timeline } from "vis-timeline/standalone";
 import { DataSet } from "vis-data";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
@@ -204,7 +204,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
     <PageLayout
       title="Calendario de Vacaciones"
       subtitle="Vista temporal de todas las solicitudes de vacaciones"
-      faIcon={{ icon: faClock }}
+      faIcon={{ icon: faCalendar }}
       onBack={() => navigate("/hr/vacations")}
       infoModal={{
         isOpen: showHelpInfo,
@@ -224,18 +224,18 @@ export const ManageVacationsCalendarPage: React.FC = () => {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
-            <button onClick={handlePreviousMonth} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Período anterior">
+            <button onClick={handlePreviousMonth} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Período anterior">
               <FontAwesomeIcon icon={faChevronLeft} />
             </button>
-            <button onClick={handleTodayClick} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
+            <button onClick={handleTodayClick} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium">
               Hoy
             </button>
-            <button onClick={handleNextMonth} className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Período siguiente">
+            <button onClick={handleNextMonth} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Período siguiente">
               <FontAwesomeIcon icon={faChevronRight} />
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
               <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="pre_approved">Pre-aprobadas</option>
@@ -271,7 +271,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
             <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-blue-600" />
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4">
             <div ref={timelineRef} className="vacation-timeline"></div>
           </div>
         )}

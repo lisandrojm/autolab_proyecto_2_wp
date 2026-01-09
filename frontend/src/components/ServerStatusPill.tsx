@@ -36,7 +36,7 @@ export const ServerStatusPill: React.FC<Props> = ({
 
   // wrapper con tamaño fijo
   const style = { width: `${widthPx}px`, height: `${heightPx}px` };
-  const base = "inline-flex items-center gap-2 px-3 rounded-full text-xs";
+  const base = "inline-flex items-center gap-2 px-3 rounded text-xs";
   const tone = loading ? "text-gray-200/90 bg-slate-700/60" : serverOk ? "text-blue-600 dark:text-blue-300 border dark:border-none dark:bg-blue-900/30" : "text-red-300 bg-red-900/30";
 
   // slots con ancho reservado para que no cambie el layout
@@ -48,7 +48,7 @@ export const ServerStatusPill: React.FC<Props> = ({
   return (
     <div className={`${base} ${tone} ${className || ""}`} style={style}>
       {/* Icono */}
-      {loading ? <span className="h-3 w-3 rounded-full dark:bg-gray-300/70" /> : serverOk ? <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" /> : <FontAwesomeIcon icon={faServer} className="h-4 w-4" />}
+      {loading ? <span className="h-3 w-3 rounded dark:bg-gray-300/70" /> : serverOk ? <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" /> : <FontAwesomeIcon icon={faServer} className="h-4 w-4" />}
 
       {/* Label */}
       <span className={labelCls}>{loading ? "Chequeando…" : serverOk ? "Server:ON" : "Server:OFF"}</span>

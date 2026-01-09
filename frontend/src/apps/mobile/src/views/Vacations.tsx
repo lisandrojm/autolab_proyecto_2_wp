@@ -15,6 +15,7 @@ import {
   faCheckCircle,
   faBriefcase,
   faUserTie,
+  faRulerCombined,
 } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
@@ -444,7 +445,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+            <button onClick={() => onNavigate("home")} className="flex items-center justify-center w-10 h-10 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
               <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
             </button>
             <div className="flex items-center gap-2">
@@ -502,27 +503,27 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               </div>
 
               {/* METADATOS: Antigüedad y Área (Separados de las métricas de días) */}
-              <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1 mb-1">
+              <div className="text-xs text-slate-500 dark:text-slate-400 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 mb-1">
                 {/* Antigüedad */}
-                <span className="flex items-center gap-1">
+                <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold">Antigüedad:</span> {calculateAntiguedad()} Años
-                </span>
+                </div>
                 {/* Cargo */}
-                <span className="flex items-center gap-1">
+                <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
-                </span>
+                </div>
                 {/* Área / Miembros */}
-                <span className="flex items-center gap-1">
+                <div className="flex items-start gap-1">
                   <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold uppercase">Área:</span>
                   {profile?.areaName || profile?.department || "Sin Área"}
                   {profile?.areaMembers !== undefined && <span className="ml-1">| {profile.areaMembers} Miembro(s)</span>}
-                </span>
+                </div>
                 {/* Proyecto */}
-                <span className="flex items-center gap-1">
-                  <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
+                <div className="flex items-start gap-1">
+                  <FontAwesomeIcon icon={faRulerCombined} className="w-3 h-3 text-slate-400" />
                   <span className="font-semibold uppercase">Reglas:</span>
                   {/* Min Days Project/Global */}
                   {/* Min Days Badge */}
@@ -539,7 +540,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || "Global";
 
                     return (
-                      <>
+                      <div className="flex flex-col items-start gap-1">
                         {fractionalAllowed ? (
                           <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                             Min: {minDays} días <span className="opacity-70">({minDaysSource})</span>
@@ -553,10 +554,10 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                         <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                           {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({typeSource})</span>
                         </span>
-                      </>
+                      </div>
                     );
                   })()}
-                </span>
+                </div>
               </div>
             </div>
             {/* Controles de Año (opcionales) */}
@@ -570,7 +571,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             </div>
           </div>
 
-          <div className="dark:bg-slate-900 rounded-lg p-4">
+          <div className="dark:bg-slate-900 rounded p-4">
             {/* NUEVA FILA DE SALDO PRINCIPAL: Corridos vs. Hábiles */}
             <div className="flex flex-col justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center justify-between mb-2">
@@ -617,7 +618,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               {isArrastreEnabled && (
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Arrastre</p>
-                  <p className="text-lg font-bold text-purple-500">{carryOver}</p>
+                  <p className="text-lg font-bold text-gray-500">{carryOver}</p>
                 </div>
               )}
 
@@ -636,7 +637,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">Nueva Solicitud</h3>
-                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                   <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
@@ -645,33 +646,33 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de inicio</label>
                   <div onClick={() => !hasNoDays && setCalendarOpen("start")} className={`relative ${hasNoDays ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-                    <input type="text" value={startDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
+                    <input type="text" value={startDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
                     <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de fin</label>
                   <div onClick={() => !hasNoDays && setCalendarOpen("end")} className={`relative ${hasNoDays ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-                    <input type="text" value={endDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
+                    <input type="text" value={endDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
                     <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comentario (Opcional)</label>
-                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} disabled={hasNoDays} rows={3} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed" placeholder="Describe el comentario de tu solicitud..." />
+                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} disabled={hasNoDays} rows={3} className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed" placeholder="Describe el comentario de tu solicitud..." />
                 </div>
 
                 {/* Requiere Firma Info Box */}
-                <div onClick={() => setShowSignatureInfoModal(true)} className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-colors">
+                <div onClick={() => setShowSignatureInfoModal(true)} className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded text-amber-500 cursor-pointer hover:bg-amber-500/20 transition-colors">
                   <span className="font-bold text-sm">Requiere FIRMA</span>
                   <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                     Cancelar
                   </button>
-                  <button type="submit" disabled={submitting || hasNoDays} className="flex-1 rounded-lg h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button type="submit" disabled={submitting || hasNoDays} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {submitting ? "Enviando..." : "Enviar"}
                   </button>
                 </div>
@@ -708,10 +709,10 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
                         <div className="flex items-center w-full">
                           <div className="flex flex-wrap gap-1.5">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-50 dark:bg-gray-600/50">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-gray-50 dark:bg-gray-600/50">
                               {format(getLocalDate(vacation.startDate), "d MMM", { locale: es })} - {format(getLocalDate(vacation.endDate), "d MMM", { locale: es })}
                             </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-sm bg-gray-50 dark:bg-gray-600/20 text-slate-700 dark:text-slate-300">{vacation.daysRequested} días</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-sm bg-gray-50 dark:bg-gray-600/20 text-slate-700 dark:text-slate-300">{vacation.daysRequested} días</span>
                           </div>
                         </div>
                       </div>
@@ -742,18 +743,18 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-                  <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
+                  <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
                     <FontAwesomeIcon icon={faChevronLeft} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
                   </button>
-                  <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                  <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
                     <FontAwesomeIcon icon={faChevronRight} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
                   </button>
                 </div>
-                <button onClick={handleClearSelection} className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-600 text-blue-600 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-900/80 transition-colors ml-2 text-xs font-medium" title="Borrar selección">
+                <button onClick={handleClearSelection} className="px-3 py-1.5 rounded bg-blue-50 dark:bg-blue-600 text-blue-600 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-900/80 transition-colors ml-2 text-xs font-medium" title="Borrar selección">
                   Limpiar
                 </button>
-                <button onClick={() => setCalendarOpen(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ml-1">
+                <button onClick={() => setCalendarOpen(null)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ml-1">
                   <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
                 </button>
               </div>
@@ -825,7 +826,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   const isReturnDay = returnDate && isSameDay(day, returnDate);
 
                   if (isReturnDay) {
-                    classes += " bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-lg font-bold border-2 border-green-500/20";
+                    classes += " bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded font-bold border-2 border-green-500/20";
                     if (isDisabled) {
                       classes += " cursor-not-allowed opacity-75";
                     }
@@ -868,7 +869,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     else classes += " border-r-transparent rounded-r-none";
                   } else {
                     classes += " border-transparent border-2";
-                    classes += !isCurrentMonth ? " text-slate-300 dark:text-slate-700" : " text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg";
+                    classes += !isCurrentMonth ? " text-slate-300 dark:text-slate-700" : " text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded";
                   }
 
                   return (
@@ -899,7 +900,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
               {returnDate && (
                 <div className="px-1 mb-2">
-                  <div className="px-3 py-2 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded-lg text-xs text-green-700 dark:text-green-300 flex items-center gap-2">
+                  <div className="px-3 py-2 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded text-xs text-green-700 dark:text-green-300 flex items-center gap-2">
                     <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
                     <span>
                       Vuelve a trabajar el <strong className="capitalize">{format(returnDate!, "EEEE d 'de' MMMM", { locale: es })}</strong>
@@ -909,10 +910,10 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => setCalendarOpen(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                <button onClick={() => setCalendarOpen(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                   Cancelar
                 </button>
-                <button onClick={handleCalendarConfirm} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                <button onClick={handleCalendarConfirm} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">
                   Confirmar
                 </button>
               </div>

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfoCircle, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faInfoCircle, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 
 export const ClientContextMenu: React.FC = () => {
   const { selectedClient, setSelectedClient } = useClientContextStore();
@@ -32,7 +32,7 @@ export const ClientContextMenu: React.FC = () => {
     {
       path: `/clients/${selectedClient._id}/projects`,
       actualPath: `/clients/${selectedClient._id}/projects`,
-      icon: faLayerGroup,
+      icon: faBriefcase,
       label: "Proyectos",
       permission: "clients:view",
       scope: "cliente" as const,
@@ -55,7 +55,7 @@ export const ClientContextMenu: React.FC = () => {
           if (!hasPermission(item.permission)) return null;
           const active = isActive(item.actualPath);
           return (
-            <button key={item.path} onClick={() => handleNavigation(item.actualPath)} aria-current={active ? "page" : undefined} className={`group w-full relative flex items-center justify-between px-2 py-2 rounded-lg text-left transition-all ${active ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300" : "text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-blue-900/30"}`}>
+            <button key={item.path} onClick={() => handleNavigation(item.actualPath)} aria-current={active ? "page" : undefined} className={`group w-full relative flex items-center justify-between px-2 py-2 rounded text-left transition-all ${active ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300" : "text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-blue-900/30"}`}>
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <FontAwesomeIcon icon={item.icon} className={`h-4 w-4 flex-shrink-0 ${active ? "text-primary-600 dark:text-primary-400" : "text-gray-400"}`} />
                 <span className="text-sm font-medium truncate">{item.label}</span>

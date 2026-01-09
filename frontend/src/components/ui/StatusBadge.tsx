@@ -11,14 +11,7 @@ interface StatusBadgeProps {
   overrideStyle?: boolean;
 }
 
-export function StatusBadge({
-  type,
-  hideIcon = false,
-  hidePrefix = false,
-  className = "",
-  size = "md",
-  overrideStyle = false,
-}: StatusBadgeProps) {
+export function StatusBadge({ type, hideIcon = false, hidePrefix = false, className = "", size = "md", overrideStyle = false }: StatusBadgeProps) {
   if (!type || !STATUS_CONFIG[type]) return null;
 
   const cfg = STATUS_CONFIG[type];
@@ -39,12 +32,8 @@ export function StatusBadge({
   };
 
   return (
-    <span
-      className={`inline-flex items-center rounded-full font-medium ${sizeClasses[size]} ${finalBgClass} ${finalTextClass} ${cfg.borderClass || ""} ${className}`}
-    >
-      {!hideIcon && cfg.icon && (
-        <FontAwesomeIcon icon={cfg.icon} className={iconSizes[size]} />
-      )}
+    <span className={`inline-flex items-center rounded font-medium ${sizeClasses[size]} ${finalBgClass} ${finalTextClass} ${cfg.borderClass || ""} ${className}`}>
+      {!hideIcon && cfg.icon && <FontAwesomeIcon icon={cfg.icon} className={iconSizes[size]} />}
       {!hidePrefix && cfg.prefix && <span>{cfg.prefix}</span>}
       <span>{cfg.label}</span>
     </span>

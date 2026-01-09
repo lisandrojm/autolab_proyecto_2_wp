@@ -42,17 +42,19 @@ export default function Home({ onNavigate }: HomeProps) {
   const latestNotification = notifications.find((n) => !n.isRead);
 
   // ⬇️ QUICK ACTIONS — badgeBg y badgeText
+  const novedadesAction = {
+    icon: faFileAlt,
+    title: "Novedades",
+    description: "Gestión de novedades",
+    view: "activity_logs" as ViewType,
+    roles: ["coordinator"],
+    disabled: false,
+    badge: "New",
+    badgeBg: "bg-green-500",
+    badgeText: "text-white",
+  };
+
   const baseActions = [
-    {
-      icon: faShoppingCart,
-      title: "Pedidos",
-      description: "Gestiona tus pedidos",
-      view: "orders" as ViewType,
-      roles: ["coordinator", "collaborator"],
-      /*       badge: "Finish", */
-      badgeBg: "bg-blue-500",
-      badgeText: "text-white",
-    },
     {
       icon: faUmbrellaBeach,
       title: "Vacaciones",
@@ -62,6 +64,16 @@ export default function Home({ onNavigate }: HomeProps) {
       disabled: false,
       /*       badge: "New", */
       badgeBg: "bg-red-500",
+      badgeText: "text-white",
+    },
+    {
+      icon: faShoppingCart,
+      title: "Pedidos",
+      description: "Gestiona tus pedidos",
+      view: "orders" as ViewType,
+      roles: ["coordinator", "collaborator"],
+      /*       badge: "Finish", */
+      badgeBg: "bg-blue-500",
       badgeText: "text-white",
     },
     {
@@ -101,7 +113,20 @@ export default function Home({ onNavigate }: HomeProps) {
     },
   ];
 
-  const quickActions = isMobileCoordinator ? [...baseActions, ...coordinatorActions] : baseActions;
+  // Construct quickActions based on role and desired order
+  const quickActions = [];
+
+  if (isMobileCoordinator) {
+    quickActions.push(novedadesAction);
+  }
+
+  // Add base actions (Vacaciones, Pedidos, etc)
+  quickActions.push(...baseActions);
+
+  // Add remaining coordinator actions
+  if (isMobileCoordinator) {
+    quickActions.push(...coordinatorActions);
+  }
 
   const getActivityIcon = (action: string) => {
     if (action.includes("vacation")) return faCheckCircle;
@@ -143,11 +168,11 @@ export default function Home({ onNavigate }: HomeProps) {
         <UserHeader user={user} />
 
         <div className="flex items-center gap-1">
-          <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
           </button>
 
-          <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
             <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>
         </div>
@@ -163,7 +188,7 @@ export default function Home({ onNavigate }: HomeProps) {
               <p className="text-sm text-green-700 dark:text-green-300">{latestNotification.message}</p>
             </div>
             {unreadCount > 1 && (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 dark:bg-green-500">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 dark:bg-green-500">
                 <span className="text-xs font-bold text-white">{unreadCount}</span>
               </div>
             )}
@@ -185,11 +210,11 @@ export default function Home({ onNavigate }: HomeProps) {
                 ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
             >
               {/* BADGE */}
-              <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
+              <div>{(action as any).badge && <span className={`absolute top-4 right-4 rounded px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide ${(action as any).badgeBg} ${(action as any).badgeText}`}>{(action as any).badge}</span>}</div>
               <div className="flex-col gap-1 items-center space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center">
-                    <FontAwesomeIcon icon={action.icon} className={`h-5 w-5 ${isCoordinatorOnly ? "text-blue-600 dark:text-blue-400" : "text-primary"}`} />
+                    <FontAwesomeIcon icon={action.icon} className="h-5 w-5 text-primary" />
                   </div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{action.title}</h2>
                 </div>
@@ -209,7 +234,7 @@ export default function Home({ onNavigate }: HomeProps) {
         <div className="flex flex-col gap-3 px-4">
           {[1, 2].map((i) => (
             <div key={i} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-              <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="h-10 w-10 rounded bg-slate-200 dark:bg-slate-700" />
               <div className="flex-1">
                 <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
                 <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
@@ -225,7 +250,7 @@ export default function Home({ onNavigate }: HomeProps) {
 
             return (
               <div key={activity._id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm dark:bg-slate-900/70">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${colors.bg}`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded ${colors.bg}`}>
                   <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${colors.icon}`} />
                 </div>
                 <div className="flex-1">

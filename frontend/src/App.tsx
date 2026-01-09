@@ -23,6 +23,7 @@ import { ProjectTeamPage } from "./pages/ProjectTeamPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
+import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
 import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
 
@@ -44,6 +45,9 @@ import { ActivityPage } from "./pages/ActivityPage";
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
+import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPage";
+import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
+
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
@@ -105,13 +109,20 @@ function App() {
     console.log("==================");
   }, []);
 
-  // Restaurar sesión si hay token
+  // Restaurar sesión y validar token
   useEffect(() => {
+    // 1. Si tenemos token y user pero no estamos marcados como auténticos,
+    // restauramos la sesión optimísticamente para renderizar rápido.
     if (token && user && !isAuthenticated) {
       useAuthStore.setState({ isAuthenticated: true });
-    } else if (token && !user) {
+    }
+
+    // 2. Siempre verificamos la validez del token en segundo plano si existe.
+    // Esto maneja el caso donde el token es inválido/expirado pero sigue en localStorage.
+    if (token) {
       const checkTokenValidity = async () => {
         try {
+          // Usamos un endpoint ligero para validar el token (ping o similar)
           const response = await fetch(`${import.meta.env.VITE_API_URL}/secure/ping`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -120,34 +131,37 @@ function App() {
           });
 
           if (!response.ok) {
+            console.warn("Token validation failed (ping !ok) -> Logging out");
             useAuthStore.getState().logout();
           } else {
-            const savedUser = localStorage.getItem("user");
-            if (savedUser) {
-              try {
-                const userData = JSON.parse(savedUser);
-                if (userData && (userData.id || userData._id)) {
-                  useAuthStore.setState({ user: userData, isAuthenticated: true });
-                } else {
-                  console.warn("Token valid but user data invalid -> logout");
+            // Token válido. Si faltaba el usuario, intentamos recuperarlo de localStorage o parsearlo.
+            // Si ya lo teníamos, todo bien.
+            if (!user) {
+              const savedUser = localStorage.getItem("user");
+              if (savedUser) {
+                try {
+                  const userData = JSON.parse(savedUser);
+                  if (userData && (userData.id || userData._id)) {
+                    useAuthStore.setState({ user: userData, isAuthenticated: true });
+                  } else {
+                    console.warn("User data invalid in storage -> Logging out");
+                    useAuthStore.getState().logout();
+                  }
+                } catch {
                   useAuthStore.getState().logout();
                 }
-              } catch {
-                useAuthStore.getState().logout();
               }
-            } else {
-              // Token válido pero sin datos de usuario -> Logout
-              console.warn("Token valid but no user data -> logout");
-              useAuthStore.getState().logout();
             }
           }
-        } catch {
+        } catch (error) {
+          console.error("Token validation error (network/server) -> Logging out", error);
           useAuthStore.getState().logout();
         }
       };
+
       checkTokenValidity();
     }
-  }, [token, user, isAuthenticated]);
+  }, [token]); // Dependencia simplificada para correr al inicio o cambio de token
 
   // Sincronizar tema
   useEffect(() => {
@@ -167,6 +181,7 @@ function App() {
             {/* Rutas públicas (SIN Navbar) */}
             <Route element={<PublicLayout />}>
               <Route path="/login" element={<LoginPage />} />
+
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/register-client" element={<RegisterClientPage />} />
             </Route>
@@ -427,6 +442,22 @@ function App() {
                 }
               />
               <Route
+                path="/hr/activity-logs/config"
+                element={
+                  <ProtectedRoute>
+                    <ManageActivityLogsConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hr/activity-logs/create"
+                element={
+                  <ProtectedRoute>
+                    <CreateActivityReportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/hr/employee-profiles"
                 element={
                   <ProtectedRoute>
@@ -519,10 +550,7 @@ function App() {
                   <Suspense
                     fallback={
                       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                        <div className="text-center">
-                          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-600 border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-                          <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando aplicación mobile...</p>
-                        </div>
+                        <LoadingSpinner message="Cargando aplicación mobile..." />
                       </div>
                     }
                   >

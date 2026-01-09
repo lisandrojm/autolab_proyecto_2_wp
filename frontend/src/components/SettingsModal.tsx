@@ -44,9 +44,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   const getStatusBadge = (percentage: number) => {
-    if (percentage >= 80) return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Alto uso</span>;
-    if (percentage >= 60) return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Uso moderado</span>;
-    return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Disponible</span>;
+    if (percentage >= 80) return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Alto uso</span>;
+    if (percentage >= 60) return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Uso moderado</span>;
+    return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Disponible</span>;
   };
 
   const handleSavePreferences = async () => {
@@ -86,7 +86,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Acceso completo a todas las funcionalidades</p>
                   </div>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                  <span className="inline-flex items-center px-3 py-1 rounded text-sm font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                     <FontAwesomeIcon icon={faCheckCircle} className="h-4 w-4 mr-1.5" />
                     Activo
                   </span>
@@ -94,7 +94,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-800 rounded p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
                     <FontAwesomeIcon icon={faClock} className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Próxima Renovación</span>
@@ -102,7 +102,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">15 de Noviembre, 2025</p>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-800 rounded p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2 mb-2">
                     <FontAwesomeIcon icon={faBuilding} className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Tenant</span>
@@ -111,7 +111,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded p-6 border border-gray-200 dark:border-gray-700">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Características del Plan</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {["Usuarios ilimitados", "Almacenamiento de 10GB", "25 clientes activos", "Campañas ilimitadas", "Soporte prioritario 24/7", "Integraciones avanzadas", "Analytics y reportes", "API access completo"].map((feature, idx) => (
@@ -123,7 +123,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 </div>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
                 <div className="flex items-start gap-3">
                   <FontAwesomeIcon icon={faCrown} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                   <div>
@@ -137,7 +137,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
           {activeTab === "usage" && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-semibold text-gray-900 dark:text-white">Uso de Recursos</h4>
                   {getStatusBadge(Math.max(usageData.users.percentage, usageData.storage.percentage, usageData.clients.percentage, usageData.campaigns.percentage))}
@@ -154,8 +154,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         {usageData.users.current} / {usageData.users.limit}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                      <div className={`h-2.5 rounded-full ${getProgressColor(usageData.users.percentage)}`} style={{ width: `${usageData.users.percentage}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2.5">
+                      <div className={`h-2.5 rounded ${getProgressColor(usageData.users.percentage)}`} style={{ width: `${usageData.users.percentage}%` }}></div>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{usageData.users.percentage}% utilizado</p>
                   </div>
@@ -172,8 +172,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         {usageData.storage.unit}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                      <div className={`h-2.5 rounded-full ${getProgressColor(usageData.storage.percentage)}`} style={{ width: `${usageData.storage.percentage}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2.5">
+                      <div className={`h-2.5 rounded ${getProgressColor(usageData.storage.percentage)}`} style={{ width: `${usageData.storage.percentage}%` }}></div>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{usageData.storage.percentage}% utilizado</p>
                   </div>
@@ -188,8 +188,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         {usageData.clients.current} / {usageData.clients.limit}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                      <div className={`h-2.5 rounded-full ${getProgressColor(usageData.clients.percentage)}`} style={{ width: `${usageData.clients.percentage}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2.5">
+                      <div className={`h-2.5 rounded ${getProgressColor(usageData.clients.percentage)}`} style={{ width: `${usageData.clients.percentage}%` }}></div>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{usageData.clients.percentage}% utilizado</p>
                   </div>
@@ -204,15 +204,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         {usageData.campaigns.current} / {usageData.campaigns.limit}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                      <div className={`h-2.5 rounded-full ${getProgressColor(usageData.campaigns.percentage)}`} style={{ width: `${usageData.campaigns.percentage}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-2.5">
+                      <div className={`h-2.5 rounded ${getProgressColor(usageData.campaigns.percentage)}`} style={{ width: `${usageData.campaigns.percentage}%` }}></div>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{usageData.campaigns.percentage}% utilizado</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
                 <div className="flex items-start gap-3">
                   <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                   <div>
@@ -226,11 +226,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
           {activeTab === "billing" && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded p-6 border border-gray-200 dark:border-gray-700">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Información de Facturación</h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <FontAwesomeIcon icon={faCreditCard} className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                       <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Método de Pago</span>
@@ -239,7 +239,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Vence 12/2026</p>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <FontAwesomeIcon icon={faClock} className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                       <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Próximo Cobro</span>
@@ -251,7 +251,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                 <div>
                   <h5 className="font-medium text-gray-900 dark:text-white mb-3">Historial de Facturas</h5>
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                  <div className="border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
@@ -273,7 +273,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{invoice.desc}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{invoice.amount}</td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{invoice.status}</span>
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{invoice.status}</span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                               <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
@@ -292,28 +292,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
           {activeTab === "preferences" && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded p-6 border border-gray-200 dark:border-gray-700">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Información General</h4>
 
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tenant</label>
-                    <input type="text" value={user?.tenantSlug || "demo-tenant"} disabled className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed capitalize" />
+                    <input type="text" value={user?.tenantSlug || "demo-tenant"} disabled className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed capitalize" />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
-                    <input type="text" value={displayName} disabled className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed" />
+                    <input type="text" value={displayName} disabled className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed" />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email de Contacto</label>
-                    <input type="email" value={user?.email || ""} disabled className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed" />
+                    <input type="email" value={user?.email || ""} disabled className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed" />
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded p-6 border border-gray-200 dark:border-gray-700">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Notificaciones</h4>
 
                 <div className="space-y-3">
@@ -343,7 +343,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded p-6 border border-gray-200 dark:border-gray-700">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Configuración Regional</h4>
 
                 <div className="space-y-4">
@@ -352,7 +352,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <FontAwesomeIcon icon={faGlobe} className="h-4 w-4 mr-2" />
                       Zona Horaria
                     </label>
-                    <select className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                    <select className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                       <option>GMT-3 (Buenos Aires)</option>
                       <option>GMT-5 (New York)</option>
                       <option>GMT+0 (London)</option>
@@ -363,7 +363,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
 
               <div className="flex justify-end">
-                <button onClick={handleSavePreferences} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                <button onClick={handleSavePreferences} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors">
                   Guardar Preferencias
                 </button>
               </div>

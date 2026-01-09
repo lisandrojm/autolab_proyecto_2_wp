@@ -9,6 +9,7 @@ import { VacationOverlapRules } from "../components/vacations/VacationOverlapRul
 
 import { ProjectVacationConfigTab } from "../components/vacations/ProjectVacationConfigTab";
 import { ConsecutiveDaysConfigTab } from "../components/vacations/ConsecutiveDaysConfigTab";
+import { UserVacationConfigTab } from "../components/vacations/UserVacationConfigTab";
 
 const HELP_KEY = "vacationsRules" as const;
 
@@ -16,7 +17,7 @@ export function ManageVacationsRulesPage() {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
   const [openInfo, setOpenInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<"global" | "overlap" | "projects" | "consecutive_days">("global");
+  const [activeTab, setActiveTab] = useState<"global" | "overlap" | "projects" | "consecutive_days" | "users">("global");
 
   return (
     <PageLayout
@@ -35,7 +36,7 @@ export function ManageVacationsRulesPage() {
       searchAndFilters={
         <div className="mx-auto">
           {/* Tabs Header */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[140px] z-10 bg-white dark:bg-gray-900">
+          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[140px] z-20 bg-white dark:bg-gray-900">
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "global" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("global")}>
               Configuración Global
             </button>
@@ -48,6 +49,9 @@ export function ManageVacationsRulesPage() {
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "overlap" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("overlap")}>
               Solapamiento
             </button>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "users" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("users")}>
+              Usuarios (Días Extra)
+            </button>
           </div>
 
           {/* Tab Content */}
@@ -56,13 +60,14 @@ export function ManageVacationsRulesPage() {
             {activeTab === "projects" && <ProjectVacationConfigTab />}
             {activeTab === "consecutive_days" && <ConsecutiveDaysConfigTab />}
             {activeTab === "overlap" && <VacationOverlapRules />}
+            {activeTab === "users" && <UserVacationConfigTab />}
           </div>
         </div>
       }
       //headerActions={}
       headerActions={
         <div>
-          <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+          <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faFilePdf} />
             <span className="hidden lg:block">Plantillas PDF</span>
           </button>

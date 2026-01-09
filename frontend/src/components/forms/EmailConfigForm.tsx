@@ -92,7 +92,7 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
           <FontAwesomeIcon icon={faEnvelope} className="mr-2" />
           Asunto del Email *
         </label>
-        <input type="text" value={config.subject || ""} onChange={(e) => onChange({ ...config, subject: e.target.value })} placeholder="Ej: Nuevas ofertas exclusivas para ti" className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
+        <input type="text" value={config.subject || ""} onChange={(e) => onChange({ ...config, subject: e.target.value })} placeholder="Ej: Nuevas ofertas exclusivas para ti" className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
         <p className="text-xs text-gray-500 mt-1">Caracteres: {(config.subject || "").length} (recomendado: 30-50 caracteres)</p>
       </div>
 
@@ -113,9 +113,9 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
               }
             }}
             placeholder="correo@ejemplo.com (separados por coma)"
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
           />
-          <button type="button" onClick={handleAddRecipient} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2">
+          <button type="button" onClick={handleAddRecipient} className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Agregar
           </button>
@@ -123,7 +123,7 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
         {config.recipients && config.recipients.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {config.recipients.map((email, index) => (
-              <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-sm">
+              <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded text-sm">
                 {email}
                 <button type="button" onClick={() => handleRemoveRecipient(index)} className="hover:text-primary-900 dark:hover:text-primary-100">
                   <X className="h-3 w-3" />
@@ -153,9 +153,9 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
                 }
               }}
               placeholder="correo@ejemplo.com"
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
             />
-            <button type="button" onClick={handleAddCC} className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <button type="button" onClick={handleAddCC} className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
               <Plus className="h-4 w-4" />
             </button>
           </div>
@@ -190,9 +190,9 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
                 }
               }}
               placeholder="correo@ejemplo.com"
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
             />
-            <button type="button" onClick={handleAddBCC} className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <button type="button" onClick={handleAddBCC} className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
               <Plus className="h-4 w-4" />
             </button>
           </div>
@@ -216,7 +216,7 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
           <User className="inline h-4 w-4 mr-2" />
           Responder a (Reply-To)
         </label>
-        <input type="email" value={config.replyTo || ""} onChange={(e) => onChange({ ...config, replyTo: e.target.value })} placeholder="respuestas@ejemplo.com" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
+        <input type="email" value={config.replyTo || ""} onChange={(e) => onChange({ ...config, replyTo: e.target.value })} placeholder="respuestas@ejemplo.com" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white" />
         <p className="text-xs text-gray-500 mt-1">Email donde se recibirán las respuestas (opcional)</p>
       </div>
 
@@ -234,7 +234,7 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
         </div>
 
         {viewMode === "plain" ? (
-          <textarea value={config.body || ""} onChange={(e) => onChange({ ...config, body: e.target.value })} placeholder="Escribe el contenido de tu email aquí..." rows={12} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none font-mono text-sm" />
+          <textarea value={config.body || ""} onChange={(e) => onChange({ ...config, body: e.target.value })} placeholder="Escribe el contenido de tu email aquí..." rows={12} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none font-mono text-sm" />
         ) : (
           <textarea
             value={config.bodyHtml || config.body || ""}
@@ -247,13 +247,13 @@ export const EmailConfigForm: React.FC<EmailConfigFormProps> = ({ config, onChan
             }
             placeholder="<html>&#10;  <body>&#10;    <h1>¡Hola!</h1>&#10;    <p>Tu contenido HTML aquí...</p>&#10;  </body>&#10;</html>"
             rows={12}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none font-mono text-sm"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none font-mono text-sm"
           />
         )}
         <p className="text-xs text-gray-500 mt-1">{(viewMode === "html" ? config.bodyHtml || config.body || "" : config.body || "").length} caracteres</p>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4">
         <div className="flex items-center gap-2">
           <FontAwesomeIcon icon={faLightbulb} className="text-blue-500 dark:text-blue-300" />
           <p className="text-sm text-blue-800 dark:text-blue-300">Las imágenes agregadas en la sección "Multimedia" se insertarán en el cuerpo del email.</p>

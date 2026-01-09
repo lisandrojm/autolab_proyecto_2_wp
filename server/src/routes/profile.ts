@@ -108,10 +108,25 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       profile.hireDate = user.hireDate;
     }
 
+    // Populate roles
+    let roleNames: string[] = [];
+    if (user && user.roles && user.roles.length > 0) {
+      try {
+        const Role = (await import("../models/Role.js")).Role;
+        const roles = await Role.find({ _id: { $in: user.roles } }).select("name");
+        roleNames = roles.map((r) => r.name);
+      } catch (roleError) {
+        console.error("Error fetching roles:", roleError);
+      }
+    }
+
     const extraVacationDays = user?.extraVacationDays || 0;
     const carryOverVacationDays = user?.carryOverVacationDays || 0;
 
-    res.json({ ...profile, areaName, areaMembers, positionName, extraVacationDays, carryOverVacationDays });
+    // Explicitly send projectIds for frontend selectors
+    const projectIds = user?.projectIds?.map((id) => id.toString()) || [];
+
+    res.json({ ...profile, areaName, areaMembers, positionName, roleNames, extraVacationDays, carryOverVacationDays, projectIds });
   } catch (error) {
     console.error("Get profile error:", error);
     if (error instanceof Error) {
@@ -299,11 +314,17 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
           _id: { $in: user.projectIds },
           tenantId,
         })
-          .select("name vacationConfig")
+          .select("name vacationConfig clientId")
+          .populate("clientId", "name")
           .lean();
 
         if (projects.length > 0) {
-          projectName = projects.map((p) => p.name).join(", "); // List all projects
+          projectName = projects
+            .map((p: any) => {
+              const c = p.clientId;
+              return c?.name ? `${c.name} | ${p.name}` : p.name;
+            })
+            .join(", "); // List all projects
 
           // Resolution Logic
           // Map projects to their effective config (or global if they use global)

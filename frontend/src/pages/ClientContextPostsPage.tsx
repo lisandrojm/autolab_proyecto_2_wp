@@ -12,7 +12,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { emitPostsChanged } from "../utils/navbarEvents";
 import { prepareSavePayload, initializeFormDataFromPost } from "../utils/postDataMigration";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImage, faLayerGroup, faPlus, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import { faImage, faPlus, faPaperPlane, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { PostFormModal } from "../components/ui/PostFormModal";
 import { PostCard } from "../components/PostCard";
@@ -432,14 +432,14 @@ export const ClientContextPostsPage: React.FC = () => {
         return {
           label: "Ir al Proyecto",
           onClick: () => navigate(`/projects/${selectedProject._id}`),
-          icon: faLayerGroup,
+          icon: faBriefcase,
         };
       }
     }
     return {
       label: "Ir a Proyectos",
       onClick: () => navigate(`/cliente/${id}/proyectos`),
-      icon: faLayerGroup,
+      icon: faBriefcase,
     };
   };
 

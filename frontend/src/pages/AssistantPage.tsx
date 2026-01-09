@@ -136,7 +136,7 @@ export const AssistantPage: React.FC = () => {
               messages.map((message) => (
                 <div key={message.id} className={`flex items-start space-x-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                   {message.role === "assistant" && (
-                    <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded flex items-center justify-center flex-shrink-0">
                       <Bot className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                     </div>
                   )}
@@ -147,7 +147,7 @@ export const AssistantPage: React.FC = () => {
                   </div>
 
                   {message.role === "user" && (
-                    <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
                       <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                     </div>
                   )}
@@ -157,15 +157,15 @@ export const AssistantPage: React.FC = () => {
 
             {isLoading && (
               <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded flex items-center justify-center flex-shrink-0">
                   <Bot className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl">
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded animate-bounce" style={{ animationDelay: "0.2s" }}></div>
                     </div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">Escribiendo...</span>
                   </div>

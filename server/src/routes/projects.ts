@@ -13,11 +13,12 @@ const router = Router();
 
 const createProjectSchema = z.object({
   name: z.string().min(1),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   status: z.enum(["active", "completed", "on_hold", "archived"]).optional(),
   startDate: z
     .string()
     .optional()
+    .nullable()
     .transform((s) => {
       if (!s) return undefined;
       const d = new Date(s);
@@ -26,13 +27,14 @@ const createProjectSchema = z.object({
   endDate: z
     .string()
     .optional()
+    .nullable()
     .transform((s) => {
       if (!s) return undefined;
       const d = new Date(s);
       return isNaN(d.getTime()) ? undefined : d;
     }),
   objectives: z.array(z.string()).default([]),
-  targetAudience: z.string().optional(),
+  targetAudience: z.string().optional().nullable(),
   assignedUsers: z.array(z.string()).optional(),
   vacationConfig: z
     .object({
@@ -41,6 +43,61 @@ const createProjectSchema = z.object({
       minDiasFraccion: z.number().min(1).nullable().optional(),
       diasCorridos: z.boolean().optional(),
     })
+    .optional()
+    .nullable(),
+  activityLogConfig: z
+    .object({
+      useGlobalConfig: z.boolean(),
+      enableFastEntry: z.boolean().optional(),
+      allowsAdditionalStaff: z.boolean().optional(),
+    })
+    .optional()
+    .nullable(),
+  workSchedule: z
+    .object({
+      mode: z.enum(["weekdays", "all_week", "per_day"]),
+      weekdays: z
+        .object({
+          startTime: z.string().optional().nullable(),
+          endTime: z.string().optional().nullable(),
+          isWorkDay: z.boolean().optional(),
+        })
+        .optional()
+        .nullable(),
+      weekend: z
+        .object({
+          startTime: z.string().optional().nullable(),
+          endTime: z.string().optional().nullable(),
+          isWorkDay: z.boolean().optional(),
+        })
+        .optional()
+        .nullable(),
+      days: z
+        .object({
+          monday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          tuesday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          wednesday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          thursday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          friday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          saturday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+          sunday: z.object({ startTime: z.string().optional().nullable(), endTime: z.string().optional().nullable(), isWorkDay: z.boolean().optional() }).optional().nullable(),
+        })
+        .optional()
+        .nullable(),
+    })
+    .optional()
+    .nullable(),
+  teamConfig: z
+    .array(
+      z.object({
+        userId: z.string(),
+        isNotifier: z.boolean().optional(),
+        canRegister: z.boolean().optional(),
+        useProjectSchedule: z.boolean().optional(),
+        startTime: z.string().optional().nullable(),
+        endTime: z.string().optional().nullable(),
+      })
+    )
     .optional(),
 });
 
@@ -88,6 +145,31 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
     });
   } catch (error) {
     console.error("Get all projects error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /miniprojects - Get minimal project info by IDs (for mobile/dropdowns)
+router.get("/miniprojects", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { ids } = req.query;
+    if (!ids) return res.json([]);
+
+    const idList = String(ids)
+      .split(",")
+      .filter((id) => Types.ObjectId.isValid(id));
+    if (idList.length === 0) return res.json([]);
+
+    const projects = await Project.find({
+      _id: { $in: idList },
+      tenantId: req.tenantObjectId,
+    })
+      .select("name status clientId")
+      .populate("clientId", "name");
+
+    res.json(projects);
+  } catch (error) {
+    console.error("Get miniprojects error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -354,6 +436,76 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
     res.json({ message: "Project deleted successfully" });
   } catch (error) {
     console.error("Delete project error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /projects/:projectId/team-config
+router.patch("/projects/:projectId/team-config", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId } = req.params;
+    const { config } = req.body; // Expects an array of configs to update
+
+    if (!Array.isArray(config)) {
+      res.status(400).json({ error: "Invalid format. 'config' must be an array" });
+      return;
+    }
+
+    const filter: any = { _id: projectId, tenantId: req.tenantObjectId };
+
+    // Check permissions (Admin or Assigned User)
+    const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const project = await Project.findOne(filter);
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    // Replace entire teamConfig or merge? Let's generic replace for simplicity in this MVP view
+    // But we need to be careful not to wipe existing configs if partial update.
+    // However, the frontend will likely send the full state of the table row toggles.
+    // Let's iterate and update specific users in the array.
+
+    // Better strategy: We completely replace the teamConfig with the new list provided,
+    // assuming the frontend sends the "complete state" or at least we are okay overriding.
+    // Wait, let's allow partial updates by user ID.
+
+    let currentConfig = project.teamConfig || [];
+
+    config.forEach((newItem: any) => {
+      const index = currentConfig.findIndex((c) => c.userId?.toString() === newItem.userId);
+      if (index >= 0) {
+        currentConfig[index].isNotifier = newItem.isNotifier;
+        currentConfig[index].canRegister = newItem.canRegister;
+        // Individual work schedule
+        currentConfig[index].useProjectSchedule = newItem.useProjectSchedule;
+        currentConfig[index].startTime = newItem.startTime;
+        currentConfig[index].endTime = newItem.endTime;
+      } else {
+        currentConfig.push({
+          userId: new Types.ObjectId(newItem.userId),
+          isNotifier: newItem.isNotifier,
+          canRegister: newItem.canRegister,
+          useProjectSchedule: newItem.useProjectSchedule,
+          startTime: newItem.startTime,
+          endTime: newItem.endTime,
+        });
+      }
+    });
+
+    project.teamConfig = currentConfig;
+    project.markModified("teamConfig");
+    await project.save();
+
+    res.json(project);
+  } catch (error) {
+    console.error("Update team config error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

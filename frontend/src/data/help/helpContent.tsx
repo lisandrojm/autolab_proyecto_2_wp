@@ -15,7 +15,7 @@ const helpResources = {
       // Clients
       "clients.title": "Información de Clientes",
       "clients.description": "Gestión completa de clientes y su información",
-      "clients.items": ["**Cliente**: Contiene datos de contacto, empresa e información adicional como redes sociales, brand kit y brief de proyecto", "**Estado**: Puede ser *Activo*, *Inactivo* u *Onboarding* para reflejar su ciclo de vida", "**Gestión**: Crear, editar, clonar y eliminar clientes desde la vista principal", "**Favoritos**: Marcar clientes importantes para acceso rápido"],
+      "clients.items": ["**Cliente**: Contiene datos de contacto, empresa e información adicional como redes sociales y brief de proyecto", "**Estado**: Puede ser *Activo*, *Inactivo* u *Onboarding* para reflejar su ciclo de vida", "**Gestión**: Crear, editar, clonar y eliminar clientes desde la vista principal"],
 
       // Dashboard
       "dashboard.title": "Información del Dashboard",
@@ -70,12 +70,12 @@ const helpResources = {
       // Client Detail
       "clientDetail.title": "Información de Cliente",
       "clientDetail.description": "Vista detallada del cliente",
-      "clientDetail.items": ["**Información básica**: Datos de contacto, empresa y estado del cliente", "**Brand Kit**: Logo, colores, fuentes y guías de marca", "**Proyectos**: Listado y gestión de proyectos asociados", "**Favoritos**: Marcar cliente como favorito para acceso rápido"],
+      "clientDetail.items": ["**Información básica**: Datos de contacto, empresa y estado del cliente", "**Proyectos**: Listado y gestión de proyectos asociados"],
 
       // Client Projects
       "clientProjects.title": "Proyectos del Cliente",
       "clientProjects.description": "Gestión de proyectos por cliente",
-      "clientProjects.items": ["**Proyectos**: Agrupan campañas, objetivos y presupuesto para un mismo cliente", "**Gestión**: Crear, buscar, editar y eliminar proyectos", "**Campañas**: Cada proyecto puede contener múltiples campañas", "**Presupuesto**: Control de presupuesto total por proyecto"],
+      "clientProjects.items": ["**Proyectos**: Agrupan objetivos para un mismo cliente", "**Gestión**: Crear, buscar, editar y eliminar proyectos"],
 
       // Campaign Detail
       "campaignDetail.title": "Sobre esta campaña",
@@ -278,7 +278,7 @@ const buildHelpContent = (key: HelpKey): React.ReactNode => {
       <ul className="space-y-3">
         {items.map((item: string, index: number) => (
           <li key={index} className="flex items-start space-x-2">
-            <span className="w-1.5 h-1.5 bg-primary-600 rounded-full mt-2 flex-shrink-0"></span>
+            <span className="w-1.5 h-1.5 bg-primary-600 rounded mt-2 flex-shrink-0"></span>
             <span className="text-gray-700 dark:text-gray-300 leading-relaxed">{processMarkdown(item)}</span>
           </li>
         ))}

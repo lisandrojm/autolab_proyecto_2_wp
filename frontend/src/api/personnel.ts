@@ -20,6 +20,8 @@ export interface ProfileData {
   department?: string;
   areaName?: string;
   areaMembers?: number;
+  roleNames?: string[];
+  projectIds?: string[];
   hireDate?: string;
   extraVacationDays?: number;
   carryOverVacationDays?: number;
