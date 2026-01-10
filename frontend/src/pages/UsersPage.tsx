@@ -95,7 +95,7 @@ export const UsersPage: React.FC = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
 
-  const canManage = hasPermission("users:manage");
+  const canManage = hasPermission("admin_users:view");
 
   // Para descartar respuestas viejas
   const requestIdRef = useRef(0);

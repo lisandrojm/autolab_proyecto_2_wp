@@ -9,7 +9,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faPlus, faShieldHalved, faGlobe, faUserGear } from "@fortawesome/free-solid-svg-icons";
+import { faUserTie, faUserGraduate, faEdit, faTrash, faPlus, faShieldHalved, faGlobe, faUserGear } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -49,7 +49,7 @@ export const LevelsPage: React.FC = () => {
   const [openInfo, setOpenInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
-  const canManage = hasPermission("users:view");
+  const canManage = hasPermission("admin_levels:view");
 
   useEffect(() => {
     fetchLevels();
@@ -427,15 +427,10 @@ export const LevelsPage: React.FC = () => {
             onClick={() => openView(level)}
             className="hover:scale-105 hover:shadow-lg transition-all duration-200"
             header={{
-              title: (
-                <div className="flex items-center gap-2">
-                  <span>{level.name}</span>
-                  {/* Eliminado el badge del cargo en el header */}
-                  {level.type === "general" && <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">General</span>}
-                </div>
-              ),
+              title: level.name,
               subtitle: level.description,
               icon: level.type === "general" ? faGlobe : faUserGraduate,
+              badges: level.type === "general" ? [{ text: "General", variant: "blue" }] : [],
             }}
             footer={
               canManage

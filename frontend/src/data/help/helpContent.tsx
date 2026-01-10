@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "calendar" | "assistant" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam";
 
 export type HelpEntry = {
   title: string;
@@ -116,16 +116,6 @@ const helpResources = {
       "clientDashboard.title": "Dashboard Cliente",
       "clientDashboard.description": "Vista general con KPIs y accesos rápidos",
       "clientDashboard.items": ["**KPIs**: Campañas activas, aprobaciones, posts programados", "**Acciones rápidas**: Crear solicitud y navegar campañas", "**Actividad reciente**: Últimos elementos actualizados", "**Estado visual**: Indicadores por color"],
-
-      // Calendar
-      "calendar.title": "Información del Calendario",
-      "calendar.description": "Vista de posts programados y publicados",
-      "calendar.items": ["**Vistas**: Mes, semana, día y agenda", "**Coloración**: Según estado del post", "**Tipos de eventos**: Posts, tareas, reuniones, deadlines", "**Navegación**: Click para ver detalles", "**Programación**: Según fecha programada"],
-
-      // Assistant
-      "assistant.title": "Información del Asistente IA",
-      "assistant.description": "Asistente para marketing y creatividad",
-      "assistant.items": ["**Conversación**: Chat en lenguaje natural", "**Marketing**: Ideas, estrategias y análisis", "**Atajos**: Enter para enviar, Shift+Enter para salto", "**Historial**: Se mantiene en la sesión"],
 
       //
       // ---------------------------------------------------------
@@ -308,8 +298,6 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   clientContextPosts: { title: "Publicaciones del Cliente", size: "sm", content: buildHelpContent("clientContextPosts") },
   clientContextUsers: { title: "Usuarios del Cliente", size: "sm", content: buildHelpContent("clientContextUsers") },
   clientDashboard: { title: "Dashboard Cliente", size: "sm", content: buildHelpContent("clientDashboard") },
-  calendar: { title: "Información del Calendario", size: "sm", content: buildHelpContent("calendar") },
-  assistant: { title: "Información del Asistente IA", size: "sm", content: buildHelpContent("assistant") },
 
   //
   // FINAL — CORRECTO

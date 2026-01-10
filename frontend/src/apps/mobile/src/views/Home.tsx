@@ -19,8 +19,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const [activityLoading, setActivityLoading] = useState(true);
   const { theme, toggleTheme } = useThemeStore();
 
-  const isMobileCoordinator = hasPermission("mobile:coordinator");
-  const isMobileCollaborator = hasPermission("mobile:collaborator");
+  const isMobileCoordinator = hasPermission("mobile_coordinator:view");
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -199,8 +198,6 @@ export default function Home({ onNavigate }: HomeProps) {
       {/* GRID */}
       <div className={`grid grid-cols-2 gap-4 p-4`}>
         {quickActions.map((action, index) => {
-          const isCoordinatorOnly = action.roles?.includes("coordinator") && !action.roles?.includes("collaborator");
-
           return (
             <button
               key={index}

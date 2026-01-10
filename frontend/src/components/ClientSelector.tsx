@@ -140,7 +140,7 @@ export const ClientSelector: React.FC = () => {
             ) : filteredClients.length === 0 ? (
               <div className="p-4 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{searchTerm ? "No se encontraron clientes" : "No hay clientes disponibles"}</p>
-                {!searchTerm && hasPermission("clients:manage") && (
+                {!searchTerm && hasPermission("client:view") && (
                   <button onClick={handleCreateClient} className="btn-primary flex items-center justify-center mx-auto text-xs px-4 py-2 gap-2">
                     <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
                     <span>Nuevo Cliente</span>

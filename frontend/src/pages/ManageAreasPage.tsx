@@ -42,7 +42,7 @@ export const ManageAreasPage: React.FC = () => {
   // const [openInfo, setOpenInfo] = useState(false);
   // const helpEntry = getHelp(HELP_KEY);
 
-  const canManage = hasPermission("users:view"); // Assuming same permission as users/positions for now
+  const canManage = hasPermission("admin_areas:view"); // Assuming same permission as users/positions for now
 
   useEffect(() => {
     fetchAreas();

@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { PageLayout } from '../components/ui/PageLayout';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Card } from '../components/ui/Card';
-import { personnelAPI, DocumentData } from '../api/personnel';
-import { sweetAlert } from '../utils/sweetAlert';
-import { useAuthStore } from '../stores/authStore';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileLines, faPlus, faDownload, faTrash, faFilter } from '@fortawesome/free-solid-svg-icons';
+import React, { useEffect, useState } from "react";
+import { PageLayout } from "../components/ui/PageLayout";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
+import { personnelAPI, DocumentData } from "../api/personnel";
+import { sweetAlert } from "../utils/sweetAlert";
+import { useAuthStore } from "../stores/authStore";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileLines, faPlus, faDownload, faTrash, faFilter } from "@fortawesome/free-solid-svg-icons";
 
 const DOCUMENT_TYPES = [
-  { value: 'all', label: 'Todos' },
-  { value: 'contract', label: 'Contratos' },
-  { value: 'payroll', label: 'Nóminas' },
-  { value: 'certificate', label: 'Certificados' },
-  { value: 'other', label: 'Otros' },
+  { value: "all", label: "Todos" },
+  { value: "contract", label: "Contratos" },
+  { value: "payroll", label: "Nóminas" },
+  { value: "certificate", label: "Certificados" },
+  { value: "other", label: "Otros" },
 ];
 
 export const DocumentsPage: React.FC = () => {
@@ -21,23 +21,23 @@ export const DocumentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [filteredDocs, setFilteredDocs] = useState<DocumentData[]>([]);
-  const [filterType, setFilterType] = useState('all');
+  const [filterType, setFilterType] = useState("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     file: null as File | null,
-    type: 'contract' as 'contract' | 'payroll' | 'certificate' | 'other',
-    title: '',
+    type: "contract" as "contract" | "payroll" | "certificate" | "other",
+    title: "",
   });
 
-  const isAdmin = hasPermission('documents:manage');
+  const isAdmin = hasPermission("admin_documents:view");
 
   useEffect(() => {
     fetchDocuments();
   }, []);
 
   useEffect(() => {
-    if (filterType === 'all') {
+    if (filterType === "all") {
       setFilteredDocs(documents);
     } else {
       setFilteredDocs(documents.filter((doc) => doc.type === filterType));
@@ -46,7 +46,7 @@ export const DocumentsPage: React.FC = () => {
 
   const fetchDocuments = async () => {
     const timeoutId = setTimeout(() => {
-      console.warn('Documents request taking longer than expected');
+      console.warn("Documents request taking longer than expected");
     }, 5000);
 
     try {
@@ -56,9 +56,9 @@ export const DocumentsPage: React.FC = () => {
       setDocuments(Array.isArray(data) ? data : []);
     } catch (error: any) {
       clearTimeout(timeoutId);
-      console.error('Error fetching documents:', error);
-      const errorMsg = error?.response?.data?.error || error?.message || 'No se pudieron cargar los documentos';
-      sweetAlert.error('Error', errorMsg);
+      console.error("Error fetching documents:", error);
+      const errorMsg = error?.response?.data?.error || error?.message || "No se pudieron cargar los documentos";
+      sweetAlert.error("Error", errorMsg);
       setDocuments([]);
     } finally {
       setLoading(false);
@@ -68,27 +68,27 @@ export const DocumentsPage: React.FC = () => {
   const handleDownload = async (doc: DocumentData) => {
     try {
       const downloadUrl = await personnelAPI.downloadDocument(doc._id);
-      window.open(downloadUrl, '_blank');
+      window.open(downloadUrl, "_blank");
     } catch (error) {
-      sweetAlert.error('Error', 'No se pudo descargar el documento');
+      sweetAlert.error("Error", "No se pudo descargar el documento");
     }
   };
 
   const handleDelete = async (doc: DocumentData) => {
     if (!isAdmin) {
-      sweetAlert.error('Error', 'No tienes permisos para eliminar documentos');
+      sweetAlert.error("Error", "No tienes permisos para eliminar documentos");
       return;
     }
-    const result = await sweetAlert.confirm('¿Eliminar documento?', '¿Estás seguro de eliminar este documento?');
+    const result = await sweetAlert.confirm("¿Eliminar documento?", "¿Estás seguro de eliminar este documento?");
     if (!result.isConfirmed) return;
 
     try {
       await personnelAPI.deleteDocumentAdmin(doc._id);
-      sweetAlert.success('Documento eliminado', 'El documento se eliminó correctamente');
+      sweetAlert.success("Documento eliminado", "El documento se eliminó correctamente");
       fetchDocuments();
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.error || 'No se pudo eliminar el documento';
-      sweetAlert.error('Error', errorMsg);
+      const errorMsg = error?.response?.data?.error || "No se pudo eliminar el documento";
+      sweetAlert.error("Error", errorMsg);
     }
   };
 
@@ -98,11 +98,11 @@ export const DocumentsPage: React.FC = () => {
 
     try {
       setUploading(true);
-      sweetAlert.info('Función no disponible', 'La subida de documentos está en desarrollo');
+      sweetAlert.info("Función no disponible", "La subida de documentos está en desarrollo");
       setShowUploadModal(false);
-      setUploadForm({ file: null, type: 'contract', title: '' });
+      setUploadForm({ file: null, type: "contract", title: "" });
     } catch (error: any) {
-      sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo subir el documento');
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo subir el documento");
     } finally {
       setUploading(false);
     }
@@ -132,40 +132,30 @@ export const DocumentsPage: React.FC = () => {
       modal={{
         isOpen: showUploadModal,
         onClose: () => setShowUploadModal(false),
-        title: 'Subir Documento',
-        subtitle: 'Sube un nuevo documento',
-        size: 'md',
+        title: "Subir Documento",
+        subtitle: "Sube un nuevo documento",
+        size: "md",
         actions: [
           {
-            label: uploading ? 'Subiendo...' : 'Subir',
+            label: uploading ? "Subiendo..." : "Subir",
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>('#upload-form');
+              const form = document.querySelector<HTMLFormElement>("#upload-form");
               form?.requestSubmit();
             },
-            variant: 'primary',
+            variant: "primary",
           },
-          { label: 'Cancelar', onClick: () => setShowUploadModal(false), variant: 'ghost' },
+          { label: "Cancelar", onClick: () => setShowUploadModal(false), variant: "ghost" },
         ],
         content: (
           <form id="upload-form" onSubmit={handleUpload} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Archivo *</label>
-              <input
-                type="file"
-                required
-                onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
-                className="input-field"
-              />
+              <input type="file" required onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })} className="input-field" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo *</label>
-              <select
-                required
-                value={uploadForm.type}
-                onChange={(e) => setUploadForm({ ...uploadForm, type: e.target.value as any })}
-                className="input-field"
-              >
-                {DOCUMENT_TYPES.filter((t) => t.value !== 'all').map((type) => (
+              <select required value={uploadForm.type} onChange={(e) => setUploadForm({ ...uploadForm, type: e.target.value as any })} className="input-field">
+                {DOCUMENT_TYPES.filter((t) => t.value !== "all").map((type) => (
                   <option key={type.value} value={type.value}>
                     {type.label}
                   </option>
@@ -174,14 +164,7 @@ export const DocumentsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Título *</label>
-              <input
-                type="text"
-                required
-                value={uploadForm.title}
-                onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                className="input-field"
-                placeholder="Título del documento"
-              />
+              <input type="text" required value={uploadForm.title} onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })} className="input-field" placeholder="Título del documento" />
             </div>
           </form>
         ),
@@ -214,16 +197,16 @@ export const DocumentsPage: React.FC = () => {
                   {
                     icon: faDownload,
                     onClick: () => handleDownload(doc),
-                    title: 'Descargar',
-                    variant: 'default',
+                    title: "Descargar",
+                    variant: "default",
                   },
                   ...(isAdmin
                     ? [
                         {
                           icon: faTrash,
                           onClick: () => handleDelete(doc),
-                          title: 'Eliminar',
-                          variant: 'blue' as const,
+                          title: "Eliminar",
+                          variant: "blue" as const,
                         },
                       ]
                     : []),
@@ -238,7 +221,7 @@ export const DocumentsPage: React.FC = () => {
         {filteredDocs.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
             <FontAwesomeIcon icon={faFileLines} className="h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">No hay documentos {filterType !== 'all' ? `de tipo ${getTypeLabel(filterType)}` : ''}</p>
+            <p className="text-gray-600 dark:text-gray-400">No hay documentos {filterType !== "all" ? `de tipo ${getTypeLabel(filterType)}` : ""}</p>
           </div>
         )}
       </div>

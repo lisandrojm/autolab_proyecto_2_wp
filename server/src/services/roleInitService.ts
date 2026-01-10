@@ -29,84 +29,39 @@ const ADMIN_PERMISSIONS = [
   // ──────────── Core Modules ────────────
   "dashboard:view", // Dashboard
 
-  // ──────────── Clientes ────────────
-  "clients:view", // Clientes (incluye selector y contexto)
-  "clients:create", // Crear clientes
-  "clients:update", // Actualizar clientes
-  "clients:delete", // Eliminar clientes
+  // ──────────── Cliente Context ────────────
+  "client:view", // Ver o no Cliente y select de cliente
 
-  // ──────────── Calendario y Tareas ────────────
-  "calendar:view", // Calendario
-  "calendar:create", // Crear eventos
-  "calendar:update", // Actualizar eventos
-  "calendar:delete", // Eliminar eventos
-  "tasks:view", // Tareas
-  "tasks:create", // Crear tareas
-  "tasks:update", // Actualizar tareas
-  "tasks:delete", // Eliminar tareas
+  // ──────────── Admin GENERAL ────────────
+  "admin_clients:view", // Clientes
+  "admin_orders:view", // Pedidos
+  "admin_vacations:view", // Vacaciones
+  "admin_activity_logs:view", // Registro de novedades
+  "admin_calendar:view", // Calendario
+  "admin_employee_profiles:view", // Perfiles de empleados
+  "admin_hr_documents:view", // Documentos RRHH
 
-  // ──────────── Asistente y Herramientas ────────────
-  "assistant:view", // Asistente IA
-  "creative:view", // Creative Suite
-  "settings:view", // Settings
-  "analytics:view", // Ver analíticas
+  // ──────────── Admin USUARIOS ────────────
+  "admin_roles:view", // Roles
+  "admin_areas:view", // Areas
+  "admin_positions:view", // Cargos
+  "admin_levels:view", // Niveles
+  "admin_users:view", // Usuarios
 
-  // ──────────── Administración de Accesos (SOLO ADMIN) ────────────
-  "roles:view", // Roles
-  "roles:create", // Crear roles
-  "roles:update", // Actualizar roles
-  "roles:delete", // Eliminar roles
-  "users:view", // Usuarios del Sistema
-  "users:create", // Crear usuarios
-  "users:update", // Actualizar usuarios
-  "users:delete", // Eliminar usuarios
-
-  // ──────────── Gestión de Campañas ────────────
-  "campaigns:view", // Ver campañas
-  "campaigns:create", // Crear campañas
-  "campaigns:update", // Actualizar campañas
-  "campaigns:delete", // Eliminar campañas
-  "projects:view", // Ver proyectos
-  "projects:create", // Crear proyectos
-  "projects:update", // Actualizar proyectos
-  "projects:delete", // Eliminar proyectos
-  "posts:view", // Ver posts
-  "posts:create", // Crear posts
-  "posts:update", // Actualizar posts
-  "posts:delete", // Eliminar posts
-
-  "assets:view", // Ver assets
-  "assets:create", // Crear assets
-  "assets:update", // Actualizar assets
-  "assets:delete", // Eliminar assets
-
-  // ──────────── Módulos de Recursos Humanos (RRHH) ────────────
-  "activityLogs:view", // Registro de Actividades del Sistema
-  "calendarEvents:view", // Eventos de Calendario (RRHH)
-  "employeeProfiles:view", // Perfiles de Empleados
-  "hrDocuments:view", // Documentos de RRHH
-  "orders:view", // Pedidos de Material/Equipamiento
-  "vacationRequests:view", // Solicitudes de Vacaciones
+  // ──────────── Configuracion ────────────
+  "config_orders:view", // Pedidos
+  "config_vacations:view", // Vacaciones
+  "config_activity_logs:view", // Novedades
+  "config_pdf_templates:view", // Plantillas PDF
 ];
-
-/**
- * ═══════════════════════════════════════════════════════════════════════
- * PERMISOS PARA MÓDULO MOBILE
- * ═══════════════════════════════════════════════════════════════════════
- *
- * Permisos específicos para el acceso a la aplicación mobile:
- * - mobile:access - Permiso base para acceder a /mobile
- * - mobile:collaborator - Permisos de colaborador en la app mobile
- * - mobile:coordinator - Permisos de coordinador en la app mobile
- */
 const MOBILE_COLLABORATOR_PERMISSIONS = [
-  "mobile:access", // Acceso base a la app mobile
-  "mobile:collaborator", // Permisos de colaborador mobile
+  "mobile_access:view", // Acceso base a la app mobile
+  "mobile_collaborator:view", // Permisos de colaborador mobile
 ];
 
 const MOBILE_COORDINATOR_PERMISSIONS = [
-  "mobile:access", // Acceso base a la app mobile
-  "mobile:coordinator", // Permisos de coordinador mobile
+  "mobile_access:view", // Acceso base a la app mobile
+  "mobile_coordinator:view", // Permisos de coordinador mobile
 ];
 
 /**

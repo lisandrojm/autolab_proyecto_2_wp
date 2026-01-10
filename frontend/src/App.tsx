@@ -33,8 +33,6 @@ import { ClientProfilePage } from "./pages/ClientProfilePage";
 import { ClientApprovalsPage } from "./pages/ClientApprovalsPage";
 import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
-import { AIAssistantModal } from "./components/AIAssistantModal";
-import { AssistantRedirect } from "./pages/AssistantRedirect";
 
 import { ProfilePage } from "./pages/ProfilePage";
 import { DailyReportPage } from "./pages/DailyReportPage";
@@ -347,14 +345,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/assistant"
-                element={
-                  <ProtectedRoute>
-                    <AssistantRedirect />
-                  </ProtectedRoute>
-                }
-              />
 
               {/* Personnel Module Routes */}
 
@@ -562,7 +552,6 @@ function App() {
           </Routes>
 
           <ServerStatusCard />
-          <AIAssistantModal />
         </Router>
       </div>
     </div>

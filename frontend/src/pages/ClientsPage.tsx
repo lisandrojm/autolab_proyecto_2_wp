@@ -28,9 +28,6 @@ interface ClientFormData {
   status: "active" | "inactive" | "onboarding";
 }
 
-const getStatusBadgeVariant = (status: Client["status"]) => (status === "active" ? "success" : status === "onboarding" ? "warning" : "blue");
-const getStatusLabel = (status: Client["status"]) => (status ? status.charAt(0).toUpperCase() + status.slice(1) : "");
-
 /* Generador corto de IDs */
 const genId = customAlphabet("23456789ABCDEFGHJKLMNPQRSTUVWXYZ", 6);
 
@@ -55,7 +52,7 @@ export const ClientsPage: React.FC = () => {
 
   // búsqueda + filtro
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
+  const [filterStatus] = useState<StatusFilter>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -80,7 +77,7 @@ export const ClientsPage: React.FC = () => {
     status: "active",
   });
 
-  const canManage = hasPermission("clients:manage");
+  const canManage = hasPermission("admin_clients:view");
 
   useEffect(() => {
     fetchClients();
@@ -101,7 +98,7 @@ export const ClientsPage: React.FC = () => {
   };
 
   // ---------- acciones ----------
-  const toggleFavorite = async (id: string, current: boolean) => {
+  /* const toggleFavorite = async (id: string, current: boolean) => {
     setClients((prev) => prev.map((c) => (c._id === id ? { ...c, favorite: !current } : c)));
     try {
       const updated = await clientsAPI.toggleFavorite(id, !current);
@@ -111,7 +108,7 @@ export const ClientsPage: React.FC = () => {
       setClients((prev) => prev.map((c) => (c._id === id ? { ...c, favorite: current } : c)));
       sweetAlert.error("Error", "No se pudo actualizar favorito");
     }
-  };
+  }; */
 
   const openClone = (client: Client) => {
     setCloneSource(client);

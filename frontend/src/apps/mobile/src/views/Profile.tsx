@@ -6,8 +6,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 export default function Profile() {
   const { user, hasPermission, logout } = useAuthStore();
 
-  const isMobileCoordinator = hasPermission("mobile:coordinator");
-  const isMobileCollaborator = hasPermission("mobile:collaborator");
+  const isMobileCoordinator = hasPermission("mobile_coordinator:view");
+  const isMobileCollaborator = hasPermission("mobile_collaborator:view");
 
   const userRole = isMobileCoordinator ? "Coordinador" : isMobileCollaborator ? "Colaborador" : "Usuario";
   const roleColor = isMobileCoordinator ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";

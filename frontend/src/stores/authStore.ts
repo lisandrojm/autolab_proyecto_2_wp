@@ -215,13 +215,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) return false;
 
+    const userRoles = (user.roles || []).map((r) => r.toLowerCase());
+    const isSuperAdmin = userRoles.includes("superadmin") || user.primaryRole?.toLowerCase() === "superadmin";
+    const isAdmin = userRoles.includes("admin") || user.primaryRole?.toLowerCase() === "admin";
+
     // SuperAdmin siempre tiene acceso total
-    if (user.primaryRole?.toLowerCase() === "superadmin") {
+    if (isSuperAdmin) {
       return true;
     }
 
     // Admin tiene acceso total excepto a tenants (solo superadmin)
-    if (user.primaryRole?.toLowerCase() === "admin") {
+    if (isAdmin) {
       const [module] = permission.split(":");
       // Admin NO puede acceder a tenants
       if (module === "tenants") {

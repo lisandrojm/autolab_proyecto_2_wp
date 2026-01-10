@@ -10,7 +10,7 @@ import { requestsAPI, RequestData } from "../../api/requests";
 import { useAuthStore } from "../../stores/authStore";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClipboardList, faFilter, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faClipboardList } from "@fortawesome/free-solid-svg-icons";
 
 export const RequestsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export const RequestsListPage: React.FC = () => {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
 
-  const canManage = hasPermission("users:manage");
+  const canManage = hasPermission("admin_requests:view");
 
   useEffect(() => {
     fetchRequests();

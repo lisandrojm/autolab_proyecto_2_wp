@@ -9,8 +9,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faIdCard, faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faCalendar, faMobileAlt, faBox, faCalendarCheck, faFileText } from "@fortawesome/free-solid-svg-icons";
-import { faUserGraduate } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -24,145 +23,57 @@ interface PermissionModule {
   permissions: string[];
 }
 
-// Mapeo de acciones a etiquetas en español
-const ACTION_LABELS: Record<string, string> = {
-  view: "Ver",
-  create: "Crear",
-  edit: "Editar",
-  delete: "Eliminar",
-  access: "Acceso",
-  collaborator: "Colaborador",
-  coordinator: "Coordinador",
-};
-
 const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
-  /*  dashboard: {
-    label: "Dashboard",
-    icon: faHouse,
-    description: "Vista principal del sistema",
-    permissions: ["dashboard:view"],
-  },
-  clients: {
-    label: "Clientes",
+  client: {
+    label: "Cliente",
     icon: faUsers,
-    description: "Gestión de clientes",
-    permissions: ["clients:view", "clients:create", "clients:update", "clients:delete"],
+    description: "Ver o no Cliente y select de cliente",
+    permissions: ["client:view"],
   },
-  calendar: {
-    label: "Calendario",
-    icon: faCalendar,
-    description: "Gestión de eventos y calendario",
-    permissions: ["calendar:view", "calendar:create", "calendar:update", "calendar:delete"],
+  admin_general: {
+    label: "Admin GENERAL",
+    icon: faUsersGear,
+    description: "Gestión general de RRHH y administración",
+    permissions: ["admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view"],
   },
-  tasks: {
-    label: "Tareas",
-    icon: faSquareCheck,
-    description: "Gestión de tareas y workflow",
-    permissions: ["tasks:view", "tasks:create", "tasks:update", "tasks:delete"],
-  },
-  assistant: {
-    label: "Asistente IA",
-    icon: faRobot,
-    description: "Acceso al asistente inteligente",
-    permissions: ["assistant:view"],
-  },
-  roles: {
-    label: "Roles",
-    icon: faUserShield,
-    description: "Gestión de roles y permisos",
-    permissions: ["roles:view", "roles:create", "roles:update", "roles:delete"],
-  },
-  users: {
-    label: "Usuarios del Sistema",
+  admin_users: {
+    label: "Admin USUARIOS",
     icon: faUserGear,
-    description: "Gestión de usuarios",
-    permissions: ["users:view", "users:create", "users:update", "users:delete"],
+    description: "Gestión de usuarios, roles y estructura organizacional",
+    permissions: ["admin_areas:view", "admin_positions:view", "admin_levels:view", "admin_users:view", "admin_roles:view"],
   },
-  creative: {
-    label: "Creative Suite",
-    icon: faPalette,
-    description: "Herramientas creativas",
-    permissions: ["creative:view"],
-  },
-  settings: {
+  config: {
     label: "Configuración",
     icon: faCog,
-    description: "Configuración del sistema",
-    permissions: ["settings:view"],
-  },
-  campaigns: {
-    label: "Campañas",
-    icon: faBullhorn,
-    description: "Gestión de campañas",
-    permissions: ["campaigns:view", "campaigns:create", "campaigns:update", "campaigns:delete"],
-  },
-  projects: {
-    label: "Proyectos",
-    icon: faRocket,
-    description: "Gestión de proyectos",
-    permissions: ["projects:view", "projects:create", "projects:update", "projects:delete"],
-  },
-  posts: {
-    label: "Posts",
-    icon: faFileText,
-    description: "Gestión de publicaciones",
-    permissions: ["posts:view", "posts:create", "posts:update", "posts:delete"],
-  },
-
-  assets: {
-    label: "Assets",
-    icon: faImage,
-    description: "Gestión de recursos multimedia",
-    permissions: ["assets:view", "assets:create", "assets:update", "assets:delete"],
-  },
-  analytics: {
-    label: "Analíticas",
-    icon: faChartBar,
-    description: "Ver analíticas y métricas",
-    permissions: ["analytics:view"],
-  }, */
-  activityLogs: {
-    label: "Registro de Actividades",
-    icon: faFileText,
-    description: "Registro de actividades del sistema",
-    permissions: ["activityLogs:view"],
-  },
-  calendarEvents: {
-    label: "Eventos de Calendario",
-    icon: faCalendarCheck,
-    description: "Eventos del calendario",
-    permissions: ["calendarEvents:view"],
-  },
-  employeeProfiles: {
-    label: "Perfiles de Empleados",
-    icon: faIdCard,
-    description: "Perfiles de empleados",
-    permissions: ["employeeProfiles:view"],
-  },
-  hrDocuments: {
-    label: "Documentos RRHH",
-    icon: faFileText,
-    description: "Documentos de recursos humanos",
-    permissions: ["hrDocuments:view"],
-  },
-  orders: {
-    label: "Pedidos",
-    icon: faBox,
-    description: "Gestión de pedidos",
-    permissions: ["orders:view"],
-  },
-  vacationRequests: {
-    label: "Solicitudes de Vacaciones",
-    icon: faCalendar,
-    description: "Solicitudes de vacaciones",
-    permissions: ["vacationRequests:view"],
+    description: "Configuración de módulos y plantillas",
+    permissions: ["config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view"],
   },
   mobile: {
     label: "Mobile",
     icon: faMobileAlt,
     description: "Acceso a la aplicación móvil",
-    permissions: ["mobile:access", "mobile:collaborator", "mobile:coordinator"],
+    permissions: ["mobile_access:view", "mobile_collaborator:view", "mobile_coordinator:view"],
   },
+};
+
+const MODULE_LABELS: Record<string, string> = {
+  "client:view": "Cliente (Ver/Select)",
+  "admin_clients:view": "Clientes",
+  "admin_orders:view": "Pedidos",
+  "admin_vacations:view": "Vacaciones",
+  "admin_activity_logs:view": "Registro de novedades",
+  "admin_areas:view": "Areas",
+  "admin_positions:view": "Cargos",
+  "admin_levels:view": "Niveles",
+  "admin_users:view": "Usuarios",
+  "admin_roles:view": "Roles",
+  "config_orders:view": "Pedidos (Config)",
+  "config_vacations:view": "Vacaciones (Config)",
+  "config_activity_logs:view": "Novedades (Config)",
+  "config_pdf_templates:view": "Plantillas PDF",
+  "mobile_access:view": "Acceso App",
+  "mobile_collaborator:view": "Colaborador",
+  "mobile_coordinator:view": "Coordinador",
 };
 
 const SUPERADMIN_ONLY_PERMISSIONS: Record<string, PermissionModule> = {
@@ -220,7 +131,7 @@ export const RolesPage: React.FC = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRole, setViewRole] = useState<Role | null>(null);
 
-  const canManage = hasPermission("roles:view");
+  const canManage = hasPermission("admin_roles:view") || user?.primaryRole?.toLowerCase() === "admin" || user?.primaryRole?.toLowerCase() === "superadmin";
   const isSuperAdmin = user?.primaryRole === "superadmin";
 
   useEffect(() => {
@@ -616,13 +527,12 @@ export const RolesPage: React.FC = () => {
                         </div>
                         <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
                           {moduleData.permissions.map((permission) => {
-                            const [_moduleName, action] = permission.split(":");
-                            const actionLabel = ACTION_LABELS[action] || action;
+                            const permissionLabel = MODULE_LABELS[permission] || permission;
 
                             return (
                               <label key={permission} className="flex items-center gap-2 group cursor-pointer">
                                 <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 focus:ring-offset-0 cursor-pointer" />
-                                <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{actionLabel}</span>
+                                <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
                               </label>
                             );
                           })}
@@ -651,13 +561,12 @@ export const RolesPage: React.FC = () => {
                           </div>
                           <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
                             {moduleData.permissions.map((permission) => {
-                              const [_moduleName, action] = permission.split(":");
-                              const actionLabel = ACTION_LABELS[action] || action;
+                              const permissionLabel = MODULE_LABELS[permission] || (permission === "*" ? "Acceso Total" : permission);
 
                               return (
                                 <label key={permission} className="flex items-center gap-2 group cursor-pointer">
                                   <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer" />
-                                  <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{actionLabel}</span>
+                                  <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
                                 </label>
                               );
                             })}
@@ -730,7 +639,7 @@ export const RolesPage: React.FC = () => {
                         title: "Editar",
                         variant: "default",
                       },
-                      ...(hasPermission("roles:delete")
+                      ...(hasPermission("admin_roles:view")
                         ? [
                             {
                               icon: faTrash,
@@ -767,7 +676,7 @@ export const RolesPage: React.FC = () => {
           title={startDate || endDate ? "No hay roles en este rango de fechas" : "No hay roles"}
           description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer rol para comenzar a gestionar permisos."}
           action={
-            hasPermission("roles:view")
+            hasPermission("admin_roles:view")
               ? {
                   label: "Nuevo Rol",
                   onClick: openCreate,
@@ -837,9 +746,9 @@ export const RolesPage: React.FC = () => {
               <div className="bg-white/60 dark:bg-black/20 rounded p-3">
                 <p className="text-sm mb-2 font-semibold">Rol "User" (Usuario estándar)</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
-                  <strong>Permisos asignados:</strong> Dashboard (Ver), Clientes (Ver), Calendario (Ver), Creative Suite (Ver)
+                  <strong>Permisos asignados:</strong> Clientes (Ver), Pedidos (Ver)
                 </p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ Verá en el navbar: Dashboard, Clientes, Calendario, Creative Suite</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ Verá en el navbar: Clientes, Pedidos</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ Verá el selector de clientes y podrá trabajar con ellos</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">
                   → Podrá <strong>ver, crear, editar y eliminar</strong> dentro de cada módulo autorizado
@@ -849,19 +758,19 @@ export const RolesPage: React.FC = () => {
               <div className="bg-white/60 dark:bg-black/20 rounded p-3">
                 <p className="text-sm mb-2 font-semibold">Rol "Admin" (Administrador)</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
-                  <strong>Permisos asignados:</strong> Dashboard, Clientes, Calendario, Creative Suite
+                  <strong>Permisos asignados:</strong> Admin General, Admin Usuarios
                 </p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ Tiene acceso completo a todos los módulos generales</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ Control completo sobre la configuración del sistema</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ Tiene acceso completo a la gestión de RRHH, Clientes y Usuarios</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ Control completo sobre la estructura organizacional y roles</p>
               </div>
 
               <div className="bg-white/60 dark:bg-black/20 rounded p-3">
-                <p className="text-sm mb-2 font-semibold">Rol personalizado "Solo Dashboard"</p>
+                <p className="text-sm mb-2 font-semibold">Rol personalizado "Solo Pedidos"</p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
-                  <strong>Permisos asignados:</strong> Solo Dashboard (Ver)
+                  <strong>Permisos asignados:</strong> Solo Pedidos (Ver)
                 </p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ Este usuario solo verá el Dashboard en el navbar</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ NO verá selector de clientes, calendario, ni otros módulos</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ Este usuario solo verá Pedidos en el navbar</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ NO verá selector de clientes ni otros módulos</p>
               </div>
 
               <div className="bg-white/60 dark:bg-black/20 rounded p-3">

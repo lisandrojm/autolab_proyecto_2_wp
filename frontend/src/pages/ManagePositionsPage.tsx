@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faGlobe, faLayerGroup, faUserGear } from "@fortawesome/free-solid-svg-icons";
+import { faUserTie, faUserGraduate, faEdit, faTrash, faPlus, faShieldHalved, faGlobe, faUserGear } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -43,7 +43,7 @@ export const PositionsPage: React.FC = () => {
   const [openInfo, setOpenInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
-  const canManage = hasPermission("users:view");
+  const canManage = hasPermission("admin_positions:view");
 
   useEffect(() => {
     fetchPositions();

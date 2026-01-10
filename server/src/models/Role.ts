@@ -4,6 +4,11 @@ export interface IRole extends Document {
   tenantId: Types.ObjectId;
   name: string;
   description?: string;
+  /**
+   * Permisos asignados al rol.
+   * Formato: "modulo:accion" (ej. "admin_users:view").
+   * El sistema simplificado otorga acceso total si se posee el permiso ":view" del módulo.
+   */
   permissions: string[];
   isDefault: boolean;
   createdAt: Date;
@@ -15,6 +20,7 @@ const roleSchema = new Schema<IRole>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
+    // Formato: "modulo:view" para acceso total al módulo
     permissions: { type: [String], default: [] },
     isDefault: { type: Boolean, default: false },
   },

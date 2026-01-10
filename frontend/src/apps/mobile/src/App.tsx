@@ -36,33 +36,11 @@ function App() {
     }
   }, [user, tenantId, setTenantId]);
 
-  const permissions = user?.permissions || [];
-  const hasMobileAccess = hasPermission("mobile:access");
-  const isMobileCollaborator = hasPermission("mobile:collaborator");
-  const isMobileCoordinator = hasPermission("mobile:coordinator");
+  const hasMobileAccess = hasPermission("mobile_access:view");
+  const isMobileCollaborator = hasPermission("mobile_collaborator:view");
+  const isMobileCoordinator = hasPermission("mobile_coordinator:view");
 
   const userRole = isMobileCoordinator ? "coordinator" : isMobileCollaborator ? "collaborator" : null;
-
-  const getTitle = (view: ViewType): string => {
-    switch (view) {
-      case "home":
-        return "Inicio";
-      case "calendar":
-        return "Calendario";
-      case "documents":
-        return "Documentos";
-      case "profile":
-        return "Perfil";
-      case "vacations":
-        return "Vacaciones";
-      case "orders":
-        return "Pedidos";
-      case "requests":
-        return "Ausencias";
-      default:
-        return "Inicio";
-    }
-  };
 
   const renderView = () => {
     switch (currentView) {
@@ -130,23 +108,6 @@ function App() {
       </div>
     );
   }
-
-  const roleColors = {
-    coordinator: {
-      gradient: "from-blue-500 to-indigo-600",
-      bg: "bg-blue-50 dark:bg-blue-900/20",
-      text: "text-blue-600 dark:text-blue-400",
-      border: "border-blue-200 dark:border-blue-800",
-    },
-    collaborator: {
-      gradient: "from-green-500 to-cyan-600",
-      bg: "bg-green-50 dark:bg-green-900/20",
-      text: "text-green-600 dark:text-green-400",
-      border: "border-green-200 dark:border-green-800",
-    },
-  };
-
-  const currentRoleColors = roleColors[userRole];
 
   return (
     <div className="w-full dark:bg-gray-900 flex justify-center">

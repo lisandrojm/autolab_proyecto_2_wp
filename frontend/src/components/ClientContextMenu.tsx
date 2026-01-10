@@ -25,7 +25,7 @@ export const ClientContextMenu: React.FC = () => {
       actualPath: `/clients/${selectedClient._id}`,
       icon: faInfoCircle,
       label: "Información",
-      permission: "clients:view",
+      permission: "client:view",
       scope: "cliente" as const,
     },
 
@@ -34,7 +34,7 @@ export const ClientContextMenu: React.FC = () => {
       actualPath: `/clients/${selectedClient._id}/projects`,
       icon: faBriefcase,
       label: "Proyectos",
-      permission: "clients:view",
+      permission: "client:view",
       scope: "cliente" as const,
     },
   ];

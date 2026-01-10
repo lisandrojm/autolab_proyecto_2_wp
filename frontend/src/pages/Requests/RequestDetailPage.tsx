@@ -8,7 +8,7 @@ import { requestsAPI, RequestData } from "../../api/requests";
 import { useAuthStore } from "../../stores/authStore";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faUser, faCheck, faTimes, faClock, faArrowLeft, faFileAlt, faBan } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faUser, faCheck, faTimes, faArrowLeft, faBan } from "@fortawesome/free-solid-svg-icons";
 
 export const RequestDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +20,7 @@ export const RequestDetailPage: React.FC = () => {
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
-  const canManage = hasPermission("users:manage");
+  const canManage = hasPermission("admin_requests:view");
 
   useEffect(() => {
     if (id) {
@@ -117,7 +117,7 @@ export const RequestDetailPage: React.FC = () => {
   };
 
   const statusBadge = getStatusBadge(request.status);
-  const isOwnRequest = user?.userId === (typeof request.employeeId === "string" ? request.employeeId : employee?._id);
+  const isOwnRequest = user?.id === (typeof request.employeeId === "string" ? request.employeeId : employee?._id);
 
   return (
     <PageLayout

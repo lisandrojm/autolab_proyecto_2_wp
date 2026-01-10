@@ -23,7 +23,7 @@ export const TenantsPage: React.FC = () => {
 
   // búsqueda/filters (server-side)
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [filterStatus] = useState<"all" | "active" | "inactive">("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -84,7 +84,7 @@ export const TenantsPage: React.FC = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewTenant, setViewTenant] = useState<Tenant | null>(null);
 
-  const canManage = hasPermission("tenants:manage");
+  const canManage = hasPermission("tenants:view");
 
   // Para descartar respuestas viejas
   const requestIdRef = useRef(0);
