@@ -412,8 +412,8 @@ export async function seedOnStart() {
 
     // ---- ROLES ----
     const adminRole = await ensureRole(tenantId, "admin", [], "Administrador del tenant");
-    const mobileCoordRole = await ensureRole(tenantId, "Mobile-Coordinador", ["mobile:access", "mobile:coordinator"], "Rol móvil (coordinador)");
-    const mobileCollabRole = await ensureRole(tenantId, "Mobile-Colaborador", ["mobile:access", "mobile:collaborator"], "Rol móvil (colaborador)");
+    const mobileCoordRole = await ensureRole(tenantId, "Mobile-Coordinador", ["mobile_coordinator:view"], "Rol móvil (coordinador)");
+    const mobileCollabRole = await ensureRole(tenantId, "Mobile-Colaborador", ["mobile_collaborator:view"], "Rol móvil (colaborador)");
     void adminRole;
     void mobileCoordRole;
     void mobileCollabRole;

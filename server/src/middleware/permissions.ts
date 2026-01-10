@@ -47,47 +47,55 @@ export const requirePermission = (perm: string) => {
       const tenantId = req.tenantObjectId!;
       const roleNames = user.roles || [];
 
+      // Debug
+      // console.log(`[Permission Check] User: ${user.email}, Permission: ${perm}, Roles: ${roleNames.join(", ")}`);
+
       if (roleNames.length === 0) {
-        return res.status(403).json({ error: "Insufficient permissions" });
+        console.warn(`[Permission Check] No roles for user ${user.email}`);
+        return res.status(403).json({ error: "Insufficient permissions (No roles)" });
       }
 
+      // Búsqueda case-insensitive de roles
+      const regexRoles = roleNames.map((name) => new RegExp(`^${name}$`, "i"));
       const roles = await Role.find({
-        name: { $in: roleNames },
+        name: { $in: regexRoles },
         tenantId,
       });
 
       const lowerRoleNames = roles.map((r) => r.name.toLowerCase());
       const permissions = new Set(roles.flatMap((r) => r.permissions));
+      const primaryRole = user.primaryRole?.toLowerCase();
 
-      // ✅ SuperAdmin y Admin siempre tienen acceso total (excepto a tenants que es solo superadmin)
-      if (lowerRoleNames.includes("superadmin")) {
+      // ✅ SuperAdmin siempre tiene acceso total
+      if (lowerRoleNames.includes("superadmin") || primaryRole === "superadmin") {
         return next();
       }
 
-      // Admin tiene acceso a todo excepto permisos específicos de superadmin (tenants)
-      if (lowerRoleNames.includes("admin")) {
+      // ✅ Admin tiene acceso a todo excepto tenants
+      if (lowerRoleNames.includes("admin") || primaryRole === "admin") {
         const [module] = perm.split(":");
-        // Admin NO puede acceder a tenants (solo superadmin)
         if (module === "tenants") {
+          console.warn(`[Permission Check] Admin tried to access tenants module`);
           return res.status(403).json({ error: "Insufficient permissions" });
         }
         return next();
       }
 
-      const [module, action] = perm.split(":");
+      // ✅ Sistema Simplificado: Si tienes "Ver", tienes todo.
+      // Se comprueba el permiso solicitado, su versión :view, o el comodín *
+      const [module] = perm.split(":");
 
-      const hasViewPermission = permissions.has(`${module}:view`);
-      const hasWildcard = permissions.has("*") || permissions.has(`${module}:*`);
-      const hasSpecificPermission = permissions.has(perm);
-
-      const allowed = hasWildcard || hasSpecificPermission || (action !== "view" && hasViewPermission);
+      // Comprobar si existe el permiso explícito o su versión :view o wildcard
+      const allowed = permissions.has("*") || permissions.has(perm) || permissions.has(`${module}:view`) || permissions.has(`${module}:*`);
 
       if (!allowed) {
+        console.warn(`[Permission Check] Access denied for ${user.email}. Req: ${perm}. Has: ${Array.from(permissions).join(", ")}`);
         return res.status(403).json({ error: "Insufficient permissions" });
       }
 
       next();
     } catch (error) {
+      console.error("[Permission Error]", error);
       next(error);
     }
   };

@@ -144,7 +144,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
 
     // Calcular redirectTo basado en permisos
     let redirectTo = "/hr/orders"; // Ruta por defecto
-    if (permissions.includes("mobile:access")) {
+    if (permissions.includes("mobile_collaborator:view") || permissions.includes("mobile_coordinator:view")) {
       redirectTo = "/mobile";
     }
 

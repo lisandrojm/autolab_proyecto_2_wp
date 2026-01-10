@@ -26,7 +26,7 @@ const createPositionSchema = z.object({
 const updatePositionSchema = createPositionSchema.partial();
 
 // GET /positions/count - Contar posiciones
-router.get("/count", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/count", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
     if (!tenantId) {
@@ -43,7 +43,7 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("users:
 });
 
 // GET /positions - Listar posiciones
-router.get("/", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 100, name } = req.query;
 
@@ -104,7 +104,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("users:view"
 });
 
 // POST /positions - Crear posición
-router.post("/", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.post("/", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = createPositionSchema.parse(req.body);
 
@@ -144,7 +144,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("users:view
 });
 
 // GET /positions/:id - Obtener posición específica
-router.get("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const positionId = toObjectIdOrNull(req.params.id);
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
@@ -192,7 +192,7 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("users:vi
 });
 
 // PATCH /positions/:id - Actualizar posición
-router.patch("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = updatePositionSchema.parse(req.body);
 
@@ -242,7 +242,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("users:
 });
 
 // DELETE /positions/:id - Eliminar posición
-router.delete("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const positionId = toObjectIdOrNull(req.params.id);
     if (!positionId) {

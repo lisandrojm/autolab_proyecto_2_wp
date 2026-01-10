@@ -83,7 +83,7 @@ const updatePasswordSchema = z.object({
 });
 
 // GET /users/count - Contar usuarios
-router.get("/count", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/count", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { isActive } = req.query;
     const filter: any = { tenantId: req.tenantObjectId };
@@ -101,7 +101,7 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("users:
 });
 
 // GET /users - Listar usuarios
-router.get("/", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 20, email, isActive, areaId } = req.query;
     const filter: any = { tenantId: req.tenantObjectId };
@@ -161,7 +161,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("users:view"
 });
 
 // POST /users - Crear usuario
-router.post("/", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.post("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = createUserSchema.parse(req.body);
 
@@ -305,7 +305,7 @@ router.get("/by-area/:areaId", requireTenant, authenticateToken, async (req: Aut
 });
 
 // GET /users/:id - Obtener usuario específico
-router.get("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const user = await User.findOne({
       _id: req.params.id,
@@ -332,7 +332,7 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("users:vi
 });
 
 // PATCH /users/:id - Actualizar usuario
-router.patch("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = updateUserSchema.parse(req.body);
 
@@ -450,7 +450,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("users:
 });
 
 // PATCH /users/:id/password - Cambiar contraseña
-router.patch("/:id/password", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.patch("/:id/password", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { password } = updatePasswordSchema.parse(req.body);
 
@@ -479,7 +479,7 @@ router.patch("/:id/password", requireTenant, authenticateToken, requirePermissio
 });
 
 // DELETE /users/:id - Eliminar usuario
-router.delete("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const user = await User.findOneAndDelete({
       _id: req.params.id,

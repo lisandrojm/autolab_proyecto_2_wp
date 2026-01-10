@@ -25,7 +25,7 @@ const createAreaSchema = z.object({
 const updateAreaSchema = createAreaSchema.partial();
 
 // GET /areas/count - Contar areas
-router.get("/count", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/count", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
     if (!tenantId) {
@@ -42,7 +42,7 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("users:
 });
 
 // GET /areas - Listar areas
-router.get("/", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 100, name } = req.query;
 
@@ -79,7 +79,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("users:view"
 });
 
 // POST /areas - Crear area
-router.post("/", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.post("/", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = createAreaSchema.parse(req.body);
 
@@ -119,7 +119,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("users:view
 });
 
 // GET /areas/:id - Obtener area específica
-router.get("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const areaId = toObjectIdOrNull(req.params.id);
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
@@ -154,7 +154,7 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("users:vi
 });
 
 // PATCH /areas/:id - Actualizar area
-router.patch("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = updateAreaSchema.parse(req.body);
 
@@ -204,7 +204,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("users:
 });
 
 // DELETE /areas/:id - Eliminar area
-router.delete("/:id", requireTenant, authenticateToken, requirePermission("users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const areaId = toObjectIdOrNull(req.params.id);
     if (!areaId) {

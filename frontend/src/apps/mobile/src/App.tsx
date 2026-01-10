@@ -36,9 +36,9 @@ function App() {
     }
   }, [user, tenantId, setTenantId]);
 
-  const hasMobileAccess = hasPermission("mobile_access:view");
   const isMobileCollaborator = hasPermission("mobile_collaborator:view");
   const isMobileCoordinator = hasPermission("mobile_coordinator:view");
+  const hasMobileAccess = isMobileCollaborator || isMobileCoordinator;
 
   const userRole = isMobileCoordinator ? "coordinator" : isMobileCollaborator ? "collaborator" : null;
 

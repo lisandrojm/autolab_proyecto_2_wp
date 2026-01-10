@@ -55,12 +55,10 @@ const ADMIN_PERMISSIONS = [
   "config_pdf_templates:view", // Plantillas PDF
 ];
 const MOBILE_COLLABORATOR_PERMISSIONS = [
-  "mobile_access:view", // Acceso base a la app mobile
   "mobile_collaborator:view", // Permisos de colaborador mobile
 ];
 
 const MOBILE_COORDINATOR_PERMISSIONS = [
-  "mobile_access:view", // Acceso base a la app mobile
   "mobile_coordinator:view", // Permisos de coordinador mobile
 ];
 
@@ -178,21 +176,24 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
   const PERMISSION_MAPPING: Record<string, string> = {
     "campaigns:read": "campaigns:view",
     "posts:read": "posts:view",
-
     "projects:read": "projects:view",
     "assets:read": "assets:view",
     "clients:read": "clients:view",
+    "roles:view": "admin_roles:view",
+    "areas:view": "admin_areas:view",
+    "positions:view": "admin_positions:view",
+    "levels:view": "admin_levels:view",
+    "users:view": "admin_users:view",
+    "mobile:access": "mobile_collaborator:view",
   };
 
-  // Actualizar rol client si existe
-  const clientRole = await Role.findOne({
-    tenantId: tid,
-    name: { $regex: /^(client|cliente)$/i },
-  });
+  const roles = await Role.find({ tenantId: tid });
 
-  if (clientRole) {
+  for (const role of roles) {
     let needsUpdate = false;
-    const updatedPermissions = clientRole.permissions.map((perm) => {
+
+    // 1) Mapear permisos antiguos a nuevos
+    let updatedPermissions = role.permissions.map((perm) => {
       if (PERMISSION_MAPPING[perm]) {
         needsUpdate = true;
         return PERMISSION_MAPPING[perm];
@@ -200,33 +201,27 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
       return perm;
     });
 
-    if (needsUpdate) {
-      clientRole.permissions = updatedPermissions;
-      await clientRole.save();
-      console.log(`[RoleInit] ♻️ Migrated CLIENT role permissions from :read to :view`);
+    // 2) Filtrar: Solo permitir permisos que terminen en :view o sean el comodín *
+    // Esto elimina permisos granulares (:edit, :delete, :create) que ya no son necesarios
+    const filteredPermissions = updatedPermissions.filter(
+      (perm) => perm === "*" || perm.endsWith(":view") || perm.startsWith("mobile_") // Mantener roles móviles
+    );
+
+    if (filteredPermissions.length !== updatedPermissions.length) {
+      needsUpdate = true;
+      updatedPermissions = filteredPermissions;
     }
-  }
 
-  // Actualizar rol manager si existe
-  const managerRole = await Role.findOne({
-    tenantId: tid,
-    name: { $regex: /^manager$/i },
-  });
-
-  if (managerRole) {
-    let needsUpdate = false;
-    const updatedPermissions = managerRole.permissions.map((perm) => {
-      if (PERMISSION_MAPPING[perm]) {
-        needsUpdate = true;
-        return PERMISSION_MAPPING[perm];
-      }
-      return perm;
-    });
+    // 3) Eliminar duplicados
+    const finalPermissions = [...new Set(updatedPermissions)];
+    if (finalPermissions.length !== updatedPermissions.length) {
+      needsUpdate = true;
+    }
 
     if (needsUpdate) {
-      managerRole.permissions = updatedPermissions;
-      await managerRole.save();
-      console.log(`[RoleInit] ♻️ Migrated MANAGER role permissions from :read to :view`);
+      role.permissions = finalPermissions;
+      await role.save();
+      console.log(`[RoleInit] ♻️ Migrated role ${role.name} permissions for tenant ${tid}`);
     }
   }
 }

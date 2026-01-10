@@ -52,7 +52,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     label: "Mobile",
     icon: faMobileAlt,
     description: "Acceso a la aplicación móvil",
-    permissions: ["mobile_access:view", "mobile_collaborator:view", "mobile_coordinator:view"],
+    permissions: ["mobile_collaborator:view", "mobile_coordinator:view"],
   },
 };
 
@@ -71,7 +71,7 @@ const MODULE_LABELS: Record<string, string> = {
   "config_vacations:view": "Vacaciones (Config)",
   "config_activity_logs:view": "Novedades (Config)",
   "config_pdf_templates:view": "Plantillas PDF",
-  "mobile_access:view": "Acceso App",
+
   "mobile_collaborator:view": "Colaborador",
   "mobile_coordinator:view": "Coordinador",
 };
@@ -749,10 +749,7 @@ export const RolesPage: React.FC = () => {
                   <strong>Permisos asignados:</strong> Clientes (Ver), Pedidos (Ver)
                 </p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ Verá en el navbar: Clientes, Pedidos</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ Verá el selector de clientes y podrá trabajar con ellos</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">
-                  → Podrá <strong>ver, crear, editar y eliminar</strong> dentro de cada módulo autorizado
-                </p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ Al tener permiso de "Ver", podrá gestionar (Crear, Editar, Eliminar) dentro de cada módulo</p>
               </div>
 
               <div className="bg-white/60 dark:bg-black/20 rounded p-3">
@@ -770,13 +767,13 @@ export const RolesPage: React.FC = () => {
                   <strong>Permisos asignados:</strong> Solo Pedidos (Ver)
                 </p>
                 <p className="text-xs text-blue-800 dark:text-blue-200">→ Este usuario solo verá Pedidos en el navbar</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">→ NO verá selector de clientes ni otros módulos</p>
+                <p className="text-xs text-blue-800 dark:text-blue-200">→ Al tener acceso a "Ver", podrá gestionar pedidos completamente</p>
               </div>
 
-              <div className="bg-white/60 dark:bg-black/20 rounded p-3">
-                <p className="text-sm mb-2 font-semibold">Roles Admin y SuperAdmin</p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">
-                  → Tienen <strong>acceso completo automático</strong> a todo el sistema, independientemente de los permisos asignados
+              <div className="bg-blue-600/10 dark:bg-blue-400/10 border border-blue-200 dark:border-blue-800 rounded p-3">
+                <p className="text-sm mb-2 font-semibold text-blue-800 dark:text-blue-300">Nota sobre el Sistema Simplificado</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  Para simplificar la administración, el permiso de <strong>"Ver"</strong> un módulo otorga automáticamente capacidad de <strong>Crear, Editar y Eliminar</strong> en el mismo. No hace falta asignar permisos granulares adicionales.
                 </p>
               </div>
             </div>
