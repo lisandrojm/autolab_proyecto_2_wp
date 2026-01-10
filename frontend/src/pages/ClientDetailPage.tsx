@@ -265,14 +265,23 @@ export const ClientDetailPage: React.FC = () => {
             title: "Información General",
             icon: faUsers,
             badges: [],
+          }}
+          footer={{
+            leftContent: (
+              <div className="space-y-1">
+                <div className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</div>
+              </div>
+            ),
             actions: [
               {
                 icon: faEdit,
                 onClick: (e) => {
                   e.stopPropagation();
+                  setIsEditing(true);
                   setOpenEdit(true);
                 },
                 title: "Editar Información",
+                variant: "default",
               },
             ],
           }}
@@ -291,12 +300,6 @@ export const ClientDetailPage: React.FC = () => {
               <div className="text-sm">
                 <span className="text-gray-500 dark:text-gray-400 block mb-1">Teléfono:</span>
                 <div className="font-medium text-gray-900 dark:text-white">{client.phone}</div>
-              </div>
-            )}
-            {client.website && (
-              <div className="text-sm">
-                <span className="text-gray-500 dark:text-gray-400 block mb-1">Sitio Web:</span>
-                <div className="font-medium text-gray-900 dark:text-white truncate">{client.website}</div>
               </div>
             )}
           </div>
