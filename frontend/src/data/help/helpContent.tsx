@@ -15,7 +15,7 @@ const helpResources = {
       // Clients
       "clients.title": "Información de Clientes",
       "clients.description": "Gestión completa de clientes y su información",
-      "clients.items": ["**Cliente**: Contiene datos de contacto, empresa e información adicional como redes sociales y brief de proyecto", "**Estado**: Puede ser *Activo*, *Inactivo* u *Onboarding* para reflejar su ciclo de vida", "**Gestión**: Crear, editar, clonar y eliminar clientes desde la vista principal"],
+      "clients.items": ["**Cliente**: Contiene datos de contacto, empresa e información adicional como redes sociales", "**Estado**: Puede ser *Activo*, *Inactivo* u *Onboarding* para reflejar su ciclo de vida", "**Gestión**: Crear, editar, clonar y eliminar clientes desde la vista principal"],
 
       // Dashboard
       "dashboard.title": "Información del Dashboard",

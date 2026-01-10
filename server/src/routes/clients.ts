@@ -32,15 +32,6 @@ const createClientSchema = z.object({
     })
     .default({}),
 
-  brief: z
-    .object({
-      objectives: z.array(z.string()).default([]),
-      targetAudience: z.string().optional().or(z.literal("")),
-      budget: z.number().optional(),
-      timeline: z.string().optional(),
-      preferences: z.string().optional(),
-    })
-    .default({ objectives: [] }),
   costCenters: z
     .array(
       z.object({

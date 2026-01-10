@@ -141,15 +141,7 @@ export const ClientsPage: React.FC = () => {
         industry: cloneSource.industry,
         website: cloneSource.website,
         attachments: cloneSource.attachments ? [...cloneSource.attachments] : [],
-        brief: cloneSource.brief
-          ? {
-              objectives: [...(cloneSource.brief.objectives || [])],
-              targetAudience: cloneSource.brief.targetAudience,
-              budget: cloneSource.brief.budget,
-              timeline: cloneSource.brief.timeline,
-              preferences: cloneSource.brief.preferences,
-            }
-          : undefined,
+
         status: cloneSource.status || "active",
         favorite: false,
       };

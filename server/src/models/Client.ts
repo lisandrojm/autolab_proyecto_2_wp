@@ -45,13 +45,6 @@ export interface IClient extends Document {
     };
     isActive: boolean;
   }[];
-  brief?: {
-    objectives: string[];
-    targetAudience?: string;
-    budget?: number;
-    timeline?: string;
-    preferences?: string;
-  };
 
   assignedUsers: Types.ObjectId[];
   usuarios?: { userId: Types.ObjectId; permiso: "ver" | "editar" }[];
@@ -92,14 +85,6 @@ const clientSchema = new Schema<IClient>(
       },
     ],
     proyectos: [{ type: Schema.Types.ObjectId, ref: "Project", index: true }],
-
-    brief: {
-      objectives: [String],
-      targetAudience: String,
-      budget: Number,
-      timeline: String,
-      preferences: String,
-    },
 
     costCenters: [
       {

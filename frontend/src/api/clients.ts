@@ -36,14 +36,6 @@ export interface Client {
     size?: number;
   }>;
 
-  brief?: {
-    objectives: string[];
-    targetAudience?: string;
-    budget?: number;
-    timeline?: string;
-    preferences?: string;
-  };
-
   status: ClientStatus;
 
   /** favorito del cliente */
@@ -99,13 +91,7 @@ function normalizeClient(raw: any): Client {
     industry: raw?.industry ?? "",
     website: raw?.website ?? "",
     attachments: Array.isArray(raw?.attachments) ? raw.attachments : [],
-    brief: {
-      objectives: Array.isArray(raw?.brief?.objectives) ? raw.brief.objectives : [],
-      targetAudience: raw?.brief?.targetAudience ?? "",
-      budget: typeof raw?.brief?.budget === "number" ? raw.brief.budget : undefined,
-      timeline: raw?.brief?.timeline ?? "",
-      preferences: raw?.brief?.preferences ?? "",
-    },
+
     status: (raw?.status as ClientStatus) ?? "onboarding",
     favorite: Boolean(raw?.favorite),
     createdAt: raw?.createdAt ?? "",

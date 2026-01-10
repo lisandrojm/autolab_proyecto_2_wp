@@ -3,19 +3,7 @@ import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { env } from "../config/env.js";
 
-const userRolePermissions = [
-  "dashboard:view",
-  "clients:read", "clients:write", "clients:update", "clients:delete",
-  "calendar:view",
-  "creative:view",
-  "campaigns:read", "campaigns:write", "campaigns:update", "campaigns:delete",
-  "projects:read", "projects:write", "projects:update", "projects:delete",
-  "briefs:read", "briefs:write", "briefs:update", "briefs:delete",
-  "posts:read", "posts:write", "posts:update", "posts:delete",
-  "tasks:read", "tasks:write", "tasks:update", "tasks:delete",
-  "assets:read", "assets:write", "assets:update", "assets:delete",
-  "analytics:view"
-];
+const userRolePermissions = ["dashboard:view", "clients:read", "clients:write", "clients:update", "clients:delete", "calendar:view", "creative:view", "campaigns:read", "campaigns:write", "campaigns:update", "campaigns:delete", "projects:read", "projects:write", "projects:update", "projects:delete", "posts:read", "posts:write", "posts:update", "posts:delete", "tasks:read", "tasks:write", "tasks:update", "tasks:delete", "assets:read", "assets:write", "assets:update", "assets:delete", "analytics:view"];
 
 async function migrateAddUserRole() {
   try {
@@ -35,7 +23,7 @@ async function migrateAddUserRole() {
 
       const existingUserRole = await Role.findOne({
         tenantId: tenant._id,
-        name: { $regex: /^user$/i }
+        name: { $regex: /^user$/i },
       });
 
       if (existingUserRole) {
@@ -50,7 +38,7 @@ async function migrateAddUserRole() {
 
         const adminRole = await Role.findOne({
           tenantId: tenant._id,
-          name: { $regex: /^admin$/i }
+          name: { $regex: /^admin$/i },
         });
 
         if (adminRole && adminRole.isDefault) {
@@ -62,7 +50,7 @@ async function migrateAddUserRole() {
       } else {
         const adminRole = await Role.findOne({
           tenantId: tenant._id,
-          name: { $regex: /^admin$/i }
+          name: { $regex: /^admin$/i },
         });
 
         if (adminRole && adminRole.isDefault) {
@@ -91,7 +79,6 @@ async function migrateAddUserRole() {
     console.log(`  User roles created: ${rolesCreated}`);
     console.log(`  Roles updated: ${rolesUpdated}`);
     console.log("[Migration] Migration completed successfully!");
-
   } catch (error) {
     console.error("[Migration] Error during migration:", error);
     process.exit(1);
