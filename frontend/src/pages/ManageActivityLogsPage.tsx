@@ -217,6 +217,12 @@ export const ManageActivityLogsPage: React.FC = () => {
               status: att.status || "present",
               absenceReason: att.absenceReason,
               notes: att.notes,
+              // Map Schedule to Standard Entry/Exit Columns
+              entryTime: att.scheduleInTime || undefined,
+              exitTime: att.scheduleOutTime || undefined,
+              // Map Actual to Overtime Entry/Exit Columns (as requested)
+              overtimeEntryTime: att.inTime || undefined,
+              overtimeExitTime: att.outTime || undefined,
               replacementName: att.replacementId ? `${att.replacementId.firstName} ${att.replacementId.lastName}` : undefined,
             }))
           : [],
@@ -377,7 +383,7 @@ export const ManageActivityLogsPage: React.FC = () => {
               footerLeft={
                 <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                   <FontAwesomeIcon icon={faCalendar} className="h-3 w-3" />
-                  <span>{format(new Date(report.date), "dd MMM yyyy", { locale: es })}</span>
+                  <span>{format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es })}</span>
                 </div>
               }
               footerActions={[
@@ -418,7 +424,7 @@ export const ManageActivityLogsPage: React.FC = () => {
       <PageLayout
         title={selectedReport.projectName}
         badge={{
-          text: format(new Date(selectedReport.date), "EEEE d 'de' MMMM, yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase()),
+          text: format(new Date(selectedReport.date + "T00:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase()),
           variant: "default",
         }}
         faIcon={{ icon: faBriefcase }}
@@ -451,7 +457,7 @@ export const ManageActivityLogsPage: React.FC = () => {
             title={
               <div className="flex items-center gap-3">
                 <span>Estadísticas: {selectedReport.projectName}</span>
-                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded font-medium border border-blue-200 dark:border-blue-800">{format(new Date(selectedReport.date), "dd MMM yyyy", { locale: es })}</span>
+                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded font-medium border border-blue-200 dark:border-blue-800">{format(new Date(selectedReport.date + "T00:00:00"), "dd MMM yyyy", { locale: es })}</span>
               </div>
             }
             size="md"
@@ -625,8 +631,8 @@ export const ManageActivityLogsPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Registro</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Novedad</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
                     Registros
@@ -643,8 +649,8 @@ export const ManageActivityLogsPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{formatReportId(report.id)}</span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-medium">{format(new Date(report.date), "dd MMM yyyy", { locale: es })}</td>
                     <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">{format(new Date(report.submittedAt), "dd MMM yyyy", { locale: es })}</td>
+                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-medium">{format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es })}</td>
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
                         <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-xs" />

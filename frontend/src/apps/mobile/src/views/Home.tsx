@@ -48,69 +48,67 @@ export default function Home({ onNavigate }: HomeProps) {
     view: "activity_logs" as ViewType,
     roles: ["coordinator"],
     disabled: false,
-    badge: "New",
-    badgeBg: "bg-green-500",
+  };
+
+  const vacationsAction = {
+    icon: faUmbrellaBeach,
+    title: "Vacaciones",
+    description: "Solicitá tus días libres",
+    view: "vacations" as ViewType,
+    roles: ["coordinator", "collaborator"],
+    disabled: false,
+    /*       badge: "New", */
+    badgeBg: "bg-red-500",
     badgeText: "text-white",
   };
 
-  const baseActions = [
-    {
-      icon: faUmbrellaBeach,
-      title: "Vacaciones",
-      description: "Solicitá tus días libres",
-      view: "vacations" as ViewType,
-      roles: ["coordinator", "collaborator"],
-      disabled: false,
-      /*       badge: "New", */
-      badgeBg: "bg-red-500",
-      badgeText: "text-white",
-    },
-    {
-      icon: faShoppingCart,
-      title: "Pedidos",
-      description: "Gestiona tus pedidos",
-      view: "orders" as ViewType,
-      roles: ["coordinator", "collaborator"],
-      /*       badge: "Finish", */
-      badgeBg: "bg-blue-500",
-      badgeText: "text-white",
-    },
-    {
-      icon: faFileAlt,
-      title: "Legajos",
-      description: "Consultá tus documentos",
-      view: "documents" as ViewType,
-      roles: ["coordinator", "collaborator"],
-      disabled: true,
-    },
-    {
-      icon: faReceipt,
-      title: "Recibos",
-      description: "Accedé a tus nóminas",
-      view: "documents" as ViewType,
-      roles: ["coordinator", "collaborator"],
-      disabled: true,
-    },
-  ];
+  const ordersAction = {
+    icon: faShoppingCart,
+    title: "Pedidos",
+    description: "Gestiona tus pedidos",
+    view: "orders" as ViewType,
+    roles: ["coordinator", "collaborator"],
+    disabled: false,
+    /*       badge: "Finish", */
+    badgeBg: "bg-blue-500",
+    badgeText: "text-white",
+  };
 
-  const coordinatorActions = [
-    {
-      icon: faUsers,
-      title: "Gestión de Equipo",
-      description: "Administra tu equipo",
-      view: "home" as ViewType,
-      roles: ["coordinator"],
-      disabled: true,
-    },
-    {
-      icon: faChartBar,
-      title: "Reportes",
-      description: "Ver métricas y estadísticas",
-      view: "home" as ViewType,
-      roles: ["coordinator"],
-      disabled: true,
-    },
-  ];
+  const legajosAction = {
+    icon: faFileAlt,
+    title: "Legajos",
+    description: "Consultá tus documentos",
+    view: "documents" as ViewType,
+    roles: ["coordinator", "collaborator"],
+    disabled: true,
+  };
+
+  const recibosAction = {
+    icon: faReceipt,
+    title: "Recibos",
+    description: "Accedé a tus nóminas",
+    view: "documents" as ViewType,
+    roles: ["coordinator", "collaborator"],
+    disabled: true,
+  };
+
+  const teamAction = {
+    icon: faUsers,
+    title: "Gestión de Equipo",
+    description: "Administra tu equipo",
+    view: "home" as ViewType,
+    roles: ["coordinator"],
+    disabled: true,
+  };
+
+  const reportsAction = {
+    icon: faChartBar,
+    title: "Reportes",
+    description: "Ver métricas y estadísticas",
+    view: "home" as ViewType,
+    roles: ["coordinator"],
+    disabled: true,
+  };
 
   // Construct quickActions based on role and desired order
   const quickActions = [];
@@ -119,12 +117,14 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push(novedadesAction);
   }
 
-  // Add base actions (Vacaciones, Pedidos, etc)
-  quickActions.push(...baseActions);
+  quickActions.push(ordersAction);
+  quickActions.push(vacationsAction);
+  quickActions.push(legajosAction);
+  quickActions.push(recibosAction);
 
-  // Add remaining coordinator actions
   if (isMobileCoordinator) {
-    quickActions.push(...coordinatorActions);
+    quickActions.push(teamAction);
+    quickActions.push(reportsAction);
   }
 
   const getActivityIcon = (action: string) => {

@@ -16,6 +16,10 @@ const attendanceSchema = z.object({
   replacementId: z.string().optional().or(z.literal("")),
   overtimeHours: z.number().optional(),
   notes: z.string().optional(),
+  inTime: z.string().optional(),
+  outTime: z.string().optional(),
+  scheduleInTime: z.string().optional(),
+  scheduleOutTime: z.string().optional(),
 });
 
 const createReportSchema = z.object({

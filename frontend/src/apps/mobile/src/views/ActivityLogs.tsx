@@ -30,6 +30,7 @@ interface LocalAttendanceRecord {
   replacementName?: string;
   overtimeHours?: number;
   outTime?: string;
+  inTime?: string; // Added inTime
   notes?: string;
 }
 
@@ -39,6 +40,7 @@ interface WizardEntry {
   replacementId?: string;
   overtimeHours?: number;
   outTime?: string;
+  inTime?: string; // Added inTime
   notes?: string;
 }
 
@@ -72,7 +74,7 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
 
   // 2. All week mode (Monday to Sunday)
   if (mode === "all_week") {
-    return isWorkDay(weekdays) ? weekdays.endTime : "";
+    return isWorkDay(weekdays) ? weekdays?.endTime || "" : "";
   }
 
   // 3. Weekdays mode (usually M-V + optional Saturday)
@@ -80,10 +82,10 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
     if (dayIndex === 0) return ""; // Sunday strictly off in this mode
     if (dayIndex === 6) {
       // Saturday uses 'weekend' config
-      return isWorkDay(weekend) ? weekend.endTime : "";
+      return isWorkDay(weekend) ? weekend?.endTime || "" : "";
     }
     // Monday to Friday
-    return isWorkDay(weekdays) ? weekdays.endTime : "";
+    return isWorkDay(weekdays) ? weekdays?.endTime || "" : "";
   }
 
   // Fallback
@@ -106,6 +108,67 @@ const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: strin
   // 2. Otherwise use project general schedule
   return getProjectEndTime(project, dateStr);
 };
+
+const getProjectStartTime = (project: Project, dateStr: string): string => {
+  if (!project.workSchedule) return "09:00";
+
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  const dayIndex = date.getDay(); // 0 is Sunday, 1 is Monday...
+  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const dayName = dayNames[dayIndex];
+
+  const { mode, weekdays, weekend, days } = project.workSchedule;
+
+  // Helper to check if it's a work day (defaults to true if startTime is present)
+  const isWorkDay = (dayConfig: any) => {
+    if (!dayConfig) return false;
+    if (dayConfig.isWorkDay === false) return false;
+    return !!dayConfig.startTime;
+  };
+
+  // 1. Per day mode
+  if (mode === "per_day" && days) {
+    const dayData = (days as any)[dayName];
+    return isWorkDay(dayData) ? dayData.startTime : "";
+  }
+
+  // 2. All week mode (Monday to Sunday)
+  if (mode === "all_week") {
+    return isWorkDay(weekdays) ? weekdays?.startTime || "" : "";
+  }
+
+  // 3. Weekdays mode (usually M-V + optional Saturday)
+  if (mode === "weekdays") {
+    if (dayIndex === 0) return ""; // Sunday strictly off in this mode
+    if (dayIndex === 6) {
+      // Saturday uses 'weekend' config
+      return isWorkDay(weekend) ? weekend?.startTime || "" : "";
+    }
+    // Monday to Friday
+    return isWorkDay(weekdays) ? weekdays?.startTime || "" : "";
+  }
+
+  // Fallback
+  return weekdays?.startTime || "09:00";
+};
+
+const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: string): string => {
+  if (!project.teamConfig) return getProjectStartTime(project, dateStr);
+
+  // 1. Check if user has a specific schedule in teamConfig
+  const userConfig = project.teamConfig.find((c) => {
+    const configUserId = typeof c.userId === "object" ? (c.userId as any)._id : c.userId;
+    return String(configUserId) === String(employeeId);
+  });
+
+  if (userConfig && userConfig.useProjectSchedule === false && userConfig.startTime) {
+    return userConfig.startTime;
+  }
+
+  // 2. Otherwise use project general schedule
+  return getProjectStartTime(project, dateStr);
+};
 export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -117,7 +180,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [activeProjectTab, setActiveProjectTab] = useState<"info" | "schedule" | "team">("info");
 
   // Form State
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split("T")[0]);
+  const [reportDate, setReportDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [hasActivity, setHasActivity] = useState<boolean | null>(null);
   const [comments, setComments] = useState("");
@@ -134,6 +200,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [draftReplacementId, setDraftReplacementId] = useState<string>("");
   const [draftOvertimeHours, setDraftOvertimeHours] = useState<number>(0);
   const [draftOutTime, setDraftOutTime] = useState<string>("");
+  const [draftInTime, setDraftInTime] = useState<string>("");
 
   // Config & Wizard State
   const [showProcessedHistory, setShowProcessedHistory] = useState(false);
@@ -178,29 +245,45 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       console.error("Error loading users", e);
     }
 
-    // 3. Fetch Projects (if user has any)
+    // 3. Fetch Projects
     try {
-      // We can use personnelAPI here to get the list of project IDs directly
-      // However, useProfile hook already fetches this. But loadData is called once on mount.
-      // Let's use the API directly to ensure fresh data for the dropdown.
-      const { personnelAPI } = await import("../../../../api/personnel");
-      const profile = await personnelAPI.getProfile();
-
-      if (profile.projectIds && profile.projectIds.length > 0) {
-        // Use listAll to get populated client details
-        const allProjs = await projectsAPI.listAll();
-        setUserProjects(allProjs);
-        // Default Select first project if available
-        if (allProjs.length > 0) {
-          setSelectedProjectId(allProjs[0]._id);
-        }
+      const myProjects = await projectsAPI.listAll();
+      setUserProjects(myProjects);
+      // Auto-select if only one
+      if (myProjects.length === 1) {
+        setSelectedProjectId(myProjects[0]._id);
       }
     } catch (e) {
       console.error("Error loading projects", e);
     }
 
-    // 4. Fetch Reports History
     fetchReports();
+  };
+
+  const fetchReports = async () => {
+    try {
+      const data = await activityReportsAPI.getAll();
+      // Filter for mobile view? Or show all allowed?
+      // Default API shows own reports for non-admin.
+      setReports(data);
+    } catch (e) {
+      console.error("Error loading reports", e);
+    }
+  };
+
+  // Helper to check for existing report
+  const existingReport = useMemo(() => {
+    if (!selectedProjectId || !reportDate) return null;
+    return reports.find((r) => {
+      const rProjId = typeof r.projectId === "object" && r.projectId ? (r.projectId as any)._id : r.projectId;
+      return rProjId === selectedProjectId && r.date === reportDate;
+    });
+  }, [reports, selectedProjectId, reportDate]);
+
+  // View Report Handler
+  const handleViewReport = (report: ActivityReport) => {
+    setViewingReport(report);
+    setShowDetailModal(true);
   };
 
   const { profile, stats } = useProfile();
@@ -225,37 +308,43 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     }
   }, [profile, userProjects.length]);
 
-  const fetchReports = async () => {
-    try {
-      const data = await activityReportsAPI.getAll();
-      setReports(data);
-    } catch (e) {
-      console.error("Error loading reports", e);
-    }
-  };
-
   useEffect(() => {
     const type = logTypes.find((t) => t._id === draftTypeId);
-    if (type?.name.toLowerCase().includes("horas extra") && selectedProjectId && draftOutTime) {
+    if (type?.name.toLowerCase().includes("horas extra") && selectedProjectId) {
       const project = userProjects.find((p) => p._id === selectedProjectId);
       if (project) {
         const endTime = selectedEmployee ? getEmployeeEndTime(project, selectedEmployee.id, reportDate) : getProjectEndTime(project, reportDate);
-        if (endTime) {
+        const startTime = selectedEmployee ? getEmployeeStartTime(project, selectedEmployee.id, reportDate) : getProjectStartTime(project, reportDate);
+
+        let totalOvertime = 0;
+
+        // 1. Exit Overtime
+        if (draftOutTime && endTime) {
           const [outH, outM] = draftOutTime.split(":").map(Number);
           const [endH, endM] = endTime.split(":").map(Number);
-
           const outTotal = outH * 60 + outM;
           const endTotal = endH * 60 + endM;
-
           let diff = (outTotal - endTotal) / 60;
-          if (diff < 0) diff = 0;
-          setDraftOvertimeHours(parseFloat(diff.toFixed(2)));
+          if (diff > 0) totalOvertime += diff;
         }
+
+        // 2. Entry Overtime (Early Start)
+        if (draftInTime && startTime) {
+          const [inH, inM] = draftInTime.split(":").map(Number);
+          const [startH, startM] = startTime.split(":").map(Number);
+          const inTotal = inH * 60 + inM;
+          const startTotal = startH * 60 + startM;
+          // If came in BEFORE start time
+          let diff = (startTotal - inTotal) / 60;
+          if (diff > 0) totalOvertime += diff;
+        }
+
+        setDraftOvertimeHours(parseFloat(totalOvertime.toFixed(2)));
       }
     }
-  }, [draftOutTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee]);
+  }, [draftOutTime, draftInTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee]);
 
-  // Pre-fill Out Time for Overtime when employee or type changes
+  // Pre-fill Out/In Time for Overtime when employee or type changes
   useEffect(() => {
     if (selectedEmployee && draftTypeId && selectedProjectId) {
       const type = logTypes.find((t) => t._id === draftTypeId);
@@ -263,9 +352,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const project = userProjects.find((p) => p._id === selectedProjectId);
         if (project) {
           const endTime = getEmployeeEndTime(project, selectedEmployee.id, reportDate);
-          if (endTime) {
-            setDraftOutTime(endTime);
-          }
+          if (endTime) setDraftOutTime(endTime);
+
+          const startTime = getEmployeeStartTime(project, selectedEmployee.id, reportDate);
+          if (startTime) setDraftInTime(startTime);
         }
       }
     }
@@ -278,22 +368,36 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     if (!currentEmp) return;
 
     const data = wizardData[currentEmp.id];
-    if (data?.status === "present" && data.outTime) {
+    if (data?.status === "present" && (data.outTime || data.inTime)) {
       const endTime = getEmployeeEndTime(selectedProject, currentEmp.id, reportDate);
-      if (endTime) {
+      const startTime = getEmployeeStartTime(selectedProject, currentEmp.id, reportDate);
+
+      let totalOvertime = 0;
+
+      // 1. Exit OT
+      if (data.outTime && endTime) {
         const [outH, outM] = data.outTime.split(":").map(Number);
         const [endH, endM] = endTime.split(":").map(Number);
-
         const outTotal = outH * 60 + outM;
         const endTotal = endH * 60 + endM;
-
         let diff = (outTotal - endTotal) / 60;
-        if (diff < 0) diff = 0;
+        if (diff > 0) totalOvertime += diff;
+      }
 
-        // Only update if it's different to avoid infinite loops
-        if (parseFloat(diff.toFixed(2)) !== data.overtimeHours) {
-          updateWizardEntry(currentEmp.id, { overtimeHours: parseFloat(diff.toFixed(2)) });
-        }
+      // 2. Entry OT
+      if (data.inTime && startTime) {
+        const [inH, inM] = data.inTime.split(":").map(Number);
+        const [startH, startM] = startTime.split(":").map(Number);
+        const inTotal = inH * 60 + inM;
+        const startTotal = startH * 60 + startM;
+        let diff = (startTotal - inTotal) / 60;
+        if (diff > 0) totalOvertime += diff;
+      }
+
+      const finalVal = parseFloat(totalOvertime.toFixed(2));
+      // Only update if it's different to avoid infinite loops
+      if (finalVal !== data.overtimeHours) {
+        updateWizardEntry(currentEmp.id, { overtimeHours: finalVal });
       }
     }
   }, [wizardIndex, wizardData, selectedProject, reportDate]);
@@ -342,6 +446,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       replacementName: replacement?.name,
       overtimeHours: type.name.toLowerCase().includes("horas extra") ? overtimeHours : undefined,
       outTime: type.name.toLowerCase().includes("horas extra") ? draftOutTime : undefined,
+      inTime: type.name.toLowerCase().includes("horas extra") ? draftInTime : undefined,
       notes: notes,
     };
 
@@ -354,6 +459,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setDraftReplacementId("");
     setDraftOvertimeHours(0);
     setDraftOutTime("");
+    setDraftInTime("");
     setIsEmployeeSelectOpen(false);
   };
 
@@ -493,6 +599,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             typeName: otType.name,
             overtimeHours: data.overtimeHours,
             outTime: data.outTime,
+            inTime: data.inTime,
             notes: data.notes,
           });
         }
@@ -560,8 +667,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     try {
       const attendance = [];
-      if (hasActivity) {
-        for (const entry of entries) {
+
+      const proj = userProjects.find((p) => p._id === selectedProjectId);
+
+      // Iterate over ALL employees to ensure we save their schedule snapshot
+      for (const emp of employees) {
+        if (!emp.projectIds || !emp.projectIds.includes(selectedProjectId)) continue;
+
+        // Try to find if we have a specific entry (anomaly/overtime)
+        const entry = entries.find((e) => e.employeeId === emp.id);
+
+        // Calculate schedule times for THIS day
+        const schedIn = proj ? getEmployeeStartTime(proj, emp.id, reportDate) : undefined;
+        const schedOut = proj ? getEmployeeEndTime(proj, emp.id, reportDate) : undefined;
+
+        if (entry) {
+          // It's an anomaly or overtime
           attendance.push({
             employeeId: entry.employeeId,
             status: entry.typeName.toLowerCase().includes("horas extra") ? "present" : "absent",
@@ -569,13 +690,31 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             replacementId: entry.replacementId,
             overtimeHours: entry.overtimeHours,
             notes: entry.notes,
+            inTime: entry.inTime, // Real Entry
+            outTime: entry.outTime, // Real Exit
+            scheduleInTime: schedIn,
+            scheduleOutTime: schedOut,
           });
+        } else {
+          // It's a standard present day (Virtual became Real/Persisted)
+          if (hasActivity === false || (hasActivity === true && !entries.find((e) => e.employeeId === emp.id))) {
+            attendance.push({
+              employeeId: emp.id,
+              status: "present",
+              overtimeHours: 0,
+              scheduleInTime: schedIn,
+              scheduleOutTime: schedOut,
+              // No inTime/outTime for standard present unless we want to copy schedule?
+              // User asked for "Entrada y Salida" to store "horario del proyecto".
+              // So saving it in scheduleInTime is correct.
+            });
+          }
         }
       }
 
       const payload = {
         date: reportDate,
-        hasActivity: !!hasActivity,
+        hasActivity: !!hasActivity, // Keeps the flag true if there were anomalies, false if "No News"
         comments,
         attendance,
         projectId: selectedProjectId || undefined,
@@ -669,11 +808,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setShowForm(true);
   };
 
-  const handleViewReport = (report: ActivityReport) => {
-    setViewingReport(report);
-    setShowDetailModal(true);
-  };
-
   const handleEditFromDetail = () => {
     if (viewingReport) {
       setShowDetailModal(false);
@@ -683,7 +817,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const handleCreateNew = async () => {
     setSelectedReportId(null);
-    setReportDate(new Date().toISOString().split("T")[0]);
+    const d = new Date();
+    setReportDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
 
     // Refresh projects to get latest config (allowsAdditionalStaff, etc.)
     try {
@@ -747,7 +882,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       <div className="px-4 pt-4">
         {/* User Info Header */}
-        <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-6 relative overflow-hidden">
+        {/*         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-6 relative overflow-hidden">
           <div className="flex flex-col gap-2">
             <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <FontAwesomeIcon icon={faUserTie} className="text-blue-500" />
@@ -776,7 +911,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {showForm && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -876,7 +1011,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                           Colaborador {wizardIndex + 1} de {projectEmployees.length}
                                         </span>
                                         {wizardIndex > 0 && (
-                                          <div onClick={() => setShowProcessedHistory(true)} className="flex items-center gap-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors">
+                                          <div onClick={() => setShowProcessedHistory(true)} className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors">
                                             <span className="text-[10px] font-bold">{wizardIndex} Cargados</span>
                                             <FontAwesomeIcon icon={faInfoCircle} className="text-[10px]" />
                                           </div>
@@ -900,7 +1035,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                     <div>
                                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
                                       <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                                        <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm ${isPresent ? "bg-white dark:bg-slate-600 text-green-600 dark:text-green-400 shadow" : "text-gray-500"}`}>
+                                        <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm ${isPresent ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow" : "text-gray-500"}`}>
                                           {/*                                           <FontAwesomeIcon icon={faCheck} className="mr-2" /> */}
                                           SÍ
                                         </button>
@@ -922,26 +1057,49 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               type="checkbox"
                                               name="toggle"
                                               id="toggle-ot"
-                                              checked={(data.overtimeHours || 0) > 0}
+                                              checked={data.overtimeHours !== undefined}
                                               onChange={(e) => {
                                                 if (e.target.checked) {
                                                   // Enable OT
-                                                  updateWizardEntry(currentEmp.id, { overtimeHours: 1 }); // Default 1
+                                                  updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
                                                 } else {
-                                                  updateWizardEntry(currentEmp.id, { overtimeHours: 0, outTime: undefined });
+                                                  updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
                                                 }
                                               }}
                                               className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                                              style={{ right: (data.overtimeHours || 0) > 0 ? "0" : "auto", left: (data.overtimeHours || 0) > 0 ? "auto" : "0" }}
+                                              style={{ right: data.overtimeHours !== undefined ? "0" : "auto", left: data.overtimeHours !== undefined ? "auto" : "0" }}
                                             />
-                                            <label htmlFor="toggle-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${(data.overtimeHours || 0) > 0 ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
+                                            <label htmlFor="toggle-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${data.overtimeHours !== undefined ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
                                           </div>
                                         </div>
 
                                         {/* Overtime Details */}
-                                        {(data.overtimeHours || 0) > 0 && (
+                                        {data.overtimeHours !== undefined && (
                                           <div className="space-y-4 pt-2">
                                             <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 pb-2">
+                                              <span>Horario Entrada Proyecto:</span>
+                                              <span className="font-bold text-slate-700 dark:text-slate-200">
+                                                {(() => {
+                                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                                  return proj ? getEmployeeStartTime(proj, currentEmp.id, reportDate) || "No laboral" : "—";
+                                                })()}
+                                              </span>
+                                            </div>
+
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
+                                              <input
+                                                type="time"
+                                                className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                                                value={data.inTime || ""}
+                                                onChange={(e) => {
+                                                  const val = e.target.value;
+                                                  updateWizardEntry(currentEmp.id, { inTime: val });
+                                                }}
+                                              />
+                                            </div>
+
+                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 pb-2 pt-2">
                                               <span>Horario Salida Proyecto:</span>
                                               <span className="font-bold text-slate-700 dark:text-slate-200">
                                                 {(() => {
@@ -1179,7 +1337,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         {/* Overtime Hours */}
                                         {isOvertime && (
                                           <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-700 mt-2">
-                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 px-1">
+                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 px-1 border-b border-slate-100 dark:border-slate-800 pb-1 mb-2">
+                                              <span>Horario Entrada Proyecto:</span>
+                                              <span className="font-bold text-slate-700 dark:text-slate-200">
+                                                {(() => {
+                                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                                  return proj ? (selectedEmployee ? getEmployeeStartTime(proj, selectedEmployee.id, reportDate) : getProjectStartTime(proj, reportDate)) || "No laboral" : "—";
+                                                })()}
+                                              </span>
+                                            </div>
+
+                                            <div className="mb-3">
+                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
+                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftInTime} onChange={(e) => setDraftInTime(e.target.value)} />
+                                            </div>
+
+                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 px-1 pt-2 border-t border-slate-100 dark:border-slate-800 mt-2">
                                               <span>Horario Salida Proyecto:</span>
                                               <span className="font-bold text-slate-700 dark:text-slate-200">
                                                 {(() => {
@@ -1191,25 +1364,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                                             <div>
                                               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Efectivo</label>
-                                              <input
-                                                type="text"
-                                                maxLength={5}
-                                                placeholder="HH:mm"
-                                                className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider"
-                                                value={draftOutTime}
-                                                onChange={(e) => {
-                                                  let val = e.target.value;
-                                                  // Simple mask for HH:mm
-                                                  if (val.length === 2 && draftOutTime.length === 1) val += ":";
-                                                  setDraftOutTime(val);
-                                                }}
-                                                onBlur={() => {
-                                                  // Basic validation/fix on blur
-                                                  if (draftOutTime.length === 4 && !draftOutTime.includes(":")) {
-                                                    setDraftOutTime(draftOutTime.slice(0, 2) + ":" + draftOutTime.slice(2));
-                                                  }
-                                                }}
-                                              />
+                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)} />
                                             </div>
 
                                             <div>
@@ -1257,6 +1412,17 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       </>
                     )}
                   </>
+                ) : existingReport ? (
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800 p-6 text-center animate-fade-in my-4">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto mb-3 text-green-600 dark:text-green-400">
+                      <FontAwesomeIcon icon={faCheck} className="text-xl" />
+                    </div>
+                    <h2 className="text-lg font-bold text-green-900 dark:text-green-100 mb-1">Reporte Completado</h2>
+                    <p className="text-sm text-green-700 dark:text-green-300 leading-relaxed">Ya existe un reporte enviado para este día ({new Date(reportDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}).</p>
+                    <button onClick={() => handleViewReport(existingReport)} className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded shadow-sm transition-colors">
+                      Ver Reporte Detallado
+                    </button>
+                  </div>
                 ) : (
                   <div className="bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 p-6 text-center animate-fade-in my-4">
                     <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-600 dark:text-amber-400">
@@ -1281,7 +1447,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                     {/* Summary in Footer */}
 
-                    <button onClick={handleWizardNext} className="flex-1 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-colors flex items-center justify-center gap-2 text-sm">
+                    <button
+                      onClick={handleWizardNext}
+                      disabled={(() => {
+                        const currentEmp = projectEmployees[wizardIndex];
+                        const data = wizardData[currentEmp.id];
+                        // If OT is enabled (defined), value MUST be > 0.
+                        if (data?.status === "present" && data.overtimeHours !== undefined) {
+                          return data.overtimeHours <= 0;
+                        }
+                        return false;
+                      })()}
+                      className="flex-1 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:shadow-none"
+                    >
                       Siguiente
                       <FontAwesomeIcon icon={faChevronRight} />
                     </button>
@@ -1331,7 +1509,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 })()}
                 {report.areaId ? (typeof report.areaId === "string" ? "" : ` - ${report.areaId.name}`) : ""}
               </h4>
-              <div className="text-sm text-slate-500 mb-3">{new Date(report.date).toLocaleDateString()}</div>
+              <div className="text-sm text-slate-500 mb-3">{new Date(report.date + "T00:00:00").toLocaleDateString()}</div>
 
               <div className="flex items-center justify-between text-xs text-slate-400">
                 <span>{report.hasActivity ? `${report.attendance.length} registros` : "Sin novedades"}</span>
@@ -1399,7 +1577,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     .map((emp) => (
                       <div key={emp.id} className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors group">
                         <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 uppercase tracking-wide border border-green-200 dark:border-green-900/50">Presente</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 uppercase tracking-wide border border-blue-200 dark:border-blue-900/50">Presente</span>
                       </div>
                     ))}
                   {employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)).length === 0 && <p className="text-sm text-gray-500 italic text-center py-4">No hay colaboradores asignados a este proyecto.</p>}
@@ -1435,7 +1613,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               </div>
               <div className="flex gap-2">
                 <span className="text-gray-500 dark:text-gray-400">Fecha:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{new Date(viewingReport.date).toLocaleDateString()}</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{new Date(`${viewingReport.date}T00:00:00`).toLocaleDateString()}</span>
               </div>
               <div className="flex gap-2">
                 <span className="text-gray-500 dark:text-gray-400">Proyecto:</span>
@@ -1729,7 +1907,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       <Modal isOpen={showProcessedHistory} onClose={() => setShowProcessedHistory(false)} title="Registros Cargados" size="md">
         <div className="space-y-6">
           <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
-            <span className="text-3xl font-bold text-green-500">{wizardIndex}</span>
+            <span className="text-3xl font-bold text-blue-500">{wizardIndex}</span>
             <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Registros procesados hasta ahora</p>
           </div>
 
@@ -1748,9 +1926,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   <div key={emp.id} className="bg-white dark:bg-slate-800/50 rounded-xl p-3 flex justify-between items-center border border-slate-100 dark:border-slate-700 shadow-sm">
                     <div>
                       <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{emp.name}</div>
-                      <div className={`text-xs font-medium ${isPresent ? (isOvertime ? "text-blue-600" : "text-green-600") : "text-red-500"}`}>{typeName}</div>
+                      <div className={`text-xs font-medium ${isPresent ? (isOvertime ? "text-blue-600" : "text-blue-600") : "text-red-500"}`}>{typeName}</div>
                     </div>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-inner ${isPresent ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-inner ${isPresent ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}>
                       <FontAwesomeIcon icon={isPresent ? faCheck : faTimes} className="text-sm" />
                     </div>
                   </div>
@@ -1808,16 +1986,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         setSelectedAdditionalStaff((prev) => [...prev, emp.id]);
                       }
                     }}
-                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-800" : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50"}`}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-800" : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50"}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isSelected ? "bg-green-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"}`}>{emp.name.charAt(0)}</div>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isSelected ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"}`}>{emp.name.charAt(0)}</div>
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
                         {emp.positionName && <p className="text-[10px] text-gray-500 dark:text-gray-400">{emp.positionName}</p>}
                       </div>
                     </div>
-                    <div className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${isSelected ? "bg-green-500 text-white" : "border-2 border-gray-300 dark:border-gray-600"}`}>{isSelected && <FontAwesomeIcon icon={faCheck} className="text-xs" />}</div>
+                    <div className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${isSelected ? "bg-blue-500 text-white" : "border-2 border-gray-300 dark:border-gray-600"}`}>{isSelected && <FontAwesomeIcon icon={faCheck} className="text-xs" />}</div>
                   </div>
                 );
               })}
@@ -1827,7 +2005,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           {/* Selected Count */}
           {selectedAdditionalStaff.length > 0 && (
             <div className="text-sm text-gray-600 dark:text-gray-400 text-center bg-gray-50 dark:bg-gray-800 py-2 rounded-lg">
-              <span className="font-bold text-green-600 dark:text-green-400">{selectedAdditionalStaff.length}</span> colaborador(es) seleccionado(s)
+              <span className="font-bold text-blue-600 dark:text-blue-400">{selectedAdditionalStaff.length}</span> colaborador(es) seleccionado(s)
             </div>
           )}
 
@@ -1869,7 +2047,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 setShowSummaryModal(true);
               }}
               disabled={selectedAdditionalStaff.length === 0}
-              className="flex-1 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold shadow-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <FontAwesomeIcon icon={faUserPlus} />
               Agregar y Continuar

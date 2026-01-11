@@ -8,6 +8,8 @@ export interface AttendanceRecord {
   areaName: string; // Area
   entryTime?: string; // Hora de Entrada
   exitTime?: string; // Hora de Salida
+  scheduleInTime?: string; // Hora Entrada Proyecto
+  scheduleOutTime?: string; // Hora Salida Proyecto
   overtimeHours: number; // Hizo Horas Extras calculation
   hasOvertime: boolean; // Sí/No
   status: AttendanceStatus;
