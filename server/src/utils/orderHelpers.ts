@@ -3,9 +3,11 @@ import { Types } from "mongoose";
 
 export function getPlainOrderNumber(orderNumber: string | undefined | null): string {
   if (!orderNumber) return "";
-  return orderNumber.includes("-")
-    ? orderNumber.split("-")[1]
-    : orderNumber;
+  if (orderNumber.includes("-")) {
+    const parts = orderNumber.split("-");
+    return parts[parts.length - 1];
+  }
+  return orderNumber;
 }
 
 export function getFormattedOrderNumber(orderNumber: string | undefined | null): string {
@@ -14,11 +16,7 @@ export function getFormattedOrderNumber(orderNumber: string | undefined | null):
 }
 
 export async function getNextOrderNumber(tenantId: Types.ObjectId, prefix: string): Promise<string> {
-  const lastOrder = await Order.findOne({ tenantId })
-    .sort({ orderNumber: -1 })
-    .select("orderNumber")
-    .lean()
-    .exec();
+  const lastOrder = await Order.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec();
 
   let nextSequence = 1;
 
