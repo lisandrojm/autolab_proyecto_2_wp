@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { Role } from "../models/Role.js";
+import { cleanupDuplicateMobileRoles } from "./roleCleanupService.js";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -321,6 +322,9 @@ export async function ensureAllTenantsHaveDefaultRoles(): Promise<void> {
       const rolesBefore = await Role.countDocuments({ tenantId });
 
       await ensureDefaultRoles(tenantId);
+
+      // Automatic cleanup of duplicates on startup
+      await cleanupDuplicateMobileRoles(tenantId, false);
 
       await migrateRolePermissions(tenantId);
 
