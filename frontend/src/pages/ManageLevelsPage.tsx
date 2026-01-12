@@ -256,6 +256,13 @@ export const LevelsPage: React.FC = () => {
         ],
         content: viewLevel ? (
           <div className="space-y-4">
+            {/* Tenant Badge */}
+            {viewLevel.tenant?.name && (
+              <div>
+                <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewLevel.tenant.name}</span>
+              </div>
+            )}
+
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Tipo</h4>
               <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -430,7 +437,18 @@ export const LevelsPage: React.FC = () => {
               title: level.name,
               subtitle: level.description,
               icon: level.type === "general" ? faGlobe : faUserGraduate,
-              badges: level.type === "general" ? [{ text: "General", variant: "blue" }] : [],
+              badges: [
+                ...(level.type === "general" ? [{ text: "General", variant: "blue" as const }] : []),
+                ...(level.tenant && level.tenant.name
+                  ? [
+                      {
+                        text: level.tenant.name,
+                        variant: "default" as const,
+                        className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                      },
+                    ]
+                  : []),
+              ],
             }}
             footer={
               canManage

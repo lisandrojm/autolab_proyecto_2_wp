@@ -66,18 +66,22 @@ type ListParams = {
 
 /* ========= Normalizadores ligeros ========= */
 function normalizeTenant(raw: any): TenantRef | undefined {
-  // Puede venir como raw.tenant {_id, slug, name} o como raw.tenantId/string
-  const t = raw?.tenant ?? {};
-  const idLike = t?._id ?? raw?.tenantId ?? t?.id ?? (typeof t === "string" ? t : undefined);
+  // Prioridad 1: Objeto completo en raw.tenant o raw.tenantId
+  const obj = raw?.tenant || (typeof raw?.tenantId === "object" ? raw.tenantId : undefined) || {};
 
-  const id = typeof idLike === "string" && /^[a-f\d]{24}$/i.test(idLike) ? (idLike as ObjectIdString) : undefined;
+  // Prioridad 2: ID explícito en el objeto o ID string en raw.tenantId
+  const idLike = obj._id || obj.id || (typeof raw?.tenantId === "string" ? raw.tenantId : undefined);
 
-  if (!id) return undefined;
+  // Validar formato ObjectId
+  if (!idLike || typeof idLike !== "string" || !/^[a-f\d]{24}$/i.test(idLike)) {
+    return undefined;
+  }
 
-  const slug = t?.slug ?? raw?.tenantSlug ?? undefined;
-  const name = t?.name ?? raw?.tenantName ?? undefined;
+  // Extraer slug y name si existen en el objeto encontrado o en propiedades planas
+  const slug = obj.slug || raw?.tenantSlug;
+  const name = obj.name || raw?.tenantName;
 
-  return { _id: id, slug, name };
+  return { _id: idLike as ObjectIdString, slug, name };
 }
 
 function normalizeClient(raw: any): Client {

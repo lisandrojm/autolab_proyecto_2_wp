@@ -253,7 +253,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
               General
             </button>
             <button className={tabClass(activeTab === "types")} onClick={() => setActiveTab("types")}>
-              Tipos de Novedades
+              Tipos de ausencias
             </button>
             <button className={tabClass(activeTab === "project")} onClick={() => setActiveTab("project")}>
               Frecuencia
@@ -427,7 +427,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center bg-gray-50/50 dark:bg-gray-800/50">
                   <div className="flex items-center gap-4 me-4">
-                    <span className="text-lg font-semibold text-gray-900 dark:text-white">Gestión de Tipos</span>
+                    <span className="text-lg font-semibold text-gray-900 dark:text-white">Gestión de Tipos de Ausencias</span>
                     <button onClick={() => setOpenTypesInfo(true)} className="text-gray-400 hover:text-blue-600">
                       <FontAwesomeIcon icon={faInfoCircle} />
                     </button>
@@ -472,7 +472,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
                         <tr>
                           <th className="py-4 px-6 w-16 text-center">Ordenar</th>
                           <th className="py-4 px-6 w-16 text-center">Orden</th>
-                          <th className="py-4 px-6">Tipo</th>
+                          <th className="py-4 px-6">Tipo de ausencia</th>
                           <th className="py-4 px-6 text-center">Visibilidad</th>
                           <th className="py-4 px-6 text-center">Reemplazo Opcional</th>
                           <th className="py-4 px-6 text-center">Estado</th>
@@ -783,10 +783,10 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
       >
         <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
           <p>
-            <strong>Global:</strong> La novedad está disponible para todos los proyectos
+            <strong>Global:</strong> El tipo de ausencia está disponible para todos los proyectos
           </p>
           <p>
-            <strong>Específico:</strong> La novedad solo estará disponible en los proyectos que selecciones manualmente.
+            <strong>Específico:</strong> El tipo de ausencia solo estará disponible en los proyectos que selecciones manualmente.
           </p>
         </div>
       </Modal>

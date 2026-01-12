@@ -215,6 +215,13 @@ export const ManageAreasPage: React.FC = () => {
         ],
         content: viewArea ? (
           <div className="space-y-6">
+            {/* Tenant Badge */}
+            {viewArea.tenant?.name && (
+              <div>
+                <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewArea.tenant.name}</span>
+              </div>
+            )}
+
             {/* Descripción */}
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
@@ -276,6 +283,16 @@ export const ManageAreasPage: React.FC = () => {
                 title: area.name,
                 subtitle: area.description,
                 icon: faLayerGroup,
+                badges:
+                  area.tenant && area.tenant.name
+                    ? [
+                        {
+                          text: area.tenant.name,
+                          variant: "default" as const,
+                          className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                        },
+                      ]
+                    : [],
               }}
               footer={
                 canManage

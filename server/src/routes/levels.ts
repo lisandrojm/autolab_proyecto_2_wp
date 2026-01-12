@@ -38,13 +38,19 @@ const updateLevelSchema = z.object({
 // GET /levels/count - Contar niveles
 router.get("/count", requireTenant, authenticateToken, requirePermission("admin_levels:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
+
+    if (!isSuperAdmin) {
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
 
-    const count = await Level.countDocuments({ tenantId });
+    const count = await Level.countDocuments(filter);
     res.json({ count });
   } catch (error) {
     console.error("Count levels error:", error);
@@ -56,15 +62,18 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_levels:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 100, name, positionId } = req.query;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
 
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      console.warn("[levels GET] Invalid tenantId:", req.tenantObjectId);
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    if (!isSuperAdmin) {
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        console.warn("[levels GET] Invalid tenantId:", req.tenantObjectId);
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
-
-    const filter: any = { tenantId };
 
     if (name) {
       filter.name = { $regex: name, $options: "i" };
@@ -81,7 +90,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_level
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [levels, total] = await Promise.all([Level.find(filter).populate("positionId", "name").sort({ name: 1 }).skip(skip).limit(Number(limit)), Level.countDocuments(filter)]);
+    const [levels, total] = await Promise.all([Level.find(filter).populate("tenantId", "name slug").populate("positionId", "name").sort({ name: 1 }).skip(skip).limit(Number(limit)), Level.countDocuments(filter)]);
 
     res.json({
       levels,
@@ -164,6 +173,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_leve
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_levels:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const levelId = toObjectIdOrNull(req.params.id);
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
 
     if (!levelId) {
@@ -172,16 +182,18 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_le
       return;
     }
 
-    if (!tenantId) {
-      console.warn("[levels GET :id] Invalid tenantId:", req.tenantObjectId);
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const query: any = { _id: levelId };
+
+    if (!isSuperAdmin) {
+      if (!tenantId) {
+        console.warn("[levels GET :id] Invalid tenantId:", req.tenantObjectId);
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      query.tenantId = tenantId;
     }
 
-    const level = await Level.findOne({
-      _id: levelId,
-      tenantId,
-    }).populate("positionId", "name");
+    const level = await Level.findOne(query).populate("positionId", "name");
 
     if (!level) {
       res.status(404).json({ error: "Nivel no encontrado" });

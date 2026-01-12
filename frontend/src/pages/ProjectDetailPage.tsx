@@ -11,7 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBullseye, faEdit, faUsers, faInfoCircle, faBriefcase, faFileLines, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faUsers, faInfoCircle, faBriefcase, faFileLines, faClock } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -261,6 +261,7 @@ export const ProjectDetailPage: React.FC = () => {
     }
     if (modalMode === "viewProjectInfo") {
       return [
+        { label: "Editar", onClick: () => setModalMode("editProject"), variant: "primary" as const },
         { label: "Equipo del Proyecto", onClick: () => setModalMode("viewProjectTeam"), variant: "secondary" as const },
         { label: "Cerrar", onClick: closeModal, variant: "ghost" as const },
       ];
@@ -514,26 +515,6 @@ export const ProjectDetailPage: React.FC = () => {
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{project.description || "Sin descripción proporcionada."}</p>
                 </div>
 
-                {/* Objetivos */}
-                {project.objectives && project.objectives.length > 0 && project.objectives.some((o) => o.trim()) && (
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FontAwesomeIcon icon={faBullseye} className="text-blue-500 h-4 w-4" />
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Objetivos</h4>
-                    </div>
-                    <ul className="space-y-2">
-                      {project.objectives
-                        .filter((o) => o.trim())
-                        .map((obj, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                            <span className="text-blue-500 mt-1">•</span>
-                            {obj}
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                )}
-
                 {/* Horario de Trabajo */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
                   <div className="flex items-center gap-2 mb-3">
@@ -612,20 +593,20 @@ export const ProjectDetailPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Estadísticas */}
+                {/* Estadísticas / Fechas */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
                   <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{assignedUsers.length}</div>
+                    <div className="border-r border-gray-200 dark:border-gray-700">
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">{assignedUsers.length}</div>
                       <div className="text-xs text-gray-500">Personas</div>
                     </div>
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{project.objectives?.filter((o) => o.trim()).length || 0}</div>
-                      <div className="text-xs text-gray-500">Objetivos</div>
+                    <div className="border-r border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-900 dark:text-white pt-1">{project.startDate ? new Date(project.startDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
+                      <div className="text-xs text-gray-500 mt-1">Inicio</div>
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"}</div>
-                      <div className="text-xs text-gray-500">Creado</div>
+                      <div className="text-sm font-bold text-gray-900 dark:text-white pt-1">{project.endDate ? new Date(project.endDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
+                      <div className="text-xs text-gray-500 mt-1">Fin</div>
                     </div>
                   </div>
                 </div>

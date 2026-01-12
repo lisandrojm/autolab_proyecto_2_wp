@@ -500,6 +500,7 @@ export const UsersPage: React.FC = () => {
               <div className="flex flex-col items-end gap-2">
                 <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewUser.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
                 {viewUser.primaryRole && <span className="inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 uppercase tracking-wider">{viewUser.primaryRole}</span>}
+                {viewUser.tenant && viewUser.tenant.name && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewUser.tenant.name}</span>}
               </div>
             </div>
 
@@ -1004,6 +1005,15 @@ export const UsersPage: React.FC = () => {
                 subtitle: user.email,
                 icon: faUser,
                 badges: [
+                  ...(user.tenant && user.tenant.name
+                    ? [
+                        {
+                          text: user.tenant.name,
+                          variant: "default" as const,
+                          className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                        },
+                      ]
+                    : []),
                   {
                     text: user.isActive ? "Activo" : "Inactivo",
                     variant: user.isActive ? "green" : "destructive",

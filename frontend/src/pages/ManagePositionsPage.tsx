@@ -227,6 +227,13 @@ export const PositionsPage: React.FC = () => {
         ],
         content: viewPosition ? (
           <div className="space-y-6">
+            {/* Tenant Badge */}
+            {viewPosition.tenant?.name && (
+              <div>
+                <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewPosition.tenant.name}</span>
+              </div>
+            )}
+
             {/* Descripción */}
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
@@ -360,6 +367,16 @@ export const PositionsPage: React.FC = () => {
                 title: position.name,
                 subtitle: position.description,
                 icon: faUserTie,
+                badges:
+                  position.tenant && position.tenant.name
+                    ? [
+                        {
+                          text: position.tenant.name,
+                          variant: "default" as const,
+                          className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                        },
+                      ]
+                    : [],
               }}
               footer={
                 canManage

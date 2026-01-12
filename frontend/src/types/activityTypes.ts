@@ -22,6 +22,7 @@ export interface AttendanceRecord {
 
 export interface ActivityReport {
   id: string;
+  reportNumber?: string;
   date: string; // Fecha del reporte
   formName: string; // Área / Formulario (e.g. "Técnica mañana")
   projectName: string; // Nombre del proyecto

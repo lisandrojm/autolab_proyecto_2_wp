@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isFuture, isToday, isBefore, isAfter, getDate, startOfDay } from "date-fns";
+import { es } from "date-fns/locale";
 import { activityLogTypesAPI, ActivityLogType } from "../../../../api/activityLogTypes";
 
 import { activityReportsAPI, ActivityReport } from "../../../../api/activityReports";
 import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -49,15 +51,18 @@ interface ActivityLogsProps {
 }
 
 const getProjectEndTime = (project: Project, dateStr: string): string => {
-  if (!project.workSchedule) return "18:00";
-
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   const dayIndex = date.getDay(); // 0 is Sunday, 1 is Monday...
-  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  const dayName = dayNames[dayIndex];
+
+  if (!project.workSchedule) {
+    if (dayIndex === 0 || dayIndex === 6) return "";
+    return "18:00";
+  }
 
   const { mode, weekdays, weekend, days } = project.workSchedule;
+  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const dayName = dayNames[dayIndex];
 
   // Helper to check if it's a work day (defaults to true if endTime is present)
   const isWorkDay = (dayConfig: any) => {
@@ -89,7 +94,7 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
   }
 
   // Fallback
-  return weekdays?.endTime || "18:00";
+  return "";
 };
 
 const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: string): string => {
@@ -110,11 +115,15 @@ const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: strin
 };
 
 const getProjectStartTime = (project: Project, dateStr: string): string => {
-  if (!project.workSchedule) return "09:00";
-
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   const dayIndex = date.getDay(); // 0 is Sunday, 1 is Monday...
+
+  if (!project.workSchedule) {
+    if (dayIndex === 0 || dayIndex === 6) return "";
+    return "09:00";
+  }
+
   const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const dayName = dayNames[dayIndex];
 
@@ -150,7 +159,7 @@ const getProjectStartTime = (project: Project, dateStr: string): string => {
   }
 
   // Fallback
-  return weekdays?.startTime || "09:00";
+  return "";
 };
 
 const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: string): string => {
@@ -201,6 +210,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [draftOvertimeHours, setDraftOvertimeHours] = useState<number>(0);
   const [draftOutTime, setDraftOutTime] = useState<string>("");
   const [draftInTime, setDraftInTime] = useState<string>("");
+  const [attendanceStatus, setAttendanceStatus] = useState<"present" | "absent" | null>(null);
+  const [showOvertimeForm, setShowOvertimeForm] = useState<boolean>(false);
+  const [noveltyCategory, setNoveltyCategory] = useState<"absence" | "overtime" | null>(null);
 
   // Config & Wizard State
   const [showProcessedHistory, setShowProcessedHistory] = useState(false);
@@ -217,6 +229,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [reports, setReports] = useState<ActivityReport[]>([]);
+
+  // Calendar State
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(new Date());
 
   useEffect(() => {
     loadData();
@@ -407,7 +423,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const isFastEntryEnabled = useMemo(() => {
     // 1. Check Project Specific Config
     if (selectedProject?.activityLogConfig) {
-      const { useGlobalConfig, enableFastEntry } = selectedProject.activityLogConfig;
+      const { enableFastEntry } = selectedProject.activityLogConfig;
 
       // If we have a specific setting (useGlobalConfig is false, or just purely relying on enableFastEntry if present)
       // Since we deprecated global config, we treat enableFastEntry as the source of truth if defined.
@@ -455,6 +471,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     // Reset builder
     setSelectedEmployee(null);
     setSearchTerm("");
+    setNoveltyCategory(null);
+    setAttendanceStatus(null);
+    setShowOvertimeForm(false);
     setDraftTypeId("");
     setDraftReplacementId("");
     setDraftOvertimeHours(0);
@@ -463,12 +482,20 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setIsEmployeeSelectOpen(false);
   };
 
-  const handleAddRecord = () => {
-    if (!selectedEmployee || !draftTypeId) return;
+  const handleAddRecord = (): boolean => {
+    if (!selectedEmployee || !draftTypeId) return false;
     const type = logTypes.find((t) => t._id === draftTypeId);
-    if (!type) return;
+    if (!type) return false;
+
+    if (type.name.toLowerCase().includes("horas extra")) {
+      if (!draftOvertimeHours || draftOvertimeHours <= 0) {
+        sweetAlert.warning("Atención", "La cantidad de horas extras debe ser mayor a 0.");
+        return false;
+      }
+    }
 
     addRecordInternal(selectedEmployee, type, draftReplacementId, draftOvertimeHours);
+    return true;
   };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -539,6 +566,70 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setWizardData(initData);
   };
 
+  // Calendar Helpers
+  const generateCalendarDays = () => {
+    const monthStart = startOfMonth(viewDate);
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday start
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+    return eachDayOfInterval({
+      start: startDate,
+      end: endDate,
+    });
+  };
+
+  const isProjectWorkDay = (day: Date) => {
+    const project = userProjects.find((p) => p._id === selectedProjectId);
+    if (!project) return false;
+
+    const dateStr = format(day, "yyyy-MM-dd");
+
+    // Project Duration Check
+    if (project.startDate) {
+      // Parse explicitly as local date YYYY-MM-DD
+      const [y, m, d] = project.startDate.split("T")[0].split("-").map(Number);
+      const pStart = startOfDay(new Date(y, m - 1, d));
+      if (isBefore(day, pStart)) return false;
+    }
+    if (project.endDate) {
+      const [y, m, d] = project.endDate.split("T")[0].split("-").map(Number);
+      const pEnd = startOfDay(new Date(y, m - 1, d));
+      // Use endOfDay logic or just compare?
+      // If today is 2026-01-31 and end is 2026-01-31, isAfter should handle it if we compare timestamps.
+      // Actually, if project ends at 2026-01-31, "day" (which represents 00:00 of that day) is NOT after.
+      // If day is 31st (00:00) and pEnd is 31st (00:00), isAfter is false. OK.
+      // If day is Feb 1st (00:00) and pEnd is 31st (00:00), isAfter is true. OK.
+      if (isAfter(day, pEnd)) return false;
+    }
+
+    // Work Schedule Check
+    // Use getProjectEndTime to determine if it is a working day (returns "" if not)
+    return getProjectEndTime(project, dateStr) !== "";
+  };
+
+  const hasReport = (day: Date) => {
+    const dateStr = format(day, "yyyy-MM-dd");
+    return reports.some((r) => {
+      const reportDateStr = typeof r.date === "string" ? r.date.split("T")[0] : "";
+      const rProjectId = typeof r.projectId === "object" ? (r.projectId as any)._id : r.projectId;
+      return reportDateStr === dateStr && rProjectId === selectedProjectId;
+    });
+  };
+
+  const handleDateSelect = async (day: Date) => {
+    if (!selectedProjectId) return;
+
+    if (isFuture(day) && !isToday(day)) return;
+    if (hasReport(day)) return;
+    if (!isProjectWorkDay(day)) return; // Strict project day check
+
+    const formattedDate = format(day, "yyyy-MM-dd");
+    setReportDate(formattedDate);
+    setCalendarOpen(false);
+  };
+
+  // ===================== WIZARD LOGIC REPAIRED =====================
   const updateWizardEntry = (employeeId: string, updates: Partial<WizardEntry>) => {
     setWizardData((prev) => ({
       ...prev,
@@ -547,7 +638,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   const handleWizardNext = () => {
-    // If we are at the last employee, finalize instead of going to next index
     if (wizardIndex >= projectEmployees.length - 1) {
       finalizeWizard();
     } else {
@@ -562,15 +652,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   const finalizeWizard = () => {
-    // Convert wizardData to entries
     const newEntries: LocalAttendanceRecord[] = [];
     let hasAnomalies = false;
 
-    projectEmployees.forEach((emp, idx) => {
+    projectEmployees.forEach((emp) => {
       const data = wizardData[emp.id];
       if (!data) return;
 
-      // If Absent
       if (data.status === "absent" && data.typeId) {
         hasAnomalies = true;
         const type = logTypes.find((t) => t._id === data.typeId);
@@ -588,7 +676,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       // If Present but Overtime
       else if (data.status === "present" && (data.overtimeHours || 0) > 0) {
         hasAnomalies = true;
-        // Find Overtime Type
         const otType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
         if (otType) {
           newEntries.push({
@@ -636,7 +723,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     // Auto-save pending draft if valid
     if (hasActivity && selectedEmployee && draftTypeId) {
-      handleAddRecord();
+      const added = handleAddRecord();
+      if (!added) return;
     }
 
     // Check for empty activity report
@@ -762,43 +850,45 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     // Simplified logic for edit mapping
     if (report.attendance && report.attendance.length > 0) {
       setHasActivity(true);
-      const mappedEntries: LocalAttendanceRecord[] = report.attendance.map((att, idx) => {
-        // Reconstruct Type from absenceReason or overtime
-        let typeId = "";
-        let typeName = att.absenceReason || "Desconocido";
+      const mappedEntries: LocalAttendanceRecord[] = report.attendance
+        .map((att, idx) => {
+          // Reconstruct Type from absenceReason or overtime
+          let typeId = "";
+          let typeName = att.absenceReason || "Presente";
 
-        if ((att.overtimeHours || 0) > 0) {
-          // Try to find an overtime type
-          const otType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
-          if (otType) {
-            typeId = otType._id;
-            typeName = otType.name;
+          if ((att.overtimeHours || 0) > 0) {
+            // Try to find an overtime type
+            const otType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
+            if (otType) {
+              typeId = otType._id;
+              typeName = otType.name;
+            }
+          } else {
+            const rType = logTypes.find((t) => t.name === att.absenceReason);
+            if (rType) {
+              typeId = rType._id;
+              typeName = rType.name;
+            }
           }
-        } else {
-          const rType = logTypes.find((t) => t.name === att.absenceReason);
-          if (rType) {
-            typeId = rType._id;
-            typeName = rType.name;
-          }
-        }
 
-        const empId = typeof att.employeeId === "object" ? att.employeeId._id : att.employeeId;
-        const emp = employees.find((e) => e.id === empId);
-        const repId = typeof att.replacementId === "object" ? att.replacementId._id : att.replacementId;
-        const rep = employees.find((e) => e.id === repId);
+          const empId = typeof att.employeeId === "object" ? att.employeeId._id : att.employeeId;
+          const emp = employees.find((e) => e.id === empId);
+          const repId = typeof att.replacementId === "object" ? att.replacementId._id : att.replacementId;
+          const rep = employees.find((e) => e.id === repId);
 
-        return {
-          tempId: idx.toString(),
-          employeeId: empId,
-          employeeName: emp ? emp.name : "Desconocido",
-          typeId,
-          typeName,
-          replacementId: repId,
-          replacementName: rep ? rep.name : undefined,
-          overtimeHours: att.overtimeHours,
-          notes: att.notes,
-        };
-      });
+          return {
+            tempId: idx.toString(),
+            employeeId: empId,
+            employeeName: emp ? emp.name : "Desconocido",
+            typeId,
+            typeName,
+            replacementId: repId,
+            replacementName: rep ? rep.name : undefined,
+            overtimeHours: att.overtimeHours,
+            notes: att.notes,
+          };
+        })
+        .filter((entry) => entry.typeName !== "Presente" || (entry.overtimeHours || 0) > 0);
       setEntries(mappedEntries);
     } else {
       setHasActivity(false);
@@ -843,6 +933,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setHasActivity(null);
     setEntries([]); // Clear entries for new report
     setSelectedEmployee(null);
+    setNoveltyCategory(null);
+    setAttendanceStatus(null);
+    setShowOvertimeForm(false);
     setSearchTerm("");
     setComments("");
     // Wizard Reset
@@ -925,13 +1018,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
               <div className="overflow-y-auto p-4 space-y-6 flex-1">
                 <div className="space-y-6">
-                  {/* Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
-                    <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
-                  </div>
-
-                  {/* Project Selector */}
+                  {/* Project Selector - Moved to Top */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente | Proyecto</label>
                     {userProjects.length > 0 ? (
@@ -953,6 +1040,138 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">No hay proyectos asignados.</div>
                     )}
                   </div>
+
+                  {/* Date - Moved Below Project */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
+                    <div onClick={() => selectedProjectId && setCalendarOpen(true)} className={`relative w-full px-4 py-2 border rounded flex items-center justify-between transition-colors ${!selectedProjectId ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 cursor-pointer focus-within:ring-2 focus-within:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500"}`}>
+                      <span className={`text-sm ${!reportDate ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Seleccionar fecha"}</span>
+                      <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                    </div>
+                    {!selectedProjectId && <p className="text-xs text-orange-500 mt-1">Selecciona un proyecto primero</p>}
+                  </div>
+
+                  {/* Calendar Modal */}
+                  {calendarOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                          <div className="flex flex-col">
+                            {selectedProjectId && (
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wider mb-0.5">
+                                <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                                <span className="text-slate-500 dark:text-slate-400 uppercase">PROYECTO</span>
+                                <span className="text truncate max-w-[150px]">{userProjects.find((p) => p._id === selectedProjectId)?.name || "Proyecto"}</span>
+                              </div>
+                            )}
+                            <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
+                              <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
+                                <FontAwesomeIcon icon={faChevronLeft} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
+                              </button>
+                              <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
+                                <FontAwesomeIcon icon={faChevronRight} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
+                              </button>
+                            </div>
+                            <button onClick={() => setCalendarOpen(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ml-1">
+                              <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="p-4">
+                          <div className="grid grid-cols-7 mb-2 text-center">
+                            {["L", "M", "M", "J", "V", "S", "D"].map((day, index) => (
+                              <div key={index} className="text-xs font-bold text-slate-400">
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-7 gap-y-1">
+                            {generateCalendarDays().map((day, idx) => {
+                              const isCurrentMonth = isSameMonth(day, viewDate);
+                              const formattedDay = format(day, "yyyy-MM-dd");
+                              const isReported = hasReport(day);
+                              const isFutureDate = isFuture(day) && !isToday(day);
+                              const isSelected = reportDate === formattedDay;
+                              const isProjectDay = isProjectWorkDay(day);
+
+                              // Style Classes
+                              let bgClass = "transparent";
+                              let textClass = "text-slate-700 dark:text-slate-300";
+                              let cursorClass = "cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-700";
+                              let borderClass = "border border-transparent";
+
+                              if (!isCurrentMonth) {
+                                textClass = "text-slate-300 dark:text-slate-600";
+                                cursorClass = "cursor-default";
+                              } else if (!isProjectDay) {
+                                // Non-working day or outside project duration
+                                textClass = "text-gray-300 dark:text-gray-600";
+                                cursorClass = "cursor-not-allowed opacity-60";
+                              } else {
+                                // Valid Project Day
+                                textClass = "text-blue-600 dark:text-blue-400 font-semibold";
+                              }
+
+                              if (isReported) {
+                                bgClass = "bg-red-50 dark:bg-red-900/20";
+                                textClass = "text-red-400 dark:text-red-400 line-through decoration-red-400/50";
+                                cursorClass = "cursor-not-allowed opacity-70";
+                                borderClass = "border border-red-100 dark:border-red-900/30";
+                              }
+
+                              if (isFutureDate) {
+                                // Only override text color if it's NOT a project day. If it IS, keep it blue (from above) but show opacity.
+                                if (!isProjectDay) {
+                                  textClass = "text-slate-300 dark:text-slate-600";
+                                }
+                                cursorClass = "cursor-not-allowed opacity-40";
+                              }
+
+                              if (isSelected) {
+                                bgClass = "bg-blue-500 text-white shadow-md shadow-blue-500/30";
+                                textClass = "text-white";
+                                cursorClass = "cursor-default";
+                              }
+
+                              // Disable interaction for invalid days
+                              const isDisabled = isFutureDate || isReported || !isProjectDay || (!isCurrentMonth && !isSelected);
+
+                              return (
+                                <div key={idx} className="flex justify-center py-0.5">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (!isDisabled) handleDateSelect(day);
+                                    }}
+                                    disabled={isDisabled}
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all relative ${bgClass} ${textClass} ${cursorClass} ${borderClass}`}
+                                  >
+                                    {getDate(day)}
+                                    {isReported && <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-red-500"></div>}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-red-500/50"></span>
+                            <span>Reporte existente</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                            <span>Días Proyecto</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sticky Project Info Bar - Moved below select as requested */}
@@ -1002,192 +1221,214 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               const isPresent = data.status === "present";
 
                               return (
-                                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
-                                  {/* Header: Progress & Name */}
-                                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-700">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                          Colaborador {wizardIndex + 1} de {projectEmployees.length}
-                                        </span>
-                                        {wizardIndex > 0 && (
-                                          <div onClick={() => setShowProcessedHistory(true)} className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors">
-                                            <span className="text-[10px] font-bold">{wizardIndex} Cargados</span>
-                                            <FontAwesomeIcon icon={faInfoCircle} className="text-[10px]" />
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex gap-1">
-                                        {Array.from({ length: Math.min(projectEmployees.length + 1, 6) }).map((_, i) => (
-                                          <div key={i} className={`h-1.5 w-6 rounded-full ${i <= (wizardIndex * 5) / projectEmployees.length ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"}`} />
-                                        ))}
-                                      </div>
-                                    </div>
-                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
-                                      {currentEmp.name}
-                                    </h3>
-                                    <span className="text-xs text-slate-500 dark:text-gray-400 mt-1 ml-10">{currentEmp.positionName || "Colaborador"}</span>
-                                  </div>
-
-                                  <div className="p-5 space-y-6">
-                                    {/* 1. Presence Toggle */}
-                                    <div>
-                                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
-                                      <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                                        <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm ${isPresent ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow" : "text-gray-500"}`}>
-                                          {/*                                           <FontAwesomeIcon icon={faCheck} className="mr-2" /> */}
-                                          SÍ
-                                        </button>
-                                        <button onClick={() => updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm ${!isPresent ? "bg-white dark:bg-slate-600 text-red-500 shadow" : "text-gray-500"}`}>
-                                          {/*                                           <FontAwesomeIcon icon={faTimes} className="mr-2" /> */}
-                                          NO
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {/* 2. Logic based on Presence */}
-                                    {isPresent ? (
-                                      <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                        {/* Overtime Toggle */}
-                                        <div className="flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
-                                          <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                                            <input
-                                              type="checkbox"
-                                              name="toggle"
-                                              id="toggle-ot"
-                                              checked={data.overtimeHours !== undefined}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  // Enable OT
-                                                  updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
-                                                } else {
-                                                  updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
-                                                }
-                                              }}
-                                              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                                              style={{ right: data.overtimeHours !== undefined ? "0" : "auto", left: data.overtimeHours !== undefined ? "auto" : "0" }}
-                                            />
-                                            <label htmlFor="toggle-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${data.overtimeHours !== undefined ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
-                                          </div>
+                                <>
+                                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+                                    {/* Header: Progress & Name */}
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-700">
+                                      <div className="flex justify-between items-center mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                            Colaborador {wizardIndex + 1} de {projectEmployees.length}
+                                          </span>
                                         </div>
+                                        <div className="flex gap-1">
+                                          {Array.from({ length: Math.min(projectEmployees.length + 1, 6) }).map((_, i) => (
+                                            <div key={i} className={`h-1.5 w-6 rounded-full ${i <= (wizardIndex * 5) / projectEmployees.length ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"}`} />
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
+                                        {currentEmp.name}
+                                      </h3>
+                                      <span className="text-xs text-slate-500 dark:text-gray-400 mt-1 ml-10">{currentEmp.positionName || "Colaborador"}</span>
+                                    </div>
 
-                                        {/* Overtime Details */}
-                                        {data.overtimeHours !== undefined && (
-                                          <div className="space-y-4 pt-2">
-                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 pb-2">
-                                              <span>Horario Entrada Proyecto:</span>
-                                              <span className="font-bold text-slate-700 dark:text-slate-200">
-                                                {(() => {
-                                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                                  return proj ? getEmployeeStartTime(proj, currentEmp.id, reportDate) || "No laboral" : "—";
-                                                })()}
-                                              </span>
-                                            </div>
+                                    <div className="p-5 space-y-6">
+                                      {/* 1. Presence Toggle */}
+                                      <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
+                                        <div className="flex gap-3">
+                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
+                                            SÍ
+                                          </button>
+                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${!isPresent ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
+                                            NO
+                                          </button>
+                                        </div>
+                                      </div>
 
-                                            <div>
-                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
+                                      {/* 2. Logic based on Presence */}
+                                      {isPresent ? (
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                          {/* Overtime Toggle */}
+                                          <div className="flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
+                                            <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                                               <input
-                                                type="time"
-                                                className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                                                value={data.inTime || ""}
+                                                type="checkbox"
+                                                name="toggle"
+                                                id="toggle-ot"
+                                                checked={data.overtimeHours !== undefined}
                                                 onChange={(e) => {
-                                                  const val = e.target.value;
-                                                  updateWizardEntry(currentEmp.id, { inTime: val });
+                                                  if (e.target.checked) {
+                                                    // Enable OT
+                                                    updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
+                                                  } else {
+                                                    updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
+                                                  }
                                                 }}
+                                                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                                                style={{ right: data.overtimeHours !== undefined ? "0" : "auto", left: data.overtimeHours !== undefined ? "auto" : "0" }}
                                               />
+                                              <label htmlFor="toggle-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${data.overtimeHours !== undefined ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
                                             </div>
+                                          </div>
 
-                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700 pb-2 pt-2">
-                                              <span>Horario Salida Proyecto:</span>
-                                              <span className="font-bold text-slate-700 dark:text-slate-200">
-                                                {(() => {
-                                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                                  return proj ? getEmployeeEndTime(proj, currentEmp.id, reportDate) || "No laboral" : "—";
-                                                })()}
-                                              </span>
-                                            </div>
-
-                                            <div>
-                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Real</label>
-                                              <input
-                                                type="time"
-                                                className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                                                value={data.outTime || ""}
-                                                onChange={(e) => {
-                                                  const val = e.target.value;
-                                                  updateWizardEntry(currentEmp.id, { outTime: val });
-                                                }}
-                                              />
-                                            </div>
-                                            <div>
-                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
-                                              <div className="flex gap-2 items-center">
-                                                <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white font-bold text-blue-600 dark:text-blue-400" value={data.overtimeHours || 0} onChange={(e) => updateWizardEntry(currentEmp.id, { overtimeHours: parseFloat(e.target.value) })} />
+                                          {/* Overtime Details */}
+                                          {data.overtimeHours !== undefined && (
+                                            <div className="space-y-4 pt-2">
+                                              {/* Unified Schedule Info */}
+                                              <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
+                                                <div className="text-center">
+                                                  <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Teórica</span>
+                                                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                                    {(() => {
+                                                      const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                                      return proj ? getEmployeeStartTime(proj, currentEmp.id, reportDate) || "—" : "—";
+                                                    })()}
+                                                  </span>
+                                                </div>
+                                                <div className="text-center">
+                                                  <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Teórica</span>
+                                                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                                    {(() => {
+                                                      const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                                      return proj ? getEmployeeEndTime(proj, currentEmp.id, reportDate) || "—" : "—";
+                                                    })()}
+                                                  </span>
+                                                </div>
                                               </div>
-                                            </div>
-                                            <p className="text-[10px] text-slate-400 italic">Este valor se puede ajustar manualmente.</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      /* Absent Logic */
-                                      <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                        <div>
-                                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
-                                          <select
-                                            className="w-full p-3 rounded border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500"
-                                            value={data.typeId || ""}
-                                            onChange={(e) => {
-                                              const newId = e.target.value;
-                                              // Reset replacement if type doesn't need it
-                                              const type = logTypes.find((t) => t._id === newId);
-                                              updateWizardEntry(currentEmp.id, {
-                                                typeId: newId,
-                                                replacementId: type?.requiresReplacement ? data.replacementId : undefined,
-                                              });
-                                            }}
-                                          >
-                                            <option value="">Seleccionar motivo...</option>
-                                            {logTypes
-                                              .filter((t) => !t.name.toLowerCase().includes("horas extra") && t.isActive) // Filter out Overtime type
-                                              .map((t) => (
-                                                <option key={t._id} value={t._id}>
-                                                  {t.name}
-                                                </option>
-                                              ))}
-                                          </select>
-                                        </div>
 
-                                        {/* Replacement */}
-                                        {(() => {
-                                          const type = logTypes.find((t) => t._id === data.typeId);
-                                          if (type?.requiresReplacement) {
-                                            return (
                                               <div>
-                                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Reemplazo (Opcional)</label>
-                                                <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.replacementId || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementId: e.target.value })}>
-                                                  <option value="">Sin reemplazo</option>
-                                                  {employees
-                                                    .filter((e) => e.id !== currentEmp.id)
-                                                    .map((e) => (
-                                                      <option key={e.id} value={e.id}>
-                                                        {e.name}
-                                                      </option>
-                                                    ))}
-                                                </select>
+                                                <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
+                                                <input
+                                                  type="time"
+                                                  className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                                                  value={data.inTime || ""}
+                                                  onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    updateWizardEntry(currentEmp.id, { inTime: val });
+                                                  }}
+                                                />
                                               </div>
-                                            );
-                                          }
-                                          return null;
-                                        })()}
-                                      </div>
-                                    )}
 
-                                    {/* Processed History Summary (Moved Inside Content) */}
+                                              <div>
+                                                <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Real</label>
+                                                <input
+                                                  type="time"
+                                                  className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                                                  value={data.outTime || ""}
+                                                  onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    updateWizardEntry(currentEmp.id, { outTime: val });
+                                                  }}
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                                                <div className="flex gap-2 items-center">
+                                                  <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 font-bold text-blue-600 dark:text-blue-400" value={data.overtimeHours || 0} onChange={(e) => updateWizardEntry(currentEmp.id, { overtimeHours: parseFloat(e.target.value) })} />
+                                                </div>
+                                              </div>
+                                              <p className="text-[10px] text-slate-400 italic">Este valor se puede ajustar manualmente.</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        /* Absent Logic */
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                          <div>
+                                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
+                                            <select
+                                              className="w-full p-3 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                              value={data.typeId || ""}
+                                              onChange={(e) => {
+                                                const newId = e.target.value;
+                                                // Reset replacement if type doesn't need it
+                                                const type = logTypes.find((t) => t._id === newId);
+                                                updateWizardEntry(currentEmp.id, {
+                                                  typeId: newId,
+                                                  replacementId: type?.requiresReplacement ? data.replacementId : undefined,
+                                                });
+                                              }}
+                                            >
+                                              <option value="">Seleccionar motivo...</option>
+                                              {logTypes
+                                                .filter((t) => !t.name.toLowerCase().includes("horas extra") && t.isActive) // Filter out Overtime type
+                                                .map((t) => (
+                                                  <option key={t._id} value={t._id}>
+                                                    {t.name}
+                                                  </option>
+                                                ))}
+                                            </select>
+                                          </div>
+
+                                          {/* Replacement */}
+                                          {(() => {
+                                            const type = logTypes.find((t) => t._id === data.typeId);
+                                            if (type?.requiresReplacement) {
+                                              return (
+                                                <div>
+                                                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Reemplazo (Opcional)</label>
+                                                  <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.replacementId || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementId: e.target.value })}>
+                                                    <option value="">Sin reemplazo</option>
+                                                    {employees
+                                                      .filter((e) => e.id !== currentEmp.id)
+                                                      .map((e) => (
+                                                        <option key={e.id} value={e.id}>
+                                                          {e.name}
+                                                        </option>
+                                                      ))}
+                                                  </select>
+                                                </div>
+                                              );
+                                            }
+                                            return null;
+                                          })()}
+                                        </div>
+                                      )}
+
+                                      {/* Processed History Summary (Moved Inside Content) */}
+                                    </div>
                                   </div>
-                                </div>
+
+                                  {/* Processed History List (Moved to Bottom) */}
+                                  {wizardIndex > 0 && (
+                                    <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-bottom-2">
+                                      <h4 className="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider pl-1">Colaboradores Procesados ({wizardIndex})</h4>
+                                      <div className="space-y-2">
+                                        {projectEmployees.slice(0, wizardIndex).map((histEmp) => {
+                                          const histData = wizardData[histEmp.id];
+                                          const histIsPresent = histData?.status === "present";
+                                          const histType = histData?.typeId ? logTypes.find((t) => t._id === histData.typeId) : null;
+
+                                          return (
+                                            <div key={histEmp.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center opacity-75 grayscale-[0.3]">
+                                              <div>
+                                                <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
+                                                <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : histType?.name || "Ausente"}</div>
+                                              </div>
+                                              <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === histEmp.id))} className="text-xs text-blue-500 hover:underline">
+                                                Editar
+                                              </button>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               );
                             })()}
                             {/* History List was here, moved inside local Wizard block */}
@@ -1283,40 +1524,156 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                     </button>
                                   </div>
 
-                                  <div>
-                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Tipo de Novedad</label>
-                                    <select className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-shadow" value={draftTypeId} onChange={handleTypeChange}>
-                                      <option value="">Seleccionar tipo...</option>
-                                      {logTypes
-                                        .filter((t) => {
-                                          // Show global types always
-                                          if (t.visibility === "all") return true;
-                                          // Show specific types only if project is in allowedProjectIds
-                                          if (t.visibility === "specific" && selectedProjectId) {
-                                            return t.allowedProjectIds?.includes(selectedProjectId);
-                                          }
-                                          return false;
-                                        })
-                                        .map((t) => (
-                                          <option key={t._id} value={t._id}>
-                                            {t.name}
-                                          </option>
-                                        ))}
-                                    </select>
+                                  {/* ATTENDANCE STATUS SELECTOR */}
+                                  <div className="mb-4 animate-fade-in">
+                                    <label className="block text-center text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">¿Asistió al turno?</label>
+                                    <div className="flex gap-3">
+                                      <button
+                                        onClick={() => {
+                                          setAttendanceStatus("present");
+                                          setDraftTypeId("");
+                                          setNoveltyCategory(null); // Clear old category state if any
+                                        }}
+                                        className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${attendanceStatus === "present" ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                      >
+                                        SÍ
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setAttendanceStatus("absent");
+                                          setDraftTypeId("");
+                                          setShowOvertimeForm(false);
+                                        }}
+                                        className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${attendanceStatus === "absent" ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                      >
+                                        NO
+                                      </button>
+                                    </div>
                                   </div>
 
+                                  {/* LOGIC BASED ON STATUS */}
+                                  {attendanceStatus === "present" && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                      {/* Overtime Toggle */}
+                                      <div className="flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
+                                        <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                          <input
+                                            type="checkbox"
+                                            name="toggle-manual-ot"
+                                            id="toggle-manual-ot"
+                                            checked={showOvertimeForm}
+                                            onChange={(e) => {
+                                              const isChecked = e.target.checked;
+                                              setShowOvertimeForm(isChecked);
+                                              if (isChecked) {
+                                                // Auto-select overtime type
+                                                const overtimeType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
+                                                if (overtimeType) setDraftTypeId(overtimeType._id);
+                                                setDraftOvertimeHours(0);
+                                              } else {
+                                                setDraftTypeId("");
+                                                setDraftOvertimeHours(0);
+                                              }
+                                            }}
+                                            className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                                            style={{ right: showOvertimeForm ? "0" : "auto", left: showOvertimeForm ? "auto" : "0" }}
+                                          />
+                                          <label htmlFor="toggle-manual-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${showOvertimeForm ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {attendanceStatus === "absent" && (
+                                    <div className="animate-in fade-in slide-in-from-top-2">
+                                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
+                                      <select className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-shadow" value={draftTypeId} onChange={handleTypeChange}>
+                                        <option value="">Seleccionar motivo...</option>
+                                        {logTypes
+                                          .filter((t) => {
+                                            const canShow = t.visibility === "all" || (t.visibility === "specific" && selectedProjectId && t.allowedProjectIds?.includes(selectedProjectId));
+                                            if (!canShow) return false;
+                                            return !t.name.toLowerCase().includes("horas extra");
+                                          })
+                                          .map((t) => (
+                                            <option key={t._id} value={t._id}>
+                                              {t.name}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    </div>
+                                  )}
+
                                   {(() => {
+                                    // 1. If Overtime Mode is ON (via toggle)
+                                    if (showOvertimeForm) {
+                                      return (
+                                        <div className="bg-slate-50 dark:bg-slate-900/50 rounded p-3 space-y-3 border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
+                                          <div className="space-y-4 pt-2">
+                                            {/* Schedule Info */}
+                                            <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
+                                              <div className="text-center">
+                                                <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Teórica</span>
+                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                                  {(() => {
+                                                    const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                                    return proj && selectedEmployee ? getEmployeeStartTime(proj, selectedEmployee.id, reportDate) || "—" : "—";
+                                                  })()}
+                                                </span>
+                                              </div>
+                                              <div className="text-center">
+                                                <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Teórica</span>
+                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                                  {(() => {
+                                                    const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                                    return proj && selectedEmployee ? getEmployeeEndTime(proj, selectedEmployee.id, reportDate) || "—" : "—";
+                                                  })()}
+                                                </span>
+                                              </div>
+                                            </div>
+
+                                            {/* Entry Time */}
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
+                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftInTime} onChange={(e) => setDraftInTime(e.target.value)} />
+                                            </div>
+
+                                            {/* Exit Time */}
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Efectivo</label>
+                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)} />
+                                            </div>
+
+                                            {/* Hours */}
+                                            <div>
+                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                                              <div className="flex gap-2 items-center">
+                                                <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftOvertimeHours} onChange={(e) => setDraftOvertimeHours(parseFloat(e.target.value))} />
+                                              </div>
+                                              <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se calcula automáticamente, pero puedes ajustarlo si es necesario.</p>
+                                            </div>
+                                          </div>
+
+                                          <button onClick={handleAddRecord} disabled={!draftTypeId} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded mt-2 disabled:opacity-50 shadow-sm">
+                                            Confirmar Registro
+                                          </button>
+                                        </div>
+                                      );
+                                    }
+
+                                    // 2. Normal Logic (Absence or others selected via dropdown)
                                     const type = logTypes.find((t) => t._id === draftTypeId);
                                     if (!type) return null;
 
-                                    const isOvertime = type.name.toLowerCase().includes("horas extra");
+                                    // If we are here, it's NOT overtime (handled above) or we are in a weird state.
+                                    // But standard absences don't need extra fields usually, just "Confirm".
+                                    // Unless they need replacement.
+
                                     const needsReplacement = type.requiresReplacement;
 
-                                    // Only show extra fields if needed
-                                    if (!isOvertime && !needsReplacement) return null;
-
                                     return (
-                                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded p-3 space-y-3 border border-slate-100 dark:border-slate-700">
+                                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded p-3 space-y-3 border border-slate-100 dark:border-slate-700 animate-in fade-in">
                                         {/* Replacement if needed */}
                                         {needsReplacement && (
                                           <div>
@@ -1331,49 +1688,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                   </option>
                                                 ))}
                                             </select>
-                                          </div>
-                                        )}
-
-                                        {/* Overtime Hours */}
-                                        {isOvertime && (
-                                          <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-700 mt-2">
-                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 px-1 border-b border-slate-100 dark:border-slate-800 pb-1 mb-2">
-                                              <span>Horario Entrada Proyecto:</span>
-                                              <span className="font-bold text-slate-700 dark:text-slate-200">
-                                                {(() => {
-                                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                                  return proj ? (selectedEmployee ? getEmployeeStartTime(proj, selectedEmployee.id, reportDate) : getProjectStartTime(proj, reportDate)) || "No laboral" : "—";
-                                                })()}
-                                              </span>
-                                            </div>
-
-                                            <div className="mb-3">
-                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
-                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftInTime} onChange={(e) => setDraftInTime(e.target.value)} />
-                                            </div>
-
-                                            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 px-1 pt-2 border-t border-slate-100 dark:border-slate-800 mt-2">
-                                              <span>Horario Salida Proyecto:</span>
-                                              <span className="font-bold text-slate-700 dark:text-slate-200">
-                                                {(() => {
-                                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                                  return proj ? (selectedEmployee ? getEmployeeEndTime(proj, selectedEmployee.id, reportDate) : getProjectEndTime(proj, reportDate)) || "No laboral" : "—";
-                                                })()}
-                                              </span>
-                                            </div>
-
-                                            <div>
-                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Efectivo</label>
-                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)} />
-                                            </div>
-
-                                            <div>
-                                              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
-                                              <div className="flex gap-2 items-center">
-                                                <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftOvertimeHours} onChange={(e) => setDraftOvertimeHours(parseFloat(e.target.value))} />
-                                              </div>
-                                              <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se calcula automáticamente, pero puedes ajustarlo si es necesario.</p>
-                                            </div>
                                           </div>
                                         )}
 
@@ -1495,7 +1809,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           {reports.map((report) => (
             <div key={report._id} onClick={() => handleViewReport(report)} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
               <div className="flex justify-between items-start mb-2">
-                <span className="inline-block px-2 py-0.5 text-[12px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">#{report._id.slice(-6).toUpperCase()}</span>
+                <span className="inline-block px-2 py-0.5 text-[12px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">{report.reportNumber || `#${report._id.slice(-6).toUpperCase()}`}</span>
               </div>
               <h4 className="font-semibold text-slate-800 dark:text-white mb-1">
                 {(() => {
@@ -1512,7 +1826,31 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               <div className="text-sm text-slate-500 mb-3">{new Date(report.date + "T00:00:00").toLocaleDateString()}</div>
 
               <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>{report.hasActivity ? `${report.attendance.length} registros` : "Sin novedades"}</span>
+                <span>
+                  {(() => {
+                    if (!report.hasActivity) return "Sin novedades";
+
+                    const counts: Record<string, number> = {};
+                    let hasAnomalies = false;
+
+                    report.attendance.forEach((att) => {
+                      if (att.overtimeHours && att.overtimeHours > 0) {
+                        counts["Horas Extra"] = (counts["Horas Extra"] || 0) + 1;
+                        hasAnomalies = true;
+                      } else if (att.absenceReason && att.absenceReason !== "Presente") {
+                        // Simplify pluralization or just use the raw reason
+                        counts[att.absenceReason] = (counts[att.absenceReason] || 0) + 1;
+                        hasAnomalies = true;
+                      }
+                    });
+
+                    if (!hasAnomalies) return "Sin novedades";
+
+                    return Object.entries(counts)
+                      .map(([type, count]) => `${count} ${type}`)
+                      .join(", ");
+                  })()}
+                </span>
                 <span>{new Date(report.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             </div>
@@ -1608,7 +1946,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           <div className="space-y-4">
             <div className="font-medium text-sm text-gray-900 dark:text-white space-y-2 pb-4">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-mono text-gray-400">#{viewingReport._id.slice(-6).toUpperCase()}</span>
+                <span className="text-xs font-mono text-gray-400">{viewingReport.reportNumber || `#${viewingReport._id.slice(-6).toUpperCase()}`}</span>
                 <span className="text-xs text-gray-500">{new Date(viewingReport.submittedAt).toLocaleString()}</span>
               </div>
               <div className="flex gap-2">
@@ -1632,27 +1970,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
             <div className="space-y-2">
               <h4 className="font-medium text-sm text-gray-900 dark:text-white border-b pb-1 dark:border-gray-700">Novedades: {viewingReport.hasActivity ? "SÍ" : "NO"}</h4>
-              {viewingReport.hasActivity && (
-                <div className="max-h-50 overflow-y-auto text-sm space-y-2 mt-2">
-                  {viewingReport.attendance.map((entry, idx) => {
-                    const empName = typeof entry.employeeId === "object" ? `${entry.employeeId.firstName} ${entry.employeeId.lastName}` : "Empleado";
-                    // Fallback for type name reconstruction if needed or use absenceReason directly
-                    const reason = entry.absenceReason || (entry.overtimeHours ? "Horas Extra" : "Novedad");
-                    const repName = entry.replacementId ? (typeof entry.replacementId === "object" ? `${entry.replacementId.firstName} ${entry.replacementId.lastName}` : "Reemplazo") : null;
+              <div className="max-h-50 overflow-y-auto text-sm space-y-2 mt-2">
+                {viewingReport.attendance.map((entry, idx) => {
+                  const empName = typeof entry.employeeId === "object" ? `${entry.employeeId.firstName} ${entry.employeeId.lastName}` : "Empleado";
+                  // Fallback for type name reconstruction if needed or use absenceReason directly
+                  const reason = entry.absenceReason || (entry.overtimeHours ? "Horas Extra" : "Presente");
+                  const repName = entry.replacementId ? (typeof entry.replacementId === "object" ? `${entry.replacementId.firstName} ${entry.replacementId.lastName}` : "Reemplazo") : null;
 
-                    return (
-                      <div key={idx} className="flex flex-col pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
-                        <span className="font-semibold text-gray-800 dark:text-white">{empName}</span>
-                        <span className="text-xs text-blue-600 dark:text-blue-400">
-                          {reason} {entry.overtimeHours ? `(${entry.overtimeHours}h)` : ""}
-                        </span>
-                        {repName && <span className="text-xs text-gray-500">Reemplaza: {repName}</span>}
-                        {entry.notes && <span className="text-xs text-gray-500 italic">"{entry.notes}"</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                  return (
+                    <div key={idx} className="flex flex-col pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
+                      <span className="font-semibold text-gray-800 dark:text-white">{empName}</span>
+                      <span className={`text-xs ${reason === "Presente" || reason === "Horas Extra" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                        {reason} {entry.overtimeHours ? `(${entry.overtimeHours}h)` : ""}
+                      </span>
+                      {repName && <span className="text-xs text-gray-500">Reemplaza: {repName}</span>}
+                      {entry.notes && <span className="text-xs text-gray-500 italic">"{entry.notes}"</span>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {viewingReport.comments && (
@@ -1732,26 +2068,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   <div className="grid grid-cols-1 gap-4">
                     <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/20 rounded-lg border border-slate-100 dark:border-slate-800">
                       <span className="text-xs font-bold text-slate-400 uppercase">Fecha de Inicio</span>
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">{selectedProject.startDate ? new Date(selectedProject.startDate).toLocaleDateString() : "No definida"}</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">{selectedProject.startDate ? new Date(selectedProject.startDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "No definida"}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/20 rounded-lg border border-slate-100 dark:border-slate-800">
                       <span className="text-xs font-bold text-slate-400 uppercase">Fecha Fin</span>
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">{selectedProject.endDate ? new Date(selectedProject.endDate).toLocaleDateString() : "No definida"}</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">{selectedProject.endDate ? new Date(selectedProject.endDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "No definida"}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/20 rounded-lg border border-slate-100 dark:border-slate-800">
                       <span className="text-xs font-bold text-slate-400 uppercase">Creado el</span>
                       <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{selectedProject.createdAt ? new Date(selectedProject.createdAt).toLocaleDateString() : "-"}</span>
                     </div>
-                    {selectedProject.objectives && selectedProject.objectives.length > 0 && (
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800/20 rounded-lg border border-slate-100 dark:border-slate-800">
-                        <span className="text-xs font-bold text-slate-400 uppercase mb-2 block">Objetivos ({selectedProject.objectives.length})</span>
-                        <ul className="list-disc list-inside text-sm text-slate-600 dark:text-slate-300 space-y-1">
-                          {selectedProject.objectives.map((obj, i) => (
-                            <li key={i}>{obj}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}

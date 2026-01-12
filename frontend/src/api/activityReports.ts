@@ -17,6 +17,7 @@ export interface AttendanceRecord extends AttendanceRecordInput {
 
 export interface ActivityReport {
   _id: string;
+  reportNumber?: string;
   date: string;
   hasActivity: boolean;
   comments?: string;

@@ -27,13 +27,19 @@ const updateAreaSchema = createAreaSchema.partial();
 // GET /areas/count - Contar areas
 router.get("/count", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
+
+    if (!isSuperAdmin) {
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
 
-    const count = await Area.countDocuments({ tenantId });
+    const count = await Area.countDocuments(filter);
     res.json({ count });
   } catch (error) {
     console.error("Count areas error:", error);
@@ -45,15 +51,18 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 100, name } = req.query;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
 
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      /* console.warn("[areas GET] Invalid tenantId:", req.tenantObjectId); */
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    if (!isSuperAdmin) {
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        /* console.warn("[areas GET] Invalid tenantId:", req.tenantObjectId); */
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
-
-    const filter: any = { tenantId };
 
     if (name) {
       filter.name = { $regex: name, $options: "i" };
@@ -61,7 +70,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_areas
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [areas, total] = await Promise.all([Area.find(filter).sort({ name: 1 }).skip(skip).limit(Number(limit)), Area.countDocuments(filter)]);
+    const [areas, total] = await Promise.all([Area.find(filter).populate("tenantId", "name slug").sort({ name: 1 }).skip(skip).limit(Number(limit)), Area.countDocuments(filter)]);
 
     res.json({
       areas,
@@ -122,6 +131,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_area
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_areas:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const areaId = toObjectIdOrNull(req.params.id);
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
 
     if (!areaId) {
@@ -130,16 +140,18 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_ar
       return;
     }
 
-    if (!tenantId) {
-      /* console.warn("[areas GET :id] Invalid tenantId:", req.tenantObjectId); */
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const query: any = { _id: areaId };
+
+    if (!isSuperAdmin) {
+      if (!tenantId) {
+        /* console.warn("[areas GET :id] Invalid tenantId:", req.tenantObjectId); */
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      query.tenantId = tenantId;
     }
 
-    const area = await Area.findOne({
-      _id: areaId,
-      tenantId,
-    });
+    const area = await Area.findOne(query);
 
     if (!area) {
       res.status(404).json({ error: "Área no encontrada" });

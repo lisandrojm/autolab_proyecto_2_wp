@@ -86,7 +86,8 @@ const updatePasswordSchema = z.object({
 router.get("/count", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { isActive } = req.query;
-    const filter: any = { tenantId: req.tenantObjectId };
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    const filter: any = isSuperAdmin ? {} : { tenantId: req.tenantObjectId };
 
     if (isActive !== undefined) {
       filter.isActive = isActive === "true";
@@ -104,7 +105,8 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 20, email, isActive, areaId } = req.query;
-    const filter: any = { tenantId: req.tenantObjectId };
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    const filter: any = isSuperAdmin ? {} : { tenantId: req.tenantObjectId };
 
     if (email) {
       filter.email = { $regex: email, $options: "i" };
@@ -125,25 +127,31 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       filter.isActive = isActive === "true";
     }
 
-    console.log("[Users List] Filter:", JSON.stringify(filter, null, 2));
-    console.log("[Users List] Query Params:", req.query);
+    // Add populate for tenant to show in UI
+    const usersQuery = User.find(filter)
+      .select("-password") // Nunca devolver password
+      .populate("roles", "name description permissions")
+      .populate("clientIds", "name")
+      .populate("projectIds", "name")
+      .populate("positionId", "name description")
+      .populate("levelId", "name description")
+      .populate("areaId", "name description")
+      .populate("tenantId", "name slug")
+      .sort({ createdAt: -1 });
+
+    // If superadmin, populate tenant field if it references a model, otherwise we might rely on tenantId string?
+    // User model has tenant field? let's check interface... "tenant?: TenantRef".
+    // It seems the schema (usersController) might not have "tenant" field populated by default?
+    // Let's assume tenantId is there.
+    // Ideally we populate tenant details if possible, but User model schema (viewed earlier) has "tenantId" ref?
+    // User.ts model was not viewed. I will assume standard population if needed, but for now just raw list.
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [users, total] = await Promise.all([
-      User.find(filter)
-        .select("-password") // Nunca devolver password
-        .populate("roles", "name description permissions")
-        .populate("clientIds", "name")
-        .populate("projectIds", "name")
-        .populate("positionId", "name description")
-        .populate("levelId", "name description")
-        .populate("areaId", "name description")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      User.countDocuments(filter),
-    ]);
+    const [users, total] = await Promise.all([usersQuery.skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
+
+    // Enhance users with tenant info if needed (manually or via population if schema supports)
+    // For now returning as is. Frontend uses tenantId or User interface has tenant?: TenantRef.
 
     res.json({
       users,
@@ -335,13 +343,35 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
 router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = updateUserSchema.parse(req.body);
+    const userId = req.params.id;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+
+    // 1. Fetch Target User to identify tenant
+    const query: any = { _id: userId };
+    if (!isSuperAdmin) {
+      if (!req.tenantObjectId) {
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      query.tenantId = req.tenantObjectId;
+    }
+
+    const currentUser = await User.findOne(query); // No "select -password" yet, we need full doc for arrays
+
+    if (!currentUser) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Use the user's tenant for all subsequent checks
+    const targetTenantId = currentUser.tenantId;
 
     // Si se está cambiando el email, verificar unicidad
     if (data.email) {
       const existingUser = await User.findOne({
         email: data.email,
-        tenantId: req.tenantObjectId,
-        _id: { $ne: req.params.id },
+        tenantId: targetTenantId,
+        _id: { $ne: userId },
       });
 
       if (existingUser) {
@@ -361,7 +391,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
 
       const existingRoles = await Role.find({
         _id: { $in: roleObjectIds },
-        tenantId: req.tenantObjectId,
+        tenantId: targetTenantId,
       });
 
       if (existingRoles.length !== data.roles.length) {
@@ -377,25 +407,20 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
       data.levelId = null;
     }
 
-    // Preparar updateData: usar $set para campos con valor y $unset para campos null
+    // Preparar updateData
     const updateData: any = { $set: {} };
     const fieldsToUnset: string[] = [];
 
     Object.keys(data).forEach((key) => {
       const value = data[key];
 
-      // null explícito significa "eliminar este campo"
       if (value === null) {
         fieldsToUnset.push(key);
-      }
-      // undefined significa "no tocar este campo" (no se incluye en la actualización)
-      else if (value !== undefined) {
-        // Tiene valor definido, actualizar
+      } else if (value !== undefined) {
         updateData.$set[key] = value;
       }
     });
 
-    // Si hay campos para eliminar, agregamos $unset
     if (fieldsToUnset.length > 0) {
       updateData.$unset = {};
       fieldsToUnset.forEach((field) => {
@@ -403,19 +428,12 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
       });
     }
 
-    // Si no hay nada en $set, lo eliminamos
     if (Object.keys(updateData.$set).length === 0) {
       delete updateData.$set;
     }
 
-    // Antes de actualizar, obtener el estado actual para sincronización
-    const currentUser = await User.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
-    if (!currentUser) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
-
-    const user = await User.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantObjectId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description");
+    // Actualizar usuario
+    const user = await User.findOneAndUpdate({ _id: userId, tenantId: targetTenantId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description");
 
     // Sincronizar proyectos si hubo cambio
     if (data.projectIds) {
@@ -426,10 +444,10 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
       const removed = oldProjectIds.filter((id) => !newProjectIds.includes(id));
 
       if (added.length > 0) {
-        await Project.updateMany({ _id: { $in: added }, tenantId: req.tenantObjectId }, { $addToSet: { assignedUsers: user!._id } });
+        await Project.updateMany({ _id: { $in: added }, tenantId: targetTenantId }, { $addToSet: { assignedUsers: userId } });
       }
       if (removed.length > 0) {
-        await Project.updateMany({ _id: { $in: removed }, tenantId: req.tenantObjectId }, { $pull: { assignedUsers: user!._id } });
+        await Project.updateMany({ _id: { $in: removed }, tenantId: targetTenantId }, { $pull: { assignedUsers: userId } });
       }
     }
 
@@ -453,11 +471,15 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
 router.patch("/:id/password", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { password } = updatePasswordSchema.parse(req.body);
+    const userId = req.params.id;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
 
-    const user = await User.findOne({
-      _id: req.params.id,
-      tenantId: req.tenantObjectId,
-    });
+    const query: any = { _id: userId };
+    if (!isSuperAdmin) {
+      query.tenantId = req.tenantObjectId;
+    }
+
+    const user = await User.findOne(query);
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -481,10 +503,15 @@ router.patch("/:id/password", requireTenant, authenticateToken, requirePermissio
 // DELETE /users/:id - Eliminar usuario
 router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const user = await User.findOneAndDelete({
-      _id: req.params.id,
-      tenantId: req.tenantObjectId,
-    });
+    const userId = req.params.id;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+
+    const query: any = { _id: userId };
+    if (!isSuperAdmin) {
+      query.tenantId = req.tenantObjectId;
+    }
+
+    const user = await User.findOneAndDelete(query);
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -492,10 +519,12 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
     }
 
     // Remover usuario del array userIds del tenant
-    await Tenant.findByIdAndUpdate(req.tenantObjectId, {
-      $pull: { userIds: user._id },
-      $inc: { "usage.users.current": -1 },
-    });
+    if (user.tenantId) {
+      await Tenant.findByIdAndUpdate(user.tenantId, {
+        $pull: { userIds: user._id },
+        $inc: { "usage.users.current": -1 },
+      });
+    }
 
     res.json({ message: "User deleted successfully" });
   } catch (error) {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
+import { Tenant } from "../models/Tenant.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
@@ -59,13 +60,29 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const filter: any = { tenantId };
 
     const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
-    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+    const isContextAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
 
-    if (!isAdmin) {
-      filter.assignedUsers = req.user!.userId;
+    // Verificar si el usuario pertenece al tenant 'superadmin' para dar acceso global
+    let isGlobalSuperAdmin = false;
+    if (req.user?.tenantId) {
+      const userHomeTenant = await Tenant.findById(req.user.tenantId).select("slug");
+      if (userHomeTenant?.slug === "superadmin") {
+        isGlobalSuperAdmin = true;
+      }
     }
 
-    const clients = await Client.find(filter).sort({ createdAt: -1 });
+    if (isGlobalSuperAdmin) {
+      // Superadmin ve todo (sin filtro de tenantId forzado)
+      delete filter.tenantId;
+    } else {
+      // Si no es superadmin global, respetar el tenant actual
+      if (!isContextAdmin) {
+        filter.assignedUsers = req.user!.userId;
+      }
+    }
+
+    // Populate tenantId para mostrar badge
+    const clients = await Client.find(filter).sort({ createdAt: -1 }).populate("tenantId", "name slug");
     res.json(clients);
   } catch (error) {
     console.error("Get clients error:", error);
@@ -81,10 +98,22 @@ router.get("/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const filter: any = { tenantId };
     const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
-    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+    const isContextAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
 
-    if (!isAdmin) {
-      filter.assignedUsers = req.user!.userId;
+    let isGlobalSuperAdmin = false;
+    if (req.user?.tenantId) {
+      const userHomeTenant = await Tenant.findById(req.user.tenantId).select("slug");
+      if (userHomeTenant?.slug === "superadmin") {
+        isGlobalSuperAdmin = true;
+      }
+    }
+
+    if (isGlobalSuperAdmin) {
+      delete filter.tenantId;
+    } else {
+      if (!isContextAdmin) {
+        filter.assignedUsers = req.user!.userId;
+      }
     }
 
     const count = await Client.countDocuments(filter);

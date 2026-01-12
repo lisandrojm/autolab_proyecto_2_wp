@@ -1,8 +1,15 @@
 import axios from "./axiosConfig";
 
+export interface TenantRef {
+  _id: string;
+  name?: string;
+  slug?: string;
+}
+
 export interface Position {
   _id: string;
-  tenantId: string;
+  tenantId?: string;
+  tenant?: TenantRef;
   name: string;
   description?: string;
   vacationConfig?: {
@@ -44,15 +51,46 @@ export interface PositionListResponse {
   };
 }
 
+function normalizeTenant(raw: any): TenantRef | undefined {
+  const obj = raw?.tenant || (typeof raw?.tenantId === "object" ? raw.tenantId : undefined) || {};
+  const idLike = obj._id || obj.id || (typeof raw?.tenantId === "string" ? raw.tenantId : undefined);
+
+  if (!idLike || typeof idLike !== "string" || !/^[a-f\d]{24}$/i.test(idLike)) {
+    return undefined;
+  }
+
+  return { _id: idLike, slug: obj.slug || raw?.tenantSlug, name: obj.name || raw?.tenantName };
+}
+
+function normalizePosition(raw: any): Position {
+  return {
+    _id: raw._id,
+    tenantId: typeof raw.tenantId === "string" ? raw.tenantId : raw.tenantId?._id,
+    tenant: normalizeTenant(raw),
+    name: raw.name,
+    description: raw.description,
+    vacationConfig: raw.vacationConfig,
+    levelCount: raw.levelCount,
+    specificLevelCount: raw.specificLevelCount,
+    levels: raw.levels,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+  };
+}
+
 export const positionsAPI = {
   list: async (params?: { page?: number; limit?: number; name?: string }): Promise<PositionListResponse> => {
     const response = await axios.get("/positions", { params });
-    return response.data;
+    const data = response.data;
+    return {
+      positions: (data.positions || []).map(normalizePosition),
+      pagination: data.pagination,
+    };
   },
 
   listAll: async (): Promise<Position[]> => {
     const response = await axios.get("/positions", { params: { limit: 1000 } });
-    return response.data.positions;
+    return (response.data.positions || []).map(normalizePosition);
   },
 
   count: async (): Promise<{ count: number }> => {
@@ -62,17 +100,17 @@ export const positionsAPI = {
 
   getById: async (id: string): Promise<Position> => {
     const response = await axios.get(`/positions/${id}`);
-    return response.data;
+    return normalizePosition(response.data);
   },
 
   create: async (data: PositionFormData): Promise<Position> => {
     const response = await axios.post("/positions", data);
-    return response.data;
+    return normalizePosition(response.data);
   },
 
   update: async (id: string, data: Partial<PositionFormData>): Promise<Position> => {
     const response = await axios.patch(`/positions/${id}`, data);
-    return response.data;
+    return normalizePosition(response.data);
   },
 
   remove: async (id: string): Promise<void> => {

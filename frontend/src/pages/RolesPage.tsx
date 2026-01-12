@@ -404,6 +404,7 @@ export const RolesPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewRole.isDefault ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" : "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"}`}>{viewRole.isDefault ? "Por defecto" : "Personalizado"}</span>
               {viewRole.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">SuperAdmin</span>}
+              {viewRole.tenant?.name && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewRole.tenant.name}</span>}
             </div>
 
             <div>
@@ -610,6 +611,15 @@ export const RolesPage: React.FC = () => {
                         {
                           text: "SuperAdmin",
                           variant: "warning" as const,
+                        },
+                      ]
+                    : []),
+                  ...(role.tenant && role.tenant.name
+                    ? [
+                        {
+                          text: role.tenant.name,
+                          variant: "default" as const,
+                          className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
                         },
                       ]
                     : []),

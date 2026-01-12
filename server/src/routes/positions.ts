@@ -28,13 +28,19 @@ const updatePositionSchema = createPositionSchema.partial();
 // GET /positions/count - Contar posiciones
 router.get("/count", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
+
+    if (!isSuperAdmin) {
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
 
-    const count = await Position.countDocuments({ tenantId });
+    const count = await Position.countDocuments(filter);
     res.json({ count });
   } catch (error) {
     console.error("Count positions error:", error);
@@ -46,15 +52,18 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 100, name } = req.query;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
 
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      console.warn("[positions GET] Invalid tenantId:", req.tenantObjectId);
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    if (!isSuperAdmin) {
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        console.warn("[positions GET] Invalid tenantId:", req.tenantObjectId);
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
-
-    const filter: any = { tenantId };
 
     if (name) {
       filter.name = { $regex: name, $options: "i" };
@@ -62,20 +71,32 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_posit
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [positions, total] = await Promise.all([Position.find(filter).sort({ name: 1 }).skip(skip).limit(Number(limit)), Position.countDocuments(filter)]);
+    const [positions, total] = await Promise.all([Position.find(filter).populate("tenantId", "name slug").sort({ name: 1 }).skip(skip).limit(Number(limit)), Position.countDocuments(filter)]);
 
     const positionsWithLevels = await Promise.all(
       positions.map(async (position) => {
-        const levelFilter = {
-          tenantId,
+        // Use position's tenantId for level filtering to ensure correctness
+        const targetTenantId = position.tenantId; // Might be different if listing all tenants
+
+        let levelFilter: any = {
           $or: [{ type: "general" }, { type: "position-specific", positionId: position._id }],
         };
 
-        const specificLevelFilter = {
-          tenantId,
+        // If we are superadmin viewing all, we should still filter levels by the position's tenant
+        // Assuming levels belong to same tenant as position.
+        // If position has tenantId, we use it. If not (system?), maybe general levels?
+        if (targetTenantId) {
+          levelFilter.tenantId = targetTenantId;
+        }
+
+        let specificLevelFilter: any = {
           type: "position-specific",
           positionId: position._id,
         };
+
+        if (targetTenantId) {
+          specificLevelFilter.tenantId = targetTenantId;
+        }
 
         const [levels, levelCount, specificLevelCount] = await Promise.all([Level.find(levelFilter).select("name description type").sort({ name: 1 }).limit(5), Level.countDocuments(levelFilter), Level.countDocuments(specificLevelFilter)]);
 
@@ -147,6 +168,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_posi
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_positions:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const positionId = toObjectIdOrNull(req.params.id);
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
 
     if (!positionId) {
@@ -155,26 +177,36 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_po
       return;
     }
 
-    if (!tenantId) {
-      console.warn("[positions GET :id] Invalid tenantId:", req.tenantObjectId);
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const query: any = { _id: positionId };
+
+    if (!isSuperAdmin) {
+      if (!tenantId) {
+        console.warn("[positions GET :id] Invalid tenantId:", req.tenantObjectId);
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      query.tenantId = tenantId;
     }
 
-    const position = await Position.findOne({
-      _id: positionId,
-      tenantId,
-    });
+    const position = await Position.findOne(query);
 
     if (!position) {
       res.status(404).json({ error: "Cargo no encontrado" });
       return;
     }
 
-    const levels = await Level.find({
-      tenantId,
+    // For levels, we should query using the position's tenantId if available
+    const targetTenantId = position.tenantId || (isSuperAdmin ? undefined : tenantId);
+
+    let levelQuery: any = {
       $or: [{ type: "general" }, { type: "position-specific", positionId: position._id }],
-    }).sort({ name: 1 });
+    };
+
+    if (targetTenantId) {
+      levelQuery.tenantId = targetTenantId;
+    }
+
+    const levels = await Level.find(levelQuery).sort({ name: 1 });
 
     const levelCount = levels.length;
     const specificLevelCount = levels.filter((l) => l.type === "position-specific").length;

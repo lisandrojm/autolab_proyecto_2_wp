@@ -379,6 +379,16 @@ export const ClientsPage: React.FC = () => {
                 fallback: client.name?.charAt(0)?.toUpperCase?.() || "?",
                 alt: `${client.name} logo`,
               },
+              badges:
+                client.tenant && client.tenant.name
+                  ? [
+                      {
+                        text: client.tenant.name,
+                        variant: "default" as const,
+                        className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                      },
+                    ]
+                  : [],
               /*               badges: [],
               favorite: !!client.favorite,
               onToggleFavorite: () => toggleFavorite(client._id, !!client.favorite), */

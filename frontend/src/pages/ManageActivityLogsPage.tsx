@@ -16,11 +16,10 @@ import { sweetAlert } from "../utils/sweetAlert";
 
 interface ActivityReport extends Omit<BaseActivityReport, "id"> {
   id: string; // Ensure id compatibility if needed
+  reportNumber?: string; // Added field
   projectIdRaw?: string; // Add this field
   // .. other fields are inherited
 }
-
-// ... (MOCK_AREAS, MOCK_REPORTS, AttendanceTable, AbsenceBlock components remain identical, omitting for brevity in this replace block if not changing, but since I'm replacing the whole file content structure to be safe with the new function placement, I will include them or rely on the tool to just insert what I need if I were using multi-replace. Since I need to construct the whole page logic for the view toggle, I will replace the main component logic.)
 
 // ... reusing MOCK_AREAS and MOCK_REPORTS ...
 const MOCK_AREAS = [
@@ -135,6 +134,21 @@ export const ManageActivityLogsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [listLayout, setListLayout] = useState<"table" | "cards">("table");
+
+  // Force cards view on screen resize < 1200px
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1200) {
+        setListLayout("cards");
+      }
+    };
+
+    // Check initially
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
   const [openInfo, setOpenInfo] = useState(false);
   const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
@@ -196,6 +210,7 @@ export const ManageActivityLogsPage: React.FC = () => {
       // API returns _id, component expects id?
       const formatted = data.map((r: any) => ({
         id: r._id,
+        reportNumber: r.reportNumber, // Use real backend number
         date: r.date,
         formName: r.areaId?.name || "General", // Area or generic
         projectIdRaw: r.projectId?._id || (typeof r.projectId === "string" ? r.projectId : ""),
@@ -234,8 +249,6 @@ export const ManageActivityLogsPage: React.FC = () => {
       setLoading(false);
     }
   };
-
-  // Frequency Config Modal state removed
 
   // Stats calculation
   const stats = React.useMemo(() => {
@@ -332,13 +345,6 @@ export const ManageActivityLogsPage: React.FC = () => {
     setViewMode("list");
   };
 
-  // Helper for ID format
-  const formatReportId = (id: string) => {
-    // Mock transformation: REP-001 -> DEM-REG-000001
-    const num = id.split("-")[1] || "000000";
-    return `DEM-REG-${num.padStart(6, "0")}`;
-  };
-
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -369,7 +375,7 @@ export const ManageActivityLogsPage: React.FC = () => {
         {reports.map((report) => {
           const badgesTop = [
             <span key="id" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
-              {formatReportId(report.id)}
+              {report.reportNumber || "Pendiente"}
             </span>,
           ];
 
@@ -383,7 +389,15 @@ export const ManageActivityLogsPage: React.FC = () => {
               footerLeft={
                 <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                   <FontAwesomeIcon icon={faCalendar} className="h-3 w-3" />
-                  <span>{format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es })}</span>
+                  <span>
+                    {(() => {
+                      try {
+                        return report.date ? format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es }) : "-";
+                      } catch (e) {
+                        return "-";
+                      }
+                    })()}
+                  </span>
                 </div>
               }
               footerActions={[
@@ -424,7 +438,13 @@ export const ManageActivityLogsPage: React.FC = () => {
       <PageLayout
         title={selectedReport.projectName}
         badge={{
-          text: format(new Date(selectedReport.date + "T00:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase()),
+          text: `${selectedReport.reportNumber || "Pendiente"} | ${(() => {
+            try {
+              return selectedReport.date ? format(new Date(selectedReport.date + "T00:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es }).replace(/^\w/, (c) => c.toUpperCase()) : "-";
+            } catch (e) {
+              return "-";
+            }
+          })()}`,
           variant: "default",
         }}
         faIcon={{ icon: faBriefcase }}
@@ -457,7 +477,15 @@ export const ManageActivityLogsPage: React.FC = () => {
             title={
               <div className="flex items-center gap-3">
                 <span>Estadísticas: {selectedReport.projectName}</span>
-                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded font-medium border border-blue-200 dark:border-blue-800">{format(new Date(selectedReport.date + "T00:00:00"), "dd MMM yyyy", { locale: es })}</span>
+                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-xs px-2.5 py-0.5 rounded font-medium border border-blue-200 dark:border-blue-800">
+                  {(() => {
+                    try {
+                      return selectedReport.date ? format(new Date(selectedReport.date + "T00:00:00"), "dd MMM yyyy", { locale: es }) : "-";
+                    } catch (e) {
+                      return "-";
+                    }
+                  })()}
+                </span>
               </div>
             }
             size="md"
@@ -612,7 +640,7 @@ export const ManageActivityLogsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden min-[1200px]:flex items-center gap-2">
             <button onClick={() => setListLayout("cards")} className={`px-4 py-1.5 rounded-md transition-all ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
               <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
             </button>
@@ -647,10 +675,26 @@ export const ManageActivityLogsPage: React.FC = () => {
                 {reports.map((report) => (
                   <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
                     <td className="py-3 px-4">
-                      <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{formatReportId(report.id)}</span>
+                      <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{report.reportNumber || "Pendiente"}</span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">{format(new Date(report.submittedAt), "dd MMM yyyy", { locale: es })}</td>
-                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-medium">{format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es })}</td>
+                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
+                      {(() => {
+                        try {
+                          return report.submittedAt ? format(new Date(report.submittedAt), "dd MMM yyyy", { locale: es }) : "-";
+                        } catch {
+                          return "-";
+                        }
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
+                      {(() => {
+                        try {
+                          return report.date ? format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es }) : "-";
+                        } catch {
+                          return "-";
+                        }
+                      })()}
+                    </td>
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
                         <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-xs" />

@@ -21,13 +21,19 @@ const updateRoleSchema = createRoleSchema.partial();
 // GET /roles/count - Contar roles
 router.get("/count", requireTenant, authenticateToken, requirePermission("admin_roles:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
+
+    if (!isSuperAdmin) {
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
 
-    const count = await Role.countDocuments({ tenantId });
+    const count = await Role.countDocuments(filter);
     res.json({ count });
   } catch (error) {
     console.error("Count roles error:", error);
@@ -39,16 +45,19 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_roles:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 20, name, _id } = req.query;
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
+    let filter: any = {};
 
-    // Sanitizar tenantId
-    const tenantId = toObjectIdOrNull(req.tenantObjectId);
-    if (!tenantId) {
-      console.warn("[roles GET] Invalid tenantId:", req.tenantObjectId);
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    if (!isSuperAdmin) {
+      // Sanitizar tenantId
+      const tenantId = toObjectIdOrNull(req.tenantObjectId);
+      if (!tenantId) {
+        console.warn("[roles GET] Invalid tenantId:", req.tenantObjectId);
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      filter.tenantId = tenantId;
     }
-
-    const filter: any = { tenantId };
 
     if (name) {
       filter.name = { $regex: name, $options: "i" };
@@ -78,7 +87,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_roles
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [roles, total] = await Promise.all([Role.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), Role.countDocuments(filter)]);
+    const [roles, total] = await Promise.all([Role.find(filter).populate("tenantId", "name slug").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), Role.countDocuments(filter)]);
 
     res.json({
       roles,
@@ -137,6 +146,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_role
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_roles:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const roleId = toObjectIdOrNull(req.params.id);
+    const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
     const tenantId = toObjectIdOrNull(req.tenantObjectId);
 
     if (!roleId) {
@@ -145,16 +155,18 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_ro
       return;
     }
 
-    if (!tenantId) {
-      console.warn("[roles GET :id] Invalid tenantId:", req.tenantObjectId);
-      res.status(400).json({ error: "Invalid tenant ID" });
-      return;
+    const query: any = { _id: roleId };
+
+    if (!isSuperAdmin) {
+      if (!tenantId) {
+        console.warn("[roles GET :id] Invalid tenantId:", req.tenantObjectId);
+        res.status(400).json({ error: "Invalid tenant ID" });
+        return;
+      }
+      query.tenantId = tenantId;
     }
 
-    const role = await Role.findOne({
-      _id: roleId,
-      tenantId,
-    });
+    const role = await Role.findOne(query);
 
     if (!role) {
       res.status(404).json({ error: "Role not found" });

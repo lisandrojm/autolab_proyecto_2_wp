@@ -73,9 +73,10 @@ export const ClientDashboardPage: React.FC = () => {
         const posts = await postsResponse.json();
 
         // Calculate stats
-        const activeProjects = projects.filter((p: any) => p.status === "active").length;
-        const pendingApprovals = posts.filter((p: any) => p.status === "pending_approval" || p.status === "in_review").length;
-        const scheduledPosts = posts.filter((p: any) => p.scheduling?.isScheduled && new Date(p.scheduling.publishAt) > new Date()).length;
+        // Calculate stats
+        const activeProjects = Array.isArray(projects) ? projects.filter((p: any) => p.status === "active").length : 0;
+        const pendingApprovals = Array.isArray(posts) ? posts.filter((p: any) => p.status === "pending_approval" || p.status === "in_review").length : 0;
+        const scheduledPosts = Array.isArray(posts) ? posts.filter((p: any) => p.scheduling?.isScheduled && new Date(p.scheduling.publishAt) > new Date()).length : 0;
 
         setStats({
           activeProjects,
@@ -84,21 +85,26 @@ export const ClientDashboardPage: React.FC = () => {
         });
 
         // Create activities list (last 5 items)
+        // Create activities list (last 5 items)
         const allActivities: Activity[] = [
-          ...posts.map((p: any) => ({
-            _id: p._id,
-            type: "post" as const,
-            title: p.title,
-            status: p.status,
-            updatedAt: p.updatedAt,
-          })),
-          ...projects.map((p: any) => ({
-            _id: p._id,
-            type: "project" as const,
-            title: p.name,
-            status: p.status,
-            updatedAt: p.updatedAt,
-          })),
+          ...(Array.isArray(posts)
+            ? posts.map((p: any) => ({
+                _id: p._id,
+                type: "post" as const,
+                title: p.title,
+                status: p.status,
+                updatedAt: p.updatedAt,
+              }))
+            : []),
+          ...(Array.isArray(projects)
+            ? projects.map((p: any) => ({
+                _id: p._id,
+                type: "project" as const,
+                title: p.name,
+                status: p.status,
+                updatedAt: p.updatedAt,
+              }))
+            : []),
         ];
 
         // Sort by updatedAt and take last 5

@@ -153,7 +153,7 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
+      base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
     } else {
       if (hasPermission("admin_roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles });
       if (hasPermission("admin_areas:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas });
@@ -251,13 +251,14 @@ export const MobileNavbar: React.FC = () => {
 
   const NavMenu: React.FC<{ onItemClick?: () => void }> = ({ onItemClick }) => {
     const adminItems = menuItems;
+    const isSuperAdminTenant = user?.tenantSlug === "superadmin";
 
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
-    const userAdminItems = adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users"].includes(item.path));
+    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/areas", "/positions", "/levels"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/areas", "/positions", "/levels", "/users"].includes(item.path));
 
     const managementItems = adminItems.filter((item) => ["/projects"].includes(item.path));
 
-    const generalAdminItems = adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
+    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/dashboard", "/tenants", "/clients", "/platform/usage", "/platform/settings"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
     const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
 
