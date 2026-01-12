@@ -321,7 +321,7 @@ export async function ensureAllTenantsHaveDefaultRoles(): Promise<void> {
       const rolesBefore = await Role.countDocuments({ tenantId });
 
       await ensureDefaultRoles(tenantId);
-      await ensureMobileRoles(tenantId);
+
       await migrateRolePermissions(tenantId);
 
       const rolesAfter = await Role.countDocuments({ tenantId });
