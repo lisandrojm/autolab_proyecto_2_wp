@@ -245,12 +245,21 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       tenantId: req.tenantObjectId,
     });
 
-    if (usersWithRole > 0) {
+    const force = req.query.force === "true";
+
+    if (usersWithRole > 0 && !force) {
       res.status(409).json({
         error: "Cannot delete role: it is assigned to users",
         usersCount: usersWithRole,
+        code: "ROLE_ASSIGNED_TO_USERS",
       });
       return;
+    }
+
+    // Si es force delete y hay usuarios, desasignar el rol primero
+    if (force && usersWithRole > 0) {
+      console.log(`[DELETE Role] Force deleting role ${roleId} - Unassigning from ${usersWithRole} users`);
+      await User.updateMany({ roles: roleId, tenantId: req.tenantObjectId }, { $pull: { roles: roleId } });
     }
 
     const role = await Role.findOneAndDelete({

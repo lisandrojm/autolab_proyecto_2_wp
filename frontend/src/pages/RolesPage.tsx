@@ -264,8 +264,25 @@ export const RolesPage: React.FC = () => {
         sweetAlert.success("Rol eliminado", "El rol ha sido eliminado correctamente");
         fetchRoles();
       } catch (error: any) {
-        const message = error.response?.data?.error || "Error al eliminar el rol";
-        sweetAlert.error("Error", message);
+        // Detectar si el error es por usuarios asignados
+        if (error.response?.status === 409 && error.response?.data?.code === "ROLE_ASSIGNED_TO_USERS") {
+          const usersCount = error.response.data.usersCount;
+          const confirmForce = await sweetAlert.confirm("Rol asignado a usuarios", `Este rol está asignado a ${usersCount} usuario(s). Si lo eliminas, estos usuarios perderán este rol. ¿Deseas forzar la eliminación?`, "warning", "Sí, eliminar y desasignar");
+
+          if (confirmForce.isConfirmed) {
+            try {
+              await rolesAPI.remove(role._id, true);
+              sweetAlert.success("Rol eliminado", "El rol ha sido eliminado y desasignado de los usuarios.");
+              fetchRoles();
+            } catch (forceError: any) {
+              const message = forceError.response?.data?.error || "Error al eliminar el rol";
+              sweetAlert.error("Error", message);
+            }
+          }
+        } else {
+          const message = error.response?.data?.error || "Error al eliminar el rol";
+          sweetAlert.error("Error", message);
+        }
       }
     }
   };

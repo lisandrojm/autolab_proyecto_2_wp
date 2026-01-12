@@ -168,8 +168,8 @@ class RolesAPI {
     return role;
   }
 
-  async remove(id: string): Promise<void> {
-    await axios.delete(`/roles/${id}`, { headers: this.getHeaders() });
+  async remove(id: string, force: boolean = false): Promise<void> {
+    await axios.delete(`/roles/${id}${force ? "?force=true" : ""}`, { headers: this.getHeaders() });
     emitRolesChanged("delete", id);
   }
 }
