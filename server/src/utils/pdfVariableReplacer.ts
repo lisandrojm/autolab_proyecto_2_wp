@@ -29,6 +29,19 @@ function formatDate(date: Date | string | undefined): string {
   if (!date) return "-";
 
   try {
+    // Si es un string YYYY-MM-DD, parsear manualmente para evitar problemas de timezone
+    if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const parts = date.split("-");
+      // Asumimos formato YYYY-MM-DD
+      if (parts.length === 3) {
+        const year = parts[0];
+        const month = parts[1];
+        const day = parts[2];
+        return `${day}/${month}/${year}`;
+      }
+    }
+
+    // Fallback para otros formatos o Date objects
     const d = typeof date === "string" ? new Date(date) : date;
     if (isNaN(d.getTime())) return "-";
 
@@ -46,6 +59,14 @@ function formatDateOnly(date: Date | string | undefined): string {
   if (!date) return "-";
 
   try {
+    // Si es un string YYYY-MM-DD, parsear manualmente
+    if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const parts = date.split("-");
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+
     const d = typeof date === "string" ? new Date(date) : date;
     if (isNaN(d.getTime())) return "-";
 

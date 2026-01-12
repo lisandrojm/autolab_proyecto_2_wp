@@ -506,6 +506,25 @@ export const ManageOrdersPage: React.FC = () => {
 
   const formatDateShort = (dateString: string | undefined): string => {
     if (!dateString) return "-";
+    // Si contiene T, asumimos ISO string completo (con hora), pero si es solo YYYY-MM-DD
+    // intentamos parsear manualmente para evitar timezone shifts si es medianoche UTC.
+    if (typeof dateString === "string" && /^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+      const datePart = dateString.toString().split("T")[0];
+      const parts = datePart.split("-");
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        // Usamos Date(year, month-1, day) para constructor LOCAL
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      }
+    }
+
     return new Date(dateString).toLocaleDateString("es-ES", {
       day: "2-digit",
       month: "short",
