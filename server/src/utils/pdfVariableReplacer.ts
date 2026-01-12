@@ -114,7 +114,18 @@ export function prepareVariables(order: IOrder, category: IOrderCategory, user: 
   const categoryName = category.name || "-";
   const categoria = sanitizeHtml(categoryName);
 
-  const subcategoria = order.subcategories && order.subcategories.length > 0 ? sanitizeHtml(order.subcategories.join(", ")) : "-";
+  let subcategoria = "-";
+  if (order.subcategories && order.subcategories.length > 0) {
+    if (category.config?.subtipos) {
+      const labels = order.subcategories.map((subId) => {
+        const found = category.config.subtipos?.find((st: any) => st.id === subId);
+        return found ? found.label : subId;
+      });
+      subcategoria = sanitizeHtml(labels.join(", "));
+    } else {
+      subcategoria = sanitizeHtml(order.subcategories.join(", "));
+    }
+  }
 
   const monto = order.amount !== undefined && order.amount !== null ? formatCurrency(order.amount) : "-";
 

@@ -553,7 +553,9 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate("userId").populate("categoryId");
+    })
+      .populate("userId")
+      .populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -573,7 +575,18 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
     const category = order.categoryId as any;
     const categoryName = category?.name || order.category;
-    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    let subcategoryText = "";
+    if (order.subcategories && order.subcategories.length > 0) {
+      if (category?.config?.subtipos) {
+        const labels = order.subcategories.map((subId: string) => {
+          const found = category.config.subtipos.find((st: any) => st.id === subId);
+          return found ? found.label : subId;
+        });
+        subcategoryText = ` - ${labels.join(", ")}`;
+      } else {
+        subcategoryText = ` - ${order.subcategories.join(", ")}`;
+      }
+    }
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
     await ActivityLog.create({
@@ -606,14 +619,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
           const tenantName = tenant?.name || tenant?.slug || "Organización";
 
           console.log("[PDF DEBUG] Calling generateOrderPDF...");
-          const pdfResult = await generateOrderPDF(
-            order,
-            category,
-            template,
-            user,
-            req.tenantObjectId.toString(),
-            tenantName
-          );
+          const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
 
           console.log("[PDF DEBUG] PDF generation result:", pdfResult.success ? "SUCCESS" : "FAILED");
           console.log("[PDF DEBUG] PDF URL:", pdfResult.pdfUrl || pdfResult.error);
@@ -648,7 +654,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
       .populate({
         path: "userId",
         select: "firstName lastName email positionId",
-        populate: { path: "positionId", select: "name" }
+        populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
       .populate("futureActionId")
@@ -669,7 +675,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate('categoryId');
+    }).populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -696,7 +702,18 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     await order.save();
 
     const categoryName = category?.name || order.category;
-    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    let subcategoryText = "";
+    if (order.subcategories && order.subcategories.length > 0) {
+      if (category?.config?.subtipos) {
+        const labels = order.subcategories.map((subId: string) => {
+          const found = category.config.subtipos.find((st: any) => st.id === subId);
+          return found ? found.label : subId;
+        });
+        subcategoryText = ` - ${labels.join(", ")}`;
+      } else {
+        subcategoryText = ` - ${order.subcategories.join(", ")}`;
+      }
+    }
     const orderDisplayName = `${categoryName}${subcategoryText}`;
     const orderNumber = order.orderNumber || "N/A";
 
@@ -724,7 +741,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       .populate({
         path: "userId",
         select: "firstName lastName email positionId",
-        populate: { path: "positionId", select: "name" }
+        populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
       .populate("futureActionId")
@@ -758,8 +775,20 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
-    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+    const category = order.categoryId ? await OrderCategory.findById(order.categoryId) : null;
+    const categoryName = category?.name || order.category;
+    let subcategoryText = "";
+    if (order.subcategories && order.subcategories.length > 0) {
+      if (category?.config?.subtipos) {
+        const labels = order.subcategories.map((subId: string) => {
+          const found = category.config.subtipos.find((st: any) => st.id === subId);
+          return found ? found.label : subId;
+        });
+        subcategoryText = ` - ${labels.join(", ")}`;
+      } else {
+        subcategoryText = ` - ${order.subcategories.join(", ")}`;
+      }
+    }
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
     await Notification.create({
@@ -775,7 +804,7 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
       .populate({
         path: "userId",
         select: "firstName lastName email positionId",
-        populate: { path: "positionId", select: "name" }
+        populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
       .populate("futureActionId")
@@ -827,7 +856,7 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
       .populate({
         path: "userId",
         select: "firstName lastName email positionId",
-        populate: { path: "positionId", select: "name" }
+        populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
       .populate("futureActionId")
@@ -845,7 +874,7 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate('categoryId');
+    }).populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -885,7 +914,7 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
       .populate({
         path: "userId",
         select: "firstName lastName email positionId",
-        populate: { path: "positionId", select: "name" }
+        populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
       .populate("futureActionId")
@@ -905,7 +934,7 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
     const order = await Order.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
-    }).populate('categoryId');
+    }).populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -955,7 +984,7 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
       .populate({
         path: "userId",
         select: "firstName lastName email positionId",
-        populate: { path: "positionId", select: "name" }
+        populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
       .populate("futureActionId")
