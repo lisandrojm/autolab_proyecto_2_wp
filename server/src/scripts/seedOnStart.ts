@@ -711,12 +711,12 @@ export async function seedOnStart() {
     const adminId = String(adminUser._id);
     console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelDirectorNacional.name}, Area=Libertador`);
 
-    // Colaborador móvil
+    // Colaborador móvil - Cambiado a rol 'user' para evitar re-creación de roles móviles
     const collab = await ensureUser({
       tenantId,
       email: "colaborador@mobile.com",
       password: "colaborador123",
-      roleNames: ["Mobile-Colaborador"],
+      roleNames: ["user"], // WAS: ["Mobile-Colaborador"]
       firstName: "Juan",
       lastName: "Colaborador",
       isActive: true,
@@ -729,12 +729,12 @@ export async function seedOnStart() {
     });
     console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
 
-    // Coordinador móvil
+    // Coordinador móvil - Cambiado a rol 'user' para evitar re-creación de roles móviles
     const coord = await ensureUser({
       tenantId,
       email: "coordinador@mobile.com",
       password: "coordinador-123",
-      roleNames: ["Mobile-Coordinador"],
+      roleNames: ["user"], // WAS: ["Mobile-Coordinador"]
       firstName: "María",
       lastName: "Coordinadora",
       isActive: true,
@@ -751,7 +751,7 @@ export async function seedOnStart() {
       tenantId,
       email: "colaborador2@mobile.com",
       password: "colaborador123",
-      roleNames: ["Mobile-Colaborador"],
+      roleNames: ["user"], // WAS: ["Mobile-Colaborador"]
       firstName: "Pedro",
       lastName: "Colaborador",
       isActive: true,
@@ -768,7 +768,7 @@ export async function seedOnStart() {
       tenantId,
       email: "coordinador2@mobile.com",
       password: "coordinador-123",
-      roleNames: ["Mobile-Coordinador"],
+      roleNames: ["user"], // WAS: ["Mobile-Coordinador"]
       firstName: "Ana",
       lastName: "Coordinadora",
       isActive: true,
