@@ -1,7 +1,8 @@
 import mongoose, { Types } from "mongoose";
+import type { IActivityReport } from "../models/ActivityReport.js";
 
 export async function getNextReportNumber(tenantId: Types.ObjectId, prefix: string): Promise<string> {
-  const ActivityReport = mongoose.model("ActivityReport");
+  const ActivityReport = mongoose.model<IActivityReport>("ActivityReport");
   const lastReport = await ActivityReport.findOne({ tenantId }).sort({ reportNumber: -1 }).select("reportNumber").lean().exec();
 
   let nextSequence = 1;
