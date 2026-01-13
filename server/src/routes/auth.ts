@@ -8,7 +8,7 @@ import { validate } from "../middleware/validate.js";
 import { registerSchema, loginSchema } from "../validators/authSchemas.js";
 import { register, checkEmailAvailability } from "../controllers/authController.js";
 import { signJwt } from "../utils/jwt.js";
-import { addUserToClientUsuarios } from "../services/clientUsuarios.js";
+import { addUserToClientUsuarios } from "../services/clientUsuariosService.js";
 import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
 import { z } from "zod";
