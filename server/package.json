@@ -9,14 +9,6 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "start:prod": "dotenv -e .env.production -- node dist/server.js",
-    "pm2:start": "pm2 start ecosystem.config.cjs",
-    "pm2:stop": "pm2 stop brandme-api",
-    "pm2:restart": "pm2 restart brandme-api",
-    "pm2:delete": "pm2 delete brandme-api",
-    "pm2:logs": "pm2 logs brandme-api",
-    "pm2:status": "pm2 status",
-    "pm2:monit": "pm2 monit",
-    "pm2:save": "pm2 save",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
@@ -53,7 +45,6 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "pdfkit": "^0.17.2",
-    "pm2": "^5.4.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
