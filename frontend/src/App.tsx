@@ -25,12 +25,9 @@ import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
-import { ClientContextPostsPage } from "./pages/ClientContextPostsPage";
-
 import { ClientDashboardPage } from "./pages/ClientDashboardPage";
 import { ClientProfilePage } from "./pages/ClientProfilePage";
 
-import { ClientApprovalsPage } from "./pages/ClientApprovalsPage";
 import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
 
@@ -218,15 +215,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ClientProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/client/aprobaciones"
-                element={
-                  <ProtectedRoute>
-                    <ClientApprovalsPage />
                   </ProtectedRoute>
                 }
               />
@@ -520,16 +508,7 @@ function App() {
                     <ClientContextWrapper />
                   </ProtectedRoute>
                 }
-              >
-                <Route
-                  path="posts"
-                  element={
-                    <ProtectedRoute>
-                      <ClientContextPostsPage />
-                    </ProtectedRoute>
-                  }
-                />
-              </Route>
+              ></Route>
             </Route>
 
             {/* Mobile App Route SIN MobileNavbar (no está dentro de AppLayout) */}

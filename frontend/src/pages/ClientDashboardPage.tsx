@@ -7,20 +7,18 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartLine, faBullhorn, faClipboardCheck, faCalendarDays, faEye, faFileText, faImage, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faBullhorn, faClock, faFileText } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientDashboard" as const;
 
 interface DashboardStats {
   activeProjects: number;
-  pendingApprovals: number;
-  scheduledPosts: number;
 }
 
 interface Activity {
   _id: string;
-  type: "post" | "project";
+  type: "project";
   title: string;
   status?: string;
   updatedAt: string;
@@ -33,8 +31,6 @@ export const ClientDashboardPage: React.FC = () => {
 
   const [stats, setStats] = useState<DashboardStats>({
     activeProjects: 0,
-    pendingApprovals: 0,
-    scheduledPosts: 0,
   });
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,42 +56,18 @@ export const ClientDashboardPage: React.FC = () => {
         },
       });
 
-      // Fetch posts
-      const postsResponse = await fetch(`${import.meta.env.VITE_API_URL}/posts`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Tenant-Id": tenantId,
-        },
-      });
-
-      if (projectsResponse.ok && postsResponse.ok) {
+      if (projectsResponse.ok) {
         const projects = await projectsResponse.json();
-        const posts = await postsResponse.json();
 
-        // Calculate stats
         // Calculate stats
         const activeProjects = Array.isArray(projects) ? projects.filter((p: any) => p.status === "active").length : 0;
-        const pendingApprovals = Array.isArray(posts) ? posts.filter((p: any) => p.status === "pending_approval" || p.status === "in_review").length : 0;
-        const scheduledPosts = Array.isArray(posts) ? posts.filter((p: any) => p.scheduling?.isScheduled && new Date(p.scheduling.publishAt) > new Date()).length : 0;
 
         setStats({
           activeProjects,
-          pendingApprovals,
-          scheduledPosts,
         });
 
         // Create activities list (last 5 items)
-        // Create activities list (last 5 items)
         const allActivities: Activity[] = [
-          ...(Array.isArray(posts)
-            ? posts.map((p: any) => ({
-                _id: p._id,
-                type: "post" as const,
-                title: p.title,
-                status: p.status,
-                updatedAt: p.updatedAt,
-              }))
-            : []),
           ...(Array.isArray(projects)
             ? projects.map((p: any) => ({
                 _id: p._id,
@@ -121,11 +93,8 @@ export const ClientDashboardPage: React.FC = () => {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case "post":
-        return faImage;
       case "project":
         return faBullhorn;
-
       default:
         return faFileText;
     }
@@ -133,11 +102,8 @@ export const ClientDashboardPage: React.FC = () => {
 
   const getActivityColor = (type: string) => {
     switch (type) {
-      case "post":
-        return "text-blue-600 dark:text-blue-400";
       case "project":
         return "text-blue-600 dark:text-blue-400";
-
       default:
         return "text-gray-600 dark:text-gray-400";
     }
@@ -185,45 +151,12 @@ export const ClientDashboardPage: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-500">En ejecución</p>
             </div>
           </Card>
-
-          <Card
-            header={{
-              title: "Aprobaciones Pendientes",
-              icon: faClipboardCheck,
-              badges: [],
-            }}
-            onClick={() => navigate("/client/aprobaciones")}
-          >
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pendingApprovals}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">Publicaciones por revisar</p>
-            </div>
-          </Card>
-
-          <Card
-            header={{
-              title: "Próximas Publicaciones",
-              icon: faCalendarDays,
-              badges: [],
-            }}
-            onClick={() => navigate("/client/aprobaciones")}
-          >
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.scheduledPosts}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">Programadas</p>
-            </div>
-          </Card>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Acciones Rápidas</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button onClick={() => navigate("/client/aprobaciones")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
-              <FontAwesomeIcon icon={faEye} className="h-5 w-5" />
-              <span className="font-medium">Ver Aprobaciones</span>
-            </button>
-
             <button onClick={() => navigate("/client/proyectos")} className="flex items-center justify-center space-x-2 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100/20 dark:hover:bg-blue-900/30 transition-colors">
               <FontAwesomeIcon icon={faBullhorn} className="h-5 w-5" />
               <span className="font-medium">Ver Proyectos</span>
