@@ -7,7 +7,7 @@ export interface IAsset extends Document {
   nombre: string;
   tipo: "imagen" | "video" | "audio" | "documento" | "otro";
   url: string;
-  scope?: "brandkit" | "assets" | "posts";
+  scope?: "brandkit" | "assets";
   creadoPor: string;
   tags: string[];
   permisos: {
@@ -25,7 +25,7 @@ export interface IAsset extends Document {
   updatedAt: Date;
 
   // Campos para tracking de uso
-  usedInPosts: mongoose.Types.ObjectId[];
+
   lastUsedAt?: Date;
   isAiGenerated?: boolean;
 
@@ -43,7 +43,7 @@ const AssetSchema = new Schema<IAsset>(
     nombre: { type: String, required: true },
     tipo: { type: String, enum: ["imagen", "video", "audio", "documento", "otro"], required: true },
     url: { type: String, required: true },
-    scope: { type: String, enum: ["brandkit", "assets", "posts"], index: true },
+    scope: { type: String, enum: ["brandkit", "assets"], index: true },
     creadoPor: { type: String, required: true, index: true },
     tags: [{ type: String, index: true }],
     permisos: {
@@ -59,7 +59,6 @@ const AssetSchema = new Schema<IAsset>(
     },
 
     // Campos para tracking de uso
-    usedInPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     lastUsedAt: { type: Date },
     isAiGenerated: { type: Boolean, default: false },
 
@@ -80,7 +79,7 @@ AssetSchema.index({ tenantId: 1, tags: 1 });
 AssetSchema.index({ tenantId: 1, "metadata.name": 1 });
 AssetSchema.index({ tenantId: 1, scope: 1 });
 AssetSchema.index({ tenantId: 1, clientId: 1, createdAt: -1 });
-AssetSchema.index({ usedInPosts: 1 });
+
 AssetSchema.index({ lastUsedAt: -1 });
 
 export const Asset = mongoose.model<IAsset>("Asset", AssetSchema);

@@ -2,7 +2,6 @@ import { Router } from "express";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
-import { Post } from "../models/Post.js";
 import { User } from "../models/User.js";
 import mongoose from "mongoose";
 
@@ -79,20 +78,8 @@ router.get("/stats", authenticateToken, async (req: AuthenticatedRequest, res) =
       ]),
     ]);
 
-    const postsCollection = mongoose.connection.db?.collection("posts");
-    let totalPosts = 0;
-    let publishedPosts = 0;
-    let scheduledPosts = 0;
-    let draftPosts = 0;
-    let lastMonthPosts = 0;
-
-    if (postsCollection) {
-      [totalPosts, publishedPosts, scheduledPosts, draftPosts, lastMonthPosts] = await Promise.all([postsCollection.countDocuments({ tenantId: new mongoose.Types.ObjectId(tenantId) }), postsCollection.countDocuments({ tenantId: new mongoose.Types.ObjectId(tenantId), status: "published" }), postsCollection.countDocuments({ tenantId: new mongoose.Types.ObjectId(tenantId), status: "scheduled" }), postsCollection.countDocuments({ tenantId: new mongoose.Types.ObjectId(tenantId), status: "draft" }), postsCollection.countDocuments({ tenantId: new mongoose.Types.ObjectId(tenantId), createdAt: { $gte: lastMonth } })]);
-    }
-
     const projectChange = totalProjects > 0 ? Math.round((lastMonthProjects / totalProjects) * 100) : 0;
     const clientChange = totalClients > 0 ? Math.round((lastMonthClients / totalClients) * 100) : 0;
-    const postChange = totalPosts > 0 ? Math.round((lastMonthPosts / totalPosts) * 100) : 0;
     const userChange = totalUsers > 0 ? Math.round((lastMonthUsers / totalUsers) * 100) : 0;
 
     const recentProjects = await Project.find({ tenantId: tenantId }).sort({ createdAt: -1 }).limit(5).populate("createdBy", "firstName lastName email").lean();
@@ -129,13 +116,6 @@ router.get("/stats", authenticateToken, async (req: AuthenticatedRequest, res) =
         onboarding: onboardingClients,
         change: clientChange,
       },
-      posts: {
-        total: totalPosts,
-        published: publishedPosts,
-        scheduled: scheduledPosts,
-        draft: draftPosts,
-        change: postChange,
-      },
       users: {
         total: totalUsers,
         active: activeUsers,
@@ -146,7 +126,6 @@ router.get("/stats", authenticateToken, async (req: AuthenticatedRequest, res) =
         _id: c._id,
         name: c.name,
         projectCount: c.projectCount,
-        postCount: 0,
       })),
       platformDistribution: platformStats,
     };

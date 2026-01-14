@@ -861,7 +861,19 @@ export const UsersPage: React.FC = () => {
                                 checked={formData.roles.includes(role._id)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setFormData((prev) => ({ ...prev, roles: [...prev.roles, role._id] }));
+                                    let newRoles = [...formData.roles, role._id];
+                                    const roleName = role.name.toLowerCase();
+
+                                    // Regla: User y Admin son mutuamente excluyentes
+                                    if (roleName === "admin") {
+                                      const conflictRole = roles.find((r) => r.name.toLowerCase() === "user");
+                                      if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
+                                    } else if (roleName === "user") {
+                                      const conflictRole = roles.find((r) => r.name.toLowerCase() === "admin");
+                                      if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
+                                    }
+
+                                    setFormData((prev) => ({ ...prev, roles: newRoles }));
                                   } else {
                                     setFormData((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== role._id) }));
                                   }
@@ -911,7 +923,7 @@ export const UsersPage: React.FC = () => {
                                       });
 
                                       if (!hasMobile) {
-                                        alert("El usuario debe tener al menos un rol Mobile asignado (Colaborador o Coordinador).");
+                                        sweetAlert.warningAlert("Atención", "El usuario debe tener al menos un rol Mobile asignado (Colaborador o Coordinador).");
                                         return;
                                       }
                                       setFormData((prev) => ({ ...prev, roles: remainingRoles }));

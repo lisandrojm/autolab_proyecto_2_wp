@@ -90,6 +90,17 @@ export const sweetAlert = {
     });
   },
 
+  warningAlert: (title: string, text: string, confirmText = "Entendido") => {
+    return Swal.fire({
+      title,
+      text,
+      icon: "warning",
+      confirmButtonText: confirmText,
+      confirmButtonColor: "#f59e0b",
+      focusConfirm: false,
+    });
+  },
+
   favoriteToggle: (isFavorite: boolean, itemName?: string) => {
     return Swal.fire({
       toast: true,

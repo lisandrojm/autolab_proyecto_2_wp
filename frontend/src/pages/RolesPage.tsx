@@ -298,9 +298,20 @@ export const RolesPage: React.FC = () => {
           permissions: currentPermissions.filter((p) => p !== permission),
         };
       } else {
+        let newPermissions = [...currentPermissions, permission];
+
+        // Lógica de exclusión mutua para roles Mobile
+        if (permission === "mobile_collaborator:view") {
+          // Si selecciono colaborador, quito coordinador
+          newPermissions = newPermissions.filter((p) => p !== "mobile_coordinator:view");
+        } else if (permission === "mobile_coordinator:view") {
+          // Si selecciono coordinador, quito colaborador
+          newPermissions = newPermissions.filter((p) => p !== "mobile_collaborator:view");
+        }
+
         return {
           ...prev,
-          permissions: [...currentPermissions, permission],
+          permissions: newPermissions,
         };
       }
     });

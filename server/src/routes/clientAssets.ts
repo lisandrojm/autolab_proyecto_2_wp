@@ -24,7 +24,7 @@ async function ensureDir(dir: string) {
   }
 }
 
-function createStorage(scope: "brandkit" | "campaigns" | "assets" | "posts") {
+function createStorage(scope: "brandkit" | "campaigns" | "assets") {
   return multer.diskStorage({
     destination: async (req: any, _file, cb) => {
       try {
@@ -72,7 +72,7 @@ const captureIdentifiers = (req: any, _res: any, next: any) => {
   }
 
   // Capturar flag de asset personal
-  if (req.query.isPersonalAsset === 'true') {
+  if (req.query.isPersonalAsset === "true") {
     req.parsedIsPersonalAsset = true;
     console.log("Asset personal detectado:", true);
   } else {
@@ -104,8 +104,8 @@ const fileFilterAllTypes = (_req: any, file: Express.Multer.File, cb: any) => {
     "application/x-msi", // .msi
   ];
 
-  const prohibitedExtensions = ['.exe', '.bat', '.sh', '.app', '.dmg', '.com', '.scr', '.vbs', '.jar', '.msi', '.cmd'];
-  const fileExt = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
+  const prohibitedExtensions = [".exe", ".bat", ".sh", ".app", ".dmg", ".com", ".scr", ".vbs", ".jar", ".msi", ".cmd"];
+  const fileExt = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf("."));
 
   if (prohibited.includes(file.mimetype) || prohibitedExtensions.includes(fileExt)) {
     cb(new Error("Tipo de archivo no permitido por razones de seguridad"));
@@ -138,16 +138,10 @@ const uploadclientAssets = multer({
   fileFilter: fileFilterImages,
 });
 
-const uploadPosts = multer({
-  storage: createStorage("posts"),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: fileFilterImages,
-});
-
 // ---------------------------
 // Función que registra rutas por scope
 // ---------------------------
-function registerScopeRoutes(scope: "brandkit" | "campaigns" | "assets" | "posts", upload: multer.Multer) {
+function registerScopeRoutes(scope: "brandkit" | "campaigns" | "assets", upload: multer.Multer) {
   // const base = scope === "client-assets" ? "assets" : scope;
 
   // GET lista
@@ -250,7 +244,7 @@ function registerScopeRoutes(scope: "brandkit" | "campaigns" | "assets" | "posts
 
         // Generar URL completa solo para respuesta (no para DB)
         const fullUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
-        console.log(`Archivo subido [${scope}] (${isPersonalAsset ? 'PERSONAL' : 'CLIENT'}):`, fullUrl);
+        console.log(`Archivo subido [${scope}] (${isPersonalAsset ? "PERSONAL" : "CLIENT"}):`, fullUrl);
 
         const asset = new Asset({
           _id: assetId,
@@ -311,7 +305,6 @@ function registerScopeRoutes(scope: "brandkit" | "campaigns" | "assets" | "posts
 registerScopeRoutes("brandkit", uploadBrandkit);
 registerScopeRoutes("campaigns", uploadCampaigns);
 registerScopeRoutes("assets", uploadclientAssets);
-registerScopeRoutes("posts", uploadPosts);
 
 // Ruta especial para documentos del brandkit con límite de 40MB
 router.post(
@@ -387,7 +380,7 @@ router.post(
       const relativePath = `/storage/${tenantId}/${identifier}/brandkit/${newFilename}`;
       const fullUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
 
-      console.log(`Documento subido [brandkit-documents] (${isPersonalAsset ? 'PERSONAL' : 'CLIENT'}):`, fullUrl);
+      console.log(`Documento subido [brandkit-documents] (${isPersonalAsset ? "PERSONAL" : "CLIENT"}):`, fullUrl);
 
       const asset = new Asset({
         _id: assetId,
@@ -409,7 +402,7 @@ router.post(
         filename: newFilename,
         path: relativePath,
         url: fullUrl,
-        fileType: fileExt.replace('.', ''),
+        fileType: fileExt.replace(".", ""),
       });
     } catch (err: any) {
       console.error("Upload document error:", err);
@@ -423,19 +416,10 @@ router.post(
 // ---------------------------
 router.get("/query", requireTenant, authenticateToken, async (req, res) => {
   try {
-    const {
-      clientId,
-      includeUserAssets,
-      userId,
-      search,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-      limit = 100,
-      offset = 0
-    } = req.query;
+    const { clientId, includeUserAssets, userId, search, sortBy = "createdAt", sortOrder = "desc", limit = 100, offset = 0 } = req.query;
 
     const filter: any = { tenantId: req.tenantId };
-    const includeUser = includeUserAssets === 'true';
+    const includeUser = includeUserAssets === "true";
     const tenantId = req.tenantId;
     const requestUserId = userId || req.user?.userId;
 
@@ -444,56 +428,48 @@ router.get("/query", requireTenant, authenticateToken, async (req, res) => {
     // - includeUserAssets=true: Assets del cliente + assets personales del usuario actual
 
     if (!clientId) {
-      console.log('[Query Assets] ERROR: clientId requerido');
-      return res.status(400).json({ error: 'clientId es requerido' });
+      console.log("[Query Assets] ERROR: clientId requerido");
+      return res.status(400).json({ error: "clientId es requerido" });
     }
 
     if (!includeUser) {
       // Caso 1: SOLO assets del cliente (compartidos)
       // Identificados porque la URL contiene /storage/{tenantId}/client/{clientId}/
-      console.log('[Query Assets] Solo assets del cliente:', { clientId, tenantId });
+      console.log("[Query Assets] Solo assets del cliente:", { clientId, tenantId });
       filter.clientId = String(clientId);
       filter.url = { $regex: `/storage/${tenantId}/client/${clientId}/` };
     } else {
       // Caso 2: Assets del cliente + assets personales del usuario
       if (!requestUserId) {
-        console.log('[Query Assets] WARN: userId no disponible, mostrando solo assets del cliente');
+        console.log("[Query Assets] WARN: userId no disponible, mostrando solo assets del cliente");
         filter.clientId = String(clientId);
         filter.url = { $regex: `/storage/${tenantId}/client/${clientId}/` };
       } else {
-        console.log('[Query Assets] Assets del cliente + personales del usuario:', {
+        console.log("[Query Assets] Assets del cliente + personales del usuario:", {
           clientId,
           userId: requestUserId,
-          tenantId
+          tenantId,
         });
         filter.$or = [
           // Assets del cliente (compartidos)
           {
             clientId: String(clientId),
-            url: { $regex: `/storage/${tenantId}/client/${clientId}/` }
+            url: { $regex: `/storage/${tenantId}/client/${clientId}/` },
           },
           // Assets personales del usuario
           {
             creadoPor: String(requestUserId),
-            url: { $regex: `/storage/${tenantId}/${requestUserId}/` }
-          }
+            url: { $regex: `/storage/${tenantId}/${requestUserId}/` },
+          },
         ];
       }
     }
 
     if (search) {
-      const searchConditions = [
-        { nombre: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } },
-        { 'metadata.title': { $regex: search, $options: 'i' } },
-        { 'metadata.description': { $regex: search, $options: 'i' } }
-      ];
+      const searchConditions = [{ nombre: { $regex: search, $options: "i" } }, { tags: { $regex: search, $options: "i" } }, { "metadata.title": { $regex: search, $options: "i" } }, { "metadata.description": { $regex: search, $options: "i" } }];
 
       if (filter.$or) {
-        filter.$and = [
-          { $or: filter.$or },
-          { $or: searchConditions }
-        ];
+        filter.$and = [{ $or: filter.$or }, { $or: searchConditions }];
         delete filter.$or;
       } else {
         filter.$or = searchConditions;
@@ -501,22 +477,18 @@ router.get("/query", requireTenant, authenticateToken, async (req, res) => {
     }
 
     const sortOptions: any = {};
-    const sortField = sortBy === 'nombre' ? 'nombre' : 'createdAt';
-    sortOptions[sortField] = sortOrder === 'asc' ? 1 : -1;
+    const sortField = sortBy === "nombre" ? "nombre" : "createdAt";
+    sortOptions[sortField] = sortOrder === "asc" ? 1 : -1;
 
-    const assets = await Asset.find(filter)
-      .sort(sortOptions)
-      .limit(Number(limit))
-      .skip(Number(offset))
-      .lean();
+    const assets = await Asset.find(filter).sort(sortOptions).limit(Number(limit)).skip(Number(offset)).lean();
 
     const total = await Asset.countDocuments(filter);
 
-    console.log('[Query Assets] Results:', {
+    console.log("[Query Assets] Results:", {
       total,
       returned: assets.length,
       includeUserAssets: includeUser,
-      filter: JSON.stringify(filter)
+      filter: JSON.stringify(filter),
     });
 
     return res.json({
@@ -524,11 +496,11 @@ router.get("/query", requireTenant, authenticateToken, async (req, res) => {
       total,
       limit: Number(limit),
       offset: Number(offset),
-      hasMore: total > Number(offset) + Number(limit)
+      hasMore: total > Number(offset) + Number(limit),
     });
   } catch (err) {
-    console.error('Query assets error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Query assets error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -546,47 +518,25 @@ router.get("/stats", requireTenant, authenticateToken, async (req, res) => {
       { $match: filter },
       {
         $facet: {
-          byScope: [
-            { $group: { _id: "$scope", count: { $sum: 1 } } }
-          ],
-          byType: [
-            { $group: { _id: "$tipo", count: { $sum: 1 } } }
-          ],
-          totalUsed: [
-            {
-              $match: {
-                usedInPosts: { $exists: true, $ne: [] }
-              }
-            },
-            { $count: "count" }
-          ],
-          totalUnused: [
-            {
-              $match: {
-                $or: [
-                  { usedInPosts: { $exists: false } },
-                  { usedInPosts: { $size: 0 } }
-                ]
-              }
-            },
-            { $count: "count" }
-          ],
+          byScope: [{ $group: { _id: "$scope", count: { $sum: 1 } } }],
+          byType: [{ $group: { _id: "$tipo", count: { $sum: 1 } } }],
+
           recentlyAdded: [
             {
               $match: {
-                createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-              }
+                createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+              },
             },
-            { $count: "count" }
-          ]
-        }
-      }
+            { $count: "count" },
+          ],
+        },
+      },
     ]);
 
     return res.json(stats[0]);
   } catch (err) {
-    console.error('Stats error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Stats error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
