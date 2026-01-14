@@ -428,7 +428,7 @@ export const MobileNavbar: React.FC = () => {
               <div className="hidden lg:block">
                 <UserCard />
               </div>
-              {isDeployButtonVisible() && (
+              {/*               {isDeployButtonVisible() && (
                 <button onClick={handleRedeploy} onMouseEnter={loadDeployMeta} disabled={isDeploying} className="relative p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group">
                   <FontAwesomeIcon icon={faRocket} className={`h-5 w-5 text-blue-600 dark:text-blue-400}`} />
                   <div className="absolute top-full left-1/2 mt-2 -translate-x-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
@@ -465,7 +465,7 @@ export const MobileNavbar: React.FC = () => {
                     </span>
                   </div>
                 </button>
-              )}
+              )} */}
 
               <button onClick={toggleTheme} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 {theme === "light" ? <FontAwesomeIcon icon={faMoon} className="h-5 w-5 text-gray-600" /> : <FontAwesomeIcon icon={faSun} className="h-5 w-5 text-gray-300" />}
