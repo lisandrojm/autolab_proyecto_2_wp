@@ -12,14 +12,7 @@
     "lint": "eslint src --ext .ts",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "seed": "dotenv -e .env.development -- tsx src/scripts/seedOnStart.ts",
-    "migrate:add-user-role": "dotenv -e .env.development -- tsx src/scripts/migrateAddUserRole.ts",
-    "migrate:posts": "NODE_ENV=development tsx src/scripts/migratePostsContentFormat.ts",
-    "migrate:posts:prod": "NODE_ENV=production tsx src/scripts/migratePostsContentFormat.ts",
-    "migrate:asset-urls": "dotenv -e .env.development -- tsx src/scripts/migrateAssetUrls.ts",
-    "migrate:asset-urls:prod": "dotenv -e .env.production -- tsx src/scripts/migrateAssetUrls.ts",
-    "migrate:order-numbers": "dotenv -e .env.development -- tsx src/scripts/migrateOrderNumbers.ts",
-    "migrate:order-numbers:prod": "dotenv -e .env.production -- tsx src/scripts/migrateOrderNumbers.ts"
+    "seed": "dotenv -e .env.development -- tsx src/scripts/seedOnStart.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
