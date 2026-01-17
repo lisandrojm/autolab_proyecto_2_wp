@@ -786,7 +786,7 @@ export async function seedOnStart() {
       tenantId,
       email: adminEmail,
       password: adminPassword,
-      roleNames: ["admin", "Mobile-Colaborador"],
+      roleNames: ["Admin", "Mobile-Colaborador"],
       firstName: "Admin",
       lastName: "User",
       isActive: true,
@@ -799,12 +799,28 @@ export async function seedOnStart() {
     const adminId = String(adminUser._id);
     console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelDirectorNacional.name}, Area=Libertador`);
 
-    // Colaborador móvil - Cambiado a rol 'user' para evitar re-creación de roles móviles
+    const userUser = await ensureUser({
+      tenantId,
+      email: "user@example.com",
+      password: "user123",
+      roleNames: ["User", "Mobile-Colaborador"],
+      firstName: "User",
+      lastName: "User",
+      isActive: true,
+      positionId: positionProductor._id as Types.ObjectId,
+      levelId: levelProductorEjecutivo._id as Types.ObjectId,
+      areaId: areaMap["Técnica"],
+      hireDate: new Date("2019-01-01"),
+      extraVacationDays: 0,
+    });
+    console.log(`👤 User assigned: Position=${positionProductor.name}, Level=${levelProductorEjecutivo.name}, Area=Técnica`);
+
+    // Colaborador móvil
     const collab = await ensureUser({
       tenantId,
       email: "colaborador@mobile.com",
       password: "colaborador123",
-      roleNames: ["user"], // WAS: ["Mobile-Colaborador"]
+      roleNames: ["Mobile-Colaborador"],
       firstName: "Juan",
       lastName: "Colaborador",
       isActive: true,
@@ -813,16 +829,15 @@ export async function seedOnStart() {
       areaId: areaMap["Editores"],
       hireDate: new Date("2023-05-01"),
       extraVacationDays: 0,
-      carryOverVacationDays: 5,
     });
     console.log(`👤 Colaborador assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
 
-    // Coordinador móvil - Cambiado a rol 'user' para evitar re-creación de roles móviles
+    // Coordinador móvil
     const coord = await ensureUser({
       tenantId,
       email: "coordinador@mobile.com",
       password: "coordinador-123",
-      roleNames: ["user"], // WAS: ["Mobile-Coordinador"]
+      roleNames: ["Mobile-Coordinador"],
       firstName: "María",
       lastName: "Coordinadora",
       isActive: true,
@@ -833,40 +848,6 @@ export async function seedOnStart() {
       extraVacationDays: 2,
     });
     console.log(`👤 Coordinador assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Técnica`);
-
-    // Nuevo Colaborador (mismo área que Juan para testing)
-    const collab2 = await ensureUser({
-      tenantId,
-      email: "colaborador2@mobile.com",
-      password: "colaborador123",
-      roleNames: ["user"], // WAS: ["Mobile-Colaborador"]
-      firstName: "Pedro",
-      lastName: "Colaborador",
-      isActive: true,
-      positionId: positionEditor._id as Types.ObjectId,
-      levelId: levelEditorJunior._id as Types.ObjectId,
-      areaId: areaMap["Editores"],
-      hireDate: new Date("2024-01-10"),
-      extraVacationDays: 0,
-    });
-    console.log(`👤 Colaborador 2 assigned: Position=${positionEditor.name}, Level=${levelEditorJunior.name}, Area=Editores`);
-
-    // Nuevo Coordinador (mismo área que Juan y Pedro para testing)
-    const coord2 = await ensureUser({
-      tenantId,
-      email: "coordinador2@mobile.com",
-      password: "coordinador-123",
-      roleNames: ["user"], // WAS: ["Mobile-Coordinador"]
-      firstName: "Ana",
-      lastName: "Coordinadora",
-      isActive: true,
-      positionId: positionProductor._id as Types.ObjectId,
-      levelId: levelProductorSenior._id as Types.ObjectId,
-      areaId: areaMap["Editores"], // Intentionally in Editores for overlap testing
-      hireDate: new Date("2021-08-20"),
-      extraVacationDays: 1,
-    });
-    console.log(`👤 Coordinador 2 assigned: Position=${positionProductor.name}, Level=${levelProductorSenior.name}, Area=Editores`);
 
     /* ============ SEED: MODELOS DEL NAVBAR (HR / MODELOS) ============ */
     console.log("👥 Seeding HR/Models demo data...");
@@ -882,11 +863,25 @@ export async function seedOnStart() {
           lastName: "User",
           email: adminEmail,
           phone: "+1-555-0101",
-          position: "Platform Administrator",
-          department: "IT",
-          hireDate: new Date(2023, 0, 15),
+          position: "Director",
+          department: "Libertador",
+          hireDate: new Date("2019-01-01"),
           address: { street: "123 Tech Street", city: "San Francisco", state: "CA", country: "USA", zip: "94102" },
           vacationPolicy: { annualDays: 25, carryOverDays: 5 },
+          isActive: true,
+        },
+        {
+          tenantId,
+          userId: userUser._id,
+          firstName: "User",
+          lastName: "User",
+          email: "user@example.com",
+          phone: "+1-555-0102",
+          position: "Productor",
+          department: "Técnica",
+          hireDate: new Date("2019-01-01"),
+          address: { street: "456 User Lane", city: "Los Angeles", state: "CA", country: "USA", zip: "90001" },
+          vacationPolicy: { annualDays: 20, carryOverDays: 0 },
           isActive: true,
         },
         {
@@ -896,9 +891,9 @@ export async function seedOnStart() {
           lastName: "Colaborador",
           email: "colaborador@mobile.com",
           phone: "+54-11-5555-0001",
-          position: "Asistente Operativo",
+          position: "Editor",
           department: "Editores",
-          hireDate: new Date(2023, 5, 1),
+          hireDate: new Date("2023-05-01"),
           address: { street: "Av. Demo 100", city: "CABA", state: "BA", country: "AR", zip: "1000" },
           vacationPolicy: { annualDays: 20, carryOverDays: 0 },
           isActive: true,
@@ -910,38 +905,10 @@ export async function seedOnStart() {
           lastName: "Coordinadora",
           email: "coordinador@mobile.com",
           phone: "+54-11-5555-0002",
-          position: "Coordinadora de Equipo",
+          position: "Productor",
           department: "Técnica",
-          hireDate: new Date(2022, 8, 10),
+          hireDate: new Date("2020-03-15"),
           address: { street: "Calle Proyecto 200", city: "CABA", state: "BA", country: "AR", zip: "1001" },
-          vacationPolicy: { annualDays: 22, carryOverDays: 3 },
-          isActive: true,
-        },
-        {
-          tenantId,
-          userId: collab2._id,
-          firstName: "Pedro",
-          lastName: "Colaborador",
-          email: "colaborador2@mobile.com",
-          phone: "+54-11-5555-0003",
-          position: "Editor Junior",
-          department: "Editores",
-          hireDate: new Date(2023, 6, 1),
-          address: { street: "Calle Test 1", city: "CABA", state: "BA", country: "AR", zip: "1002" },
-          vacationPolicy: { annualDays: 20, carryOverDays: 0 },
-          isActive: true,
-        },
-        {
-          tenantId,
-          userId: coord2._id,
-          firstName: "Ana",
-          lastName: "Coordinadora",
-          email: "coordinador2@mobile.com",
-          phone: "+54-11-5555-0004",
-          position: "Productor Senior",
-          department: "Editores",
-          hireDate: new Date(2022, 9, 15),
-          address: { street: "Calle Test 2", city: "CABA", state: "BA", country: "AR", zip: "1003" },
           vacationPolicy: { annualDays: 22, carryOverDays: 2 },
           isActive: true,
         },
@@ -959,11 +926,24 @@ export async function seedOnStart() {
         lastName: "User",
         email: adminEmail,
         phone: "+1-555-0101",
-        position: "Platform Administrator",
-        department: "IT",
-        hireDate: new Date(2023, 0, 15),
+        position: "Director",
+        department: "Libertador",
+        hireDate: new Date("2019-01-01"),
         address: { street: "123 Tech Street", city: "San Francisco", state: "CA", country: "USA", zip: "94102" },
         vacationPolicy: { annualDays: 25, carryOverDays: 5 },
+        isActive: true,
+      },
+      {
+        userId: userUser._id,
+        firstName: "User",
+        lastName: "User",
+        email: "user@example.com",
+        phone: "+1-555-0102",
+        position: "Productor",
+        department: "Técnica",
+        hireDate: new Date("2019-01-01"),
+        address: { street: "456 User Lane", city: "Los Angeles", state: "CA", country: "USA", zip: "90001" },
+        vacationPolicy: { annualDays: 20, carryOverDays: 0 },
         isActive: true,
       },
       {
@@ -972,9 +952,9 @@ export async function seedOnStart() {
         lastName: "Colaborador",
         email: "colaborador@mobile.com",
         phone: "+54-11-5555-0001",
-        position: "Asistente Operativo",
+        position: "Editor",
         department: "Editores",
-        hireDate: new Date(2023, 5, 1),
+        hireDate: new Date("2023-05-01"),
         address: { street: "Av. Demo 100", city: "CABA", state: "BA", country: "AR", zip: "1000" },
         vacationPolicy: { annualDays: 20, carryOverDays: 0 },
         isActive: true,
@@ -985,36 +965,10 @@ export async function seedOnStart() {
         lastName: "Coordinadora",
         email: "coordinador@mobile.com",
         phone: "+54-11-5555-0002",
-        position: "Coordinadora de Equipo",
+        position: "Productor",
         department: "Técnica",
-        hireDate: new Date(2022, 8, 10),
+        hireDate: new Date("2020-03-15"),
         address: { street: "Calle Proyecto 200", city: "CABA", state: "BA", country: "AR", zip: "1001" },
-        vacationPolicy: { annualDays: 22, carryOverDays: 3 },
-        isActive: true,
-      },
-      {
-        userId: collab2._id,
-        firstName: "Pedro",
-        lastName: "Colaborador",
-        email: "colaborador2@mobile.com",
-        phone: "+54-11-5555-0003",
-        position: "Editor Junior",
-        department: "Editores",
-        hireDate: new Date(2023, 6, 1),
-        address: { street: "Calle Test 1", city: "CABA", state: "BA", country: "AR", zip: "1002" },
-        vacationPolicy: { annualDays: 20, carryOverDays: 0 },
-        isActive: true,
-      },
-      {
-        userId: coord2._id,
-        firstName: "Ana",
-        lastName: "Coordinadora",
-        email: "coordinador2@mobile.com",
-        phone: "+54-11-5555-0004",
-        position: "Productor Senior",
-        department: "Editores",
-        hireDate: new Date(2022, 9, 15),
-        address: { street: "Calle Test 2", city: "CABA", state: "BA", country: "AR", zip: "1003" },
         vacationPolicy: { annualDays: 22, carryOverDays: 2 },
         isActive: true,
       },
