@@ -144,7 +144,7 @@ async function ensureTenant({ name, slug }: { name: string; slug: string }) {
   return tenant;
 }
 
-async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "") {
+async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "", isDefault = false) {
   let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, "i") } });
   if (!role) {
     role = await Role.create({
@@ -152,16 +152,38 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
       name,
       description: description || `${name} role`,
       permissions,
-      isDefault: false,
+      isDefault,
     });
-    console.log(`✅ Created role: ${name} (${permissions.length ? `perms: ${permissions.join(", ")}` : "sin permisos"})`);
+    console.log(`✅ Created role: ${name} (perms: ${permissions.length}, default: ${isDefault})`);
   } else {
-    // Mantenerlo minimal: solo garantizamos los permisos pedidos si cambian
-    const mustUpdate = permissions.length && (role.permissions.length !== permissions.length || permissions.some((p) => !role.permissions.includes(p)));
-    if (mustUpdate) {
+    // Sync permissions, description and isDefault
+    let hasChanges = false;
+
+    // Check permissions
+    const currentPerms = new Set(role.permissions);
+    const newPerms = new Set(permissions);
+    const permsChanged = currentPerms.size !== newPerms.size || [...newPerms].some((p) => !currentPerms.has(p));
+
+    if (permsChanged) {
       role.permissions = permissions;
+      hasChanges = true;
+    }
+
+    // Check description
+    if (description && role.description !== description) {
+      role.description = description;
+      hasChanges = true;
+    }
+
+    // Check isDefault
+    if (role.isDefault !== isDefault) {
+      role.isDefault = isDefault;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
       await role.save();
-      console.log(`♻️ Updated role: ${name} (perms sync)`);
+      console.log(`♻️ Updated role: ${name} (synced)`);
     } else {
       console.log(`✔️ Role exists: ${name}`);
     }
@@ -461,8 +483,24 @@ export async function seedOnStart() {
     await VacationCounter.deleteMany({ tenantId });
 
     // ---- ROLES ----
-    const adminRole = await ensureRole(tenantId, "admin", [], "Administrador del tenant");
-    void adminRole;
+    // ---- ROLES ----
+    console.log("👥 Seeding Roles...");
+
+    // 1. Admin
+    const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_positions:view", "admin_levels:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "mobile_collaborator:view"];
+    await ensureRole(tenantId, "Admin", adminPerms, "Admin role", false);
+
+    // 2. User
+    const userPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view"];
+    await ensureRole(tenantId, "User", userPerms, "User role", true);
+
+    // 3. Mobile-Coordinador
+    await ensureRole(tenantId, "Mobile-Coordinador", ["mobile_coordinator:view"], "Mobile-Coordinador role", false);
+
+    // 4. Mobile-Colaborador
+    await ensureRole(tenantId, "Mobile-Colaborador", ["mobile_collaborator:view"], "Mobile-Colaborador role", false);
+
+    console.log("✅ Roles seeded");
 
     // ---- POSITIONS ----
     console.log("📋 Seeding Positions...");
@@ -1906,7 +1944,7 @@ export async function seedOnStart() {
                 createdBy: adminUser._id,
               },
             ],
-            { ordered: true }
+            { ordered: true },
           );
           console.log("✅ CalendarEvent seeded");
         } else {
