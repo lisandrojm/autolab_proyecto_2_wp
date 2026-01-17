@@ -54,7 +54,7 @@ interface DemoUser {
 
 // ===== Página de Login =====
 export const LoginPage: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
@@ -62,7 +62,6 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState("");
   const [lastErrorObj, setLastErrorObj] = useState<any>(null);
   const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [availableClients, setAvailableClients] = useState<ClientOption[]>([]);
   const [showClientSelector, setShowClientSelector] = useState(false);
@@ -105,7 +104,6 @@ export const LoginPage: React.FC = () => {
   }, [watchedEmail]);
 
   const fetchDemoUsers = async () => {
-    setLoadingUsers(true);
     try {
       const usersResponse = await fetch(`${import.meta.env.VITE_API_URL}/auth/demo-users`);
 
@@ -121,8 +119,6 @@ export const LoginPage: React.FC = () => {
     } catch (error) {
       console.error("No se pudieron cargar los usuarios demo:", error);
       setDemoUsers([]);
-    } finally {
-      setLoadingUsers(false);
     }
   };
 
@@ -226,7 +222,7 @@ export const LoginPage: React.FC = () => {
       }
 
       // 4. Default a plataforma
-      navigate(isSuperadmin ? "/tenants" : "/users");
+      navigate(isSuperadmin ? "/tenants" : "/clients");
     } catch (err: any) {
       console.error("[login:error]", err);
       setLastErrorObj(err);
@@ -244,13 +240,8 @@ export const LoginPage: React.FC = () => {
       // Re-calculate superadmin for link
       const roles = (useAuthStore.getState().user?.roles as any[]) || [];
       const isSuperadmin = roles.some((r) => (typeof r === "string" ? r : r?.name)?.toLowerCase() === "superadmin");
-      navigate(isSuperadmin ? "/tenants" : "/users");
+      navigate(isSuperadmin ? "/tenants" : "/clients");
     }
-  };
-
-  const handleLanguageToggle = () => {
-    const newLang = i18n.language === "en" ? "es" : "en";
-    i18n.changeLanguage(newLang);
   };
 
   const autofill = (user: DemoUser) => {
