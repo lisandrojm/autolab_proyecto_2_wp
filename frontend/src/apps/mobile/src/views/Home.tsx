@@ -13,13 +13,14 @@ interface HomeProps {
 }
 
 export default function Home({ onNavigate }: HomeProps) {
-  const { user, hasPermission, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
   const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const { theme, toggleTheme } = useThemeStore();
 
-  const isMobileCoordinator = hasPermission("mobile_coordinator:view");
+  // FIX: Check permissions directly to avoid Admin global override
+  const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
 
   useEffect(() => {
     const fetchActivity = async () => {

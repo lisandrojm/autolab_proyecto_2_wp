@@ -15,7 +15,7 @@ import { useThemeStore } from "../../../stores/themeStore";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
-  const { user, hasPermission, tenantId, setTenantId } = useAuthStore();
+  const { user, tenantId, setTenantId } = useAuthStore();
   const { theme } = useThemeStore();
 
   useEffect(() => {
@@ -36,8 +36,9 @@ function App() {
     }
   }, [user, tenantId, setTenantId]);
 
-  const isMobileCollaborator = hasPermission("mobile_collaborator:view");
-  const isMobileCoordinator = hasPermission("mobile_coordinator:view");
+  // FIX: Check permissions directly to avoid Admin global override
+  const isMobileCollaborator = user?.permissions?.includes("mobile_collaborator:view");
+  const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
   const hasMobileAccess = isMobileCollaborator || isMobileCoordinator;
 
   const userRole = isMobileCoordinator ? "coordinator" : isMobileCollaborator ? "collaborator" : null;
