@@ -153,7 +153,9 @@ export function prepareVariables(order: IOrder, category: IOrderCategory, user: 
     Object.entries(order.dynamicValue).forEach(([key, value]) => {
       if (value === null || value === undefined) return;
 
-      if (typeof value === "string") {
+      if (value instanceof Date) {
+        dynamicVars[key] = formatDate(value);
+      } else if (typeof value === "string") {
         if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
           dynamicVars[key] = formatDate(value);
         } else {

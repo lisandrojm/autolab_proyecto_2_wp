@@ -107,8 +107,12 @@ export function PdfTemplatesPage() {
   const openCreate = () => {
     setEditingTemplate(null);
 
+    // Find first available code
+    const usedCodes = new Set(templates.map((t) => t.code));
+    const firstAvailable = codeOptions.find((opt) => !usedCodes.has(opt.value))?.value || "";
+
     setFormData({
-      code: "dinero",
+      code: firstAvailable as any,
       name: "",
       content: "",
       variablesHint: "",
@@ -393,11 +397,19 @@ export function PdfTemplatesPage() {
                   }
                   className="input-field"
                 >
-                  {codeOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
+                  {codeOptions
+                    .filter((opt) => {
+                      // Logic: Show option if:
+                      // 1. We are editing and this is the current template's code
+                      // 2. OR the code is NOT used by any other template
+                      if (editingTemplate && editingTemplate.code === opt.value) return true;
+                      return !templates.some((t) => t.code === opt.value);
+                    })
+                    .map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>

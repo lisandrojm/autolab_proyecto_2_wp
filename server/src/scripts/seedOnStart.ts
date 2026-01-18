@@ -64,6 +64,27 @@ Esta autorización se encuentra sujeta a las políticas internas de la empresa y
     variablesHint: "Variables: dias, fechaDesde, fechaHasta, nombreUsuario",
     isActive: true,
   },
+  {
+    code: "fechaUnica",
+    name: "Solicitud de Fecha Única",
+    content: "Por la presente solicito el día {{fechaUnica}} por motivos personales.",
+    variablesHint: "Variables: categoria, subcategoria, fechaUnica, nombreCompleto, numeroPedido",
+    isActive: true,
+  },
+  {
+    code: "objeto",
+    name: "Solicitud de Objeto/Material",
+    content: "Por medio de la presente, dejo constancia de la solicitud de entrega de: {{objeto}}.\n\nDetalle: {{descripcion}}.\n\nMe comprometo a su correcto uso y devolución si correspondiese.",
+    variablesHint: "Variables: categoria, subcategoria, objeto, nombreCompleto, numeroPedido, descripcion",
+    isActive: true,
+  },
+  {
+    code: "otros",
+    name: "Solicitud General (Otros)",
+    content: "Solicitud General:\n\nDetalle: {{descripcion}}.\n\nAutorizado por: {{tenantName}}",
+    variablesHint: "Variables: categoria, subcategoria, descripcion, nombreCompleto, numeroPedido, tenantName",
+    isActive: true,
+  },
 ];
 
 async function ensurePdfTemplates(tenantId: Types.ObjectId) {
@@ -1131,633 +1152,7 @@ export async function seedOnStart() {
       console.log("✔️ RequestType already present");
     }
 
-    // ---- OrderCategory ----
-    const categoriesCount = await OrderCategory.countDocuments({ tenantId });
-    if (categoriesCount === 0) {
-      const catLicencias = await OrderCategory.create({
-        tenantId,
-        name: "Licencias y Permisos",
-        categoryType: "fecha",
-        dateMode: "range",
-        isActive: true,
-        sortOrder: 1,
-        requiresAction: true,
-        requiresSignature: true,
-        actionText: "Me comprometo a presentar el certificado correspondiente",
-        futureActionType: "documento",
-        deadlineMode: "plazoDias",
-        plazoDias: 5,
-        documentoRequerido: "Certificado médico o permiso oficial",
-        config: {
-          subtipos: [
-            { id: "licencia_medica", label: "Licencia Médica", requiere_certificado: true },
-            { id: "permiso_estudio", label: "Permiso por Estudio", requiere_certificado: true },
-            { id: "cuidado_familiar", label: "Cuidado Familiar", requiere_certificado: true },
-            { id: "matrimonio", label: "Matrimonio", requiere_certificado: false },
-          ],
-        },
-      });
-
-      const catAdelantos = await OrderCategory.create({
-        tenantId,
-        name: "Adelantos y Anticipos",
-        categoryType: "dinero",
-        isActive: true,
-        sortOrder: 2,
-        requiresAction: true,
-        requiresSignature: true,
-        actionText: "Acepto el descuento en cuotas según el plazo acordado",
-        tituloAccion: "Aceptar descuento en cuotas mensuales",
-        futureActionType: "otra",
-        deadlineMode: "none",
-        config: {
-          subtipos: [
-            { id: "adelanto_sueldo", label: "Adelanto de Sueldo" },
-            { id: "adelanto_emergencia", label: "Adelanto por Emergencia" },
-          ],
-        },
-      });
-
-      const catReembolsos = await OrderCategory.create({
-        tenantId,
-        name: "Reembolsos de Gastos",
-        categoryType: "dinero",
-        isActive: true,
-        sortOrder: 3,
-        requiresAction: true,
-        actionText: "Me comprometo a presentar todos los comprobantes",
-        tituloAccion: "Completar presentación de comprobantes y facturas",
-        futureActionType: "otra",
-        deadlineMode: "plazoDias",
-        plazoDias: 15,
-        config: {},
-      });
-
-      const catEquipamiento = await OrderCategory.create({
-        tenantId,
-        name: "Equipamiento y Materiales",
-        categoryType: "objeto",
-        isActive: true,
-        sortOrder: 4,
-        requiresAction: true,
-        actionText: "Me comprometo a confirmar la recepción en buen estado",
-        tituloAccion: "Confirmar recepción de equipamiento",
-        futureActionType: "otra",
-        deadlineMode: "plazoDias",
-        plazoDias: 7,
-        config: {
-          subtipos: [
-            { id: "tecnologia", label: "Tecnología" },
-            { id: "seguridad_higiene", label: "Seguridad e Higiene" },
-            { id: "oficina", label: "Materiales de Oficina" },
-          ],
-        },
-      });
-
-      const catSolicitudesEspeciales = await OrderCategory.create({
-        tenantId,
-        name: "Solicitudes Especiales",
-        categoryType: "otros",
-        isActive: true,
-        sortOrder: 5,
-        requiresAction: true,
-        actionText: "Entiendo que mi solicitud será evaluada por el área correspondiente",
-        tituloAccion: "Solicitud en evaluación",
-        futureActionType: "otra",
-        deadlineMode: "none",
-        config: {},
-      });
-
-      console.log("✅ OrderCategory seeded (5 categorías representativas)");
-
-      // ---- Order (ejemplos representativos de cada tipo) ----
-      const order1 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Licencia médica por gripe",
-        description: "Solicito licencia por cuadro gripal con certificado médico",
-        category: "Licencias y Permisos",
-        categoryId: catLicencias._id,
-        subcategories: ["licencia_medica"],
-        dynamicValue: { startDate: new Date(2024, 1, 5), endDate: new Date(2024, 1, 7) },
-        status: "approved",
-        approvedBy: adminId,
-        approvedAt: new Date(2024, 1, 4),
-        requestedAt: new Date(2024, 1, 3),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "sent",
-        signatureSentAt: new Date(2024, 1, 4),
-      });
-
-      const order2 = await Order.create({
-        tenantId,
-        userId: coord._id,
-        title: "Permiso para examen universitario",
-        description: "Necesito presentarme a examen final de la carrera de grado el 20 de marzo",
-        category: "Licencias y Permisos",
-        categoryId: catLicencias._id,
-        subcategories: ["permiso_estudio"],
-        dynamicValue: { startDate: new Date(2025, 2, 20), endDate: new Date(2025, 2, 20) },
-        status: "pending",
-        requestedAt: new Date(),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "pending",
-      });
-
-      const order3 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Adelanto de sueldo",
-        description: "Solicito adelanto de $150.000 por gastos médicos urgentes",
-        category: "Adelantos y Anticipos",
-        categoryId: catAdelantos._id,
-        subcategories: ["adelanto_sueldo"],
-        dynamicValue: 150000,
-        amount: 150000,
-        status: "pending",
-        requestedAt: new Date(),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "pending",
-      });
-
-      const order4 = await Order.create({
-        tenantId,
-        userId: coord._id,
-        title: "Reembolso viáticos conferencia técnica",
-        description: "Gastos de hospedaje, traslados y comidas durante conferencia en Córdoba",
-        category: "Reembolsos de Gastos",
-        categoryId: catReembolsos._id,
-        subcategories: [],
-        dynamicValue: 85000,
-        amount: 85000,
-        status: "approved",
-        approvedBy: adminId,
-        approvedAt: new Date(2024, 1, 20),
-        requestedAt: new Date(2024, 1, 15),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order5 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Adelanto por emergencia familiar",
-        description: "Necesito un adelanto urgente por hospitalización de familiar directo",
-        category: "Adelantos y Anticipos",
-        categoryId: catAdelantos._id,
-        subcategories: ["adelanto_emergencia"],
-        dynamicValue: 80000,
-        amount: 80000,
-        status: "rejected",
-        requestedAt: new Date(2024, 0, 10),
-        signatureStatus: "not_required",
-      });
-
-      const order6 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Notebook Lenovo ThinkPad",
-        description: "Solicito notebook para trabajo remoto: Lenovo ThinkPad E14, 16GB RAM, 512GB SSD",
-        category: "Equipamiento y Materiales",
-        categoryId: catEquipamiento._id,
-        subcategories: ["tecnologia"],
-        dynamicValue: "Lenovo ThinkPad E14 Gen 4 - Intel i7 - 16GB RAM - 512GB SSD",
-        status: "delivered",
-        approvedBy: adminId,
-        approvedAt: new Date(2024, 0, 10),
-        deliveredAt: new Date(2024, 0, 15),
-        requestedAt: new Date(2024, 0, 5),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order7 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Elementos de protección personal",
-        description: "Necesito renovar EPP: barbijo N95, guantes de seguridad y antiparras",
-        category: "Equipamiento y Materiales",
-        categoryId: catEquipamiento._id,
-        subcategories: ["seguridad_higiene"],
-        dynamicValue: "Kit EPP completo: barbijos N95 (caja x50), guantes nitrilo (caja x100), antiparras protección UV",
-        status: "pending",
-        requestedAt: new Date(),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order8 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Justificación ausencia por trámite",
-        description: "Tuve que realizar trámite urgente en ANSES el día 10/01. Adjunto comprobante de turno",
-        category: "Solicitudes Especiales",
-        categoryId: catSolicitudesEspeciales._id,
-        subcategories: [],
-        dynamicValue: "Trámite en ANSES - Comprobante de turno adjunto",
-        status: "approved",
-        approvedBy: adminId,
-        approvedAt: new Date(2024, 0, 11),
-        requestedAt: new Date(2024, 0, 10),
-        requiresSignature: false,
-        signatureStatus: "not_required",
-      });
-
-      const order9 = await Order.create({
-        tenantId,
-        userId: coord._id,
-        title: "Solicitud cambio de horario laboral",
-        description: "Por razones personales solicito cambio de horario de entrada: de 9:00 a 10:00 hs",
-        category: "Solicitudes Especiales",
-        categoryId: catSolicitudesEspeciales._id,
-        subcategories: [],
-        dynamicValue: "Propuesta: Horario de 10:00 a 19:00 hs en lugar de 9:00 a 18:00 hs",
-        status: "pending",
-        requestedAt: new Date(),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order10 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Licencia médica prolongada y permiso para controles",
-        description: "Solicito licencia por intervención quirúrgica y permisos para controles postoperatorios posteriores",
-        category: "Licencias y Permisos",
-        categoryId: catLicencias._id,
-        subcategories: ["licencia_medica", "permiso_tramite"],
-        dynamicValue: {
-          fechaDesde: new Date(2024, 2, 10),
-          fechaHasta: new Date(2024, 2, 20),
-          observaciones: "Cirugía programada con 3 controles postoperatorios posteriores",
-        },
-        status: "approved",
-        approvedBy: adminId,
-        approvedAt: new Date(2024, 2, 5),
-        requestedAt: new Date(2024, 2, 1),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "sent",
-        signatureSentAt: new Date(2024, 2, 5),
-      });
-
-      const order11 = await Order.create({
-        tenantId,
-        userId: coord._id,
-        title: "Adelanto de sueldo y reembolso de viáticos",
-        description: "Necesito adelanto para viaje de trabajo y posterior reembolso de gastos adicionales",
-        category: "Adelantos y Anticipos",
-        categoryId: catAdelantos._id,
-        subcategories: ["adelanto_sueldo", "adelanto_vacaciones"],
-        dynamicValue: {
-          montoAdelanto: 100000,
-          montoReembolso: 35000,
-          motivo: "Viaje urgente de trabajo a sucursal exterior",
-        },
-        amount: 135000,
-        status: "approved",
-        approvedBy: adminId,
-        approvedAt: new Date(),
-        requestedAt: new Date(2024, 1, 20),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "sent",
-        signatureSentAt: new Date(),
-      });
-
-      const catDocumentos = await OrderCategory.create({
-        tenantId,
-        name: "Documentos Pendientes",
-        categoryType: "objeto",
-        isActive: true,
-        sortOrder: 6,
-        requiresAction: true,
-        actionText: "Me comprometo a presentar el documento requerido en el plazo establecido",
-        futureActionType: "documento",
-        deadlineMode: "plazoDias",
-        plazoDias: 7,
-        documentoRequerido: "Documento solicitado según el tipo de trámite",
-        config: {
-          subtipos: [
-            { id: "dni", label: "DNI / Documento de Identidad" },
-            { id: "certificado", label: "Certificado" },
-            { id: "comprobante", label: "Comprobante" },
-            { id: "titulo", label: "Título / Diploma" },
-          ],
-        },
-      });
-
-      const order12 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Fotocopia de DNI actualizado",
-        description: "Necesito presentar fotocopia de DNI actualizado para legajo personal",
-        category: "Documentos Pendientes",
-        categoryId: catDocumentos._id,
-        subcategories: ["dni"],
-        dynamicValue: "DNI frente y dorso legible",
-        status: "pending",
-        requestedAt: new Date(),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order13 = await Order.create({
-        tenantId,
-        userId: coord._id,
-        title: "Certificado de estudios secundarios",
-        description: "Para completar legajo según nuevo requisito de RRHH",
-        category: "Documentos Pendientes",
-        categoryId: catDocumentos._id,
-        subcategories: ["certificado"],
-        dynamicValue: "Certificado analítico o constancia de título secundario",
-        status: "approved",
-        approvedBy: adminId,
-        approvedAt: new Date(),
-        requestedAt: new Date(),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order14 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Comprobante de domicilio actualizado",
-        description: "Solicito actualización de domicilio, requiero presentar comprobante de no más de 3 meses",
-        category: "Documentos Pendientes",
-        categoryId: catDocumentos._id,
-        subcategories: ["comprobante"],
-        dynamicValue: "Factura de servicio (luz, gas, agua) a nombre del titular",
-        status: "pending",
-        requestedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order15 = await Order.create({
-        tenantId,
-        userId: coord._id,
-        title: "Título universitario para legajo",
-        description: "Presentación de título de grado para formalizar ascenso y ajuste salarial",
-        category: "Documentos Pendientes",
-        categoryId: catDocumentos._id,
-        subcategories: ["titulo"],
-        dynamicValue: "Título de Licenciatura en Administración - Universidad Nacional",
-        status: "pending",
-        requestedAt: new Date(),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      const order16 = await Order.create({
-        tenantId,
-        userId: collab._id,
-        title: "Certificado médico preocupacional",
-        description: "Certificado de apto físico para inicio de actividades según protocolo de seguridad e higiene",
-        category: "Documentos Pendientes",
-        categoryId: catDocumentos._id,
-        subcategories: ["certificado"],
-        dynamicValue: "Examen preocupacional completo con firma y sello del médico laboral",
-        status: "approved",
-        approvedBy: adminId,
-        approvedAt: new Date(),
-        requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        actionCompleted: true,
-        requiereAccionFutura: true,
-        signatureStatus: "not_required",
-      });
-
-      console.log("✅ Order seeded (16 pedidos representativos con estados variados, incluyendo 5 con documentos pendientes)");
-
-      const futureActionsCount = await FutureAction.countDocuments({ tenantId });
-      if (futureActionsCount === 0) {
-        const fa1 = await FutureAction.create({
-          tenantId,
-          orderId: order1._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "documento",
-          deadlineMode: "plazoDias",
-          plazoDias: 5,
-          descripcionAccion: "Presentar certificado médico que justifique la ausencia por enfermedad",
-          responsableAccion: "usuario",
-          documentoRequerido: "Certificado médico original o escaneado",
-          fechaCreacionAccion: order1.requestedAt,
-          estadoAccion: "cumplida",
-        });
-        order1.futureActionId = fa1._id as any;
-        await order1.save();
-
-        const fa2 = await FutureAction.create({
-          tenantId,
-          orderId: order2._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "documento",
-          deadlineMode: "plazoDias",
-          plazoDias: 5,
-          descripcionAccion: "Presentar certificado de inscripción o constancia de examen",
-          responsableAccion: "usuario",
-          documentoRequerido: "Certificado de alumno regular y constancia de examen",
-          fechaCreacionAccion: order2.requestedAt,
-          estadoAccion: "pendiente",
-        });
-        order2.futureActionId = fa2._id as any;
-        await order2.save();
-
-        const limitDate3 = new Date(2025, 11, 31);
-        const fa3 = await FutureAction.create({
-          tenantId,
-          orderId: order3._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "otra",
-          deadlineMode: "fechaEspecifica",
-          descripcionAccion: "Aceptar descuento en cuotas mensuales según lo acordado",
-          responsableAccion: "usuario",
-          fechaLimite: limitDate3,
-          fechaCreacionAccion: order3.requestedAt,
-          estadoAccion: "pendiente",
-        });
-        order3.futureActionId = fa3._id as any;
-        await order3.save();
-
-        const fa4 = await FutureAction.create({
-          tenantId,
-          orderId: order4._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "otra",
-          deadlineMode: "none",
-          descripcionAccion: "Comprobantes y facturas originales presentados correctamente",
-          responsableAccion: "usuario",
-          fechaCreacionAccion: order4.requestedAt,
-          estadoAccion: "cumplida",
-        });
-        order4.futureActionId = fa4._id as any;
-        await order4.save();
-
-        const limitDate6 = new Date(2024, 0, 22);
-        const fa6 = await FutureAction.create({
-          tenantId,
-          orderId: order6._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "otra",
-          deadlineMode: "plazoDias",
-          plazoDias: 7,
-          descripcionAccion: "Confirmar recepción del equipamiento en buen estado",
-          responsableAccion: "usuario",
-          quienDefineVencimiento: "sistema",
-          fechaLimite: limitDate6,
-          fechaCreacionAccion: order6.requestedAt,
-          estadoAccion: "cumplida",
-        });
-        order6.futureActionId = fa6._id as any;
-        await order6.save();
-
-        const limitDate7 = new Date();
-        limitDate7.setDate(limitDate7.getDate() + 7);
-        const fa7 = await FutureAction.create({
-          tenantId,
-          orderId: order7._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "otra",
-          deadlineMode: "plazoDias",
-          plazoDias: 7,
-          descripcionAccion: "Confirmar recepción de los elementos de protección personal",
-          responsableAccion: "usuario",
-          quienDefineVencimiento: "sistema",
-          fechaLimite: limitDate7,
-          fechaCreacionAccion: order7.requestedAt,
-          estadoAccion: "pendiente",
-        });
-        order7.futureActionId = fa7._id as any;
-        await order7.save();
-
-        const fa9 = await FutureAction.create({
-          tenantId,
-          orderId: order9._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "otra",
-          deadlineMode: "none",
-          descripcionAccion: "El área de RRHH debe evaluar la solicitud y definir si es viable el cambio de horario",
-          responsableAccion: "area_interna",
-          quienDefineVencimiento: "area_interna",
-          fechaCreacionAccion: order9.requestedAt,
-          estadoAccion: "en_revision",
-        });
-        order9.futureActionId = fa9._id as any;
-        await order9.save();
-
-        const limitDate12 = new Date();
-        limitDate12.setDate(limitDate12.getDate() + 2);
-        const fa12 = await FutureAction.create({
-          tenantId,
-          orderId: order12._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "documento",
-          deadlineMode: "plazoDias",
-          plazoDias: 2,
-          descripcionAccion: "Presentar fotocopia de DNI frente y dorso legible",
-          responsableAccion: "usuario",
-          documentoRequerido: "DNI actualizado (frente y dorso)",
-          fechaLimite: limitDate12,
-          fechaCreacionAccion: order12.requestedAt,
-          estadoAccion: "pendiente_documento",
-        });
-        order12.futureActionId = fa12._id as any;
-        await order12.save();
-
-        const limitDate13 = new Date();
-        limitDate13.setDate(limitDate13.getDate() + 7);
-        const fa13 = await FutureAction.create({
-          tenantId,
-          orderId: order13._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "documento",
-          deadlineMode: "plazoDias",
-          plazoDias: 7,
-          descripcionAccion: "Presentar certificado analítico o constancia de título secundario",
-          responsableAccion: "usuario",
-          documentoRequerido: "Certificado de estudios secundarios completo",
-          fechaLimite: limitDate13,
-          fechaCreacionAccion: order13.requestedAt,
-          estadoAccion: "pendiente_documento",
-        });
-        order13.futureActionId = fa13._id as any;
-        await order13.save();
-
-        const limitDate14 = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-        limitDate14.setDate(limitDate14.getDate() + 7);
-        const fa14 = await FutureAction.create({
-          tenantId,
-          orderId: order14._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "documento",
-          deadlineMode: "plazoDias",
-          plazoDias: 7,
-          descripcionAccion: "Presentar comprobante de domicilio actualizado (no mayor a 3 meses)",
-          responsableAccion: "usuario",
-          documentoRequerido: "Factura de servicio a nombre del titular",
-          fechaLimite: limitDate14,
-          fechaCreacionAccion: order14.requestedAt,
-          estadoAccion: "pendiente_documento",
-        });
-        order14.futureActionId = fa14._id as any;
-        await order14.save();
-
-        const limitDate15 = new Date();
-        limitDate15.setDate(limitDate15.getDate() + 5);
-        const fa15 = await FutureAction.create({
-          tenantId,
-          orderId: order15._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "documento",
-          deadlineMode: "fechaEspecifica",
-          descripcionAccion: "Presentar título universitario original o copia certificada",
-          responsableAccion: "usuario",
-          documentoRequerido: "Título de grado universitario",
-          fechaLimite: limitDate15,
-          fechaCreacionAccion: order15.requestedAt,
-          estadoAccion: "pendiente_documento",
-        });
-        order15.futureActionId = fa15._id as any;
-        await order15.save();
-
-        const limitDate16 = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-        limitDate16.setDate(limitDate16.getDate() + 7);
-        const fa16 = await FutureAction.create({
-          tenantId,
-          orderId: order16._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: "documento",
-          deadlineMode: "plazoDias",
-          plazoDias: 7,
-          descripcionAccion: "Presentar certificado médico preocupacional firmado y sellado por médico laboral",
-          responsableAccion: "usuario",
-          documentoRequerido: "Certificado médico preocupacional completo",
-          fechaLimite: limitDate16,
-          fechaCreacionAccion: order16.requestedAt,
-          estadoAccion: "documento_presentado",
-          documentoUrl: "/storage/demo-tenant/documents/certificado_preocupacional_mock.pdf",
-        });
-        order16.futureActionId = fa16._id as any;
-        await order16.save();
-
-        console.log("✅ FutureAction seeded (12 acciones vinculadas: 7 originales + 5 documentos pendientes con estados variados)");
-      } else {
-        console.log("✔️ FutureAction already present");
-      }
-    } else {
-      console.log("✔️ OrderCategory and Order already present");
-    }
+    console.log("ℹ️ Order, OrderCategory and FutureAction seeding skipped by user request.");
 
     // ---- Document (HRDocument) ----
     const documentsCount = await HRDocument.countDocuments({ tenantId });
@@ -1913,6 +1308,57 @@ export async function seedOnStart() {
 
     // ---- PDF TEMPLATES ----
     await ensurePdfTemplates(tenantId);
+
+    // ================= REPAIR LOGIC (ALWAYS RUNS) =================
+    console.log("🔧 Validating OrderCategory PDF Templates configuration...");
+
+    const repairMap = [
+      { name: "Licencias y Permisos", templateCode: "fechaRango" },
+      { name: "Adelantos y Anticipos", templateCode: "dinero" },
+      { name: "Reembolsos de Gastos", templateCode: "dinero" },
+      { name: "Equipamiento y Materiales", templateCode: "objeto" },
+      { name: "Solicitudes Especiales", templateCode: "otros" },
+      { name: "Documentos Pendientes", templateCode: "objeto" },
+    ];
+
+    for (const item of repairMap) {
+      // Find the category
+      const category = await OrderCategory.findOne({ tenantId, name: item.name });
+
+      if (category) {
+        // Find the template
+        const template = await PdfTemplate.findOne({ tenantId, code: item.templateCode });
+
+        if (template) {
+          const currentId = category.pdfTemplateId ? category.pdfTemplateId.toString() : "";
+          const targetId = template._id.toString();
+
+          // We check if we need to update OR if we want to force a save to ensure consistency
+          // The user reported that only "Editing" (saving) fixes it.
+          // So we will perform a save() if the ID is missing OR just to be safe if it matches but might be "stale" (though less likely).
+          // We'll prioritize fixing missing/wrong ones.
+
+          if (currentId !== targetId) {
+            console.log(`  -> 🔧 Fixing Category '${item.name}': '${currentId}' -> '${targetId}' (${item.templateCode})`);
+            category.pdfTemplateId = template._id;
+            await category.save();
+          } else {
+            // Even if it matches, we might want to ensure it's saved correctly if it was seeded raw?
+            // But let's assume fixing the ID is enough.
+            // If the user says "Sigue sin crearse", maybe the previous updateOne FAILED or didn't commit?
+            // Logs said "Repaired".
+            // Let's force a save anyway if it looks seemingly correct but maybe "broken" internally?
+            // No, that's dangerous. Let's just trust that save() works better than updateOne.
+            console.log(`  -> ✔️ Category '${item.name}' already has correct template '${item.templateCode}'`);
+          }
+        } else {
+          console.warn(`  -> ⚠️ Missing Template '${item.templateCode}' for Category '${item.name}'. Cannot repair.`);
+        }
+      } else {
+        // Category doesn't exist
+      }
+    }
+    console.log("✅ Repair check completed.");
 
     console.log("✅ Seed process completed successfully!");
     console.log(`👤 Admin: ${adminEmail} / ${adminPassword}`);

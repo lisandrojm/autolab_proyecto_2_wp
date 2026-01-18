@@ -599,55 +599,81 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     });
 
     console.log("[PDF DEBUG] Starting PDF generation check...");
-    console.log("[PDF DEBUG] Category:", category ? `ID: ${category._id}, Name: ${category.name}` : "null");
-    console.log("[PDF DEBUG] pdfTemplateId:", category?.pdfTemplateId || "undefined");
+    console.log(`[PDF DEBUG] Order ID: ${order._id}, Status: ${order.status}`);
 
-    if (category && category.pdfTemplateId) {
-      console.log("[PDF DEBUG] Category has pdfTemplateId, searching for template...");
-      try {
-        const template = await PdfTemplate.findOne({
-          _id: category.pdfTemplateId,
-          tenantId: req.tenantObjectId,
-          isActive: true,
-        });
-
-        console.log("[PDF DEBUG] Template found:", template ? `ID: ${template._id}, Name: ${template.name}` : "null");
-
-        if (template) {
-          const user = order.userId as any;
-          const tenant = await Tenant.findById(req.tenantObjectId);
-          const tenantName = tenant?.name || tenant?.slug || "Organización";
-
-          console.log("[PDF DEBUG] Calling generateOrderPDF...");
-          const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
-
-          console.log("[PDF DEBUG] PDF generation result:", pdfResult.success ? "SUCCESS" : "FAILED");
-          console.log("[PDF DEBUG] PDF URL:", pdfResult.pdfUrl || pdfResult.error);
-
-          if (pdfResult.success) {
-            order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
-            await order.save();
-            console.log("[PDF DEBUG] PDF URL saved to order:", order.pdfPreAprobacionUrl);
-
-            await ActivityLog.create({
-              tenantId: req.tenantObjectId,
-              userId: order.userId,
-              action: "pdf_generated",
-              description: `PDF generado automáticamente para pedido "${orderDisplayName}"`,
-              entityType: "Order",
-              entityId: order._id,
-            });
-          } else {
-            console.error("[PDF ERROR] Error generating PDF:", pdfResult.error);
-          }
-        } else {
-          console.log("[PDF DEBUG] No active template found for ID:", category.pdfTemplateId);
-        }
-      } catch (pdfError) {
-        console.error("[PDF ERROR] Exception in PDF generation process:", pdfError);
+    // Ensure category is available
+    let pdfCategory = category;
+    if (!pdfCategory) {
+      console.warn("[PDF WARNING] Order has no populated value for 'categoryId'. Trying to fetch manual.");
+      if (order.categoryId) {
+        pdfCategory = await OrderCategory.findById(order.categoryId);
       }
+    }
+
+    if (!pdfCategory) {
+      console.error("[PDF ERROR] Category could not be resolved. Skipping PDF.");
     } else {
-      console.log("[PDF DEBUG] Category does not have pdfTemplateId or category is null");
+      console.log(`[PDF DEBUG] Category resolved: Name="${pdfCategory.name}", ID=${pdfCategory._id}, pdfTemplateId=${pdfCategory.pdfTemplateId}`);
+
+      // Resolve Template
+      let template = null;
+
+      // 1. Try association
+      if (pdfCategory.pdfTemplateId) {
+        template = await PdfTemplate.findOne({ _id: pdfCategory.pdfTemplateId, tenantId: req.tenantObjectId });
+        if (!template) console.warn("[PDF WARNING] pdfTemplateId referenced but Template not found in DB.");
+        else console.log(`[PDF DEBUG] Found template via association: ${template.name}`);
+      }
+
+      // 2. Fallback: Map by Name if missing
+      if (!template) {
+        console.log("[PDF DEBUG] Attempting Fallback Template Lookup by Category Name...");
+        let templateCode = "";
+        const nameLower = pdfCategory.name.toLowerCase();
+
+        if (nameLower.includes("licencia")) templateCode = "fechaRango";
+        else if (nameLower.includes("adelanto")) templateCode = "dinero";
+        else if (nameLower.includes("reembolso")) templateCode = "dinero";
+        else if (nameLower.includes("equipamiento")) templateCode = "objeto";
+        else if (nameLower.includes("documento")) templateCode = "objeto";
+        else if (nameLower.includes("solicitud")) templateCode = "otros";
+
+        if (templateCode) {
+          template = await PdfTemplate.findOne({ tenantId: req.tenantObjectId, code: templateCode });
+          if (template) console.log(`[PDF DEBUG] Found template via Fallback (${templateCode}): ${template.name}`);
+        }
+      }
+
+      if (template) {
+        const user = order.userId as any;
+        const tenant = await Tenant.findById(req.tenantObjectId);
+        const tenantName = tenant?.name || tenant?.slug || "Organización";
+
+        console.log("[PDF DEBUG] Calling generateOrderPDF...");
+        const pdfResult = await generateOrderPDF(order, pdfCategory, template, user, req.tenantObjectId.toString(), tenantName);
+
+        console.log("[PDF DEBUG] PDF generation result:", pdfResult.success ? "SUCCESS" : "FAILED");
+
+        if (pdfResult.success) {
+          order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+          // Force save again to persist the URL
+          await Order.updateOne({ _id: order._id }, { $set: { pdfPreAprobacionUrl: pdfResult.pdfUrl } });
+          console.log("[PDF DEBUG] PDF URL saved to order:", order.pdfPreAprobacionUrl);
+
+          await ActivityLog.create({
+            tenantId: req.tenantObjectId,
+            userId: order.userId,
+            action: "pdf_generated",
+            description: `PDF generado automáticamente para pedido "${orderDisplayName}"`,
+            entityType: "Order",
+            entityId: order._id,
+          });
+        } else {
+          console.error("[PDF ERROR] Error generating PDF:", pdfResult.error);
+        }
+      } else {
+        console.log("[PDF DEBUG] No suitable template found for Category. Skipping PDF.");
+      }
     }
 
     const finalOrder = await Order.findById(order._id)

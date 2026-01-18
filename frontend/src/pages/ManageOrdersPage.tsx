@@ -107,7 +107,7 @@ export const ManageOrdersPage: React.FC = () => {
           acc[order.status] = (acc[order.status] || 0) + 1;
           return acc;
         },
-        { pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
+        { pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 },
       );
       setStats(newStats);
 
@@ -508,7 +508,7 @@ export const ManageOrdersPage: React.FC = () => {
     if (!dateString) return "-";
     // Si contiene T, asumimos ISO string completo (con hora), pero si es solo YYYY-MM-DD
     // intentamos parsear manualmente para evitar timezone shifts si es medianoche UTC.
-    if (typeof dateString === "string" && /^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+    if (typeof dateString === "string" && !dateString.includes("T") && /^\d{4}-\d{2}-\d{2}/.test(dateString)) {
       const datePart = dateString.toString().split("T")[0];
       const parts = datePart.split("-");
       if (parts.length === 3) {

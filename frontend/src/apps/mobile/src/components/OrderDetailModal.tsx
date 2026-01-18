@@ -279,6 +279,12 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               </div>
             </div>
             <div className="flex gap-10">
+              {(typeof order.dynamicValue === "string" || order.dynamicValue?.fechaUnica) && (
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Fecha Solicitada</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{typeof order.dynamicValue === "string" ? formatDateShort(order.dynamicValue) : formatDateShort(order.dynamicValue.fechaUnica)}</p>
+                </div>
+              )}
               {monto !== null && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Importe</p>
@@ -311,7 +317,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             <div className="bg-slate-100 dark:bg-slate-700/50 p-3 py-3 rounded">
               <div className="flex justify-between items-start">
                 <div className="flex justify-between items-center w-full">
-                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Información</p>
+                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-500">Comentario</p>
                 </div>
               </div>
               <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{order.description}</p>

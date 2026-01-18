@@ -32,6 +32,15 @@ export const getUserAvatar = (user: any): string | null => {
 
 export const formatDateShort = (dateString: string | undefined): string => {
   if (!dateString) return "-";
+
+  if (dateString.includes("T")) {
+    return new Date(dateString).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
   // Parse YYYY-MM-DD manually to create Local Date without timezone shift
   const datePart = dateString.toString().split("T")[0];
   const [year, month, day] = datePart.split("-").map(Number);
