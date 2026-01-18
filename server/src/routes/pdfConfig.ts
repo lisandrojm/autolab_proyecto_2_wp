@@ -3,7 +3,7 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { PdfGlobalConfig } from "../models/PdfGlobalConfig.js";
+import { PdfConfig } from "../models/PdfConfig.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -39,7 +39,7 @@ const upload = multer({
 
 router.get("/", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const config = await PdfGlobalConfig.getOrCreateDefault(req.tenantObjectId);
+    const config = await PdfConfig.getOrCreateDefault(req.tenantObjectId);
     res.json(config);
   } catch (error) {
     console.error("Get PDF Global Config error:", error);
@@ -61,9 +61,9 @@ router.put(
 
       const { razonSocial, cuit, ciudad, logoUrl, signatureUrl } = req.body;
 
-      let config = await PdfGlobalConfig.findOne({ tenantId: req.tenantObjectId });
+      let config = await PdfConfig.findOne({ tenantId: req.tenantObjectId });
       if (!config) {
-        config = new PdfGlobalConfig({ tenantId: req.tenantObjectId });
+        config = new PdfConfig({ tenantId: req.tenantObjectId });
       }
 
       if (razonSocial !== undefined) config.razonSocial = razonSocial;
@@ -91,4 +91,4 @@ router.put(
   }
 );
 
-export { router as pdfGlobalConfigRoutes };
+export { router as PdfConfigRoutes };

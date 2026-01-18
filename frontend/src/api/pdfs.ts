@@ -1,6 +1,6 @@
 import axios from "./axiosConfig";
 
-export interface PdfTemplate {
+export interface Pdf {
   _id: string;
   tenantId: string;
   code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
@@ -12,7 +12,7 @@ export interface PdfTemplate {
   updatedAt: string;
 }
 
-export interface PdfTemplateInput {
+export interface PdfInput {
   code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
   name: string;
   content: string;
@@ -20,29 +20,29 @@ export interface PdfTemplateInput {
   isActive?: boolean;
 }
 
-export const pdfTemplatesAPI = {
-  getAll: async (): Promise<PdfTemplate[]> => {
-    const response = await axios.get("/pdf-templates");
+export const pdfsAPI = {
+  getAll: async (): Promise<Pdf[]> => {
+    const response = await axios.get("/pdfs");
     return response.data;
   },
 
-  getById: async (id: string): Promise<PdfTemplate> => {
-    const response = await axios.get(`/pdf-templates/${id}`);
+  getById: async (id: string): Promise<Pdf> => {
+    const response = await axios.get(`/pdfs/${id}`);
     return response.data;
   },
 
-  create: async (data: PdfTemplateInput): Promise<PdfTemplate> => {
-    const response = await axios.post("/pdf-templates", data);
+  create: async (data: PdfInput): Promise<Pdf> => {
+    const response = await axios.post("/pdfs", data);
     return response.data;
   },
 
-  update: async (id: string, data: PdfTemplateInput): Promise<PdfTemplate> => {
-    const response = await axios.put(`/pdf-templates/${id}`, data);
+  update: async (id: string, data: PdfInput): Promise<Pdf> => {
+    const response = await axios.put(`/pdfs/${id}`, data);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await axios.delete(`/pdf-templates/${id}`);
+    await axios.delete(`/pdfs/${id}`);
   },
 };
 

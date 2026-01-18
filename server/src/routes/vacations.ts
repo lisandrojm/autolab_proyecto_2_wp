@@ -4,7 +4,7 @@ import { Vacation } from "../models/Vacation.js";
 import { GlobalVacationConfig } from "../models/VacationGlobalConfig.js";
 import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
-import { PdfTemplate } from "../models/PdfTemplate.js";
+import { Pdf } from "../models/Pdf.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { generateVacationPDF } from "../utils/pdfGenerator.js";
 import { User } from "../models/User.js";
@@ -434,7 +434,7 @@ router.post("/", async (req, res) => {
         minDiasFraccion: effectiveMinDiasFraccion,
         diasCorridos: effectiveDiasCorridos,
         requiereFirma: globalConfig.requiereFirma,
-        pdfTemplateId: globalConfig.pdfTemplateId,
+        pdfId: globalConfig.pdfId,
       },
     };
 
@@ -514,14 +514,12 @@ router.put("/:id/pre-approve", async (req: any, res) => {
 
     await vacation.save();
 
-    
-
     // Generate PDF
-    let templateId = vacation.rules?.pdfTemplateId;
+    let templateId = vacation.rules?.pdfId;
 
     // Fallback: Try to find default template if not specified in rules
     if (!templateId) {
-      const defaultTemplate = await PdfTemplate.findOne({ tenantId, code: "vacaciones", isActive: true });
+      const defaultTemplate = await Pdf.findOne({ tenantId, code: "vacaciones", isActive: true });
       if (defaultTemplate) {
         templateId = defaultTemplate._id.toString();
       }
@@ -529,7 +527,7 @@ router.put("/:id/pre-approve", async (req: any, res) => {
 
     if (templateId) {
       try {
-        const template = await PdfTemplate.findOne({
+        const template = await Pdf.findOne({
           _id: templateId,
           tenantId,
           isActive: true,
@@ -595,8 +593,6 @@ router.put("/:id/approve", async (req: any, res) => {
 
     await vacation.save();
 
-    
-
     if (requiresSignature) {
       await Notification.create({
         tenantId,
@@ -645,8 +641,6 @@ router.put("/:id/reject", async (req: any, res) => {
     vacation.status = "rejected";
     await vacation.save();
 
-    
-
     await Notification.create({
       tenantId,
       userId: vacation.userId,
@@ -685,8 +679,6 @@ router.put("/:id/cancel", async (req: any, res) => {
     vacation.cancelledAt = new Date();
     await vacation.save();
 
-    
-
     res.json(vacation);
   } catch (error: any) {
     console.error("Cancel vacation error:", error);
@@ -715,8 +707,6 @@ router.put("/:id/deliver", async (req: any, res) => {
     vacation.status = "delivered";
     vacation.deliveredAt = new Date();
     await vacation.save();
-
-    
 
     await Notification.create({
       tenantId,
@@ -756,8 +746,6 @@ router.put("/:id/send-signature", async (req: any, res) => {
     vacation.signatureSentAt = new Date();
     await vacation.save();
 
-    
-
     await Notification.create({
       tenantId,
       userId: vacation.userId,
@@ -795,8 +783,6 @@ router.put("/:id/notify-signature", async (req: any, res) => {
 
     vacation.signatureNotifiedAt = new Date();
     await vacation.save();
-
-    
 
     // Notify the approver (Supervisor/Admin)
     const approverId = vacation.approvedBy; // Assuming approvedBy is the admin/manager
@@ -841,8 +827,6 @@ router.put("/:id/mark-signed", async (req: any, res) => {
     vacation.signedAt = new Date();
     vacation.signedBy = new Types.ObjectId(signerId);
     await vacation.save();
-
-    
 
     // Notify the approver (Supervisor/Admin)
     if (vacation.approvedBy) {

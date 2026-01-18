@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export interface IPdfTemplate extends Document {
+export interface IPdf extends Document {
   tenantId: Types.ObjectId;
-  code: "dinero" | "fechaRango" | "fechaUnica" | "objeto" | "otros";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
   name: string;
   content: string;
   variablesHint?: string;
@@ -11,7 +11,7 @@ export interface IPdfTemplate extends Document {
   updatedAt: Date;
 }
 
-const pdfTemplateSchema = new Schema<IPdfTemplate>(
+const pdfSchema = new Schema<IPdf>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
     code: {
@@ -45,10 +45,10 @@ const pdfTemplateSchema = new Schema<IPdfTemplate>(
       index: true,
     },
   },
-  { timestamps: true, collection: "pdf_templates" },
+  { timestamps: true, collection: "pdf" },
 );
 
-pdfTemplateSchema.index({ tenantId: 1, code: 1 }, { unique: true });
-pdfTemplateSchema.index({ tenantId: 1, isActive: 1 });
+pdfSchema.index({ tenantId: 1, code: 1 }, { unique: true });
+pdfSchema.index({ tenantId: 1, isActive: 1 });
 
-export const PdfTemplate = mongoose.model<IPdfTemplate>("PdfTemplate", pdfTemplateSchema);
+export const Pdf = mongoose.model<IPdf>("Pdf", pdfSchema);

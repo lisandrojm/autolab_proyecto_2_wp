@@ -4,18 +4,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faToggleOn, faToggleOff, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
+import { Pdf } from "../../api/pdfs";
 
 import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderTypes";
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/futureAction";
-
-interface PdfTemplate {
-  _id: string;
-  name: string;
-  code: string;
-  content: string;
-  isActive: boolean;
-}
 
 interface OrderCategoryFormProps {
   formData: {
@@ -37,12 +30,12 @@ interface OrderCategoryFormProps {
     documentoRequerido?: string;
     requiresSignature?: boolean;
     requiresUserConfirmation?: boolean;
-    pdfTemplateId?: string;
+    pdfId?: string;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onSubmit: (e: React.FormEvent) => void;
   submitting: boolean;
-  pdfTemplates?: PdfTemplate[];
+  pdfTemplates?: Pdf[];
 }
 
 export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, setFormData, onSubmit, submitting, pdfTemplates = [] }) => {
@@ -87,8 +80,8 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
   useEffect(() => {
     if (formData.requiresSignature === false) {
-      if (formData.pdfTemplateId) {
-        setFormData((prev: any) => ({ ...prev, pdfTemplateId: undefined }));
+      if (formData.pdfId) {
+        setFormData((prev: any) => ({ ...prev, pdfId: undefined }));
       }
       return;
     }
@@ -99,12 +92,12 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
 
     if (matchingTemplate) {
-      if (formData.pdfTemplateId !== matchingTemplate._id) {
-        setFormData((prev: any) => ({ ...prev, pdfTemplateId: matchingTemplate._id }));
+      if (formData.pdfId !== matchingTemplate._id) {
+        setFormData((prev: any) => ({ ...prev, pdfId: matchingTemplate._id }));
       }
     } else {
-      if (formData.pdfTemplateId) {
-        setFormData((prev: any) => ({ ...prev, pdfTemplateId: undefined }));
+      if (formData.pdfId) {
+        setFormData((prev: any) => ({ ...prev, pdfId: undefined }));
       }
     }
   }, [formData.categoryType, formData.dateMode, formData.requiresSignature, pdfTemplates]);
@@ -372,7 +365,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                 setFormData({
                   ...formData,
                   requiresSignature: e.target.checked,
-                  pdfTemplateId: e.target.checked ? formData.pdfTemplateId : undefined,
+                  pdfId: e.target.checked ? formData.pdfId : undefined,
                 })
               }
               className="w-4 h-4 text-blue-600"
@@ -416,7 +409,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                             <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                               No existe una plantilla activa para este tipo de pedido (Código esperado: <strong>{expectedCode}</strong>). El PDF no se generará.
                             </p>
-                            <Link to="/hr/pdf-templates" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
+                            <Link to="/hr/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
                               Crear plantilla en Configuración &rarr;
                             </Link>
                           </div>

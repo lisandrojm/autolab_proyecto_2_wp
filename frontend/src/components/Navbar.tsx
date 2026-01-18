@@ -171,10 +171,10 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("admin_hr_documents:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
       // CONFIGURACION Items
-      if (hasPermission("config_orders:view")) base.push({ path: "/hr/order-categories", icon: faShoppingCart, label: "Pedidos", scope: "global" });
+      if (hasPermission("config_orders:view")) base.push({ path: "/hr/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("config_vacations:view")) base.push({ path: "/hr/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("config_activity_logs:view")) base.push({ path: "/hr/activity-logs/config", icon: faFileText, label: "Novedades", scope: "global" });
-      if (hasPermission("config_pdf_templates:view")) base.push({ path: "/hr/pdf-templates", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
+      if (hasPermission("config_pdf_templates:view")) base.push({ path: "/hr/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
     }
 
     return base;
@@ -260,7 +260,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/dashboard", "/tenants", "/clients", "/platform/usage", "/platform/settings"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdf-templates", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdfs", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
 
     const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item) && !configItems.includes(item) && !managementItems.includes(item));
 

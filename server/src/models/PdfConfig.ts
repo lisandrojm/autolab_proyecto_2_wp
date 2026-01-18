@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export interface IPdfGlobalConfig extends Document {
+export interface IPdfConfig extends Document {
   tenantId: mongoose.Types.ObjectId;
   razonSocial?: string;
   cuit?: string;
@@ -11,11 +11,11 @@ export interface IPdfGlobalConfig extends Document {
   updatedAt: Date;
 }
 
-interface IPdfGlobalConfigModel extends Model<IPdfGlobalConfig> {
-  getOrCreateDefault(tenantId: mongoose.Types.ObjectId): Promise<IPdfGlobalConfig>;
+interface IPdfConfigModel extends Model<IPdfConfig> {
+  getOrCreateDefault(tenantId: mongoose.Types.ObjectId): Promise<IPdfConfig>;
 }
 
-const PdfGlobalConfigSchema = new Schema<IPdfGlobalConfig>(
+const PdfConfigSchema = new Schema<IPdfConfig>(
   {
     tenantId: {
       type: Schema.Types.ObjectId,
@@ -32,11 +32,11 @@ const PdfGlobalConfigSchema = new Schema<IPdfGlobalConfig>(
   },
   {
     timestamps: true,
-    collection: "pdf_global_config", // Explicit collection name
+    collection: "pdf_config",
   },
 );
 
-PdfGlobalConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {
+PdfConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {
   let config = await this.findOne({ tenantId });
 
   if (!config) {
@@ -51,4 +51,4 @@ PdfGlobalConfigSchema.statics.getOrCreateDefault = async function (tenantId: mon
   return config;
 };
 
-export const PdfGlobalConfig = mongoose.model<IPdfGlobalConfig, IPdfGlobalConfigModel>("PdfGlobalConfig", PdfGlobalConfigSchema);
+export const PdfConfig = mongoose.model<IPdfConfig, IPdfConfigModel>("PdfConfig", PdfConfigSchema);

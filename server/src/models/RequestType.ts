@@ -1,13 +1,13 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface IRequestType extends Document {
   tenantId: Types.ObjectId;
   name: string;
-  key: string;
-  description?: string;
-  isSystem: boolean;
-  isDeletable: boolean;
+  order: number;
+  requiresReplacement: boolean;
   isActive: boolean;
+  visibility: "all" | "specific";
+  allowedProjectIds: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,17 +15,21 @@ export interface IRequestType extends Document {
 const requestTypeSchema = new Schema<IRequestType>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    name: { type: String, required: true, trim: true },
-    key: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
-    isSystem: { type: Boolean, default: false },
-    isDeletable: { type: Boolean, default: true },
+    name: { type: String, required: true },
+    order: { type: Number, default: 0 },
+    requiresReplacement: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    visibility: {
+      type: String,
+      enum: ["all", "specific"],
+      default: "all",
+    },
+    allowedProjectIds: [{ type: Schema.Types.ObjectId, ref: "Project", default: [] }],
   },
   { timestamps: true, collection: "requests_types" },
 );
 
-requestTypeSchema.index({ tenantId: 1, key: 1 }, { unique: true });
-requestTypeSchema.index({ tenantId: 1, isActive: 1 });
+// Compound index to ensure uniqueness of name per tenant
+requestTypeSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 
-export const RequestType = mongoose.model<IRequestType>("RequestType", requestTypeSchema);
+export const RequestType = model<IRequestType>("RequestType", requestTypeSchema);

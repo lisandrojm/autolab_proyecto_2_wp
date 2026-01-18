@@ -5,7 +5,7 @@ import { faSpinner, faCircleInfo, faSave, faEye, faExclamationTriangle } from "@
 import Swal from "sweetalert2";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { InfoModal } from "../ui/InfoModal";
-import { pdfTemplatesAPI, PdfTemplate } from "../../api/pdfTemplates";
+import { pdfsAPI, Pdf } from "../../api/pdfs";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 import { globalVacationConfigAPI, GlobalVacationConfig } from "../../api/globalVacationConfig";
 
@@ -13,7 +13,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
   const [config, setConfig] = useState<GlobalVacationConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
+  const [pdfTemplates, setPdfTemplates] = useState<Pdf[]>([]);
 
   // Modales de información
   const [showAntiguedadInfo, setShowAntiguedadInfo] = useState(false);
@@ -57,16 +57,16 @@ export const GlobalVacationConfigTab: React.FC = () => {
 
     const vacationTemplate = pdfTemplates.find((t) => t.code === "vacaciones");
     if (vacationTemplate) {
-      if (config.pdfTemplateId !== vacationTemplate._id) {
-        setConfig((prev) => (prev ? { ...prev, pdfTemplateId: vacationTemplate._id } : null));
+      if (config.pdfId !== vacationTemplate._id) {
+        setConfig((prev) => (prev ? { ...prev, pdfId: vacationTemplate._id } : null));
       }
     }
-  }, [config?.pdfTemplateId, pdfTemplates]);
+  }, [config?.pdfId, pdfTemplates]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [configData, templatesData] = await Promise.all([globalVacationConfigAPI.getConfig(), pdfTemplatesAPI.getAll()]);
+      const [configData, templatesData] = await Promise.all([globalVacationConfigAPI.getConfig(), pdfsAPI.getAll()]);
       setConfig(configData);
       setPdfTemplates(templatesData.filter((t) => t.isActive));
     } catch (error) {
@@ -278,7 +278,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
                               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                                 No existe una plantilla activa para vacaciones (Código esperado: <strong>vacaciones</strong>). El PDF no se generará correctamente.
                               </p>
-                              <Link to="/hr/pdf-templates" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
+                              <Link to="/hr/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
                                 Crear plantilla en Configuración &rarr;
                               </Link>
                             </div>

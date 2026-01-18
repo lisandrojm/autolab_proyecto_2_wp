@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { pdfGlobalConfigAPI, PdfGlobalConfig } from "../../api/pdfGlobalConfig";
+import { pdfConfigAPI, PdfConfig } from "../../api/pdfConfig";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faBuilding, faSignature, faImage, faEye, faSpinner } from "@fortawesome/free-solid-svg-icons";
@@ -14,7 +14,7 @@ export function PdfGlobalConfigTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [config, setConfig] = useState<PdfGlobalConfig | null>(null);
+  const [config, setConfig] = useState<PdfConfig | null>(null);
 
   const {
     register,
@@ -40,7 +40,7 @@ export function PdfGlobalConfigTab() {
   const loadConfig = async () => {
     try {
       setLoading(true);
-      const data = await pdfGlobalConfigAPI.get();
+      const data = await pdfConfigAPI.get();
       setConfig(data);
       setValue("razonSocial", data.razonSocial || "");
       setValue("cuit", data.cuit || "");
@@ -87,7 +87,7 @@ export function PdfGlobalConfigTab() {
         }
       }
 
-      const updated = await pdfGlobalConfigAPI.update(formData);
+      const updated = await pdfConfigAPI.update(formData);
       setConfig(updated);
 
       if (updated.logoUrl) setLogoPreview(updated.logoUrl);

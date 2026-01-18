@@ -22,7 +22,7 @@ interface VacationRules {
   minDiasFraccion?: number;
   diasCorridos?: boolean;
   requiereFirma: boolean;
-  pdfTemplateId?: string;
+  pdfId?: string;
 }
 
 export interface IVacation extends Document {
@@ -126,7 +126,7 @@ const vacationSchema = new Schema<IVacation>(
         minDiasFraccion: { type: Number, required: false },
         diasCorridos: { type: Boolean, required: false },
         requiereFirma: { type: Boolean, required: true },
-        pdfTemplateId: { type: String, required: false },
+        pdfId: { type: String, required: false },
       },
       required: false,
     },

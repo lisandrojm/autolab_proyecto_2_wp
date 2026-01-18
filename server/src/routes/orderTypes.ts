@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { OrderType } from "../models/OrderType.js";
-import { PdfTemplate } from "../models/PdfTemplate.js";
+import { Pdf } from "../models/Pdf.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -45,7 +45,7 @@ const createCategorySchema = z
     documentoRequerido: z.string().max(200).optional(),
     requiresSignature: z.boolean().default(true),
     requiresUserConfirmation: z.boolean().default(false),
-    pdfTemplateId: z.string().optional(),
+    pdfId: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -129,7 +129,7 @@ const updateCategorySchema = z
     documentoRequerido: z.string().max(200).optional(),
     requiresSignature: z.boolean().optional(),
     requiresUserConfirmation: z.boolean().optional(),
-    pdfTemplateId: z.string().optional(),
+    pdfId: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -286,14 +286,14 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       return;
     }
 
-    if (data.pdfTemplateId) {
-      if (!mongoose.Types.ObjectId.isValid(data.pdfTemplateId)) {
-        res.status(400).json({ error: "Invalid pdfTemplateId format" });
+    if (data.pdfId) {
+      if (!mongoose.Types.ObjectId.isValid(data.pdfId)) {
+        res.status(400).json({ error: "Invalid pdfId format" });
         return;
       }
 
-      const template = await PdfTemplate.findOne({
-        _id: data.pdfTemplateId,
+      const template = await Pdf.findOne({
+        _id: data.pdfId,
         tenantId: req.tenantObjectId,
         isActive: true,
       });
@@ -319,8 +319,8 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       sortOrder: nextSortOrder,
     };
 
-    if (categoryData.pdfTemplateId) {
-      categoryData.pdfTemplateId = new mongoose.Types.ObjectId(categoryData.pdfTemplateId);
+    if (categoryData.pdfId) {
+      categoryData.pdfId = new mongoose.Types.ObjectId(categoryData.pdfId);
     }
 
     if (categoryData.requiresAction && !categoryData.futureActionType) {
@@ -370,14 +370,14 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       }
     }
 
-    if (data.pdfTemplateId) {
-      if (!mongoose.Types.ObjectId.isValid(data.pdfTemplateId)) {
-        res.status(400).json({ error: "Invalid pdfTemplateId format" });
+    if (data.pdfId) {
+      if (!mongoose.Types.ObjectId.isValid(data.pdfId)) {
+        res.status(400).json({ error: "Invalid pdfId format" });
         return;
       }
 
-      const template = await PdfTemplate.findOne({
-        _id: data.pdfTemplateId,
+      const template = await Pdf.findOne({
+        _id: data.pdfId,
         tenantId: req.tenantObjectId,
         isActive: true,
       });
@@ -389,8 +389,8 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     }
 
     const updateData: any = { ...data };
-    if (updateData.pdfTemplateId) {
-      updateData.pdfTemplateId = new mongoose.Types.ObjectId(updateData.pdfTemplateId);
+    if (updateData.pdfId) {
+      updateData.pdfId = new mongoose.Types.ObjectId(updateData.pdfId);
     }
 
     Object.assign(category, updateData);

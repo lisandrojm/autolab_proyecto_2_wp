@@ -5,7 +5,7 @@ import { UserProfile } from "../models/UserProfile.js";
 import { Vacation } from "../models/Vacation.js";
 import { Order } from "../models/Order.js";
 import { OrderType } from "../models/OrderType.js";
-import { PdfTemplate } from "../models/PdfTemplate.js";
+import { Pdf } from "../models/Pdf.js";
 import { Tenant } from "../models/Tenant.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { HRDocument } from "../models/Document.js";
@@ -375,13 +375,13 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
     }
 
     const requiresSignature = vacation.rules?.requiereFirma || false;
-    const pdfTemplateId = vacation.rules?.pdfTemplateId;
+    const pdfId = vacation.rules?.pdfId;
 
     vacation.requiresSignature = requiresSignature;
     vacation.signatureStatus = requiresSignature ? "pending" : "not_required";
 
-    if (pdfTemplateId) {
-      const template = await PdfTemplate.findById(pdfTemplateId);
+    if (pdfId) {
+      const template = await Pdf.findById(pdfId);
 
       if (template) {
         console.log("[PRE-APPROVE] Generating PDF for vacation:", vacation._id);
@@ -404,7 +404,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
           console.error("[PRE-APPROVE] PDF generation failed:", pdfResult.error);
         }
       } else {
-        console.warn("[PRE-APPROVE] PDF template not found:", pdfTemplateId);
+        console.warn("[PRE-APPROVE] PDF template not found:", pdfId);
       }
     }
 
@@ -597,10 +597,10 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    if (category && category.pdfTemplateId) {
+    if (category && category.PdfId) {
       try {
-        const template = await PdfTemplate.findOne({
-          _id: category.pdfTemplateId,
+        const template = await Pdf.findOne({
+          _id: category.PdfId,
           tenantId: req.tenantObjectId,
           isActive: true,
         });
@@ -756,13 +756,13 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
 
     const category = order.categoryId as any;
 
-    if (!category || !category.pdfTemplateId) {
+    if (!category || !category.PdfId) {
       res.status(400).json({ error: "Este tipo de pedido no tiene plantilla PDF asignada" });
       return;
     }
 
-    const template = await PdfTemplate.findOne({
-      _id: category.pdfTemplateId,
+    const template = await Pdf.findOne({
+      _id: category.PdfId,
       tenantId: req.tenantObjectId,
       isActive: true,
     });

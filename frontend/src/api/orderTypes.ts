@@ -43,7 +43,7 @@ export interface OrderType {
   documentoRequerido?: string;
   requiresSignature?: boolean;
   requiresUserConfirmation?: boolean;
-  pdfTemplateId?: string;
+  pdfId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,7 +60,7 @@ export const orderTypesAPI = {
     return data;
   },
 
-  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfTemplateId?: string }): Promise<OrderType> => {
+  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfId?: string }): Promise<OrderType> => {
     const { data } = await axios.post<OrderType>("/order-types", typeData);
     return data;
   },
@@ -86,7 +86,7 @@ export const orderTypesAPI = {
       fechaLimite?: string;
       documentoRequerido?: string;
       requiresSignature?: boolean;
-      pdfTemplateId?: string;
+      pdfId?: string;
     },
   ): Promise<OrderType> => {
     const { data } = await axios.put<OrderType>(`/order-types/${id}`, updates);

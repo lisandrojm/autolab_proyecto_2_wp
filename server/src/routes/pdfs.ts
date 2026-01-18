@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
-import { PdfTemplate } from "../models/PdfTemplate.js";
+import { Pdf } from "../models/Pdf.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
 const router = Router();
 
-const pdfTemplateSchema = z.object({
+const PdfSchema = z.object({
   code: z.enum(["dinero", "fechaRango", "fechaUnica", "vacaciones", "objeto", "otros"]),
   name: z.string().min(1).max(100),
   content: z.string().min(10).max(50000),
@@ -16,7 +16,7 @@ const pdfTemplateSchema = z.object({
 
 router.get("/", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const templates = await PdfTemplate.find({
+    const templates = await Pdf.find({
       tenantId: req.tenantObjectId,
     }).sort({ createdAt: -1 });
 
@@ -29,7 +29,7 @@ router.get("/", authenticateToken, requireTenant, async (req: AuthenticatedReque
 
 router.get("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const template = await PdfTemplate.findOne({
+    const template = await Pdf.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -48,9 +48,9 @@ router.get("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
 
 router.post("/", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const validatedData = pdfTemplateSchema.parse(req.body);
+    const validatedData = PdfSchema.parse(req.body);
 
-    const existingTemplate = await PdfTemplate.findOne({
+    const existingTemplate = await Pdf.findOne({
       tenantId: req.tenantObjectId,
       code: validatedData.code,
     });
@@ -60,7 +60,7 @@ router.post("/", authenticateToken, requireTenant, async (req: AuthenticatedRequ
       return;
     }
 
-    const template = await PdfTemplate.create({
+    const template = await Pdf.create({
       ...validatedData,
       tenantId: req.tenantObjectId,
     });
@@ -78,9 +78,9 @@ router.post("/", authenticateToken, requireTenant, async (req: AuthenticatedRequ
 
 router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const validatedData = pdfTemplateSchema.parse(req.body);
+    const validatedData = PdfSchema.parse(req.body);
 
-    const template = await PdfTemplate.findOne({
+    const template = await Pdf.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -91,7 +91,7 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
     }
 
     if (template.code !== validatedData.code) {
-      const existingTemplate = await PdfTemplate.findOne({
+      const existingTemplate = await Pdf.findOne({
         tenantId: req.tenantObjectId,
         code: validatedData.code,
         _id: { $ne: template._id },
@@ -119,7 +119,7 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
 
 router.delete("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const template = await PdfTemplate.findOne({
+    const template = await Pdf.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -138,4 +138,4 @@ router.delete("/:id", authenticateToken, requireTenant, async (req: Authenticate
   }
 });
 
-export { router as pdfTemplateRoutes };
+export { router as PdfRoutes };

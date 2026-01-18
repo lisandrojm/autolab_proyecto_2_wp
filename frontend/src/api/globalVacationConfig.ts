@@ -23,7 +23,7 @@ export interface GlobalVacationConfig {
   minDiasFraccion?: number;
   diasCorridos: boolean;
   requiereFirma: boolean;
-  pdfTemplateId?: string;
+  pdfId?: string;
   createdAt?: string;
   updatedAt?: string;
 }

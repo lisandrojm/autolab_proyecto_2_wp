@@ -6,12 +6,11 @@ import { User } from "../models/User.js";
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { UserProfile } from "../models/UserProfile.js";
-import { PdfTemplate } from "../models/PdfTemplate.js";
+import { Pdf } from "../models/Pdf.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
-import { RequestType } from "../models/RequestType.js";
 import { OrderType } from "../models/OrderType.js";
 import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
@@ -22,12 +21,12 @@ import { Vacation } from "../models/Vacation.js";
 
 import { VacationCounter } from "../models/VacationCounter.js";
 import { VacationOverlap } from "../models/VacationOverlap.js";
-import { RequestActivityType } from "../models/RequestActivityType.js";
+import { RequestType } from "../models/RequestType.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
 
-const pdfTemplatesList = [
+const PdfsList = [
   {
     code: "dinero" as const,
     name: "Solicitud de Dinero",
@@ -85,11 +84,11 @@ Esta autorización se encuentra sujeta a las políticas internas de la empresa y
   },
 ];
 
-async function ensurePdfTemplates(tenantId: Types.ObjectId) {
+async function ensurePdfs(tenantId: Types.ObjectId) {
   console.log(`📄 Ensuring PDF templates for tenant ${tenantId}...`);
 
-  for (const templateData of pdfTemplatesList) {
-    const existingTemplate = await PdfTemplate.findOne({
+  for (const templateData of PdfsList) {
+    const existingTemplate = await Pdf.findOne({
       tenantId,
       code: templateData.code,
     });
@@ -99,7 +98,7 @@ async function ensurePdfTemplates(tenantId: Types.ObjectId) {
       continue;
     }
 
-    await PdfTemplate.create({
+    await Pdf.create({
       ...templateData,
       tenantId,
     });
@@ -347,18 +346,18 @@ async function ensureActivityLogTypes(tenantId: Types.ObjectId) {
 
   let currentOrder = 1;
   for (const name of defaults) {
-    const exists = await RequestActivityType.findOne({ tenantId, name });
+    const exists = await RequestType.findOne({ tenantId, name });
     if (!exists) {
-      await RequestActivityType.create({
+      await RequestType.create({
         tenantId,
         name,
         requiresReplacement: false,
         isActive: true,
         order: currentOrder,
       });
-      console.log(`✅ Created RequestActivityType: ${name}`);
+      console.log(`✅ Created RequestType: ${name}`);
     } else {
-      console.log(`✔️ RequestActivityType exists: ${name}`);
+      console.log(`✔️ RequestType exists: ${name}`);
     }
     currentOrder++;
   }
@@ -1015,7 +1014,7 @@ export async function seedOnStart() {
     let globalConfig = await GlobalVacationConfig.findOne({ tenantId });
 
     if (!globalConfig) {
-      const vacationTemplate = await PdfTemplate.findOne({ tenantId, code: "vacaciones" });
+      const vacationTemplate = await Pdf.findOne({ tenantId, code: "vacaciones" });
 
       globalConfig = await GlobalVacationConfig.create({
         tenantId,
@@ -1025,7 +1024,7 @@ export async function seedOnStart() {
         minDiasFraccion: 7,
         requiereFirma: true,
         maxDiasGozados: 30,
-        pdfTemplateId: vacationTemplate?._id,
+        PdfId: vacationTemplate?._id,
       });
       console.log("✅ Global vacation config created");
     } else {
@@ -1045,60 +1044,6 @@ export async function seedOnStart() {
     // } else {
     //   console.log("✔️ Vacation requests already present");
     // }
-
-    // ---- RequestTypes ----
-    const requestTypesCount = await RequestType.countDocuments({ tenantId });
-    if (requestTypesCount === 0) {
-      try {
-        await RequestType.create([
-          {
-            tenantId,
-            name: "Vacaciones",
-            key: "vacation",
-            description: "Solicitud de vacaciones anuales",
-            isSystem: true,
-            isDeletable: false,
-            isActive: true,
-          },
-          {
-            tenantId,
-            name: "Licencias especiales",
-            key: "special_leave",
-            description: "Licencias por motivos especiales (matrimonio, fallecimiento, etc.)",
-            isSystem: true,
-            isDeletable: true,
-            isActive: true,
-          },
-          {
-            tenantId,
-            name: "Compensatorios",
-            key: "compensatory",
-            description: "Días compensatorios por horas extras",
-            isSystem: true,
-            isDeletable: true,
-            isActive: true,
-          },
-          {
-            tenantId,
-            name: "Pedidos extraordinarios",
-            key: "extra",
-            description: "Otros tipos de pedidos no categorizado",
-            isSystem: true,
-            isDeletable: true,
-            isActive: true,
-          },
-        ]);
-        console.log("✅ RequestType seeded");
-      } catch (error: any) {
-        if (error.code === 11000) {
-          console.log("✔️ RequestType already seeded (race condition handled)");
-        } else {
-          console.error("Error seeding RequestType:", error);
-        }
-      }
-    } else {
-      console.log("✔️ RequestType already present");
-    }
 
     console.log("ℹ️ Order, OrderCategory and FutureAction seeding skipped by user request.");
 
@@ -1218,7 +1163,7 @@ export async function seedOnStart() {
     }
 
     // ---- PDF TEMPLATES ----
-    await ensurePdfTemplates(tenantId);
+    await ensurePdfs(tenantId);
 
     // ================= REPAIR LOGIC (ALWAYS RUNS) =================
     console.log("🔧 Validating OrderCategory PDF Templates configuration...");
@@ -1238,10 +1183,10 @@ export async function seedOnStart() {
 
       if (category) {
         // Find the template
-        const template = await PdfTemplate.findOne({ tenantId, code: item.templateCode });
+        const template = await Pdf.findOne({ tenantId, code: item.templateCode });
 
         if (template) {
-          const currentId = category.pdfTemplateId ? category.pdfTemplateId.toString() : "";
+          const currentId = category.pdfId ? category.pdfId.toString() : "";
           const targetId = template._id.toString();
 
           // We check if we need to update OR if we want to force a save to ensure consistency
@@ -1251,7 +1196,7 @@ export async function seedOnStart() {
 
           if (currentId !== targetId) {
             console.log(`  -> 🔧 Fixing Category '${item.name}': '${currentId}' -> '${targetId}' (${item.templateCode})`);
-            category.pdfTemplateId = template._id;
+            category.pdfId = template._id;
             await category.save();
           } else {
             // Even if it matches, we might want to ensure it's saved correctly if it was seeded raw?

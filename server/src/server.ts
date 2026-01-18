@@ -44,21 +44,18 @@ import { notificationRoutes } from "./routes/notifications.js";
 
 import { hrAdminRoutes } from "./routes/hr-admin.js";
 import { hrManagementRoutes } from "./routes/hr-management.js";
-import { requestRoutes } from "./routes/requests.js";
-import { requestTypeRoutes } from "./routes/requestTypes.js";
 import { futureActionsRoutes } from "./routes/futureActions.js";
 import { positionRoutes } from "./routes/positions.js";
 import { areaRoutes } from "./routes/areas.js";
 import { levelRoutes } from "./routes/levels.js";
-import { pdfTemplateRoutes } from "./routes/pdfTemplates.js";
-import { pdfGlobalConfigRoutes } from "./routes/pdfGlobalConfig.js";
+import { PdfRoutes } from "./routes/pdfs.js";
+import { PdfConfigRoutes } from "./routes/pdfConfig.js";
 import { pdfTemplatePreviewRoutes } from "./routes/pdfPreview.js";
 import { globalVacationConfigRoutes } from "./routes/globalVacationConfig.js";
 import { vacationsRoutes } from "./routes/vacations.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
-import { RequestActivityTypeRoutes } from "./routes/activityLogTypes.js";
-import { RequestActivityReportRoutes } from "./routes/activityReports.js";
-import { RequestActivityConfigRoutes } from "./routes/activityLogConfig.js";
+import { RequestTypeRoutes } from "./routes/activityLogTypes.js";
+import { RequestRoutes } from "./routes/activityReports.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -160,22 +157,19 @@ app.use("/api/v1/notifications", notificationRoutes);
 
 app.use("/api/v1/hr-admin", hrAdminRoutes);
 app.use("/api/v1/hr-management", hrManagementRoutes);
-app.use("/api/v1/requests", requestRoutes);
-app.use("/api/v1/request-types", requestTypeRoutes);
 app.use("/api/v1/future-actions", futureActionsRoutes);
 app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/areas", areaRoutes);
 app.use("/api/v1/levels", levelRoutes);
-app.use("/api/v1/pdf-templates", pdfTemplateRoutes);
-app.use("/api/v1/pdf-global-config", pdfGlobalConfigRoutes);
+app.use("/api/v1/pdfs", PdfRoutes);
+app.use("/api/v1/pdf-config", PdfConfigRoutes);
 app.use("/api/v1/pdf-preview", pdfTemplatePreviewRoutes);
 
 app.use("/api/v1/global-vacation-config", globalVacationConfigRoutes);
 app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
-app.use("/api/v1/activity-log-types", RequestActivityTypeRoutes);
-app.use("/api/v1/activity-reports", RequestActivityReportRoutes);
-app.use("/api/v1/activity-log-config", RequestActivityConfigRoutes);
+app.use("/api/v1/activity-log-types", RequestTypeRoutes);
+app.use("/api/v1/activity-reports", RequestRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

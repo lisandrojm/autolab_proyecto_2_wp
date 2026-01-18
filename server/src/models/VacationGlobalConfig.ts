@@ -14,7 +14,7 @@ interface IGlobalVacationConfig extends Document {
   minDiasFraccion?: number;
   diasCorridos: boolean;
   requiereFirma: boolean;
-  pdfTemplateId?: string;
+  pdfId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,7 +85,7 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
       required: true,
       default: true,
     },
-    pdfTemplateId: {
+    pdfId: {
       type: String,
       required: false,
     },

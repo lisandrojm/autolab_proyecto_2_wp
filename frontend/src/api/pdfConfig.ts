@@ -1,6 +1,6 @@
 import axios from "./axiosConfig";
 
-export interface PdfGlobalConfig {
+export interface PdfConfig {
   _id: string;
   tenantId: string;
   razonSocial?: string;
@@ -12,14 +12,14 @@ export interface PdfGlobalConfig {
   updatedAt: string;
 }
 
-export const pdfGlobalConfigAPI = {
-  get: async (): Promise<PdfGlobalConfig> => {
-    const response = await axios.get("/pdf-global-config");
+export const pdfConfigAPI = {
+  get: async (): Promise<PdfConfig> => {
+    const response = await axios.get("/pdf-config");
     return response.data;
   },
 
-  update: async (data: FormData): Promise<PdfGlobalConfig> => {
-    const response = await axios.put("/pdf-global-config", data, {
+  update: async (data: FormData): Promise<PdfConfig> => {
+    const response = await axios.put("/pdf-config", data, {
       headers: {
         "Content-Type": "multipart/form-data",
       },

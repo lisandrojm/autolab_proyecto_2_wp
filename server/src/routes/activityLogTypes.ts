@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { RequestActivityType } from "../models/RequestActivityType.js";
+import { RequestType } from "../models/RequestType.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -11,7 +11,7 @@ router.use(requireTenant, authenticateToken);
 router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     // Return all types, sorted by order
-    const types = await RequestActivityType.find({ tenantId: req.tenantObjectId }).sort({ order: 1 });
+    const types = await RequestType.find({ tenantId: req.tenantObjectId }).sort({ order: 1 });
     res.json(types);
   } catch (error) {
     console.error("Get activity log types error:", error);
@@ -30,11 +30,11 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Determine order if not provided: max order + 1
     let newOrder = order;
     if (newOrder === undefined) {
-      const lastItem = await RequestActivityType.findOne({ tenantId: req.tenantObjectId }).sort({ order: -1 });
+      const lastItem = await RequestType.findOne({ tenantId: req.tenantObjectId }).sort({ order: -1 });
       newOrder = (lastItem?.order || 0) + 1;
     }
 
-    const newType = new RequestActivityType({
+    const newType = new RequestType({
       tenantId: req.tenantObjectId,
       name,
       requiresReplacement: !!requiresReplacement,
@@ -72,7 +72,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     if (req.body.visibility !== undefined) updateData.visibility = req.body.visibility;
     if (req.body.allowedProjectIds !== undefined) updateData.allowedProjectIds = req.body.allowedProjectIds;
 
-    const updatedType = await RequestActivityType.findOneAndUpdate({ _id: id, tenantId: req.tenantObjectId }, updateData, { new: true });
+    const updatedType = await RequestType.findOneAndUpdate({ _id: id, tenantId: req.tenantObjectId }, updateData, { new: true });
 
     if (!updatedType) return res.status(404).json({ error: "Activity log type not found" });
 
@@ -90,7 +90,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
 router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { id } = req.params;
-    const deleted = await RequestActivityType.findOneAndDelete({ _id: id, tenantId: req.tenantObjectId });
+    const deleted = await RequestType.findOneAndDelete({ _id: id, tenantId: req.tenantObjectId });
     if (!deleted) return res.status(404).json({ error: "Activity log type not found" });
     res.json({ message: "Deleted successfully" });
   } catch (error) {
@@ -114,7 +114,7 @@ router.patch("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) 
       },
     }));
 
-    await RequestActivityType.bulkWrite(ops);
+    await RequestType.bulkWrite(ops);
     res.json({ message: "Order updated successfully" });
   } catch (error) {
     console.error("Reorder activity log types error:", error);
@@ -122,4 +122,4 @@ router.patch("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) 
   }
 });
 
-export { router as RequestActivityTypeRoutes };
+export { router as RequestTypeRoutes };

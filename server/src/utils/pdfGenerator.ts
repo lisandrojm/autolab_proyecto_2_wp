@@ -3,16 +3,16 @@ import path from "path";
 import fs from "fs";
 import { IOrder } from "../models/Order.js";
 import { IOrderType } from "../models/OrderType.js";
-import { IPdfTemplate } from "../models/PdfTemplate.js";
+import { IPdf } from "../models/Pdf.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
-import { PdfGlobalConfig } from "../models/PdfGlobalConfig.js";
+import { PdfConfig } from "../models/PdfConfig.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables } from "./pdfVariableReplacer.js";
 
 // Helper function to build the full HTML with layout
 async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}): Promise<string> {
-  const config = (await PdfGlobalConfig.findOne({ tenantId })) || {};
+  const config = (await PdfConfig.findOne({ tenantId })) || {};
   const systemVars = getSystemVariables(config);
   const allVars = { ...additionalVars, ...systemVars };
 
@@ -163,7 +163,7 @@ interface GeneratePdfResult {
   error?: string;
 }
 
-export async function generateOrderPDF(order: IOrder, category: IOrderType, template: IPdfTemplate, user: IUser, tenantId: string, tenantName: string): Promise<GeneratePdfResult> {
+export async function generateOrderPDF(order: IOrder, category: IOrderType, template: IPdf, user: IUser, tenantId: string, tenantName: string): Promise<GeneratePdfResult> {
   try {
     console.log("[PDF GENERATOR] Starting PDF generation...");
     console.log("[PDF GENERATOR] Order ID:", order._id);
@@ -240,7 +240,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderType, temp
   }
 }
 
-export async function generateVacationPDF(vacation: IVacation, template: IPdfTemplate, user: IUser, tenantId: string, tenantName: string, vacationNumber: string): Promise<GeneratePdfResult> {
+export async function generateVacationPDF(vacation: IVacation, template: IPdf, user: IUser, tenantId: string, tenantName: string, vacationNumber: string): Promise<GeneratePdfResult> {
   try {
     console.log("[PDF GENERATOR] Starting vacation PDF generation...");
     console.log("[PDF GENERATOR] Vacation ID:", vacation._id);

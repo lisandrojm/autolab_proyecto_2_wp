@@ -50,7 +50,7 @@ export interface IOrderType extends Document {
   documentoRequerido?: string;
   requiresSignature?: boolean;
   requiresUserConfirmation?: boolean;
-  pdfTemplateId?: Types.ObjectId;
+  pdfId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,7 +97,7 @@ const orderTypeSchema = new Schema<IOrderType>(
     documentoRequerido: { type: String, trim: true },
     requiresSignature: { type: Boolean, default: true },
     requiresUserConfirmation: { type: Boolean, default: false },
-    pdfTemplateId: { type: Schema.Types.ObjectId, ref: "PdfTemplate" },
+    pdfId: { type: Schema.Types.ObjectId, ref: "Pdf" },
   },
   { timestamps: true, collection: "orders_types" },
 );

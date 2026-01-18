@@ -1,9 +1,9 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheckCircle, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
-import { PdfTemplate } from "../../api/pdfTemplates";
+import { Pdf } from "../../api/pdfs";
 
 interface PdfAssignmentStatusProps {
-  templates: PdfTemplate[];
+  templates: Pdf[];
 }
 
 export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {

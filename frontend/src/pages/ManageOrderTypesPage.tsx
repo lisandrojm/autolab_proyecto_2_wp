@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract, faFilePdf, faEye } from "@fortawesome/free-solid-svg-icons";
 import { orderTypesAPI, OrderType, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderTypes";
-import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
+import { pdfsAPI, Pdf } from "../api/pdfs";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -24,7 +24,7 @@ interface SortableRowProps {
   onDelete: (orderType: OrderType) => void;
   onToggleActive: (orderType: OrderType) => void;
   onEnableReorder: () => void;
-  pdfTemplates: PdfTemplate[];
+  pdfTemplates: Pdf[];
   onPreviewPdf: (content: string, code: string) => void;
 }
 
@@ -126,7 +126,7 @@ const HELP_KEY = "orderTypes"; // Consider changing help key if needed, or keep 
 export const ManageOrderTypesPage: React.FC = () => {
   const navigate = useNavigate();
   const [orderTypes, setOrderTypes] = useState<OrderType[]>([]);
-  const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
+  const [pdfTemplates, setPdfTemplates] = useState<Pdf[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOrderType, setEditingOrderType] = useState<OrderType | null>(null);
@@ -149,7 +149,7 @@ export const ManageOrderTypesPage: React.FC = () => {
     documentoRequerido?: string;
     requiresSignature: boolean;
     requiresUserConfirmation?: boolean;
-    pdfTemplateId?: string;
+    pdfId?: string;
   }>({
     name: "",
     informacion: "",
@@ -169,7 +169,7 @@ export const ManageOrderTypesPage: React.FC = () => {
     documentoRequerido: undefined,
     requiresSignature: true,
     requiresUserConfirmation: false,
-    pdfTemplateId: undefined,
+    pdfId: undefined,
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -201,8 +201,8 @@ export const ManageOrderTypesPage: React.FC = () => {
 
   const loadPdfTemplates = async () => {
     try {
-      const data = await pdfTemplatesAPI.getAll();
-      setPdfTemplates(data.filter((t: PdfTemplate) => t.isActive));
+      const data = await pdfsAPI.getAll();
+      setPdfTemplates(data.filter((t: Pdf) => t.isActive));
     } catch (error) {
       console.error("Error loading PDF templates:", error);
     }
@@ -280,7 +280,7 @@ export const ManageOrderTypesPage: React.FC = () => {
       documentoRequerido: orderType.documentoRequerido,
       requiresSignature: orderType.requiresSignature ?? true,
       requiresUserConfirmation: orderType.requiresUserConfirmation ?? false,
-      pdfTemplateId: orderType.pdfTemplateId,
+      pdfId: orderType.pdfId,
     });
     setShowModal(true);
   };
@@ -367,13 +367,13 @@ export const ManageOrderTypesPage: React.FC = () => {
         futureActionType: formData.requiresAction && formData.futureActionType ? formData.futureActionType : undefined,
         deadlineMode: formData.requiresAction && formData.futureActionType ? formData.deadlineMode : undefined,
         requiresSignature: formData.requiresSignature,
-        pdfTemplateId: formData.requiresSignature && formData.pdfTemplateId ? formData.pdfTemplateId : undefined,
+        pdfId: formData.requiresSignature && formData.pdfId ? formData.pdfId : undefined,
         requiresUserConfirmation: formData.requiresAction ? formData.requiresUserConfirmation : false,
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
 
       if (!formData.requiresSignature) {
-        payload.pdfTemplateId = undefined;
+        payload.pdfId = undefined;
       }
 
       if (!formData.requiresAction) {
@@ -522,7 +522,7 @@ export const ManageOrderTypesPage: React.FC = () => {
               <button onClick={openCreateModal} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faPlus} />
               </button>
-              <button onClick={() => navigate("/hr/pdf-templates")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <button onClick={() => navigate("/hr/pdfs")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faFilePdf} />
                 <span className="hidden lg:block">Plantillas PDF</span>
               </button>

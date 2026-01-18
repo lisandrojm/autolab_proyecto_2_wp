@@ -484,7 +484,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/pdf-templates"
+                path="/hr/pdfs"
                 element={
                   <ProtectedRoute>
                     <PdfTemplatesPage />

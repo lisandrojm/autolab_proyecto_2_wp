@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList } from "@fortawesome/free-solid-svg-icons";
 
-import { pdfTemplatesAPI, PdfTemplate, PdfTemplateInput, codeOptions, variablesByCode } from "../../api/pdfTemplates";
+import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode } from "../../api/pdfs";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 
 import Swal from "sweetalert2";
@@ -21,7 +21,7 @@ const HELP_KEY = "pdfTemplates" as const;
 
 export function PdfTemplatesPage() {
   // data
-  const [templates, setTemplates] = useState<PdfTemplate[]>([]);
+  const [templates, setTemplates] = useState<Pdf[]>([]);
   const [loading, setLoading] = useState(true);
 
   // filters
@@ -31,12 +31,12 @@ export function PdfTemplatesPage() {
 
   // modal
   const [showModal, setShowModal] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<PdfTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<Pdf | null>(null);
   const [saving, setSaving] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
 
   // form
-  const [formData, setFormData] = useState<PdfTemplateInput>({
+  const [formData, setFormData] = useState<PdfInput>({
     code: "dinero",
     name: "",
     content: "",
@@ -81,7 +81,7 @@ export function PdfTemplatesPage() {
   const loadTemplates = async () => {
     try {
       setLoading(true);
-      const data = await pdfTemplatesAPI.getAll();
+      const data = await pdfsAPI.getAll();
       setTemplates(data);
     } catch {
       Swal.fire("Error", "No se pudieron cargar las plantillas", "error");
@@ -123,7 +123,7 @@ export function PdfTemplatesPage() {
     setShowModal(true);
   };
 
-  const openEdit = (template: PdfTemplate) => {
+  const openEdit = (template: Pdf) => {
     setEditingTemplate(template);
     setFormData({
       code: template.code,
@@ -136,7 +136,7 @@ export function PdfTemplatesPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async (template: PdfTemplate) => {
+  const handleDelete = async (template: Pdf) => {
     const result = await Swal.fire({
       title: "¿Eliminar plantilla?",
       text: `Se eliminará la plantilla "${template.name}"`,
@@ -150,7 +150,7 @@ export function PdfTemplatesPage() {
     if (!result.isConfirmed) return;
 
     try {
-      await pdfTemplatesAPI.delete(template._id);
+      await pdfsAPI.delete(template._id);
       Swal.fire("Eliminada", "La plantilla ha sido eliminada", "success");
       loadTemplates();
     } catch {
@@ -173,10 +173,10 @@ export function PdfTemplatesPage() {
     try {
       setSaving(true);
       if (editingTemplate) {
-        await pdfTemplatesAPI.update(editingTemplate._id, formData);
+        await pdfsAPI.update(editingTemplate._id, formData);
         Swal.fire("Actualizada", "La plantilla ha sido actualizada", "success");
       } else {
-        await pdfTemplatesAPI.create(formData);
+        await pdfsAPI.create(formData);
         Swal.fire("Creada", "La plantilla ha sido creada", "success");
       }
       setShowModal(false);
@@ -189,7 +189,7 @@ export function PdfTemplatesPage() {
     }
   };
 
-  const getBadge = (template: PdfTemplate) => {
+  const getBadge = (template: Pdf) => {
     if (template.isActive) {
       return (
         <span className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 px-2 py-1 rounded-md">
