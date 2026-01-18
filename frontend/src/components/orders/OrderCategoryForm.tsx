@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 import { Pdf } from "../../api/pdfs";
 
-import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderTypes";
+import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderConfig";
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/orderFutureAction";
 

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload, faTrash, faCheck, faFileSignature } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
-import { OrderType, CategoryType } from "../api/orderTypes";
+import { OrderConfig } from "../api/orderConfig";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
 import { Modal } from "../components/ui/Modal";
-import { Card } from "../components/ui/Card";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
@@ -46,7 +45,7 @@ export const ManageOrdersPage: React.FC = () => {
   const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: any;
 
     const handleResize = () => {
       clearTimeout(timeoutId);
@@ -114,7 +113,7 @@ export const ManageOrdersPage: React.FC = () => {
       const docCounts = { total: 0, normal: 0, urgent: 0, overdue: 0, uploaded: 0 };
 
       data.orders.forEach((order) => {
-        const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+        const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
         const docStatusType = mapDocumentStateToStatusType(futureAction);
 
         if (docStatusType) {
@@ -144,6 +143,7 @@ export const ManageOrdersPage: React.FC = () => {
     loadOrders();
   }, [page]);
 
+  /*
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
       await hrManagementAPI.orders.update(orderId, { status: newStatus as any });
@@ -153,6 +153,7 @@ export const ManageOrdersPage: React.FC = () => {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
     }
   };
+  */
 
   const handlePreApprove = async () => {
     if (!selectedOrder) return;
@@ -432,8 +433,11 @@ export const ManageOrdersPage: React.FC = () => {
     );
   };
 
+  /*
   const getCategoryLabel = (category: string) => category;
+  */
 
+  /*
   const getCategoryTypeName = (categoryType?: CategoryType): string => {
     const typeNames: Record<CategoryType, string> = {
       fecha: "Fecha",
@@ -443,11 +447,13 @@ export const ManageOrdersPage: React.FC = () => {
     };
     return categoryType ? typeNames[categoryType] : "N/A";
   };
+  */
 
+  /*
   const getSubcategoryDisplay = (order: Order): string => {
     if (!order.categoryId || typeof order.categoryId === "string") return "N/A";
 
-    const category = order.categoryId as OrderType;
+    const category = order.categoryId as OrderConfig;
 
     if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return "Sin opciones";
 
@@ -458,11 +464,12 @@ export const ManageOrdersPage: React.FC = () => {
 
     return labels.join(", ");
   };
+  */
 
   const getSubcategoriesArray = (order: Order): string[] => {
     if (!order.categoryId || typeof order.categoryId === "string") return [];
 
-    const category = order.categoryId as OrderType;
+    const category = order.categoryId as OrderConfig;
 
     if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return [];
 
@@ -476,25 +483,29 @@ export const ManageOrdersPage: React.FC = () => {
     return labels;
   };
 
+  /*
   const hasRequiresAction = (order: Order): boolean => {
     if (!order.categoryId || typeof order.categoryId === "string") return false;
-    const category = order.categoryId as OrderType;
+    const category = order.categoryId as OrderConfig;
     return category.requiresAction || false;
   };
+  */
 
   const getCategoryName = (order: Order): string => {
     if (!order.categoryId) return order.category || "Sin categoría";
     if (typeof order.categoryId === "string") return order.category || "Sin categoría";
-    const category = order.categoryId as OrderType;
+    const category = order.categoryId as OrderConfig;
     return category.name || order.category || "Sin categoría";
   };
 
+  /*
   const getUserRole = (user: any): string => {
     if (!user) return "Usuario";
     if (typeof user === "string") return "Usuario";
     if (user.role) return user.role;
     return "Empleado";
   };
+  */
 
   const getUserAvatar = (user: any): string | null => {
     if (!user || typeof user === "string") return null;
@@ -529,6 +540,7 @@ export const ManageOrdersPage: React.FC = () => {
     });
   };
 
+  /*
   const mapStatusToCardVariant = (status: string): "default" | "success" | "warning" | "blue" | "info" | "green" => {
     const variants: Record<string, "default" | "success" | "warning" | "blue" | "info" | "green"> = {
       pending: "warning",
@@ -539,7 +551,9 @@ export const ManageOrdersPage: React.FC = () => {
     };
     return variants[status] || "default";
   };
+  */
 
+  /*
   const getCardBadges = (order: Order) => {
     const badges = [
       {
@@ -550,12 +564,13 @@ export const ManageOrdersPage: React.FC = () => {
 
     return badges;
   };
+  */
 
   const getAvatarFallback = (user: any): string => {
     const name = getUserName(user);
     return name
       .split(" ")
-      .map((n) => n[0])
+      .map((n: string) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
@@ -566,7 +581,7 @@ export const ManageOrdersPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredOrders.map((order) => {
           const avatarUrl = getUserAvatar(order.userId);
-          const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+          const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
           const docStatusType = mapDocumentStateToStatusType(futureAction);
           const isInFinalState = isOrderInFinalState(order.status);
 
@@ -610,7 +625,7 @@ export const ManageOrdersPage: React.FC = () => {
               footerActions={[
                 {
                   icon: faTrash,
-                  onClick: (e) => {
+                  onClick: (e: any) => {
                     e?.stopPropagation();
                     handleDelete(order._id, order.orderNumber, e);
                   },
@@ -730,9 +745,9 @@ export const ManageOrdersPage: React.FC = () => {
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
         onClose: () => setOpenInfo(false),
-        title: helpEntry.title,
-        size: helpEntry.size,
-        content: helpEntry.content,
+        title: helpEntry?.title || "Ayuda",
+        size: helpEntry?.size as any,
+        content: helpEntry?.content,
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
@@ -835,7 +850,7 @@ export const ManageOrdersPage: React.FC = () => {
                             </td>
                             <td className="py-3 px-4">
                               {(() => {
-                                const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+                                const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
                                 const docStatusType = mapDocumentStateToStatusType(futureAction);
                                 const isInFinalState = isOrderInFinalState(order.status);
 
@@ -918,17 +933,18 @@ export const ManageOrdersPage: React.FC = () => {
               <div className="flex flex-wrap gap-2">
                 <StatusBadge type={mapOrderStatusToStatusType(selectedOrder.status)} size="sm" />
                 {(() => {
-                  const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
+                  const futureAction = selectedOrder.futureActions && selectedOrder.futureActions.length > 0 ? selectedOrder.futureActions[0] : null;
                   const docStatusType = mapDocumentStateToStatusType(futureAction);
                   const isInFinalState = isOrderInFinalState(selectedOrder.status);
 
                   if (!docStatusType) return null;
 
-                  const isDocumentUploaded = docStatusType === "doc_subido" && selectedOrder.documentoUrl;
+                  const documentUrl = selectedOrder.documentoUrl || futureAction?.documentoUrl || (selectedOrder.documents && selectedOrder.documents.length > 0 ? selectedOrder.documents[0].fileUrl : undefined);
+                  const isDocumentUploaded = ((docStatusType as string) === "doc_subido" || (docStatusType as string) === "documento_presentado") && documentUrl;
 
                   if (isDocumentUploaded) {
                     return (
-                      <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
+                      <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${documentUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
                         <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />
                       </button>
                     );
@@ -951,7 +967,7 @@ export const ManageOrdersPage: React.FC = () => {
                   <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">
                     {getUserName(selectedOrder.userId)
                       .split(" ")
-                      .map((n) => n[0])
+                      .map((n: string) => n[0])
                       .join("")
                       .toUpperCase()
                       .slice(0, 2)}
@@ -1022,7 +1038,7 @@ export const ManageOrdersPage: React.FC = () => {
                 {selectedOrder.photoUrl && (
                   <div className="md:col-span-2">
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
-                    <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.title} className="max-w-xs w-full h-auto rounded border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
+                    <img src={`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`} alt={selectedOrder.description} className="max-w-xs w-full h-auto rounded border border-slate-200 dark:border-slate-600 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.photoUrl}`)} />
                   </div>
                 )}
               </div>
@@ -1040,7 +1056,7 @@ export const ManageOrdersPage: React.FC = () => {
             )}
 
             {(() => {
-              const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
+              const futureAction = selectedOrder.futureActions && selectedOrder.futureActions.length > 0 ? selectedOrder.futureActions[0] : null;
 
               if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "pendiente_documento") {
                 return null;
@@ -1069,9 +1085,10 @@ export const ManageOrdersPage: React.FC = () => {
 
             {/* Document Uploaded Section */}
             {(() => {
-              const futureAction = typeof selectedOrder.futureActionId === "object" ? selectedOrder.futureActionId : null;
+              const futureAction = selectedOrder.futureActions && selectedOrder.futureActions.length > 0 ? selectedOrder.futureActions[0] : null;
+              const documentUrl = selectedOrder.documentoUrl || futureAction?.documentoUrl || (selectedOrder.documents && selectedOrder.documents.length > 0 ? selectedOrder.documents[0].fileUrl : undefined);
 
-              if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "documento_presentado" || !selectedOrder.documentoUrl) {
+              if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "documento_presentado" || !documentUrl) {
                 return null;
               }
 
@@ -1082,21 +1099,21 @@ export const ManageOrdersPage: React.FC = () => {
                     <div className="flex-1">
                       <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Subido</h4>
                       {futureAction.documentoRequerido && (
-                        <p className="text-sm text-blue-600 dark:text-blue-400 mb-3">
+                        <p className="text-sm text-blue-600 dark:text-blue-400 mb-2">
                           <strong>"{futureAction.documentoRequerido}"</strong>
                         </p>
                       )}
-                      <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">El usuario ha subido el documento solicitado. Podés revisarlo haciendo clic en el botón de abajo.</p>
-                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm">
-                          <FontAwesomeIcon icon={faFileArrowUp} />
-                          Ver Documento
-                        </button>
-                        <a href={`${import.meta.env.VITE_API_URL}${selectedOrder.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm">
-                          <FontAwesomeIcon icon={faDownload} />
-                        </a>
-                      </div>
                     </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${documentUrl}`)} className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm">
+                      <FontAwesomeIcon icon={faFileArrowUp} />
+                      Ver Documento
+                    </button>
+                    <a href={`${import.meta.env.VITE_API_URL}${documentUrl}`} download target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm">
+                      <FontAwesomeIcon icon={faDownload} />
+                    </a>
                   </div>
                 </div>
               );
@@ -1104,6 +1121,7 @@ export const ManageOrdersPage: React.FC = () => {
 
             {/* Signature Notification Section */}
             {(() => {
+              if (!selectedOrder) return null;
               const orderRequiresSignature = selectedOrder.requiresSignature || (selectedOrder.signatureStatus && selectedOrder.signatureStatus !== "not_required");
               if (selectedOrder.status !== "approved" || !orderRequiresSignature || selectedOrder.signatureStatus !== "sent" || selectedOrder.signatureNotifiedAt) {
                 return null;
@@ -1231,7 +1249,7 @@ export const ManageOrdersPage: React.FC = () => {
               { label: "Rechazados", value: stats.rejected, icon: faTimesCircle, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" },
               { label: "Entregados", value: stats.delivered, icon: faTruck, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" },
               { label: "Cancelados", value: stats.cancelled, icon: faBan, color: "bg-orange-50 dark:bg-orange-600/20 text-orange-600 dark:text-orange-400" },
-              { label: "Documentos", value: docStats.total, icon: faFileAlt, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
+              { label: "Documentos", value: docStats.total, icon: faFileSignature, color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
             ].map((stat, index) => (
               <div
                 key={index}

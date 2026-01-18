@@ -1,4 +1,4 @@
-import { OrderData } from "../../../../api/personnel";
+import { Order } from "../../../../api/hrManagement";
 
 export const getUserName = (user: any): string => {
   if (!user) return "Usuario desconocido";
@@ -53,7 +53,7 @@ export const formatDateShort = (dateString: string | undefined): string => {
   });
 };
 
-export const getCategoryName = (order: OrderData): string => {
+export const getCategoryName = (order: Order): string => {
   if (!order.categoryId) return order.category || "Sin categoría";
   if (typeof order.categoryId === "string") return order.category || "Sin categoría";
   const category = order.categoryId as any;
@@ -65,7 +65,7 @@ export const getOrderNumber = (orderNumber: string | undefined | null): string =
   return orderNumber;
 };
 
-export const getSubcategoriesArray = (order: OrderData): string[] => {
+export const getSubcategoriesArray = (order: Order): string[] => {
   if (!order.categoryId || typeof order.categoryId === "string") return [];
 
   const category = order.categoryId as any;

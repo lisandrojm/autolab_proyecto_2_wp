@@ -28,7 +28,7 @@ export interface ITypeConfig {
   [key: string]: any;
 }
 
-export interface IOrderType extends Document {
+export interface IOrderConfig extends Document {
   tenantId: Types.ObjectId;
   name: string;
   informacion?: string;
@@ -55,7 +55,7 @@ export interface IOrderType extends Document {
   updatedAt: Date;
 }
 
-const orderTypeSchema = new Schema<IOrderType>(
+const orderConfigSchema = new Schema<IOrderConfig>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
@@ -99,11 +99,11 @@ const orderTypeSchema = new Schema<IOrderType>(
     requiresUserConfirmation: { type: Boolean, default: false },
     pdfId: { type: Schema.Types.ObjectId, ref: "Pdf" },
   },
-  { timestamps: true, collection: "orders_types" },
+  { timestamps: true, collection: "orders_configs" },
 );
 
-orderTypeSchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
-orderTypeSchema.index({ tenantId: 1, name: 1 }, { unique: true });
-orderTypeSchema.index({ tenantId: 1, categoryType: 1 });
+orderConfigSchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
+orderConfigSchema.index({ tenantId: 1, name: 1 }, { unique: true });
+orderConfigSchema.index({ tenantId: 1, categoryType: 1 });
 
-export const OrderType = mongoose.model<IOrderType>("OrderType", orderTypeSchema);
+export const OrderConfig = mongoose.model<IOrderConfig>("OrderConfig", orderConfigSchema);

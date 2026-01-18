@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBox, faCamera, faImage, faTimes, faPenToSquare, faCheckCircle, faCircleInfo, faShoppingCart, faPaperPlane, faPlus, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCamera, faImage, faTimes, faShoppingCart, faPlus, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
-import { OrderType } from "../../../../api/orderTypes";
+import { OrderConfig } from "../../../../api/orderConfig";
 import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
 import { sweetAlert } from "../utils/sweetAlert";
 import OrderDetailModal from "../components/OrderDetailModal";
@@ -22,7 +22,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const { orders, loading, createOrder, updateOrderStatus, refetch } = useOrders();
   const [showForm, setShowForm] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [categories, setCategories] = useState<OrderType[]>([]);
+  const [categories, setCategories] = useState<OrderConfig[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -54,8 +54,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
     const loadCategories = async () => {
       try {
         setLoadingCategories(true);
-        const { data } = await axios.get<OrderType[]>("/order-types", { params: { isActive: true } });
-        setCategories(data.sort((a, b) => a.sortOrder - b.sortOrder));
+        const { data } = await axios.get<OrderConfig[]>("/order-config", { params: { isActive: true } });
+        setCategories(data.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
         if (data.length > 0) {
           setSelectedCategoryId(data[0]._id);
         }
@@ -367,7 +367,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                           <StatusBadge type={mapOrderStatusToStatusTypeForMobile(order.status)} size="sm" />
 
                           {(() => {
-                            const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+                            const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
                             const docStatusType = mapDocumentStateToStatusType(futureAction);
                             const isInFinalState = isOrderInFinalState(order.status);
                             if (docStatusType) return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;

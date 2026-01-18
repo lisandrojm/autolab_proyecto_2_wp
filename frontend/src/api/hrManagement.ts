@@ -1,5 +1,5 @@
 import axios from "./axiosConfig";
-import { OrderType } from "./orderTypes";
+import { OrderConfig } from "./orderConfig";
 
 export interface Pagination {
   page: number;
@@ -67,41 +67,33 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-export interface OrderDocument {
+export interface EmbeddedDocument {
   _id: string;
-  tenantId: string;
-  userId: any;
   type: "contract" | "payroll" | "certificate" | "other";
   title: string;
   description?: string;
   filePath?: string;
   fileUrl?: string;
-  uploadedBy: any;
+  uploadedBy?: any;
   uploadedAt: string;
-  isVisibleToEmployee: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface FutureAction {
   _id: string;
-  tenantId: string;
-  orderId: string;
   requiereAccionFutura: boolean;
-  tipoAccionFutura: "documento" | "condicion" | "accion" | "presentacionDocumento" | "vencimientoSistema" | "vencimientoInterno" | "sinVencimiento";
-  deadlineMode?: "plazoDias" | "fechaEspecifica" | "none";
+  tipoAccionFutura: "documento" | "otra";
+  deadlineMode?: "none" | "plazoDias" | "fechaEspecifica";
+  descripcionAccion: string;
+  responsableAccion: "usuario" | "cliente" | "area_interna";
+  documentoRequerido?: string;
   plazoDias?: number;
   fechaLimite?: string;
-  descripcionAccion: string;
-  responsableAccion: "usuario" | "area_interna";
-  documentoRequerido?: string;
-  documentoUrl?: string;
-  quienDefineVencimiento?: "sistema" | "area_interna";
-  estadoAccion: "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
   fechaCreacionAccion: string;
   fechaCumplimiento?: string;
-  createdAt: string;
-  updatedAt: string;
+  estadoAccion: "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
+  documentoUrl?: string;
+  quienDefineVencimiento?: "cliente" | "sistema" | "area_interna";
+  metadata?: Record<string, any>;
 }
 
 export interface Order {
@@ -111,7 +103,7 @@ export interface Order {
   orderNumber: string;
   description: string;
   category: string;
-  categoryId?: OrderType | string;
+  categoryId?: OrderConfig | string;
   subcategories: string[];
   status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: string;
@@ -122,17 +114,17 @@ export interface Order {
   deliveredAt?: string;
   amount?: number;
   photoUrl?: string;
+  documentoUrl?: string;
   actionCompleted?: boolean;
   dynamicValue?: any;
-  requiereAccionFutura?: boolean;
-  futureActionId?: FutureAction | string;
   requiresSignature?: boolean;
   signatureStatus?: "not_required" | "pending" | "sent" | "signed";
   signatureSentAt?: string;
   signatureNotifiedAt?: string;
   signedAt?: string;
   signedBy?: any;
-  documentoUrl?: string;
+  documents: EmbeddedDocument[];
+  futureActions: FutureAction[];
   pdfPreAprobacionUrl?: string;
   metadata?: Record<string, any>;
   createdAt: string;
@@ -196,11 +188,15 @@ export const hrManagementAPI = {
 
   hrDocuments: {
     list: async (params?: { page?: number; limit?: number; type?: string; userId?: string }) => {
-      const { data } = await axios.get<{ documents: OrderDocument[]; pagination: Pagination }>("/hr-management/hrdocuments", { params });
-      return data;
+      const { data } = await axios.get<{ orders: Order[]; pagination: Pagination }>("/hr-management/orders", {
+        params: { ...params, category: "documento" },
+      });
+      return { documents: data.orders, pagination: data.pagination };
     },
     count: async () => {
-      const { data } = await axios.get<{ count: number }>("/hr-management/hrdocuments/count");
+      const { data } = await axios.get<{ count: number }>("/hr-management/orders/count", {
+        params: { category: "documento" },
+      });
       return data.count;
     },
   },

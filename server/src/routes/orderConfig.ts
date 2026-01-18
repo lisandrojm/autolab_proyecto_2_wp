@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { OrderType } from "../models/OrderType.js";
+import { OrderConfig } from "../models/OrderConfig.js";
 import { Pdf } from "../models/Pdf.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -212,7 +212,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       filter.isActive = isActive === "true";
     }
 
-    const categories = await OrderType.find(filter).sort({ sortOrder: 1, name: 1 });
+    const categories = await OrderConfig.find(filter).sort({ sortOrder: 1, name: 1 });
 
     res.json(categories);
   } catch (error) {
@@ -223,7 +223,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
 router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const category = await OrderType.findOne({
+    const category = await OrderConfig.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -246,7 +246,7 @@ router.put("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) =>
     const { categories } = reorderCategoriesSchema.parse(req.body);
 
     const categoryIds = categories.map((c) => c.id);
-    const existingCategories = await OrderType.find({
+    const existingCategories = await OrderConfig.find({
       _id: { $in: categoryIds },
       tenantId: req.tenantObjectId,
     });
@@ -256,7 +256,7 @@ router.put("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) =>
       return;
     }
 
-    const updatePromises = categories.map(({ id, sortOrder }) => OrderType.findByIdAndUpdate(id, { sortOrder }, { new: true }));
+    const updatePromises = categories.map(({ id, sortOrder }) => OrderConfig.findByIdAndUpdate(id, { sortOrder }, { new: true }));
 
     await Promise.all(updatePromises);
 
@@ -276,7 +276,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const data = createCategorySchema.parse(req.body);
 
-    const existingCategory = await OrderType.findOne({
+    const existingCategory = await OrderConfig.findOne({
       tenantId: req.tenantObjectId,
       name: data.name,
     });
@@ -304,7 +304,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       }
     }
 
-    const maxOrderCategory = await OrderType.findOne({
+    const maxOrderCategory = await OrderConfig.findOne({
       tenantId: req.tenantObjectId,
     })
       .sort({ sortOrder: -1 })
@@ -327,7 +327,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       categoryData.futureActionType = "sinVencimiento";
     }
 
-    const category = new OrderType(categoryData);
+    const category = new OrderConfig(categoryData);
 
     await category.save();
 
@@ -347,7 +347,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const data = updateCategorySchema.parse(req.body);
 
-    const category = await OrderType.findOne({
+    const category = await OrderConfig.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -358,7 +358,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     }
 
     if (data.name && data.name !== category.name) {
-      const existingCategory = await OrderType.findOne({
+      const existingCategory = await OrderConfig.findOne({
         tenantId: req.tenantObjectId,
         name: data.name,
         _id: { $ne: category._id },
@@ -411,7 +411,7 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
   try {
     const userId = req.user!.userId;
 
-    const category = await OrderType.findOne({
+    const category = await OrderConfig.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -421,7 +421,7 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
       return;
     }
 
-    await OrderType.findByIdAndDelete(category._id);
+    await OrderConfig.findByIdAndDelete(category._id);
 
     res.json({ message: "Category deleted successfully" });
   } catch (error) {
@@ -430,4 +430,4 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
   }
 });
 
-export { router as orderTypeRoutes };
+export { router as orderConfigRoutes };

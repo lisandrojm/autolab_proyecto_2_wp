@@ -4,11 +4,10 @@ import { User } from "../models/User.js";
 import { UserProfile } from "../models/UserProfile.js";
 import { Vacation } from "../models/Vacation.js";
 import { Order } from "../models/Order.js";
-import { OrderType } from "../models/OrderType.js";
+import { OrderConfig } from "../models/OrderConfig.js";
 import { Pdf } from "../models/Pdf.js";
 import { Tenant } from "../models/Tenant.js";
 import { Calendar } from "../models/Calendar.js";
-import { OrderDocument } from "../models/OrderDocument.js";
 import { Notification } from "../models/Notification.js";
 import { authenticateToken, AuthenticatedRequest, requireRole } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -592,35 +591,33 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const category = order.categoryId as any;
-    const categoryName = category?.name || order.category;
-    const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
-    const orderDisplayName = `${categoryName}${subcategoryText}`;
+    if (order.categoryId) {
+      const category = await OrderConfig.findById(order.categoryId);
+      if (category && category.pdfId) {
+        try {
+          const template = await Pdf.findOne({
+            _id: category.pdfId,
+            tenantId: req.tenantObjectId,
+            isActive: true,
+          });
 
-    if (category && category.PdfId) {
-      try {
-        const template = await Pdf.findOne({
-          _id: category.PdfId,
-          tenantId: req.tenantObjectId,
-          isActive: true,
-        });
+          if (template) {
+            const user = order.userId as any;
+            const tenant = await Tenant.findById(req.tenantObjectId);
+            const tenantName = tenant?.name || tenant?.slug || "Organización";
 
-        if (template) {
-          const user = order.userId as any;
-          const tenant = await Tenant.findById(req.tenantObjectId);
-          const tenantName = tenant?.name || tenant?.slug || "Organización";
+            const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
 
-          const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
-
-          if (pdfResult.success) {
-            order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
-            await order.save();
-          } else {
-            console.error("PDF generation failed:", pdfResult.error);
+            if (pdfResult.success) {
+              order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+              await order.save();
+            } else {
+              console.error("PDF generation failed:", pdfResult.error);
+            }
           }
+        } catch (pdfError) {
+          console.error("Error in PDF generation process:", pdfError);
         }
-      } catch (pdfError) {
-        console.error("Error in PDF generation process:", pdfError);
       }
     }
 
@@ -718,7 +715,7 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -756,13 +753,13 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
 
     const category = order.categoryId as any;
 
-    if (!category || !category.PdfId) {
+    if (!category || !category.pdfId) {
       res.status(400).json({ error: "Este tipo de pedido no tiene plantilla PDF asignada" });
       return;
     }
 
     const template = await Pdf.findOne({
-      _id: category.PdfId,
+      _id: category.pdfId,
       tenantId: req.tenantObjectId,
       isActive: true,
     });
@@ -828,7 +825,7 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -950,20 +947,27 @@ router.post("/documents", async (req: AuthenticatedRequest & TenantRequest, res)
     const data = createDocumentSchema.parse(req.body);
     const uploaderId = req.user!.userId;
 
-    const document = new OrderDocument({
+    // Create a generic order for this document
+    const order = new Order({
       tenantId: req.tenantObjectId,
       userId: new Types.ObjectId(data.userId),
-      type: data.type,
-      title: data.title,
-      description: data.description,
-      filePath: data.filePath,
-      fileUrl: data.fileUrl,
-      uploadedBy: new Types.ObjectId(uploaderId),
-      uploadedAt: new Date(),
-      isVisibleToEmployee: data.isVisibleToEmployee,
+      category: "documento",
+      description: data.description || data.title,
+      status: "delivered",
+      requestedAt: new Date(),
+      deliveredAt: new Date(),
+      documents: [
+        {
+          type: data.type,
+          title: data.title,
+          filePath: data.filePath,
+          fileUrl: data.fileUrl,
+          uploadedAt: new Date(),
+        },
+      ],
     });
 
-    await document.save();
+    await order.save();
 
     if (data.isVisibleToEmployee) {
       await Notification.create({
@@ -972,11 +976,11 @@ router.post("/documents", async (req: AuthenticatedRequest & TenantRequest, res)
         type: "document",
         title: "New Document Available",
         message: `A new document "${data.title}" has been added to your profile.`,
-        linkUrl: `/documents/${document._id}`,
+        linkUrl: `/orders/${order._id}`,
       });
     }
 
-    res.status(201).json(document);
+    res.status(201).json(order.documents[0]);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });
@@ -989,15 +993,19 @@ router.post("/documents", async (req: AuthenticatedRequest & TenantRequest, res)
 
 router.delete("/documents/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const document = await OrderDocument.findOneAndDelete({
-      _id: req.params.id,
+    // Find the order that contains this document
+    const order = await Order.findOne({
       tenantId: req.tenantObjectId,
+      "documents._id": req.params.id,
     });
 
-    if (!document) {
+    if (!order) {
       res.status(404).json({ error: "Document not found" });
       return;
     }
+
+    order.documents = order.documents.filter((d: any) => d._id.toString() !== req.params.id);
+    await order.save();
 
     res.json({ message: "Document deleted successfully" });
   } catch (error) {

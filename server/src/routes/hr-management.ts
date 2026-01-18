@@ -8,9 +8,8 @@ import { dirname } from "path";
 import { z } from "zod";
 import { Calendar } from "../models/Calendar.js";
 import { UserProfile } from "../models/UserProfile.js";
-import { OrderDocument } from "../models/OrderDocument.js";
 import { Order } from "../models/Order.js";
-import { OrderType } from "../models/OrderType.js";
+import { OrderConfig } from "../models/OrderConfig.js";
 import { Vacation } from "../models/Vacation.js";
 import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
@@ -188,7 +187,16 @@ router.get("/hrdocuments", async (req: AuthenticatedRequest & TenantRequest, res
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [documents, total] = await Promise.all([OrderDocument.find(filter).sort({ uploadedAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("uploadedBy", "firstName lastName email"), OrderDocument.countDocuments(filter)]);
+    const [orders, total] = await Promise.all([
+      Order.find({ tenantId: req.tenantObjectId, "documents.0": { $exists: true } })
+        .sort({ "documents.uploadedAt": -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate("userId", "firstName lastName email"),
+      Order.countDocuments({ tenantId: req.tenantObjectId, "documents.0": { $exists: true } }),
+    ]);
+
+    const documents = orders.flatMap((o) => o.documents.map((d) => ({ ...d.toObject(), userId: o.userId })));
 
     res.json({
       documents,
@@ -207,7 +215,7 @@ router.get("/hrdocuments", async (req: AuthenticatedRequest & TenantRequest, res
 
 router.get("/hrdocuments/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const count = await OrderDocument.countDocuments({ tenantId: req.tenantObjectId });
+    const count = await Order.countDocuments({ tenantId: req.tenantObjectId, "documents.0": { $exists: true } });
     res.json({ count });
   } catch (error) {
     console.error("Count HR documents error:", error);
@@ -238,8 +246,8 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
         .limit(Number(limit))
         .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
         .populate("approvedBy", "firstName lastName email")
-        .populate("categoryId")
-        .populate("futureActionId"),
+        .populate("approvedBy", "firstName lastName email")
+        .populate("categoryId"),
       Order.countDocuments(filter),
     ]);
 
@@ -301,15 +309,14 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
 
         await order.save();
 
-        const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
+        const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
         const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
         const orderDisplayName = `${categoryName}${subcategoryText}`;
 
         const populatedOrder = await Order.findById(order._id)
           .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
           .populate("approvedBy", "firstName lastName email")
-          .populate("categoryId")
-          .populate("futureActionId");
+          .populate("categoryId");
 
         res.status(201).json(populatedOrder);
         return;
@@ -392,7 +399,7 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     await order.save();
 
     if (req.body.status === "cancelled") {
-      const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
+      const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
       const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
       const orderDisplayName = `${categoryName}${subcategoryText}`;
     }
@@ -400,8 +407,7 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId")
-      .populate("futureActionId");
+      .populate("categoryId");
 
     res.json(populatedOrder);
   } catch (error) {
@@ -539,22 +545,22 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     if (!pdfCategory) {
       console.warn("[PDF WARNING] Order has no populated value for 'categoryId'. Trying to fetch manual.");
       if (order.categoryId) {
-        pdfCategory = await OrderType.findById(order.categoryId);
+        pdfCategory = await OrderConfig.findById(order.categoryId);
       }
     }
 
     if (!pdfCategory) {
       console.error("[PDF ERROR] Category could not be resolved. Skipping PDF.");
     } else {
-      console.log(`[PDF DEBUG] Category resolved: Name="${pdfCategory.name}", ID=${pdfCategory._id}, PdfId=${pdfCategory.PdfId}`);
+      console.log(`[PDF DEBUG] Category resolved: Name="${pdfCategory.name}", ID=${pdfCategory._id}, pdfId=${pdfCategory.pdfId}`);
 
       // Resolve Template
       let template = null;
 
       // 1. Try association
-      if (pdfCategory.PdfId) {
-        template = await Pdf.findOne({ _id: pdfCategory.PdfId, tenantId: req.tenantObjectId });
-        if (!template) console.warn("[PDF WARNING] PdfId referenced but Template not found in DB.");
+      if (pdfCategory.pdfId) {
+        template = await Pdf.findOne({ _id: pdfCategory.pdfId, tenantId: req.tenantObjectId });
+        if (!template) console.warn("[PDF WARNING] pdfId referenced but Template not found in DB.");
         else console.log(`[PDF DEBUG] Found template via association: ${template.name}`);
       }
 
@@ -607,7 +613,6 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
         populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
-      .populate("futureActionId")
       .populate("approvedBy", "firstName lastName email");
 
     console.log("[PDF DEBUG] Sending response with pdfPreAprobacionUrl:", finalOrder?.pdfPreAprobacionUrl || "undefined");
@@ -685,7 +690,6 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
         populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
-      .populate("futureActionId")
       .populate("approvedBy", "firstName lastName email");
 
     res.json(finalOrder);
@@ -716,7 +720,7 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
 
     await order.save();
 
-    const category = order.categoryId ? await OrderType.findById(order.categoryId) : null;
+    const category = order.categoryId ? await OrderConfig.findById(order.categoryId) : null;
     const categoryName = category?.name || order.category;
     let subcategoryText = "";
     if (order.subcategories && order.subcategories.length > 0) {
@@ -748,7 +752,6 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
         populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
-      .populate("futureActionId")
       .populate("approvedBy", "firstName lastName email");
 
     res.json(finalOrder);
@@ -780,7 +783,7 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -800,7 +803,6 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
         populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
-      .populate("futureActionId")
       .populate("approvedBy", "firstName lastName email");
 
     res.json(finalOrder);
@@ -858,7 +860,6 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
         populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
-      .populate("futureActionId")
       .populate("approvedBy", "firstName lastName email");
 
     res.json(finalOrder);
@@ -899,7 +900,7 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -919,7 +920,6 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
         populate: { path: "positionId", select: "name" },
       })
       .populate("categoryId")
-      .populate("futureActionId")
       .populate("approvedBy", "firstName lastName email")
       .populate("signedBy", "firstName lastName email");
 

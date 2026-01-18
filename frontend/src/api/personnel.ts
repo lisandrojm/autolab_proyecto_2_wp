@@ -133,25 +133,28 @@ export interface EmployeeData {
   };
 }
 
-export interface OrderFutureAction {
+export interface EmbeddedDocument {
   _id: string;
-  tenantId: string;
-  orderId: string;
+  name: string;
+  fileUrl: string;
+  uploadedAt: string;
+}
+
+export interface FutureAction {
+  _id: string;
   requiereAccionFutura: boolean;
-  tipoAccionFutura: "documento" | "condicion" | "accion" | "presentacionDocumento" | "vencimientoSistema" | "vencimientoInterno" | "sinVencimiento";
-  deadlineMode?: "plazoDias" | "fechaEspecifica" | "none";
+  tipoAccionFutura: "documento" | "otra";
+  deadlineMode?: "none" | "plazoDias" | "fechaEspecifica";
+  descripcionAccion: string;
+  responsableAccion: "usuario" | "cliente" | "area_interna";
+  documentoRequerido?: string;
   plazoDias?: number;
   fechaLimite?: string;
-  descripcionAccion: string;
-  responsableAccion: "usuario" | "area_interna";
-  documentoRequerido?: string;
-  documentoUrl?: string;
-  quienDefineVencimiento?: "sistema" | "area_interna";
-  estadoAccion: "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
   fechaCreacionAccion: string;
   fechaCumplimiento?: string;
-  createdAt: string;
-  updatedAt: string;
+  estadoAccion: "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
+  quienDefineVencimiento?: "cliente" | "sistema" | "area_interna";
+  metadata?: Record<string, any>;
 }
 
 export interface OrderData {
@@ -181,7 +184,6 @@ export interface OrderData {
   actionCompleted?: boolean;
   amount?: number;
   photoUrl?: string;
-  documentoUrl?: string;
   status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: string;
   preApprovedBy?: {
@@ -199,7 +201,8 @@ export interface OrderData {
   };
   approvedAt?: string;
   deliveredAt?: string;
-  futureActionId?: OrderFutureAction | string;
+  documents: EmbeddedDocument[];
+  futureActions: FutureAction[];
   signatureStatus?: "not_required" | "pending" | "sent" | "signed";
   signatureSentAt?: string;
   signatureNotifiedAt?: string;

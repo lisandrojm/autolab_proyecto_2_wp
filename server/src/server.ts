@@ -36,15 +36,13 @@ import { vercelRoutes } from "./routes/vercel.js";
 import { envRoutes } from "./routes/env.js";
 import { profileRoutes } from "./routes/profile.js";
 
-import { documentRoutes } from "./routes/documents.js";
 import { orderRoutes } from "./routes/orders.js";
-import { orderTypeRoutes } from "./routes/orderTypes.js";
+import { orderConfigRoutes } from "./routes/orderConfig.js";
 import { calendarRoutes } from "./routes/calendar.js";
 import { notificationRoutes } from "./routes/notifications.js";
 
 import { hrAdminRoutes } from "./routes/hr-admin.js";
 import { hrManagementRoutes } from "./routes/hr-management.js";
-import { futureActionsRoutes } from "./routes/futureActions.js";
 import { positionRoutes } from "./routes/positions.js";
 import { areaRoutes } from "./routes/areas.js";
 import { levelRoutes } from "./routes/levels.js";
@@ -149,15 +147,13 @@ app.use("/api/v1", envRoutes);
 // ───────────────── HR Module Routes ─────────────────
 app.use("/api/v1/profile", profileRoutes);
 
-app.use("/api/v1/documents", documentRoutes);
 app.use("/api/v1/orders", orderRoutes);
-app.use("/api/v1/order-types", orderTypeRoutes);
+app.use("/api/v1/order-config", orderConfigRoutes);
 app.use("/api/v1/calendar", calendarRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
 app.use("/api/v1/hr-admin", hrAdminRoutes);
 app.use("/api/v1/hr-management", hrManagementRoutes);
-app.use("/api/v1/future-actions", futureActionsRoutes);
 app.use("/api/v1/positions", positionRoutes);
 app.use("/api/v1/areas", areaRoutes);
 app.use("/api/v1/levels", levelRoutes);

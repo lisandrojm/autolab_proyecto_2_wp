@@ -7,8 +7,7 @@ import mongoose from "mongoose";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { Order } from "../models/Order.js";
-import { OrderType } from "../models/OrderType.js";
-import { OrderFutureAction } from "../models/OrderFutureAction.js";
+import { OrderConfig } from "../models/OrderConfig.js";
 import { Notification } from "../models/Notification.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
@@ -136,8 +135,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       .sort({ requestedAt: -1 })
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId")
-      .populate("futureActionId");
+      .populate("categoryId");
 
     res.json(orders);
   } catch (error) {
@@ -153,14 +151,17 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const orders = await Order.find({
       tenantId: req.tenantObjectId,
       userId,
-    }).populate("futureActionId");
+    });
 
     const stats = orders.reduce(
       (acc: any, order: any) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
 
-        if (order.futureActionId && typeof order.futureActionId === "object" && order.futureActionId.tipoAccionFutura === "documento" && order.futureActionId.estadoAccion === "pendiente_documento") {
-          acc.pendingDocuments = (acc.pendingDocuments || 0) + 1;
+        if (order.futureActions && order.futureActions.length > 0) {
+          const mainAction = order.futureActions[0];
+          if (mainAction.tipoAccionFutura === "documento" && mainAction.estadoAccion === "pendiente_documento") {
+            acc.pendingDocuments = (acc.pendingDocuments || 0) + 1;
+          }
         }
 
         return acc;
@@ -186,8 +187,7 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     })
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId")
-      .populate("futureActionId");
+      .populate("categoryId");
 
     if (!order) {
       res.status(404).json({ error: "Order not found" });
@@ -249,7 +249,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     });
 
     if (data.categoryId) {
-      const category = await OrderType.findOne({
+      const category = await OrderConfig.findOne({
         _id: data.categoryId,
         tenantId: req.tenantObjectId,
         isActive: true,
@@ -308,108 +308,104 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     };
 
     if (data.categoryId) {
-      const category = await OrderType.findById(data.categoryId);
+      const category = await OrderConfig.findById(data.categoryId);
       if (category?.requiresSignature) {
         orderData.signatureStatus = "pending";
       }
     }
 
     const session = await mongoose.startSession();
-    let order;
+    let order: any;
 
     try {
       await session.withTransaction(async () => {
         order = new Order(orderData);
+
+        if (data.categoryId) {
+          const category = await OrderConfig.findById(data.categoryId);
+
+          const shouldCreateOrderFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
+
+          if (shouldCreateOrderFutureAction) {
+            const actionType = category.futureActionType || "sinVencimiento";
+
+            const futureActionData: any = {
+              requiereAccionFutura: true,
+              tipoAccionFutura: actionType,
+              descripcionAccion: category.actionText || "Acción requerida por categoría",
+              responsableAccion: "usuario",
+              estadoAccion: "pendiente",
+              fechaCreacionAccion: new Date(),
+            };
+
+            switch (actionType) {
+              case "documento":
+                if (category.documentoRequerido) {
+                  futureActionData.documentoRequerido = category.documentoRequerido;
+                }
+                if (data.futureActionDocumento) {
+                  futureActionData.documentoRequerido = data.futureActionDocumento;
+                }
+                if (documentoUrl) {
+                  futureActionData.documentoUrl = documentoUrl;
+                  futureActionData.estadoAccion = "documento_presentado";
+                } else {
+                  futureActionData.estadoAccion = "pendiente_documento";
+                }
+                if (category.deadlineMode === "plazoDias" && category.plazoDias) {
+                  futureActionData.plazoDias = category.plazoDias;
+                  futureActionData.deadlineMode = "plazoDias";
+                } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
+                  futureActionData.fechaLimite = new Date(category.fechaLimite);
+                  futureActionData.deadlineMode = "fechaEspecifica";
+                } else if (data.futureActionPlazoDias) {
+                  futureActionData.plazoDias = data.futureActionPlazoDias;
+                  futureActionData.deadlineMode = "plazoDias";
+                } else if (data.futureActionFechaLimite) {
+                  futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+                  futureActionData.deadlineMode = "fechaEspecifica";
+                }
+                break;
+
+              case "otra":
+                if (category.tituloAccion) {
+                  futureActionData.descripcionAccion = category.tituloAccion;
+                }
+                if (category.deadlineMode === "plazoDias" && category.plazoDias) {
+                  futureActionData.plazoDias = category.plazoDias;
+                  futureActionData.deadlineMode = "plazoDias";
+                } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
+                  futureActionData.fechaLimite = new Date(category.fechaLimite);
+                  futureActionData.deadlineMode = "fechaEspecifica";
+                } else if (data.futureActionPlazoDias) {
+                  futureActionData.plazoDias = data.futureActionPlazoDias;
+                  futureActionData.deadlineMode = "plazoDias";
+                } else if (data.futureActionFechaLimite) {
+                  futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+                  futureActionData.deadlineMode = "fechaEspecifica";
+                } else {
+                  futureActionData.deadlineMode = "none";
+                }
+                break;
+            }
+
+            order.futureActions.push(futureActionData);
+          }
+        }
+
         await order.save({ session });
       });
     } finally {
       await session.endSession();
     }
 
-    if (data.categoryId) {
-      const category = await OrderType.findById(data.categoryId);
-
-      const shouldCreateOrderFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
-
-      if (shouldCreateOrderFutureAction) {
-        // Default to "sinVencimiento" if futureActionType is not set
-        const actionType = category.futureActionType || "sinVencimiento";
-
-        const futureActionData: any = {
-          tenantId: req.tenantObjectId,
-          orderId: order._id,
-          requiereAccionFutura: true,
-          tipoAccionFutura: actionType,
-          descripcionAccion: category.actionText || "Acción requerida por categoría",
-          responsableAccion: "usuario",
-          estadoAccion: "pendiente",
-          fechaCreacionAccion: new Date(),
-        };
-
-        switch (actionType) {
-          case "documento":
-            if (category.documentoRequerido) {
-              futureActionData.documentoRequerido = category.documentoRequerido;
-            }
-            if (data.futureActionDocumento) {
-              futureActionData.documentoRequerido = data.futureActionDocumento;
-            }
-            if (documentoUrl) {
-              futureActionData.documentoUrl = documentoUrl;
-              futureActionData.estadoAccion = "documento_presentado";
-            } else {
-              futureActionData.estadoAccion = "pendiente_documento";
-            }
-            if (category.deadlineMode === "plazoDias" && category.plazoDias) {
-              futureActionData.plazoDias = category.plazoDias;
-              futureActionData.deadlineMode = "plazoDias";
-            } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
-              futureActionData.fechaLimite = new Date(category.fechaLimite);
-              futureActionData.deadlineMode = "fechaEspecifica";
-            } else if (data.futureActionPlazoDias) {
-              futureActionData.plazoDias = data.futureActionPlazoDias;
-              futureActionData.deadlineMode = "plazoDias";
-            } else if (data.futureActionFechaLimite) {
-              futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
-              futureActionData.deadlineMode = "fechaEspecifica";
-            }
-            break;
-
-          case "otra":
-            if (category.tituloAccion) {
-              futureActionData.descripcionAccion = category.tituloAccion;
-            }
-            if (category.deadlineMode === "plazoDias" && category.plazoDias) {
-              futureActionData.plazoDias = category.plazoDias;
-              futureActionData.deadlineMode = "plazoDias";
-            } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
-              futureActionData.fechaLimite = new Date(category.fechaLimite);
-              futureActionData.deadlineMode = "fechaEspecifica";
-            } else if (data.futureActionPlazoDias) {
-              futureActionData.plazoDias = data.futureActionPlazoDias;
-              futureActionData.deadlineMode = "plazoDias";
-            } else if (data.futureActionFechaLimite) {
-              futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
-              futureActionData.deadlineMode = "fechaEspecifica";
-            } else {
-              futureActionData.deadlineMode = "none";
-            }
-            break;
-        }
-
-        const futureAction = await OrderFutureAction.create(futureActionData);
-        order.futureActionId = futureAction._id;
-        await order.save();
-      }
-    }
-
-    const categoryDoc = data.categoryId ? await OrderType.findById(data.categoryId) : null;
+    const categoryDoc = data.categoryId ? await OrderConfig.findById(data.categoryId) : null;
     const categoryName = categoryDoc?.name || data.category;
 
     let subcategoryText = "";
     if (data.subcategories && data.subcategories.length > 0 && categoryDoc?.config?.subtipos) {
-      const subcategoryLabels = data.subcategories.map((subId) => {
-        const subtipo = categoryDoc.config.subtipos?.find((s) => s.id === subId);
+      const subcategoryLabels = data.subcategories.map((subId: string) => {
+        const subtipo = categoryDoc.config.subtipos?.find((s: any) => s.id === subId);
         return subtipo?.label || subId;
       });
       subcategoryText = ` - ${subcategoryLabels.join(", ")}`;
@@ -417,13 +413,10 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       subcategoryText = ` - ${data.subcategories.join(", ")}`;
     }
 
-    const orderDisplayName = `${categoryName}${subcategoryText}`;
-
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId")
-      .populate("futureActionId");
+      .populate("categoryId");
 
     res.status(201).json(populatedOrder);
   } catch (error) {
@@ -491,7 +484,7 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
     await order.save();
 
     if (req.body.status === "cancelled") {
-      const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
+      const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
       const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
       const orderDisplayName = `${categoryName}${subcategoryText}`;
     }
@@ -499,8 +492,7 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId")
-      .populate("futureActionId");
+      .populate("categoryId");
 
     res.json(populatedOrder);
   } catch (error) {
@@ -539,20 +531,20 @@ router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRe
     order.documentoUrl = documentoUrl;
     await order.save();
 
-    if (order.futureActionId) {
-      const futureAction = await OrderFutureAction.findById(order.futureActionId);
-      if (futureAction && futureAction.tipoAccionFutura === "documento") {
+    if (order.futureActions && order.futureActions.length > 0) {
+      const futureAction = order.futureActions[0]; // Assuming one future action per order for now
+      if (futureAction.tipoAccionFutura === "documento") {
         futureAction.documentoUrl = documentoUrl;
         futureAction.estadoAccion = "documento_presentado";
-        await futureAction.save();
+        order.markModified("futureActions");
+        await order.save();
       }
     }
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
       .populate("approvedBy", "firstName lastName email")
-      .populate("categoryId")
-      .populate("futureActionId");
+      .populate("categoryId");
 
     res.json(populatedOrder);
   } catch (error) {

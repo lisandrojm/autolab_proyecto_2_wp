@@ -1,5 +1,5 @@
 import { IOrder } from "../models/Order.js";
-import { IOrderType } from "../models/OrderType.js";
+import { IOrderConfig } from "../models/OrderConfig.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 
@@ -108,7 +108,7 @@ function calculateDays(fechaDesde: Date | string | undefined, fechaHasta: Date |
   }
 }
 
-export function prepareVariables(order: IOrder, category: IOrderType, user: IUser, tenantName: string): Record<string, string> {
+export function prepareVariables(order: IOrder, category: IOrderConfig, user: IUser, tenantName: string): Record<string, string> {
   const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario";
 
   const categoryName = category.name || "-";

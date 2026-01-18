@@ -1,18 +1,19 @@
 import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faDollarSign, faUser, faImage, faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faChevronLeft, faChevronRight, faBell, faClock, faCheckCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
-import { OrderData, personnelAPI } from "../../../../api/personnel";
+import { faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faBell, faClock, faCheckCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { Order } from "../../../../api/hrManagement";
+import { personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
-import { getUserName, getUserRole, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
+import { getUserName, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
 
 interface OrderDetailModalProps {
-  order: OrderData | null;
+  order: Order | null;
   isOpen: boolean;
   onClose: () => void;
-  onStatusUpdate?: (orderId: string, newStatus: string) => Promise<void>;
+  onStatusUpdate?: (orderId: string, newStatus: string) => Promise<any>;
   onRefresh?: () => Promise<void>;
   currentIndex?: number;
   totalOrders?: number;
@@ -31,7 +32,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
   if (!order) return null;
 
-  const needsDocument = order.categoryId && !order.documentoUrl;
+  // const documentUrl = order.documents && order.documents.length > 0 ? order.documents[0].fileUrl : undefined;
+  // const needsDocument = order.categoryId && !documentUrl;
 
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,7 +89,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
     try {
       setNotifyingSignature(true);
       const response = await personnelAPI.notifySignatureCompleted(order._id);
-      const notifiedCount = response?.data?.notifiedCount || 0;
+      const notifiedCount = (response as any)?.notifiedCount || 0;
       const message = notifiedCount > 0 ? `Se ha notificado a ${notifiedCount} supervisor(es). Esperá que verifiquen la firma del documento.` : "Se ha registrado tu notificación. Esperá que el supervisor verifique la firma del documento.";
 
       setNotifyingSignature(false);
@@ -144,25 +146,43 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
     }
   };
 
+  const getDocumentUrl = (targetOrder: Order): string | undefined => {
+    if (targetOrder.documentoUrl) return targetOrder.documentoUrl;
+    const futureAction = targetOrder.futureActions && targetOrder.futureActions.length > 0 ? targetOrder.futureActions[0] : null;
+    if (futureAction?.documentoUrl) return futureAction.documentoUrl;
+    if (targetOrder.documents && targetOrder.documents.length > 0) return targetOrder.documents[0].fileUrl;
+    return undefined;
+  };
+
   const renderFooter = () => {
-    if (updatingStatus) {
+    const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
+    const isPendingDocument = futureAction && futureAction.tipoAccionFutura === "documento" && futureAction.estadoAccion === "pendiente_documento";
+
+    if (updatingStatus || uploadingDocument || notifyingSignature) {
       return (
-        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+        <div className="flex items-center justify-end gap-2 text-blue-600 dark:text-blue-400 w-full px-2">
           <FontAwesomeIcon icon={faSpinner} className="w-4 h-4" spin />
-          <span className="text-sm">Actualizando...</span>
+          <span className="text-sm">{uploadingDocument ? "Subiendo..." : notifyingSignature ? "Notificando..." : "Actualizando..."}</span>
         </div>
       );
     }
 
-    if (order.status === "pending") {
-      return (
-        <button onClick={handleCancelOrder} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          Cancelar Pedido
-        </button>
-      );
-    }
+    return (
+      <div className="flex flex-row items-center justify-end gap-3 w-full px-2">
+        {order.status === "pending" && (
+          <button onClick={handleCancelOrder} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50">
+            Cancelar Pedido
+          </button>
+        )}
 
-    return null;
+        {isPendingDocument && (
+          <button onClick={documentToUpload ? handleUploadDocument : () => (galleryInputRef.current ? galleryInputRef.current.click() : null)} className="px-6 py-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm transition-colors flex items-center gap-2">
+            <FontAwesomeIcon icon={documentToUpload ? faUpload : faFileArrowUp} className="w-4 h-4" />
+            Enviar Documento
+          </button>
+        )}
+      </div>
+    );
   };
 
   const getMonto = (): number | null => {
@@ -173,8 +193,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
   const monto = getMonto();
 
+  /*
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex >= 0 && currentIndex < totalOrders - 1;
+  */
 
   return (
     <>
@@ -220,17 +242,18 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               <StatusBadge type={mapOrderStatusToStatusTypeForMobile(order.status)} size="sm" />
               {/* Documento */}
               {(() => {
-                const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+                const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
                 const docStatusType = mapDocumentStateToStatusType(futureAction);
                 const isInFinalState = isOrderInFinalState(order.status);
 
                 if (!docStatusType) return null;
 
-                const isDocumentUploaded = docStatusType === "doc_subido" && order.documentoUrl;
+                const documentUrl = getDocumentUrl(order);
+                const isDocumentUploaded = docStatusType === "doc_subido" && documentUrl;
 
                 if (isDocumentUploaded) {
                   return (
-                    <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
+                    <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${documentUrl}`)} className="hover:opacity-80 transition-opacity" title="Ver documento">
                       <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />
                     </button>
                   );
@@ -331,7 +354,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
           )}
           {/* Document Upload Section with Future Action */}
           {(() => {
-            const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+            const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
 
             if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "pendiente_documento") {
               return null;
@@ -399,15 +422,16 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
           {/* Document Uploaded Section */}
           {(() => {
-            const futureAction = typeof order.futureActionId === "object" ? order.futureActionId : null;
+            const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
+            const documentUrl = getDocumentUrl(order);
 
-            if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "documento_presentado" || !order.documentoUrl) {
+            if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "documento_presentado" || !documentUrl) {
               return null;
             }
 
             return (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded">
-                <div className="flex items-start gap-3 mb-3">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-500/50 p-4 rounded shadow-sm">
+                <div className="flex items-start gap-3 mb-4">
                   <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                   <div className="flex-1">
                     <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Subido</h4>
@@ -416,15 +440,15 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                         <strong>"{futureAction.documentoRequerido}"</strong>
                       </p>
                     )}
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">El usuario ha subido el documento solicitado. Podés revisarlo haciendo clic en el botón de abajo.</p>
                   </div>
                 </div>
+
                 <div className="flex gap-2">
-                  <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${order.documentoUrl}`)} className="flex-1 flex items-center justify-center gap-2 rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors">
+                  <button onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}${documentUrl}`)} className="flex-1 flex items-center justify-center gap-2 rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium leading-normal shadow-sm transition-colors">
                     <FontAwesomeIcon icon={faFileArrowUp} className="w-4 h-4" />
-                    <span>Ver Documento</span>
+                    <span>Ver</span>
                   </button>
-                  <a href={`${import.meta.env.VITE_API_URL}${order.documentoUrl}`} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
+                  <a href={`${import.meta.env.VITE_API_URL}${documentUrl}`} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm">
                     <FontAwesomeIcon icon={faDownload} className="w-4 h-4" />
                   </a>
                 </div>
@@ -454,8 +478,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                     <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                     <div className="flex-1">
                       <h4 className="font-semibold text-amber-800 dark:text-amber-400 mb-1">Esperando Verificación</h4>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">Ya notificaste al supervisor que completaste la firma. Estamos esperando que verifique el documento.</p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {new Date(order.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">Notificado el: {order.signatureNotifiedAt ? new Date(order.signatureNotifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "N/A"}</p>
                     </div>
                   </div>
                   <div className="mt-3">

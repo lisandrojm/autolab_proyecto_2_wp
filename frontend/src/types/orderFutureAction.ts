@@ -2,7 +2,7 @@ export type TipoAccionFutura = "documento" | "otra";
 
 export type DeadlineMode = "none" | "plazoDias" | "fechaEspecifica";
 
-export type EstadoAccion = "pendiente" | "cumplida" | "vencida" | "en_revision";
+export type EstadoAccion = "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
 
 export type ResponsableAccion = "usuario" | "cliente" | "area_interna";
 
@@ -93,6 +93,8 @@ export const estadoAccionLabels: Record<EstadoAccion, string> = {
   pendiente: "Pendiente",
   cumplida: "Cumplida",
   vencida: "Vencida",
+  pendiente_documento: "Pendiente de Documento",
+  documento_presentado: "Documento Presentado",
   en_revision: "En Revisión",
 };
 

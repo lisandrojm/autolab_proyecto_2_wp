@@ -2,7 +2,7 @@ import { StatusType } from "../config/statusConfig";
 
 export interface OrderFutureAction {
   _id: string;
-  tipoAccionFutura: "documento" | "condicion" | "accion" | "presentacionDocumento" | "vencimientoSistema" | "vencimientoInterno" | "sinVencimiento";
+  tipoAccionFutura: "documento" | "otra";
   estadoAccion: "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
   fechaLimite?: string;
   [key: string]: any;

@@ -20,7 +20,7 @@ export interface TypeConfig {
 
 export type CategoryType = "fecha" | "dinero" | "objeto" | "otros";
 
-export interface OrderType {
+export interface OrderConfig {
   _id: string;
   tenantId: string;
   name: string;
@@ -48,20 +48,20 @@ export interface OrderType {
   updatedAt: string;
 }
 
-export const orderTypesAPI = {
-  getAll: async (isActive?: boolean): Promise<OrderType[]> => {
+export const orderConfigAPI = {
+  getAll: async (isActive?: boolean): Promise<OrderConfig[]> => {
     const params = isActive !== undefined ? { isActive } : {};
-    const { data } = await axios.get<OrderType[]>("/order-types", { params });
+    const { data } = await axios.get<OrderConfig[]>("/order-config", { params });
     return data;
   },
 
-  getById: async (id: string): Promise<OrderType> => {
-    const { data } = await axios.get<OrderType>(`/order-types/${id}`);
+  getById: async (id: string): Promise<OrderConfig> => {
+    const { data } = await axios.get<OrderConfig>(`/order-config/${id}`);
     return data;
   },
 
-  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfId?: string }): Promise<OrderType> => {
-    const { data } = await axios.post<OrderType>("/order-types", typeData);
+  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfId?: string }): Promise<OrderConfig> => {
+    const { data } = await axios.post<OrderConfig>("/order-config", typeData);
     return data;
   },
 
@@ -88,16 +88,16 @@ export const orderTypesAPI = {
       requiresSignature?: boolean;
       pdfId?: string;
     },
-  ): Promise<OrderType> => {
-    const { data } = await axios.put<OrderType>(`/order-types/${id}`, updates);
+  ): Promise<OrderConfig> => {
+    const { data } = await axios.put<OrderConfig>(`/order-config/${id}`, updates);
     return data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await axios.delete(`/order-types/${id}`);
+    await axios.delete(`/order-config/${id}`);
   },
 
   reorder: async (categories: Array<{ id: string; sortOrder: number }>): Promise<void> => {
-    await axios.put("/order-types/reorder", { categories });
+    await axios.put("/order-config/reorder", { categories });
   },
 };

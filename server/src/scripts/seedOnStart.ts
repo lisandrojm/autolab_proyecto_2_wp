@@ -7,12 +7,10 @@ import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { UserProfile } from "../models/UserProfile.js";
 import { Pdf } from "../models/Pdf.js";
-import { OrderDocument } from "../models/OrderDocument.js";
 import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
 import { Calendar } from "../models/Calendar.js";
-import { OrderType } from "../models/OrderType.js";
-import { OrderFutureAction } from "../models/OrderFutureAction.js";
+import { OrderConfig } from "../models/OrderConfig.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
 import { Level } from "../models/Level.js";
@@ -1045,47 +1043,9 @@ export async function seedOnStart() {
     //   console.log("✔️ Vacation requests already present");
     // }
 
-    console.log("ℹ️ Order, OrderCategory and OrderFutureAction seeding skipped by user request.");
+    console.log("ℹ️ Order and OrderConfig seeding skipped by user request.");
 
-    // ---- Document (OrderDocument) ----
-    const documentsCount = await OrderDocument.countDocuments({ tenantId });
-    if (documentsCount === 0) {
-      await OrderDocument.create([
-        {
-          tenantId,
-          userId: collab._id,
-          type: "contract",
-          title: "Employment Contract 2023",
-          description: "Initial employment contract",
-          filePath: "storage/documents/contract_user_2023.pdf",
-          uploadedBy: adminId,
-          isVisibleToEmployee: true,
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          type: "payroll",
-          title: "Payroll Statement - February 2024",
-          description: "Monthly payroll statement",
-          filePath: "storage/documents/payroll_user_202402.pdf",
-          uploadedBy: adminId,
-          isVisibleToEmployee: true,
-        },
-        {
-          tenantId,
-          userId: coord._id,
-          type: "contract",
-          title: "Employment Contract 2023",
-          description: "Management employment contract",
-          filePath: "storage/documents/contract_manager_2023.pdf",
-          uploadedBy: adminId,
-          isVisibleToEmployee: true,
-        },
-      ]);
-      console.log("✅ Document (OrderDocument) seeded");
-    } else {
-      console.log("✔️ Document already present");
-    }
+    /* Standalone OrderDocument seeding removed in favor of embedded Order documents */
 
     // ---- Notification ----
     const notificationsCount = await Notification.countDocuments({ tenantId });
@@ -1179,7 +1139,7 @@ export async function seedOnStart() {
 
     for (const item of repairMap) {
       // Find the category
-      const category = await OrderType.findOne({ tenantId, name: item.name });
+      const category = await OrderConfig.findOne({ tenantId, name: item.name });
 
       if (category) {
         // Find the template

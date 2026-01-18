@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract, faFilePdf, faEye } from "@fortawesome/free-solid-svg-icons";
-import { orderTypesAPI, OrderType, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderTypes";
+import { orderConfigAPI, OrderConfig, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderConfig";
 import { pdfsAPI, Pdf } from "../api/pdfs";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -17,19 +17,19 @@ import { pdfPreviewAPI } from "../api/pdfPreview";
 import Swal from "sweetalert2";
 
 interface SortableRowProps {
-  orderType: OrderType;
+  orderConfig: OrderConfig;
   index: number;
   isReorderMode: boolean;
-  onEdit: (orderType: OrderType) => void;
-  onDelete: (orderType: OrderType) => void;
-  onToggleActive: (orderType: OrderType) => void;
+  onEdit: (orderConfig: OrderConfig) => void;
+  onDelete: (orderConfig: OrderConfig) => void;
+  onToggleActive: (orderConfig: OrderConfig) => void;
   onEnableReorder: () => void;
   pdfTemplates: Pdf[];
   onPreviewPdf: (content: string, code: string) => void;
 }
 
-const SortableRow: React.FC<SortableRowProps> = ({ orderType, index, isReorderMode, onEdit, onDelete, onToggleActive, onEnableReorder, pdfTemplates, onPreviewPdf }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: orderType._id, disabled: !isReorderMode });
+const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorderMode, onEdit, onDelete, onToggleActive, onEnableReorder, pdfTemplates, onPreviewPdf }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: orderConfig._id, disabled: !isReorderMode });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -45,7 +45,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderType, index, isReorderMo
   };
 
   const getExpectedTemplateCode = (): string | null => {
-    const { categoryType, dateMode } = orderType;
+    const { categoryType, dateMode } = orderConfig;
     if (categoryType === "fecha") {
       return dateMode === "range" ? "fechaRango" : "fechaUnica";
     }
@@ -79,18 +79,18 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderType, index, isReorderMo
         <span className="text-sm font-medium">{index + 1}</span>
       </td>
       <td className="py-3 px-4">
-        <div className="font-medium text-gray-900 dark:text-gray-100">{orderType.name}</div>
-        {orderType.categoryType === "dinero" && orderType.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${orderType.montoMaximo.toLocaleString("es-ES")}</div>}
+        <div className="font-medium text-gray-900 dark:text-gray-100">{orderConfig.name}</div>
+        {orderConfig.categoryType === "dinero" && orderConfig.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${orderConfig.montoMaximo.toLocaleString("es-ES")}</div>}
       </td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${orderType.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderType.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderType.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderType.categoryType] || orderType.categoryType}</span>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderConfig.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderConfig.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
       </td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${orderType.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{orderType.config?.subtipos?.length ? "Sí" : "No"}</span>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{orderConfig.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
-      <td className="py-3 px-4">{orderType.requiresAction ? <div className="flex justify-start items-center gap-1">{orderType.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${orderType.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[orderType.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
+      <td className="py-3 px-4">{orderConfig.requiresAction ? <div className="flex justify-start items-center gap-1">{orderConfig.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[orderConfig.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${(orderType.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(orderType.requiresSignature ?? true) ? "Sí" : "No"}</span>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${(orderConfig.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(orderConfig.requiresSignature ?? true) ? "Sí" : "No"}</span>
       </td>
       <td className="py-3 px-4">
         {matchingTemplate ? (
@@ -102,17 +102,17 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderType, index, isReorderMo
         )}
       </td>
       <td className="py-3 px-4">
-        <button onClick={() => onToggleActive(orderType)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${orderType.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
-          <FontAwesomeIcon icon={orderType.isActive ? faToggleOn : faToggleOff} className="mr-1" />
-          {orderType.isActive ? "Activa" : "Inactiva"}
+        <button onClick={() => onToggleActive(orderConfig)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${orderConfig.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
+          <FontAwesomeIcon icon={orderConfig.isActive ? faToggleOn : faToggleOff} className="mr-1" />
+          {orderConfig.isActive ? "Activa" : "Inactiva"}
         </button>
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <button onClick={() => onEdit(orderType)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
+          <button onClick={() => onEdit(orderConfig)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
-          <button onClick={() => onDelete(orderType)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
+          <button onClick={() => onDelete(orderConfig)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
           </button>
         </div>
@@ -125,11 +125,11 @@ const HELP_KEY = "orderTypes"; // Consider changing help key if needed, or keep 
 
 export const ManageOrderTypesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [orderTypes, setOrderTypes] = useState<OrderType[]>([]);
+  const [orderTypes, setOrderTypes] = useState<OrderConfig[]>([]);
   const [pdfTemplates, setPdfTemplates] = useState<Pdf[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingOrderType, setEditingOrderType] = useState<OrderType | null>(null);
+  const [editingOrderType, setEditingOrderType] = useState<OrderConfig | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
     informacion: string;
@@ -173,7 +173,7 @@ export const ManageOrderTypesPage: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
-  const [tempOrderTypes, setTempOrderTypes] = useState<OrderType[]>([]);
+  const [tempOrderTypes, setTempOrderTypes] = useState<OrderConfig[]>([]);
 
   const [showMainInfo, setShowMainInfo] = useState(false);
 
@@ -189,7 +189,7 @@ export const ManageOrderTypesPage: React.FC = () => {
   const loadOrderTypes = async () => {
     try {
       setLoading(true);
-      const data = await orderTypesAPI.getAll();
+      const data = await orderConfigAPI.getAll();
       setOrderTypes(data);
     } catch (error) {
       console.error("Error loading order types:", error);
@@ -259,7 +259,7 @@ export const ManageOrderTypesPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const openEditModal = (orderType: OrderType) => {
+  const openEditModal = (orderType: OrderConfig) => {
     setEditingOrderType(orderType);
     setFormData({
       name: orderType.name,
@@ -415,10 +415,10 @@ export const ManageOrderTypesPage: React.FC = () => {
       }
 
       if (editingOrderType) {
-        await orderTypesAPI.update(editingOrderType._id, payload);
+        await orderConfigAPI.update(editingOrderType._id, payload);
         sweetAlert.success("Tipo de pedido actualizado", "El tipo de pedido se actualizó correctamente");
       } else {
-        await orderTypesAPI.create(payload);
+        await orderConfigAPI.create(payload);
         sweetAlert.success("Tipo de pedido creado", "El tipo de pedido se creó correctamente");
       }
       setShowModal(false);
@@ -430,12 +430,12 @@ export const ManageOrderTypesPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (orderType: OrderType) => {
+  const handleDelete = async (orderType: OrderConfig) => {
     const result = await sweetAlert.confirm("¿Eliminar tipo de pedido?", `¿Estás seguro de eliminar el tipo de pedido "${orderType.name}"?`);
     if (!result.isConfirmed) return;
 
     try {
-      await orderTypesAPI.delete(orderType._id);
+      await orderConfigAPI.delete(orderType._id);
       sweetAlert.success("Eliminado", "El tipo de pedido se eliminó correctamente");
       loadOrderTypes();
     } catch (error: any) {
@@ -443,9 +443,9 @@ export const ManageOrderTypesPage: React.FC = () => {
     }
   };
 
-  const handleToggleActive = async (orderType: OrderType) => {
+  const handleToggleActive = async (orderType: OrderConfig) => {
     try {
-      await orderTypesAPI.update(orderType._id, { isActive: !orderType.isActive });
+      await orderConfigAPI.update(orderType._id, { isActive: !orderType.isActive });
       loadOrderTypes();
     } catch (error: any) {
       sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
@@ -469,7 +469,7 @@ export const ManageOrderTypesPage: React.FC = () => {
     }));
 
     try {
-      await orderTypesAPI.reorder(reorderData);
+      await orderConfigAPI.reorder(reorderData);
       sweetAlert.success("Orden guardado", "El orden se actualizó correctamente");
       setIsReorderMode(false);
       setTempOrderTypes([]);
@@ -570,8 +570,8 @@ export const ManageOrderTypesPage: React.FC = () => {
                     </thead>
                     <SortableContext items={(isReorderMode ? tempOrderTypes : orderTypes).map((c) => c._id)} strategy={verticalListSortingStrategy}>
                       <tbody>
-                        {(isReorderMode ? tempOrderTypes : orderTypes).map((orderType, index) => (
-                          <SortableRow key={orderType._id} orderType={orderType} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} pdfTemplates={pdfTemplates} onPreviewPdf={handlePreviewPdf} />
+                        {(isReorderMode ? tempOrderTypes : orderTypes).map((orderConfig, index) => (
+                          <SortableRow key={orderConfig._id} orderConfig={orderConfig} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} pdfTemplates={pdfTemplates} onPreviewPdf={handlePreviewPdf} />
                         ))}
                       </tbody>
                     </SortableContext>

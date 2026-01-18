@@ -1,5 +1,45 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 import { getNextOrderNumber } from "../utils/orderHelpers.js";
+import { IOrderConfig } from "./OrderConfig.js";
+
+// Schemas embebidos para Documentos y Acciones Futuras
+const EmbeddedDocumentSchema = new Schema(
+  {
+    type: { type: String, enum: ["contract", "payroll", "certificate", "other"], required: true },
+    title: { type: String, required: true },
+    description: { type: String },
+    filePath: { type: String },
+    fileUrl: { type: String },
+    uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    uploadedAt: { type: Date, default: Date.now },
+    isVisibleToEmployee: { type: Boolean, default: true },
+  },
+  { _id: true, timestamps: true },
+);
+
+const EmbeddedFutureActionSchema = new Schema(
+  {
+    requiereAccionFutura: { type: Boolean, default: true },
+    tipoAccionFutura: { type: String, enum: ["documento", "otra"], required: true },
+    deadlineMode: { type: String, enum: ["none", "plazoDias", "fechaEspecifica"] },
+    descripcionAccion: { type: String, required: true },
+    responsableAccion: { type: String, enum: ["usuario", "cliente", "area_interna"], required: true },
+    documentoRequerido: { type: String },
+    documentoUrl: { type: String },
+    plazoDias: { type: Number },
+    fechaLimite: { type: Date },
+    fechaCreacionAccion: { type: Date, default: Date.now },
+    fechaCumplimiento: { type: Date },
+    estadoAccion: {
+      type: String,
+      enum: ["pendiente", "pendiente_documento", "documento_presentado", "cumplida", "vencida", "en_revision"],
+      default: "pendiente",
+    },
+    quienDefineVencimiento: { type: String, enum: ["cliente", "sistema", "area_interna"] },
+    metadata: { type: Schema.Types.Mixed },
+  },
+  { _id: true, timestamps: true },
+);
 
 export interface IOrder extends Document {
   tenantId: Types.ObjectId;
@@ -7,7 +47,7 @@ export interface IOrder extends Document {
   orderNumber: string;
   description: string;
   category: string;
-  categoryId?: Types.ObjectId;
+  categoryId?: Types.ObjectId | IOrderConfig;
   subcategories: string[];
   status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: Date;
@@ -30,6 +70,8 @@ export interface IOrder extends Document {
   signedBy?: Types.ObjectId;
   pdfPreAprobacionUrl?: string;
   metadata?: Record<string, any>;
+  documents: any[];
+  futureActions: any[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,7 +83,7 @@ const orderSchema = new Schema<IOrder>(
     orderNumber: { type: String, trim: true, uppercase: true, index: true },
     description: { type: String, required: false, trim: true, default: "" },
     category: { type: String, required: true, trim: true, default: "other" },
-    categoryId: { type: Schema.Types.ObjectId, ref: "OrderType", index: true },
+    categoryId: { type: Schema.Types.ObjectId, ref: "OrderConfig", index: true },
     subcategories: { type: [String], default: [], index: true },
     status: {
       type: String,
@@ -61,7 +103,11 @@ const orderSchema = new Schema<IOrder>(
     actionCompleted: { type: Boolean },
     dynamicValue: { type: Schema.Types.Mixed },
     requiereAccionFutura: { type: Boolean, default: false },
-    futureActionId: { type: Schema.Types.ObjectId, ref: "OrderFutureAction" },
+
+    // Arrays embebidos
+    documents: [EmbeddedDocumentSchema],
+    futureActions: [EmbeddedFutureActionSchema],
+
     signatureStatus: { type: String, enum: ["not_required", "pending", "sent", "signed"], default: "not_required" },
     signatureSentAt: { type: Date },
     signatureNotifiedAt: { type: Date },
