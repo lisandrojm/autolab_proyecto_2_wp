@@ -48,7 +48,7 @@ const activityReportSchema = new Schema<IActivityReport>(
     attendance: [attendanceRecordSchema],
     submittedAt: { type: Date, default: Date.now },
   },
-  { timestamps: true, collection: "activity_reports" },
+  { timestamps: true, collection: "requests_activity_reports" },
 );
 
 // Indexes

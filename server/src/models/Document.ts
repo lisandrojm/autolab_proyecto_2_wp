@@ -33,7 +33,7 @@ const documentSchema = new Schema<IDocument>(
     uploadedAt: { type: Date, default: Date.now },
     isVisibleToEmployee: { type: Boolean, default: true },
   },
-  { timestamps: true, collection: "hr_documents" },
+  { timestamps: true, collection: "orders_documents" },
 );
 
 documentSchema.index({ tenantId: 1, userId: 1, type: 1 });

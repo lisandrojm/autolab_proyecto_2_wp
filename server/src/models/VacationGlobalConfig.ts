@@ -92,7 +92,7 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
   },
   {
     timestamps: true,
-    collection: "vacation_global_config",
+    collection: "vacations_global_configs",
   },
 );
 

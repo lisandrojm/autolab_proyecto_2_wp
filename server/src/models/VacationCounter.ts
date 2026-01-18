@@ -20,7 +20,7 @@ const vacationCounterSchema = new Schema<IVacationCounter>(
       min: 0,
     },
   },
-  { timestamps: true, collection: "vacation_counters" },
+  { timestamps: true, collection: "vacations_counters" },
 );
 
 vacationCounterSchema.index({ tenantId: 1 }, { unique: true });

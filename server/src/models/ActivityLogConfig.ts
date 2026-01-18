@@ -12,7 +12,7 @@ const activityLogConfigSchema = new mongoose.Schema(
       default: true,
     },
   },
-  { timestamps: true, collection: "activity_log_configs" },
+  { timestamps: true, collection: "requests_activity_configs" },
 );
 
 export const ActivityLogConfig = mongoose.model("ActivityLogConfig", activityLogConfigSchema);

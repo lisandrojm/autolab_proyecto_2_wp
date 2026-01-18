@@ -99,7 +99,7 @@ const orderTypeSchema = new Schema<IOrderType>(
     requiresUserConfirmation: { type: Boolean, default: false },
     pdfTemplateId: { type: Schema.Types.ObjectId, ref: "PdfTemplate" },
   },
-  { timestamps: true, collection: "order_types" },
+  { timestamps: true, collection: "orders_types" },
 );
 
 orderTypeSchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });

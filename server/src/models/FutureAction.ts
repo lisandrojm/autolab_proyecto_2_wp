@@ -112,7 +112,7 @@ const futureActionSchema = new Schema<IFutureAction>(
   },
   {
     timestamps: true,
-    collection: "future_actions",
+    collection: "orders_future_actions",
   },
 );
 

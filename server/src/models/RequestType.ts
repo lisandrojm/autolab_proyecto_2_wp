@@ -22,7 +22,7 @@ const requestTypeSchema = new Schema<IRequestType>(
     isDeletable: { type: Boolean, default: true },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true, collection: "request_types" },
+  { timestamps: true, collection: "requests_types" },
 );
 
 requestTypeSchema.index({ tenantId: 1, key: 1 }, { unique: true });

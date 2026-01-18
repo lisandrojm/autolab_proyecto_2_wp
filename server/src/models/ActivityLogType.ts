@@ -26,7 +26,7 @@ const activityLogTypeSchema = new Schema<IActivityLogType>(
     },
     allowedProjectIds: [{ type: Schema.Types.ObjectId, ref: "Project", default: [] }],
   },
-  { timestamps: true, collection: "activity_log_types" },
+  { timestamps: true, collection: "requests_activity_types" },
 );
 
 // Compound index to ensure uniqueness of name per tenant might be useful, but maybe not strictly required if we allow duplicates?
