@@ -29,7 +29,7 @@ import VacationDetailModal from "../components/VacationDetailModal";
 import { VacationRequest } from "../../../../api/vacations";
 import { InfoModal } from "../../../../components/ui/InfoModal";
 import { calculateLCTVacationDays } from "../../../../utils/vacationLCT";
-import { globalVacationConfigAPI, GlobalVacationConfig } from "../../../../api/globalVacationConfig";
+import { vacationConfigAPI, VacationConfig } from "../../../../api/vacationConfig";
 
 // Helper to parse date string as local date (ignoring time/timezone)
 const getLocalDate = (dateString: string) => {
@@ -62,12 +62,12 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showPendingInfoModal, setShowPendingInfoModal] = useState(false);
   const [showSignatureInfoModal, setShowSignatureInfoModal] = useState(false);
-  const [globalConfig, setGlobalConfig] = useState<GlobalVacationConfig | null>(null);
+  const [globalConfig, setGlobalConfig] = useState<VacationConfig | null>(null);
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const config = await globalVacationConfigAPI.getConfig();
+        const config = await vacationConfigAPI.getConfig();
         setGlobalConfig(config);
       } catch (error) {
         console.error("Error fetching global config:", error);

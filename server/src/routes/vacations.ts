@@ -1,7 +1,7 @@
 import express from "express";
 import { Types } from "mongoose";
 import { Vacation } from "../models/Vacation.js";
-import { GlobalVacationConfig } from "../models/VacationGlobalConfig.js";
+import { VacationConfig } from "../models/VacationConfig.js";
 import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
 import { Pdf } from "../models/Pdf.js";
@@ -281,7 +281,7 @@ router.post("/", async (req, res) => {
       }
     }
 
-    const globalConfig = await GlobalVacationConfig.findOne({ tenantId });
+    const globalConfig = await VacationConfig.findOne({ tenantId });
 
     if (!globalConfig) {
       return res.status(400).json({ error: "No se encontró configuración global de vacaciones para este tenant" });

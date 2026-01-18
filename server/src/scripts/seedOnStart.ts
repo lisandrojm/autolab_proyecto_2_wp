@@ -16,7 +16,7 @@ import { OrderFutureAction } from "../models/OrderFutureAction.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
 import { Level } from "../models/Level.js";
-import { GlobalVacationConfig } from "../models/VacationGlobalConfig.js";
+import { VacationConfig } from "../models/VacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
 
 import { VacationCounter } from "../models/VacationCounter.js";
@@ -1011,12 +1011,12 @@ export async function seedOnStart() {
     // if (VacationsLegacyCount === 0) { ... }
 
     // ---- Global Vacation Config ----
-    let globalConfig = await GlobalVacationConfig.findOne({ tenantId });
+    let globalConfig = await VacationConfig.findOne({ tenantId });
 
     if (!globalConfig) {
       const vacationTemplate = await Pdf.findOne({ tenantId, code: "vacaciones" });
 
-      globalConfig = await GlobalVacationConfig.create({
+      globalConfig = await VacationConfig.create({
         tenantId,
         diasBeneficio: 0,
         permiteArrastre: false,
@@ -1024,7 +1024,7 @@ export async function seedOnStart() {
         minDiasFraccion: 7,
         requiereFirma: true,
         maxDiasGozados: 30,
-        PdfId: vacationTemplate?._id,
+        pdfId: vacationTemplate?._id.toString(), // Ensure string
       });
       console.log("✅ Global vacation config created");
     } else {

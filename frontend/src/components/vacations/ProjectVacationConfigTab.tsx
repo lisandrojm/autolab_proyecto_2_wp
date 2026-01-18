@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faToggleOn, faToggleOff, faBriefcase, faLayerGroup, faUserTag, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faToggleOn, faToggleOff, faBriefcase, faLayerGroup, faUserTag } from "@fortawesome/free-solid-svg-icons";
 import { projectsAPI, Project } from "../../api/projects";
 import { clientsAPI, Client } from "../../api/clients";
 import { areasAPI, Area } from "../../api/areas";
 import { positionsAPI, Position } from "../../api/positions";
-import { globalVacationConfigAPI, GlobalVacationConfig } from "../../api/globalVacationConfig";
+import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 type ConfigScope = "project" | "area" | "position";
@@ -15,7 +15,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [globalConfig, setGlobalConfig] = useState<GlobalVacationConfig | null>(null);
+  const [globalConfig, setGlobalConfig] = useState<VacationConfig | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [projectsData, clientsData, areasData, positionsData, globalConfigData] = await Promise.all([projectsAPI.listAll(), clientsAPI.listAll(), areasAPI.listAll(), positionsAPI.listAll(), globalVacationConfigAPI.getConfig()]);
+      const [projectsData, clientsData, areasData, positionsData, globalConfigData] = await Promise.all([projectsAPI.listAll(), clientsAPI.listAll(), areasAPI.listAll(), positionsAPI.listAll(), vacationConfigAPI.getConfig()]);
       setProjects(projectsData);
       setClients(clientsData);
       setAreas(areasData);
@@ -258,7 +258,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                 const newValue = !globalConfig.permiteFraccionadas;
                 setGlobalConfig({ ...globalConfig, permiteFraccionadas: newValue });
                 try {
-                  await globalVacationConfigAPI.updateConfig({ ...globalConfig, permiteFraccionadas: newValue });
+                  await vacationConfigAPI.updateConfig({ ...globalConfig, permiteFraccionadas: newValue });
                   sweetAlert.success("Actualizado", "Configuración global actualizada");
                 } catch (e) {
                   console.error(e);
@@ -288,7 +288,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                   onClick={async () => {
                     setIsSavingGlobal(true);
                     try {
-                      await globalVacationConfigAPI.updateConfig(globalConfig);
+                      await vacationConfigAPI.updateConfig(globalConfig);
                       sweetAlert.success("Guardado", "Configuración actualizada");
                     } catch (e) {
                       console.error(e);
@@ -344,7 +344,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                     client?.name,
                     config,
                     (updates) => handleUpdateProjectConfig(project, updates),
-                    (updates) => setProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, vacationConfig: { ...p.vacationConfig, ...updates } } : p)))
+                    (updates) => setProjects((prev) => prev.map((p) => (p._id === project._id ? { ...p, vacationConfig: { ...p.vacationConfig, ...updates } } : p))),
                   )}
                 </div>
               );
@@ -365,7 +365,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                     area.description,
                     config,
                     (updates) => handleUpdateAreaConfig(area, updates),
-                    (updates) => setAreas((prev) => prev.map((a) => (a._id === area._id ? { ...a, vacationConfig: { ...a.vacationConfig, ...updates } } : a)))
+                    (updates) => setAreas((prev) => prev.map((a) => (a._id === area._id ? { ...a, vacationConfig: { ...a.vacationConfig, ...updates } } : a))),
                   )}
                 </div>
               );
@@ -386,7 +386,7 @@ export const ProjectVacationConfigTab: React.FC = () => {
                     position.description,
                     config,
                     (updates) => handleUpdatePositionConfig(position, updates),
-                    (updates) => setPositions((prev) => prev.map((p) => (p._id === position._id ? { ...p, vacationConfig: { ...p.vacationConfig, ...updates } } : p)))
+                    (updates) => setPositions((prev) => prev.map((p) => (p._id === position._id ? { ...p, vacationConfig: { ...p.vacationConfig, ...updates } } : p))),
                   )}
                 </div>
               );

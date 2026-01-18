@@ -7,10 +7,10 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { InfoModal } from "../ui/InfoModal";
 import { pdfsAPI, Pdf } from "../../api/pdfs";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
-import { globalVacationConfigAPI, GlobalVacationConfig } from "../../api/globalVacationConfig";
+import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
 
-export const GlobalVacationConfigTab: React.FC = () => {
-  const [config, setConfig] = useState<GlobalVacationConfig | null>(null);
+export const VacationConfigTab: React.FC = () => {
+  const [config, setConfig] = useState<VacationConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pdfTemplates, setPdfTemplates] = useState<Pdf[]>([]);
@@ -66,7 +66,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [configData, templatesData] = await Promise.all([globalVacationConfigAPI.getConfig(), pdfsAPI.getAll()]);
+      const [configData, templatesData] = await Promise.all([vacationConfigAPI.getConfig(), pdfsAPI.getAll()]);
       setConfig(configData);
       setPdfTemplates(templatesData.filter((t) => t.isActive));
     } catch (error) {
@@ -83,7 +83,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const updatedConfig = await globalVacationConfigAPI.updateConfig(config);
+      const updatedConfig = await vacationConfigAPI.updateConfig(config);
       setConfig(updatedConfig);
       sweetAlert.success("¡Éxito!", "Configuración actualizada correctamente");
     } catch (error: any) {
@@ -94,7 +94,7 @@ export const GlobalVacationConfigTab: React.FC = () => {
     }
   };
 
-  const updateConfig = (field: keyof GlobalVacationConfig, value: any) => {
+  const updateConfig = (field: keyof VacationConfig, value: any) => {
     if (!config) return;
     setConfig({ ...config, [field]: value });
   };

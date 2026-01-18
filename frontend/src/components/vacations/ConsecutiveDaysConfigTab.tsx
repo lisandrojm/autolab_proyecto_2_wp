@@ -5,7 +5,7 @@ import { projectsAPI, Project } from "../../api/projects";
 import { clientsAPI, Client } from "../../api/clients";
 import { areasAPI, Area } from "../../api/areas";
 import { positionsAPI, Position } from "../../api/positions";
-import { globalVacationConfigAPI, GlobalVacationConfig } from "../../api/globalVacationConfig";
+import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 type ConfigScope = "project" | "area" | "position";
@@ -15,7 +15,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [globalConfig, setGlobalConfig] = useState<GlobalVacationConfig | null>(null);
+  const [globalConfig, setGlobalConfig] = useState<VacationConfig | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [isSavingGlobal, setIsSavingGlobal] = useState(false);
@@ -28,7 +28,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [projectsData, clientsData, areasData, positionsData, globalConfigData] = await Promise.all([projectsAPI.listAll(), clientsAPI.listAll(), areasAPI.listAll(), positionsAPI.listAll(), globalVacationConfigAPI.getConfig()]);
+      const [projectsData, clientsData, areasData, positionsData, globalConfigData] = await Promise.all([projectsAPI.listAll(), clientsAPI.listAll(), areasAPI.listAll(), positionsAPI.listAll(), vacationConfigAPI.getConfig()]);
       setProjects(projectsData);
       setClients(clientsData);
       setAreas(areasData);
@@ -170,7 +170,7 @@ export const ConsecutiveDaysConfigTab: React.FC = () => {
                 setGlobalConfig({ ...globalConfig, diasCorridos: newValue });
                 try {
                   setIsSavingGlobal(true);
-                  await globalVacationConfigAPI.updateConfig({ ...globalConfig, diasCorridos: newValue });
+                  await vacationConfigAPI.updateConfig({ ...globalConfig, diasCorridos: newValue });
                   sweetAlert.success("Actualizado", "Configuración global actualizada");
                 } catch (e) {
                   console.error(e);

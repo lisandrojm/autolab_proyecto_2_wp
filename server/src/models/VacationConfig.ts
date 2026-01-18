@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface IGlobalVacationConfig extends Document {
+interface IVacationConfig extends Document {
   tenantId: mongoose.Types.ObjectId;
   diasBeneficio?: number;
   maxDiasGozados?: number;
@@ -19,7 +19,7 @@ interface IGlobalVacationConfig extends Document {
   updatedAt: Date;
 }
 
-const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
+const VacationConfigSchema = new Schema<IVacationConfig>(
   {
     tenantId: {
       type: Schema.Types.ObjectId,
@@ -92,11 +92,11 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
   },
   {
     timestamps: true,
-    collection: "vacations_global_configs",
+    collection: "vacation_config",
   },
 );
 
-GlobalVacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {
+VacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {
   let config = await this.findOne({ tenantId });
 
   if (!config) {
@@ -111,4 +111,4 @@ GlobalVacationConfigSchema.statics.getOrCreateDefault = async function (tenantId
   return config;
 };
 
-export const GlobalVacationConfig = mongoose.model<IGlobalVacationConfig>("GlobalVacationConfig", GlobalVacationConfigSchema);
+export const VacationConfig = mongoose.model<IVacationConfig>("VacationConfig", VacationConfigSchema);

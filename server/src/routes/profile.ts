@@ -301,9 +301,9 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     if (!effectiveVacationConfig && user && user.projectIds && user.projectIds.length > 0) {
       try {
         const Project = (await import("../models/Project.js")).Project;
-        const GlobalVacationConfig = (await import("../models/VacationGlobalConfig.js")).GlobalVacationConfig;
+        const VacationConfig = (await import("../models/VacationConfig.js")).VacationConfig;
 
-        const globalConfig = await GlobalVacationConfig.findOne({ tenantId });
+        const globalConfig = await VacationConfig.findOne({ tenantId });
         const defaultGlobal = {
           permiteFraccionadas: globalConfig?.permiteFraccionadas ?? true,
           minDiasFraccion: globalConfig?.minDiasFraccion ?? 7,
@@ -431,5 +431,3 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 });
 
 export { router as profileRoutes };
-
-

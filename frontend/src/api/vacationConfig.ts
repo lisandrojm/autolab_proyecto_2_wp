@@ -6,7 +6,7 @@ interface AntiguedadTramo {
   dias: number;
 }
 
-export interface GlobalVacationConfig {
+export interface VacationConfig {
   _id?: string;
   tenantId: string;
   diasAnuales: number;
@@ -28,14 +28,14 @@ export interface GlobalVacationConfig {
   updatedAt?: string;
 }
 
-export const globalVacationConfigAPI = {
-  getConfig: async (): Promise<GlobalVacationConfig> => {
-    const response = await api.get("/global-vacation-config");
+export const vacationConfigAPI = {
+  getConfig: async (): Promise<VacationConfig> => {
+    const response = await api.get("/vacation-config");
     return response.data;
   },
 
-  updateConfig: async (config: Partial<GlobalVacationConfig>): Promise<GlobalVacationConfig> => {
-    const response = await api.put("/global-vacation-config", config);
+  updateConfig: async (config: Partial<VacationConfig>): Promise<VacationConfig> => {
+    const response = await api.put("/vacation-config", config);
     return response.data;
   },
 };

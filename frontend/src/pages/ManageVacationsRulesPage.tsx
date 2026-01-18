@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faFilePdf } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { GlobalVacationConfigTab } from "../components/vacations/GlobalVacationConfigTab";
+import { VacationConfigTab } from "../components/vacations/VacationConfigTab";
 import { VacationOverlapRules } from "../components/vacations/VacationOverlapRules";
 
 import { ProjectVacationConfigTab } from "../components/vacations/ProjectVacationConfigTab";
@@ -56,7 +56,7 @@ export function ManageVacationsRulesPage() {
 
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
-            {activeTab === "global" && <GlobalVacationConfigTab />}
+            {activeTab === "global" && <VacationConfigTab />}
             {activeTab === "projects" && <ProjectVacationConfigTab />}
             {activeTab === "consecutive_days" && <ConsecutiveDaysConfigTab />}
             {activeTab === "overlap" && <VacationOverlapRules />}
