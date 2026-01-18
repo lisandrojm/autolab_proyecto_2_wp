@@ -152,11 +152,11 @@ export const CreateActivityReportPage: React.FC = () => {
 
     sweetAlert.success("Reporte enviado correctamente", "El reporte diario ha sido registrado.");
     setSubmitting(false);
-    navigate("/activity-logs");
+    navigate("/requests");
   };
 
   return (
-    <PageLayout title="Nuevo Reporte de Novedades" subtitle="Complete el formulario diario de asistencia y novedades." faIcon={{ icon: faCheck }} onBack={() => navigate("/activity-logs")}>
+    <PageLayout title="Nuevo Reporte de Novedades" subtitle="Complete el formulario diario de asistencia y novedades." faIcon={{ icon: faCheck }} onBack={() => navigate("/requests")}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
         {/* Header Config Card */}
         <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">

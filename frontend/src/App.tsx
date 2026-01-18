@@ -404,7 +404,7 @@ function App() {
 
               {/* HR Management Routes */}
               <Route
-                path="/activity-logs"
+                path="/requests"
                 element={
                   <ProtectedRoute>
                     <ManageActivityLogsPage />
@@ -412,7 +412,7 @@ function App() {
                 }
               />
               <Route
-                path="/activity-logs/config"
+                path="/requests/config"
                 element={
                   <ProtectedRoute>
                     <ManageActivityLogsConfigPage />
@@ -420,7 +420,7 @@ function App() {
                 }
               />
               <Route
-                path="/activity-logs/create"
+                path="/requests/create"
                 element={
                   <ProtectedRoute>
                     <CreateActivityReportPage />
