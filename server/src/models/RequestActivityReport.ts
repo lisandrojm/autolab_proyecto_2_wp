@@ -22,7 +22,7 @@ const attendanceRecordSchema = new Schema(
   { _id: true },
 );
 
-export interface IActivityReport extends Document {
+export interface IRequestActivityReport extends Document {
   tenantId: Types.ObjectId;
   userId: Types.ObjectId;
   reportNumber?: string;
@@ -35,7 +35,7 @@ export interface IActivityReport extends Document {
   submittedAt: Date;
 }
 
-const activityReportSchema = new Schema<IActivityReport>(
+const requestActivityReportSchema = new Schema<IRequestActivityReport>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -52,11 +52,11 @@ const activityReportSchema = new Schema<IActivityReport>(
 );
 
 // Indexes
-activityReportSchema.index({ tenantId: 1, userId: 1, date: -1 });
-activityReportSchema.index({ tenantId: 1, reportNumber: 1 }, { unique: true, sparse: true }); // Sparse in case older records don't have it immediately, though we aim to have it.
+requestActivityReportSchema.index({ tenantId: 1, userId: 1, date: -1 });
+requestActivityReportSchema.index({ tenantId: 1, reportNumber: 1 }, { unique: true, sparse: true });
 
 // Pre-validate hook for reportNumber
-activityReportSchema.pre("validate", async function (next) {
+requestActivityReportSchema.pre("validate", async function (next) {
   if (!this.isNew || this.reportNumber) {
     return next();
   }
@@ -66,23 +66,10 @@ activityReportSchema.pre("validate", async function (next) {
 
   while (attempt < maxRetries) {
     try {
-      // Use dynamic import or model retrieval to avoid circular dependency if imported directly (though here we import helper, helper imports model dynamically now)
-      // Actually, since we fixed the helper to use mongoose.model("ActivityReport"), we can just call the helper.
-      // But we need to ensure Tenant model is available.
-
-      // Ensure Tenant model is loaded (usually it is app-wide, but safe check)
-      // const Tenant = mongoose.model("Tenant");
-      // If we don't assume Tenant model is already compiled, we might need to import it.
-      // Typically in this project, models might be auto-loaded.
-      // Let's assume Tenant is available or fetch it via checking collection directly if needed,
-      // but standard Mongoose pattern is `mongoose.model('Tenant')`.
-
       const Tenant = mongoose.models.Tenant || mongoose.model("Tenant");
       const tenant = await Tenant.findById(this.tenantId);
 
       if (!tenant) {
-        // If tenant not found, we can't generate prefix. Fallback or error?
-        // Let's log and use a default prefix to avoid complete failure
         console.warn("Tenant not found for report number generation");
         this.reportNumber = `UNK-REG-${Date.now()}`; // Fallback
         return next();
@@ -105,4 +92,4 @@ activityReportSchema.pre("validate", async function (next) {
   return next(new Error("Failed to generate unique report number after multiple attempts"));
 });
 
-export const ActivityReport = mongoose.model<IActivityReport>("ActivityReport", activityReportSchema);
+export const RequestActivityReport = mongoose.model<IRequestActivityReport>("RequestActivityReport", requestActivityReportSchema);

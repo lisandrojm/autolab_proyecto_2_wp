@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
-import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { UserProfile } from "../models/UserProfile.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
@@ -22,7 +22,7 @@ import { Vacation } from "../models/Vacation.js";
 
 import { VacationCounter } from "../models/VacationCounter.js";
 import { VacationOverlap } from "../models/VacationOverlap.js";
-import { ActivityLogType } from "../models/ActivityLogType.js";
+import { RequestActivityType } from "../models/RequestActivityType.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -347,18 +347,18 @@ async function ensureActivityLogTypes(tenantId: Types.ObjectId) {
 
   let currentOrder = 1;
   for (const name of defaults) {
-    const exists = await ActivityLogType.findOne({ tenantId, name });
+    const exists = await RequestActivityType.findOne({ tenantId, name });
     if (!exists) {
-      await ActivityLogType.create({
+      await RequestActivityType.create({
         tenantId,
         name,
         requiresReplacement: false,
         isActive: true,
         order: currentOrder,
       });
-      console.log(`✅ Created ActivityLogType: ${name}`);
+      console.log(`✅ Created RequestActivityType: ${name}`);
     } else {
-      console.log(`✔️ ActivityLogType exists: ${name}`);
+      console.log(`✔️ RequestActivityType exists: ${name}`);
     }
     currentOrder++;
   }
@@ -880,10 +880,10 @@ export async function seedOnStart() {
     /* ============ SEED: MODELOS DEL NAVBAR (HR / MODELOS) ============ */
     console.log("👥 Seeding HR/Models demo data...");
 
-    // ---- EmployeeProfile ----
-    const profilesCount = await EmployeeProfile.countDocuments({ tenantId });
+    // ---- UserProfile ----
+    const profilesCount = await UserProfile.countDocuments({ tenantId });
     if (profilesCount === 0) {
-      await EmployeeProfile.create([
+      await UserProfile.create([
         {
           tenantId,
           userId: adminUser._id,
@@ -941,9 +941,9 @@ export async function seedOnStart() {
           isActive: true,
         },
       ]);
-      console.log("✅ EmployeeProfile seeded");
+      console.log("✅ UserProfile seeded");
     } else {
-      console.log("✔️ EmployeeProfile already present (skipping bulk creation)");
+      console.log("✔️ UserProfile already present (skipping bulk creation)");
     }
 
     // Ensure specific demo profiles are up to date (or created if missing)
@@ -1003,7 +1003,7 @@ export async function seedOnStart() {
     ];
 
     for (const p of demoProfiles) {
-      await EmployeeProfile.findOneAndUpdate({ tenantId, userId: p.userId }, { ...p, tenantId }, { upsert: true, new: true });
+      await UserProfile.findOneAndUpdate({ tenantId, userId: p.userId }, { ...p, tenantId }, { upsert: true, new: true });
       console.log(`✅ Ensure Profile: ${p.email} (${p.department})`);
     }
 

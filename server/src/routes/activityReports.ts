@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import mongoose from "mongoose";
-import { ActivityReport } from "../models/ActivityReport.js";
+import { RequestActivityReport } from "../models/RequestActivityReport.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -47,7 +47,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       filter.userId = userId;
     }
 
-    const reports = await ActivityReport.find(filter)
+    const reports = await RequestActivityReport.find(filter)
       .sort({ date: -1, createdAt: -1 })
       .populate("userId", "firstName lastName")
       .populate({
@@ -84,7 +84,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const data = createReportSchema.parse(body);
 
-    const report = await ActivityReport.create({
+    const report = await RequestActivityReport.create({
       tenantId: req.tenantObjectId,
       userId,
       ...data,
@@ -105,7 +105,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
-    const report = await ActivityReport.findOne({
+    const report = await RequestActivityReport.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
       userId,
@@ -142,7 +142,7 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
       filter.userId = userId;
     }
 
-    const report = await ActivityReport.findOneAndDelete(filter);
+    const report = await RequestActivityReport.findOneAndDelete(filter);
 
     if (!report) {
       res.status(404).json({ error: "Reporte no encontrado o no autorizado" });
@@ -184,7 +184,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const data = createReportSchema.parse(body);
 
-    const report = await ActivityReport.findOneAndUpdate(filter, data, { new: true });
+    const report = await RequestActivityReport.findOneAndUpdate(filter, data, { new: true });
 
     if (!report) {
       res.status(404).json({ error: "Reporte no encontrado o no autorizado para editar" });
@@ -202,4 +202,4 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   }
 });
 
-export { router as activityReportRoutes };
+export { router as RequestActivityReportRoutes };

@@ -42,7 +42,7 @@ import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
 import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPage";
 import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
 
-import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
+import { ManageUserProfilesPage } from "./pages/ManageUserProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageOrderTypesPage } from "./pages/ManageOrderTypesPage";
@@ -431,7 +431,7 @@ function App() {
                 path="/hr/employee-profiles"
                 element={
                   <ProtectedRoute>
-                    <ManageEmployeeProfilesPage />
+                    <ManageUserProfilesPage />
                   </ProtectedRoute>
                 }
               />

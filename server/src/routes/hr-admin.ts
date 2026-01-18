@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { User } from "../models/User.js";
-import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { UserProfile } from "../models/UserProfile.js";
 import { Vacation } from "../models/Vacation.js";
 import { Order } from "../models/Order.js";
 import { OrderType } from "../models/OrderType.js";
@@ -96,7 +96,7 @@ router.get("/users", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
 
     const userIds = users.map((u) => u._id);
-    const profiles = await EmployeeProfile.find({
+    const profiles = await UserProfile.find({
       tenantId: req.tenantObjectId,
       userId: { $in: userIds },
     });
@@ -149,7 +149,7 @@ router.get("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) 
       return;
     }
 
-    const profile = await EmployeeProfile.findOne({
+    const profile = await UserProfile.findOne({
       tenantId: req.tenantObjectId,
       userId: user._id,
     });
@@ -178,7 +178,7 @@ router.put("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) 
       return;
     }
 
-    const profile = await EmployeeProfile.findOneAndUpdate(
+    const profile = await UserProfile.findOneAndUpdate(
       {
         tenantId: req.tenantObjectId,
         userId: user._id,
@@ -200,7 +200,7 @@ router.put("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) 
 
 router.delete("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const profile = await EmployeeProfile.findOneAndUpdate(
+    const profile = await UserProfile.findOneAndUpdate(
       {
         tenantId: req.tenantObjectId,
         userId: req.params.id,
@@ -289,8 +289,6 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       });
     }
 
-    
-
     res.json(vacation);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -335,8 +333,6 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       message: `Tu solicitud de vacaciones ha sido rechazada. Motivo: ${managerComment}`,
       linkUrl: `/vacations/${vacation._id}`,
     });
-
-    
 
     res.json(vacation);
   } catch (error) {
@@ -413,8 +409,6 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
     }
 
     await vacation.save();
-
-    
 
     res.json(vacation);
   } catch (error) {
@@ -603,8 +597,6 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    
-
     if (category && category.pdfTemplateId) {
       try {
         const template = await PdfTemplate.findOne({
@@ -623,11 +615,8 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
           if (pdfResult.success) {
             order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
             await order.save();
-
-            
           } else {
             console.error("PDF generation failed:", pdfResult.error);
-            
           }
         }
       } catch (pdfError) {
@@ -700,8 +689,6 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
         linkUrl: `/orders/${order._id}`,
       });
     }
-
-    
 
     res.json(order);
   } catch (error) {
@@ -807,8 +794,6 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
     const categoryName = category?.name || order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
-
-    
 
     res.json({
       success: true,

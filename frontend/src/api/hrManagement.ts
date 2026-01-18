@@ -36,7 +36,7 @@ export interface CalendarEvent {
   updatedAt: string;
 }
 
-export interface EmployeeProfile {
+export interface UserProfile {
   _id: string;
   tenantId: string;
   userId: any;
@@ -188,9 +188,9 @@ export const hrManagementAPI = {
     },
   },
 
-  employeeProfiles: {
+  UserProfiles: {
     list: async (params?: { page?: number; limit?: number; department?: string; isActive?: boolean; search?: string }) => {
-      const { data } = await axios.get<{ profiles: EmployeeProfile[]; pagination: Pagination }>("/hr-management/employeeprofiles", { params });
+      const { data } = await axios.get<{ profiles: UserProfile[]; pagination: Pagination }>("/hr-management/employeeprofiles", { params });
       return data;
     },
     count: async () => {

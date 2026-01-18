@@ -9,7 +9,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { generateVacationPDF } from "../utils/pdfGenerator.js";
 import { User } from "../models/User.js";
 import { VacationOverlap } from "../models/VacationOverlap.js";
-import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { UserProfile } from "../models/UserProfile.js";
 import { Level } from "../models/Level.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
@@ -29,9 +29,9 @@ router.get("/availability", async (req, res) => {
 
     let userAreaId = user.areaId;
 
-    // Fallback: If user has no areaId, try to find it via EmployeeProfile department
+    // Fallback: If user has no areaId, try to find it via UserProfile department
     if (!userAreaId) {
-      const profile = await EmployeeProfile.findOne({ userId, tenantId });
+      const profile = await UserProfile.findOne({ userId, tenantId });
       if (profile && profile.department) {
         const area = await Area.findOne({ tenantId, name: profile.department });
         if (area) {
@@ -73,7 +73,7 @@ router.get("/availability", async (req, res) => {
     const areaName = (await Area.findById(userAreaId))?.name;
     let extraUserIds: any[] = [];
     if (areaName) {
-      const profilesInDept = await EmployeeProfile.find({ tenantId, department: areaName }).select("userId");
+      const profilesInDept = await UserProfile.find({ tenantId, department: areaName }).select("userId");
       extraUserIds = profilesInDept.map((p) => p.userId);
     }
 
@@ -180,7 +180,7 @@ router.post("/", async (req, res) => {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
 
-    const profile = await EmployeeProfile.findOne({ userId, tenantId });
+    const profile = await UserProfile.findOne({ userId, tenantId });
 
     // Fetch Position Name
     let positionName = "Sin Cargo";
@@ -261,7 +261,7 @@ router.post("/", async (req, res) => {
 
         let extraUserIds: any[] = [];
         if (areaName) {
-          const profilesInDept = await EmployeeProfile.find({ tenantId, department: areaName }).select("userId");
+          const profilesInDept = await UserProfile.find({ tenantId, department: areaName }).select("userId");
           extraUserIds = profilesInDept.map((p) => p.userId);
         }
         const allUserIdsInArea = [...new Set([...userIdsInArea.map((id) => id.toString()), ...extraUserIds.map((id) => id.toString())])];

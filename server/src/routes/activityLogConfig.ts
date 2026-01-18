@@ -1,5 +1,5 @@
 import express from "express";
-import { ActivityLogConfig } from "../models/ActivityLogConfig.js";
+import { RequestActivityConfig } from "../models/RequestActivityConfig.js";
 import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -9,10 +9,10 @@ router.use(authenticateToken);
 router.get("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const config = await ActivityLogConfig.findOne({ tenantId });
+    const config = await RequestActivityConfig.findOne({ tenantId });
 
     if (!config) {
-      const newConfig = await ActivityLogConfig.create({
+      const newConfig = await RequestActivityConfig.create({
         tenantId,
         enableFastEntry: true, // Default to true (current behavior)
       });
@@ -31,10 +31,10 @@ router.put("/", async (req, res) => {
     const tenantId = req.tenantId;
     const { enableFastEntry } = req.body;
 
-    let config = await ActivityLogConfig.findOne({ tenantId });
+    let config = await RequestActivityConfig.findOne({ tenantId });
 
     if (!config) {
-      config = await ActivityLogConfig.create({
+      config = await RequestActivityConfig.create({
         tenantId,
         enableFastEntry,
       });
@@ -50,4 +50,4 @@ router.put("/", async (req, res) => {
   }
 });
 
-export const activityLogConfigRoutes = router;
+export const RequestActivityConfigRoutes = router;

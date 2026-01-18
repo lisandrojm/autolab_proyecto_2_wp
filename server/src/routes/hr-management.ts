@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { z } from "zod";
 import { CalendarEvent } from "../models/CalendarEvent.js";
-import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { UserProfile } from "../models/UserProfile.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
 import { OrderType } from "../models/OrderType.js";
@@ -135,7 +135,7 @@ router.get("/calendarevents/count", async (req: AuthenticatedRequest & TenantReq
   }
 });
 
-router.get("/employeeprofiles", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/UserProfiles", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 50, department, isActive, search } = req.query;
 
@@ -150,7 +150,7 @@ router.get("/employeeprofiles", async (req: AuthenticatedRequest & TenantRequest
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [profiles, total] = await Promise.all([EmployeeProfile.find(filter).sort({ lastName: 1, firstName: 1 }).skip(skip).limit(Number(limit)).populate("userId", "email roles"), EmployeeProfile.countDocuments(filter)]);
+    const [profiles, total] = await Promise.all([UserProfile.find(filter).sort({ lastName: 1, firstName: 1 }).skip(skip).limit(Number(limit)).populate("userId", "email roles"), UserProfile.countDocuments(filter)]);
 
     res.json({
       profiles,
@@ -167,9 +167,9 @@ router.get("/employeeprofiles", async (req: AuthenticatedRequest & TenantRequest
   }
 });
 
-router.get("/employeeprofiles/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/UserProfiles/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const count = await EmployeeProfile.countDocuments({ tenantId: req.tenantObjectId });
+    const count = await UserProfile.countDocuments({ tenantId: req.tenantObjectId });
     res.json({ count });
   } catch (error) {
     console.error("Count employee profiles error:", error);

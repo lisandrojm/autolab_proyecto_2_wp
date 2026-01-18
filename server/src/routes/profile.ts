@@ -1,7 +1,7 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
-import { EmployeeProfile } from "../models/EmployeeProfile.js";
+import { UserProfile } from "../models/UserProfile.js";
 import { Vacation } from "../models/Vacation.js";
 import { User } from "../models/User.js";
 import { Area } from "../models/Area.js";
@@ -42,7 +42,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       console.error(`Error fetching user ${userId}:`, e);
     }
 
-    let profile: any = await EmployeeProfile.findOne({
+    let profile: any = await UserProfile.findOne({
       tenantId: req.tenantObjectId,
       userId,
     }).lean();
@@ -53,7 +53,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       // lastName is required, so we need a fallback if user doesn't have one
       const lastName = user?.lastName || "-";
 
-      const newProfile = new EmployeeProfile({
+      const newProfile = new UserProfile({
         tenantId: req.tenantObjectId,
         userId,
         firstName,
@@ -141,7 +141,7 @@ router.put("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const data = updateProfileSchema.parse(req.body);
 
-    const profile = await EmployeeProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: data }, { new: true, upsert: false });
+    const profile = await UserProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: data }, { new: true, upsert: false });
 
     if (!profile) {
       res.status(404).json({ error: "Profile not found" });
@@ -164,7 +164,7 @@ router.put("/photo", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const { profilePhotoUrl } = updatePhotoSchema.parse(req.body);
 
-    const profile = await EmployeeProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: { profilePhotoUrl } }, { new: true });
+    const profile = await UserProfile.findOneAndUpdate({ tenantId: req.tenantObjectId, userId }, { $set: { profilePhotoUrl } }, { new: true });
 
     if (!profile) {
       res.status(404).json({ error: "Profile not found" });
@@ -194,7 +194,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const user = await User.findById(userId);
 
     // 2. Get Profile for other stats (daysWorked) if needed
-    const profile = await EmployeeProfile.findOne({
+    const profile = await UserProfile.findOne({
       tenantId,
       userId,
     }).lean();

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const activityLogConfigSchema = new mongoose.Schema(
+const requestActivityConfigSchema = new mongoose.Schema(
   {
     tenantId: {
       type: String,
@@ -15,4 +15,4 @@ const activityLogConfigSchema = new mongoose.Schema(
   { timestamps: true, collection: "requests_activity_configs" },
 );
 
-export const ActivityLogConfig = mongoose.model("ActivityLogConfig", activityLogConfigSchema);
+export const RequestActivityConfig = mongoose.model("RequestActivityConfig", requestActivityConfigSchema);

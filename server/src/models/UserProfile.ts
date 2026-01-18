@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export interface IEmployeeProfile extends Document {
+export interface IUserProfile extends Document {
   tenantId: Types.ObjectId;
   userId: Types.ObjectId;
   firstName: string;
@@ -28,7 +28,7 @@ export interface IEmployeeProfile extends Document {
   updatedAt: Date;
 }
 
-const employeeProfileSchema = new Schema<IEmployeeProfile>(
+const userProfileSchema = new Schema<IUserProfile>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -57,8 +57,8 @@ const employeeProfileSchema = new Schema<IEmployeeProfile>(
   { timestamps: true, collection: "users_profiles" },
 );
 
-employeeProfileSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
-employeeProfileSchema.index({ tenantId: 1, email: 1 });
-employeeProfileSchema.index({ tenantId: 1, department: 1 });
+userProfileSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
+userProfileSchema.index({ tenantId: 1, email: 1 });
+userProfileSchema.index({ tenantId: 1, department: 1 });
 
-export const EmployeeProfile = mongoose.model<IEmployeeProfile>("EmployeeProfile", employeeProfileSchema);
+export const UserProfile = mongoose.model<IUserProfile>("UserProfile", userProfileSchema);

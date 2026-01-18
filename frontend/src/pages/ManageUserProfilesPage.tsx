@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faSearch } from "@fortawesome/free-solid-svg-icons";
-import { hrManagementAPI, EmployeeProfile } from "../api/hrManagement";
+import { hrManagementAPI, UserProfile } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 
-export const ManageEmployeeProfilesPage: React.FC = () => {
-  const [profiles, setProfiles] = useState<EmployeeProfile[]>([]);
+export const ManageUserProfilesPage: React.FC = () => {
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -14,7 +14,7 @@ export const ManageEmployeeProfilesPage: React.FC = () => {
   const loadProfiles = async () => {
     try {
       setLoading(true);
-      const data = await hrManagementAPI.employeeProfiles.list({ page, limit: 50, search: searchTerm || undefined });
+      const data = await hrManagementAPI.UserProfiles.list({ page, limit: 50, search: searchTerm || undefined });
       setProfiles(data.profiles);
       setTotalPages(data.pagination.pages);
     } catch (error) {

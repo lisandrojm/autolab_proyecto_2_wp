@@ -56,9 +56,9 @@ import { pdfTemplatePreviewRoutes } from "./routes/pdfPreview.js";
 import { globalVacationConfigRoutes } from "./routes/globalVacationConfig.js";
 import { vacationsRoutes } from "./routes/vacations.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
-import { activityLogTypeRoutes } from "./routes/activityLogTypes.js";
-import { activityReportRoutes } from "./routes/activityReports.js";
-import { activityLogConfigRoutes } from "./routes/activityLogConfig.js";
+import { RequestActivityTypeRoutes } from "./routes/activityLogTypes.js";
+import { RequestActivityReportRoutes } from "./routes/activityReports.js";
+import { RequestActivityConfigRoutes } from "./routes/activityLogConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -173,9 +173,9 @@ app.use("/api/v1/pdf-preview", pdfTemplatePreviewRoutes);
 app.use("/api/v1/global-vacation-config", globalVacationConfigRoutes);
 app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
-app.use("/api/v1/activity-log-types", activityLogTypeRoutes);
-app.use("/api/v1/activity-reports", activityReportRoutes);
-app.use("/api/v1/activity-log-config", activityLogConfigRoutes);
+app.use("/api/v1/activity-log-types", RequestActivityTypeRoutes);
+app.use("/api/v1/activity-reports", RequestActivityReportRoutes);
+app.use("/api/v1/activity-log-config", RequestActivityConfigRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

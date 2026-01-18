@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from "mongoose";
 
-export interface IActivityLogType extends Document {
+export interface IRequestActivityType extends Document {
   tenantId: Types.ObjectId;
   name: string;
   order: number;
@@ -12,7 +12,7 @@ export interface IActivityLogType extends Document {
   updatedAt: Date;
 }
 
-const activityLogTypeSchema = new Schema<IActivityLogType>(
+const requestActivityTypeSchema = new Schema<IRequestActivityType>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true },
@@ -29,8 +29,7 @@ const activityLogTypeSchema = new Schema<IActivityLogType>(
   { timestamps: true, collection: "requests_activity_types" },
 );
 
-// Compound index to ensure uniqueness of name per tenant might be useful, but maybe not strictly required if we allow duplicates?
-// Standard practice: unique names per tenant.
-activityLogTypeSchema.index({ tenantId: 1, name: 1 }, { unique: true });
+// Compound index to ensure uniqueness of name per tenant
+requestActivityTypeSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 
-export const ActivityLogType = model<IActivityLogType>("ActivityLogType", activityLogTypeSchema);
+export const RequestActivityType = model<IRequestActivityType>("RequestActivityType", requestActivityTypeSchema);
