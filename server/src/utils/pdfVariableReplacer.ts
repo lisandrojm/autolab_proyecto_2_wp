@@ -201,6 +201,9 @@ export function prepareVariables(order: IOrder, category: IOrderCategory, user: 
       dynamicVars["fecha"] = fechaUnica;
       dynamicVars["fechaUnica"] = fechaUnica;
       dynamicVars["value"] = fechaUnica;
+    } else if (category.categoryType === "objeto") {
+      dynamicVars["objeto"] = sanitizeHtml(order.dynamicValue);
+      dynamicVars["value"] = sanitizeHtml(order.dynamicValue);
     } else {
       dynamicVars["value"] = sanitizeHtml(order.dynamicValue);
     }
@@ -289,6 +292,7 @@ export function getDummyVariables(code: string): Record<string, string> {
     nombreUsuario: "Juan Pérez",
     nombreCompleto: "Juan Pérez",
     numeroOrden: "ORD-12345",
+    tenantName: "Empresa Demo",
   };
 
   const normalizedCode = code.toLowerCase();
@@ -300,6 +304,8 @@ export function getDummyVariables(code: string): Record<string, string> {
         categoria: "Viáticos",
         subcategoria: "Almuerzo",
         monto: "$ 15.000,00",
+        motivo: "Reintegro de gastos de almuerzo corporativo",
+        descripcion: "Reintegro de gastos de almuerzo corporativo",
       };
     case "fecharango":
       return {
@@ -309,6 +315,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         fechaDesde: "01/03/2024",
         fechaHasta: "05/03/2024",
         dias: "5",
+        descripcion: "Licencia por examen universitario",
       };
     case "fechaunica":
       return {
@@ -316,6 +323,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         categoria: "Compensatorio",
         subcategoria: "-",
         fechaUnica: "10/03/2024",
+        descripcion: "Día compensatorio por guardia fin de semana",
       };
     case "vacaciones":
       return {
@@ -327,6 +335,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         fechaReintegro: "15/01/2024",
         fechaDesde: "01/01/2024",
         fechaHasta: "14/01/2024",
+        descripcion: "Vacaciones anuales correspondientes al periodo 2023",
       };
     case "objeto":
       return {
@@ -334,6 +343,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         categoria: "Electrónica",
         subcategoria: "Computadoras",
         objeto: "Notebook Dell Latitude",
+        descripcion: "Solicitud de equipo para nuevo ingreso",
       };
     case "otros":
       return {
@@ -341,6 +351,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         categoria: "General",
         subcategoria: "Varios",
         detalle: "Solicitud de prueba genérica",
+        descripcion: "Solicitud de prueba genérica para validación de flujo",
       };
     default:
       return defaults;

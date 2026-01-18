@@ -997,7 +997,13 @@ export const ManageOrdersPage: React.FC = () => {
                     <p className="font-medium text-slate-800 dark:text-slate-100">$ {selectedOrder.amount.toFixed(2)}</p>
                   </div>
                 )}
-                {(typeof selectedOrder.dynamicValue === "string" || selectedOrder.dynamicValue?.fechaUnica) && (
+                {typeof selectedOrder.dynamicValue === "string" && !/^\d{4}-\d{2}-\d{2}/.test(selectedOrder.dynamicValue) && (
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{(selectedOrder.categoryId as any)?.categoryType === "otros" ? "Detalle" : "Objeto Especificado"}</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">{selectedOrder.dynamicValue}</p>
+                  </div>
+                )}
+                {((typeof selectedOrder.dynamicValue === "string" && /^\d{4}-\d{2}-\d{2}/.test(selectedOrder.dynamicValue)) || selectedOrder.dynamicValue?.fechaUnica) && (
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Fecha Solicitada</p>
                     <p className="font-medium text-slate-800 dark:text-slate-100">{typeof selectedOrder.dynamicValue === "string" ? formatDateShort(selectedOrder.dynamicValue) : formatDateShort(selectedOrder.dynamicValue.fechaUnica)}</p>

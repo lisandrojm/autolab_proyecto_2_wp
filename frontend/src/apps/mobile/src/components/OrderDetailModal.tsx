@@ -279,7 +279,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
               </div>
             </div>
             <div className="flex gap-10">
-              {(typeof order.dynamicValue === "string" || order.dynamicValue?.fechaUnica) && (
+              {typeof order.dynamicValue === "string" && !/^\d{4}-\d{2}-\d{2}/.test(order.dynamicValue) && (
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{(order.categoryId as any)?.categoryType === "otros" ? "Detalle" : "Objeto Especificado"}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{order.dynamicValue}</p>
+                </div>
+              )}
+              {((typeof order.dynamicValue === "string" && /^\d{4}-\d{2}-\d{2}/.test(order.dynamicValue)) || order.dynamicValue?.fechaUnica) && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Fecha Solicitada</p>
                   <p className="font-medium text-slate-800 dark:text-slate-100">{typeof order.dynamicValue === "string" ? formatDateShort(order.dynamicValue) : formatDateShort(order.dynamicValue.fechaUnica)}</p>

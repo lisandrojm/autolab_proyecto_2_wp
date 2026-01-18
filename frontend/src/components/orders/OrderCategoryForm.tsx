@@ -338,30 +338,25 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         {/* Monto Máximo */}
         {formData.categoryType === "dinero" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monto Máximo (opcional)</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-              <input
-                type="number"
-                min="0"
-                step="50"
-                value={formData.montoMaximo || ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!v) return setFormData({ ...formData, montoMaximo: undefined });
-                  setFormData({ ...formData, montoMaximo: parseFloat(v) });
-                }}
-                onBlur={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (!v) return;
-                  if (v % 50 !== 0) {
-                    const r = Math.round(v / 50) * 50;
-                    setFormData({ ...formData, montoMaximo: r > 0 ? r : 50 });
-                  }
-                }}
-                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-4 py-2 text-gray-900 dark:text-white"
-                placeholder="Sin límite"
-              />
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monto Máximo (opcional)</label>
+              <span className={`text-sm font-bold ${formData.montoMaximo ? "text-blue-600 dark:text-blue-400" : "text-gray-500"}`}>{formData.montoMaximo ? `$ ${formData.montoMaximo.toLocaleString("es-ES")}` : "Sin límite"}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="10000000"
+              step="50000"
+              value={formData.montoMaximo || 0}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setFormData({ ...formData, montoMaximo: v === 0 ? undefined : v });
+              }}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+            />
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <span>Sin límite</span>
+              <span>$ 10.000.000</span>
             </div>
           </div>
         )}
