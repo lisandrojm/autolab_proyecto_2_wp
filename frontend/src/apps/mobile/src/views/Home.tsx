@@ -156,6 +156,40 @@ export default function Home({ onNavigate }: HomeProps) {
     return "hace un momento";
   };
 
+  const formatActivityDescription = (activity: ActivityRecord) => {
+    const { description } = activity;
+
+    // Traducciones de Pedidos (Orders)
+    if (description.includes("Order") && description.includes("approved")) {
+      const match = description.match(/"([^"]+)"/);
+      const item = match ? match[1] : "";
+      return item ? `Tu pedido "${item}" fue aprobado` : "Tu pedido fue aprobado";
+    }
+    if (description.includes("Order") && description.includes("rejected")) {
+      const match = description.match(/"([^"]+)"/);
+      const item = match ? match[1] : "";
+      return item ? `Tu pedido "${item}" fue rechazado` : "Tu pedido fue rechazado";
+    }
+    if (description.includes("Order") && description.includes("delivered")) {
+      const match = description.match(/"([^"]+)"/);
+      const item = match ? match[1] : "";
+      return item ? `Tu pedido "${item}" fue entregado` : "Tu pedido fue entregado";
+    }
+    if (description.includes("Order") && description.includes("cancelled")) {
+      const match = description.match(/"([^"]+)"/);
+      const item = match ? match[1] : "";
+      return item ? `Tu pedido "${item}" fue cancelado` : "Tu pedido fue cancelado";
+    }
+
+    // Traducciones de Vacaciones
+    if (description.includes("Vacation request approved")) return "Tu solicitud de vacaciones fue aprobada";
+    if (description.includes("Vacation request rejected")) return "Tu solicitud de vacaciones fue rechazada";
+    if (description.includes("Vacation request cancelled")) return "Tu solicitud de vacaciones fue cancelada";
+
+    // Casos ya en español o genéricos
+    return description.replace("Order", "Pedido").replace("approved by manager", "aprobado").replace("rejected", "rechazado").replace("delivered", "entregado").replace("Vacation request", "Solicitud de vacaciones");
+  };
+
   const handleLogout = () => {
     logout();
     window.location.href = "/login";
@@ -252,7 +286,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   <FontAwesomeIcon icon={icon} className={`h-5 w-5 ${colors.icon}`} />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">{activity.description}</p>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">{formatActivityDescription(activity)}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{formatTimeAgo(activity.createdAt)}</p>
                 </div>
               </div>
