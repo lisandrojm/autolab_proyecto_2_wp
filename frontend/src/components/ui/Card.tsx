@@ -221,7 +221,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                 <div className="min-w-0 flex-1 flex justify-between items-start">
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{header.title}</h3>
-                    {header.subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{header.subtitle}</p>}
+                    {header.subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 text-wrap">{header.subtitle}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Badges (Header Right Position) */}

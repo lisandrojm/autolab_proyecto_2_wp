@@ -72,6 +72,16 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
 }> {
   const tid = new Types.ObjectId(tenantId);
 
+  // ════════ SKIP FOR SUPERADMIN TENANT ════════
+  // El tenant de Platform Administration (superadmin) solo debe tener el rol Superadmin
+  // No debe tener roles admin ni user
+  const { Tenant } = await import("../models/Tenant.js");
+  const tenant = await Tenant.findById(tid);
+  if (tenant?.isSystem || tenant?.slug === "superadmin") {
+    console.log(`[RoleInit] Skipping default roles for system tenant: ${tenant.slug}`);
+    return { userRole: null, adminRole: null };
+  }
+
   console.log(`[RoleInit] Ensuring default roles for tenant: ${tid}`);
 
   // ════════ CREAR/VERIFICAR ROL USER ════════
@@ -205,7 +215,7 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
     // 2) Filtrar: Solo permitir permisos que terminen en :view o sean el comodín *
     // Esto elimina permisos granulares (:edit, :delete, :create) que ya no son necesarios
     const filteredPermissions = updatedPermissions.filter(
-      (perm) => perm === "*" || perm.endsWith(":view") || perm.startsWith("mobile_") // Mantener roles móviles
+      (perm) => perm === "*" || perm.endsWith(":view") || perm.startsWith("mobile_"), // Mantener roles móviles
     );
 
     if (filteredPermissions.length !== updatedPermissions.length) {

@@ -435,18 +435,27 @@ export async function ensureSuperAdmin() {
 
     const superAdminTenantId = new Types.ObjectId(superAdminTenant._id as any);
 
+    // ---- ELIMINAR ROLES NO DESEADOS DEL TENANT SUPERADMIN ----
+    // Solo debe existir el rol Superadmin en Platform Administration
+    // Usamos regex case-insensitive para capturar variaciones como "Admin", "admin", "USER", etc.
+    const deleteResult = await Role.deleteMany({
+      tenantId: superAdminTenantId,
+      name: { $in: [/^admin$/i, /^user$/i, /^Mobile-Coordinador$/i, /^Mobile-Colaborador$/i] },
+    });
+    if (deleteResult.deletedCount > 0) {
+      console.log(`🗑️ Deleted ${deleteResult.deletedCount} unwanted roles from Platform Administration`);
+    }
+
     // ---- ROLES PERMITIDOS ----
-    await ensureRole(superAdminTenantId, "superadmin", ["*"], "Acceso total a toda la plataforma");
-    await ensureRole(superAdminTenantId, "admin", [], "Administrador del tenant");
-    await ensureRole(superAdminTenantId, "Mobile-Coordinador", [], "Rol móvil (coordinador)");
-    await ensureRole(superAdminTenantId, "Mobile-Colaborador", [], "Rol móvil (colaborador)");
+    // Solo el rol Superadmin para el tenant de administración de plataforma
+    await ensureRole(superAdminTenantId, "Superadmin", ["*"], "Acceso total a toda la plataforma");
 
     // ---- USUARIO SUPERADMIN ----
     await ensureUser({
       tenantId: superAdminTenantId,
       email: "superadmin@example.com",
       password: "superadmin123",
-      roleNames: ["superadmin"],
+      roleNames: ["Superadmin"],
       firstName: "Super",
       lastName: "Admin",
       isActive: true,
