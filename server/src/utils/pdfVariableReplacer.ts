@@ -114,7 +114,7 @@ export function prepareVariables(order: IOrder, category: IOrderCategory, user: 
   const categoryName = category.name || "-";
   const categoria = sanitizeHtml(categoryName);
 
-  let subcategoria = "-";
+  let subcategoria = "";
   if (order.subcategories && order.subcategories.length > 0) {
     if (category.config?.subtipos) {
       const labels = order.subcategories.map((subId) => {

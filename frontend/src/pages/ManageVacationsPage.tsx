@@ -221,7 +221,7 @@ export const ManageVacationsPage: React.FC = () => {
         acc[vacation.estado] = (acc[vacation.estado] || 0) + 1;
         return acc;
       },
-      { pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 }
+      { pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 },
     );
     setStats(newStats);
   };
@@ -231,32 +231,24 @@ export const ManageVacationsPage: React.FC = () => {
       e.stopPropagation();
     }
 
-    let title = "¿Cancelar esta solicitud?";
-    let text = `La solicitud ${getFormattedVacationNumber(numeroPedido)} será cancelada. Permanecerá en el historial con estado 'Cancelada'.`;
-
-    if (status === "delivered") {
-      title = "¿Cancelar solicitud entregada?";
-      text = "Se cancelará la solicitud entregada y se restaurarán los días de vacaciones.";
-    }
-
-    const result = await sweetAlert.confirm(title, text, "Sí, Cancelar", "No hacer nada");
+    const result = await sweetAlert.confirm("¿Eliminar esta solicitud?", `La solicitud ${getFormattedVacationNumber(numeroPedido)} será eliminada permanentemente. Esta acción no se puede deshacer.`, "Sí, Eliminar", "Cancelar");
 
     if (!result.isConfirmed) return;
 
     try {
-      await vacationsAPI.cancel(vacationId);
+      await vacationsAPI.delete(vacationId);
 
-      setMockVacations((prev) => prev.map((v) => (v.id === vacationId ? { ...v, estado: "cancelled" } : v)));
+      setMockVacations((prev) => prev.filter((v) => v.id !== vacationId));
 
       if (selectedVacation && selectedVacation.id === vacationId) {
-        setSelectedVacation({ ...selectedVacation, estado: "cancelled" });
-        // Don't close modal, just update state
+        setSelectedVacation(null);
+        setShowDetailModal(false);
       }
 
-      await sweetAlert.success("Cancelada", "La solicitud ha sido cancelada correctamente");
+      await sweetAlert.success("Eliminada", "La solicitud ha sido eliminada correctamente");
       await loadRecords(); // Refresh to be sure
     } catch (error: any) {
-      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo cancelar la solicitud");
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo eliminar la solicitud");
     }
   };
 
@@ -280,7 +272,7 @@ export const ManageVacationsPage: React.FC = () => {
               requiresSignature: updatedVacationRaw.requiresSignature,
               signatureNotifiedAt: updatedVacationRaw.signatureNotifiedAt, // though pre-approve usually doesn't notify signature yet
             }
-          : null
+          : null,
       );
 
       await loadRecords(); // Refresh list in background
@@ -320,7 +312,7 @@ export const ManageVacationsPage: React.FC = () => {
               estado: "approved",
               firmaEstado: requiresSignature ? "sent" : prev.firmaEstado,
             }
-          : null
+          : null,
       );
 
       await loadRecords();
@@ -352,7 +344,7 @@ export const ManageVacationsPage: React.FC = () => {
               ...prev,
               estado: "rejected",
             }
-          : null
+          : null,
       );
 
       await loadRecords();
@@ -383,7 +375,7 @@ export const ManageVacationsPage: React.FC = () => {
               ...prev,
               estado: "delivered",
             }
-          : null
+          : null,
       );
 
       await loadRecords();
@@ -436,7 +428,7 @@ export const ManageVacationsPage: React.FC = () => {
               ...prev,
               firmaEstado: "signed",
             }
-          : null
+          : null,
       );
 
       await loadRecords();
@@ -629,18 +621,16 @@ export const ManageVacationsPage: React.FC = () => {
               }
               footerActions={
                 [
-                  !["rejected", "cancelled"].includes(vacation.estado)
-                    ? {
-                        icon: faTrash,
-                        onClick: (e: any) => {
-                          e?.stopPropagation();
-                          // @ts-ignore
-                          handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e);
-                        },
-                        title: "Cancelar solicitud",
-                        variant: "default",
-                      }
-                    : null,
+                  {
+                    icon: faTrash,
+                    onClick: (e: any) => {
+                      e?.stopPropagation();
+                      // @ts-ignore
+                      handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e);
+                    },
+                    title: "Eliminar solicitud",
+                    variant: "default",
+                  },
                 ].filter(Boolean) as any
               }
               onClick={() => {
@@ -794,11 +784,9 @@ export const ManageVacationsPage: React.FC = () => {
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {!["rejected", "cancelled"].includes(vacation.estado) && (
-                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cancelar solicitud" aria-label="Cancelar solicitud">
-                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                            </button>
-                          )}
+                          <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}

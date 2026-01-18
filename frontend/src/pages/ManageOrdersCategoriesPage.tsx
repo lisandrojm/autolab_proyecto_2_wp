@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract, faFilePdf, faEye } from "@fortawesome/free-solid-svg-icons";
 import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
 import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -13,6 +13,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { OrderCategoryForm } from "../components/orders/OrderCategoryForm";
 import { tipoAccionFuturaLabels } from "../types/futureAction";
+import { pdfPreviewAPI } from "../api/pdfPreview";
+import Swal from "sweetalert2";
 
 interface SortableRowProps {
   category: OrderCategory;
@@ -22,9 +24,11 @@ interface SortableRowProps {
   onDelete: (category: OrderCategory) => void;
   onToggleActive: (category: OrderCategory) => void;
   onEnableReorder: () => void;
+  pdfTemplates: PdfTemplate[];
+  onPreviewPdf: (content: string, code: string) => void;
 }
 
-const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMode, onEdit, onDelete, onToggleActive, onEnableReorder }) => {
+const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMode, onEdit, onDelete, onToggleActive, onEnableReorder, pdfTemplates, onPreviewPdf }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category._id, disabled: !isReorderMode });
 
   const style = {
@@ -32,6 +36,27 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const categoryTypeLabels: Record<CategoryType, string> = {
+    fecha: "Fecha",
+    dinero: "Dinero",
+    objeto: "Objeto",
+    otros: "Otros",
+  };
+
+  const getExpectedTemplateCode = (): string | null => {
+    const { categoryType, dateMode } = category;
+    if (categoryType === "fecha") {
+      return dateMode === "range" ? "fechaRango" : "fechaUnica";
+    }
+    if (categoryType === "dinero") return "dinero";
+    if (categoryType === "objeto") return "objeto";
+    if (categoryType === "otros") return "otros";
+    return null;
+  };
+
+  const expectedCode = getExpectedTemplateCode();
+  const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
 
   return (
     <tr ref={setNodeRef} style={style} {...(isReorderMode ? { ...attributes, ...listeners } : {})} className={`border-b border-gray-100 dark:border-gray-700 ${isReorderMode ? "bg-blue-50 dark:bg-blue-900/20 cursor-grab active:cursor-grabbing" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}>
@@ -58,15 +83,24 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
         {category.categoryType === "dinero" && category.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${category.montoMaximo.toLocaleString("es-ES")}</div>}
       </td>
       <td className="py-3 px-4">
+        <span className={`px-2 py-1 rounded text-xs font-medium ${category.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : category.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : category.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[category.categoryType] || category.categoryType}</span>
+      </td>
+      <td className="py-3 px-4">
         <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
       <td className="py-3 px-4">{category.requiresAction ? <div className="flex justify-start items-center gap-1">{category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
       <td className="py-3 px-4">
         <span className={`px-2 py-1 rounded text-xs font-medium ${(category.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(category.requiresSignature ?? true) ? "Sí" : "No"}</span>
       </td>
-      {/*       <td className="py-3 px-4">
-        <div className="text-sm text-gray-600 dark:text-gray-400">{category.informacion || "-"}</div>
-      </td> */}
+      <td className="py-3 px-4">
+        {matchingTemplate ? (
+          <button onClick={() => onPreviewPdf(matchingTemplate.content, matchingTemplate.code)} disabled={isReorderMode} className={`text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title={`Previsualizar: ${matchingTemplate.name}`}>
+            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+          </button>
+        ) : (
+          <span className="text-gray-400 dark:text-gray-600 text-xs">-</span>
+        )}
+      </td>
       <td className="py-3 px-4">
         <button onClick={() => onToggleActive(category)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${category.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
           <FontAwesomeIcon icon={category.isActive ? faToggleOn : faToggleOff} className="mr-1" />
@@ -171,6 +205,27 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
       setPdfTemplates(data.filter((t: PdfTemplate) => t.isActive));
     } catch (error) {
       console.error("Error loading PDF templates:", error);
+    }
+  };
+
+  const handlePreviewPdf = async (content: string, code: string) => {
+    try {
+      Swal.fire({
+        title: "Generando previsualización...",
+        text: "Por favor espere",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      const blob = await pdfPreviewAPI.preview(content, code);
+      Swal.close();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "No se pudo generar la previsualización", "error");
     }
   };
 
@@ -510,11 +565,12 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
                       <tr className="border-b border-gray-200 dark:border-gray-700">
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">Ordenar</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo de Dato</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opciones</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                        {/* <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Información</th> */}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Plantilla PDF</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                       </tr>
@@ -522,7 +578,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
                     <SortableContext items={(isReorderMode ? tempCategories : categories).map((c) => c._id)} strategy={verticalListSortingStrategy}>
                       <tbody>
                         {(isReorderMode ? tempCategories : categories).map((category, index) => (
-                          <SortableRow key={category._id} category={category} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} />
+                          <SortableRow key={category._id} category={category} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} pdfTemplates={pdfTemplates} onPreviewPdf={handlePreviewPdf} />
                         ))}
                       </tbody>
                     </SortableContext>

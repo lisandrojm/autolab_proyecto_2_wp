@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload, faTrash, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload, faTrash, faCheck, faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
 import { OrderCategory, CategoryType } from "../api/orderCategories";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -157,9 +157,6 @@ export const ManageOrdersPage: React.FC = () => {
   const handlePreApprove = async () => {
     if (!selectedOrder) return;
 
-    const result = await sweetAlert.confirm("¿Pre-Aprobar este pedido?", "El pedido pasará a estado Preaprobado. El usuario no será notificado.", "Sí, Pre-Aprobar", "Cancelar");
-    if (!result.isConfirmed) return;
-
     try {
       setUpdatingStatus(true);
       const updatedOrder = await hrManagementAPI.orders.preApprove(selectedOrder._id);
@@ -188,14 +185,14 @@ export const ManageOrdersPage: React.FC = () => {
     const requiresSignature = selectedOrder.requiresSignature || (selectedOrder.signatureStatus && selectedOrder.signatureStatus !== "not_required");
     const confirmMessage = requiresSignature ? "Al aprobarse este pedido, se enviará una notificación para informar que el documento ya se encuentra cargado en la plataforma y listo para su firma." : "El pedido será aprobado y el usuario será notificado.";
 
-    const result = await sweetAlert.confirm("¿Aprobar este pedido?", confirmMessage, "Sí, Aprobar", "Cancelar");
+    const result = await sweetAlert.confirm("¿Aprobar esta solicitud?", confirmMessage, "Sí, Aprobar", "Cancelar");
     if (!result.isConfirmed) return;
 
     try {
       setUpdatingStatus(true);
       await hrManagementAPI.orders.approve(selectedOrder._id);
 
-      const successMessage = selectedOrder.requiresSignature ? "Se ha notificado al usuario que debe firmar el documento por email" : "El pedido ha sido aprobado correctamente";
+      const successMessage = selectedOrder.requiresSignature ? "Se le ha enviado un email con el documento para firmar." : "El pedido ha sido aprobado correctamente";
 
       const updatedOrders = await loadOrders();
       const refreshedOrder = updatedOrders.find((o) => o._id === selectedOrder._id);
@@ -677,6 +674,7 @@ export const ManageOrdersPage: React.FC = () => {
     }
 
     if (selectedOrder.status === "approved") {
+      const orderRequiresSignature = selectedOrder.requiresSignature || (selectedOrder.signatureStatus && selectedOrder.signatureStatus !== "not_required");
       return (
         <>
           <button onClick={handleReject} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
@@ -684,7 +682,7 @@ export const ManageOrdersPage: React.FC = () => {
             Rechazar
           </button>
 
-          {selectedOrder.requiresSignature && (
+          {orderRequiresSignature && (
             <>
               {selectedOrder.signatureStatus === "pending" && (
                 <button onClick={handleSendSignature} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-gray-500 text-white font-semibold text-sm hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
@@ -693,7 +691,7 @@ export const ManageOrdersPage: React.FC = () => {
                 </button>
               )}
               {selectedOrder.signatureStatus === "sent" && (
-                <button onClick={handleMarkSigned} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-green-500 text-white font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onClick={handleMarkSigned} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   <FontAwesomeIcon icon={faCheckCircle} />
                   Firmado
                 </button>
@@ -701,7 +699,7 @@ export const ManageOrdersPage: React.FC = () => {
             </>
           )}
 
-          {(!selectedOrder.requiresSignature || selectedOrder.signatureStatus === "signed") && (
+          {(!orderRequiresSignature || selectedOrder.signatureStatus === "signed") && (
             <button onClick={handleDeliver} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               <FontAwesomeIcon icon={faTruck} />
               Marcar como Entregado
@@ -1098,6 +1096,26 @@ export const ManageOrdersPage: React.FC = () => {
                           <FontAwesomeIcon icon={faDownload} />
                         </a>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Signature Notification Section */}
+            {(() => {
+              const orderRequiresSignature = selectedOrder.requiresSignature || (selectedOrder.signatureStatus && selectedOrder.signatureStatus !== "not_required");
+              if (selectedOrder.status !== "approved" || !orderRequiresSignature || selectedOrder.signatureStatus !== "sent" || selectedOrder.signatureNotifiedAt) {
+                return null;
+              }
+              return (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded">
+                  <div className="flex items-start gap-3">
+                    <FontAwesomeIcon icon={faFileSignature} className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-blue-800 dark:text-blue-400 mb-1">Documento Enviado para Firma</h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">Se le ha enviado un email con el documento para firmar.</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 opacity-90">Una vez que haya completado la firma, podrá avisar que firmó. Si no llega el aviso igualmente revisar en la plataforma de Firmas si esta fue realizada.</p>
                     </div>
                   </div>
                 </div>
