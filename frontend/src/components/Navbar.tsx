@@ -163,17 +163,17 @@ export const MobileNavbar: React.FC = () => {
 
       // Admin GENERAL Items
       if (hasPermission("admin_clients:view")) base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
+      if (hasPermission("admin_activity_logs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
       if (hasPermission("admin_orders:view")) base.push({ path: "/hr/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("admin_vacations:view")) base.push({ path: "/hr/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("admin_activity_logs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
       if (hasPermission("admin_calendar:view")) base.push({ path: "/hr/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
       if (hasPermission("admin_employee_profiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
       if (hasPermission("admin_hr_documents:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
       // CONFIGURACION Items
+      if (hasPermission("config_activity_logs:view")) base.push({ path: "/hr/activity-logs/config", icon: faFileText, label: "Novedades", scope: "global" });
       if (hasPermission("config_orders:view")) base.push({ path: "/hr/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("config_vacations:view")) base.push({ path: "/hr/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("config_activity_logs:view")) base.push({ path: "/hr/activity-logs/config", icon: faFileText, label: "Novedades", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/hr/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
     }
 
@@ -260,9 +260,7 @@ export const MobileNavbar: React.FC = () => {
 
     const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/dashboard", "/tenants", "/clients", "/platform/usage", "/platform/settings"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/hr/order-categories", "/hr/pdfs", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
-
-    const otherAdminItems = adminItems.filter((item) => !userAdminItems.includes(item) && !generalAdminItems.includes(item) && !configItems.includes(item) && !managementItems.includes(item));
+    const configItems = adminItems.filter((item) => ["/hr/order-types", "/hr/pdfs", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {
@@ -378,14 +376,6 @@ export const MobileNavbar: React.FC = () => {
             </button>
 
             {openAdminSection === "config" && <nav className="space-y-1 pb-2">{configItems.map((item) => renderMenuItem(item))}</nav>}
-          </div>
-        )}
-
-        {/* OTROS ITEMS (si existen) */}
-        {otherAdminItems.length > 0 && (
-          <div className="px-2 mb-2">
-            <div className="text-gray-500 dark:text-gray-400 text-xs uppercase mb-1">Otros</div>
-            <nav className="space-y-1 pb-2">{otherAdminItems.map((item) => renderMenuItem(item))}</nav>
           </div>
         )}
       </div>
