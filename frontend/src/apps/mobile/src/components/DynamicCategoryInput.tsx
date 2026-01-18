@@ -14,18 +14,18 @@ interface DynamicCategoryInputProps {
   actionCompleted: boolean;
   onActionCompletedChange: (value: boolean) => void;
   futureActionPlazoDias?: number;
-  onFutureActionPlazoDiasChange?: (value: number) => void;
+  onOrderFutureActionPlazoDiasChange?: (value: number) => void;
   futureActionFechaLimite?: string;
-  onFutureActionFechaLimiteChange?: (value: string) => void;
+  onOrderFutureActionFechaLimiteChange?: (value: string) => void;
   futureActionDocumento?: string;
-  onFutureActionDocumentoChange?: (value: string) => void;
+  onOrderFutureActionDocumentoChange?: (value: string) => void;
   document?: File | null;
   onDocumentChange?: (file: File | null) => void;
   documentPreview?: string | null;
   onDocumentPreviewChange?: (preview: string | null) => void;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onFutureActionPlazoDiasChange, futureActionFechaLimite, onFutureActionFechaLimiteChange, futureActionDocumento, onFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange }) => {
   if (!category) return null;
 
   const cameraInputRef = useRef<HTMLInputElement>(null);

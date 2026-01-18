@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { Order } from "../models/Order.js";
 import { OrderType } from "../models/OrderType.js";
-import { FutureAction } from "../models/FutureAction.js";
+import { OrderFutureAction } from "../models/OrderFutureAction.js";
 import { Notification } from "../models/Notification.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
@@ -329,9 +329,9 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     if (data.categoryId) {
       const category = await OrderType.findById(data.categoryId);
 
-      const shouldCreateFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
+      const shouldCreateOrderFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
 
-      if (shouldCreateFutureAction) {
+      if (shouldCreateOrderFutureAction) {
         // Default to "sinVencimiento" if futureActionType is not set
         const actionType = category.futureActionType || "sinVencimiento";
 
@@ -397,7 +397,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
             break;
         }
 
-        const futureAction = await FutureAction.create(futureActionData);
+        const futureAction = await OrderFutureAction.create(futureActionData);
         order.futureActionId = futureAction._id;
         await order.save();
       }
@@ -418,8 +418,6 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     }
 
     const orderDisplayName = `${categoryName}${subcategoryText}`;
-
-    
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
@@ -496,8 +494,6 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
       const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
       const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
       const orderDisplayName = `${categoryName}${subcategoryText}`;
-
-      
     }
 
     const populatedOrder = await Order.findById(order._id)
@@ -544,15 +540,13 @@ router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRe
     await order.save();
 
     if (order.futureActionId) {
-      const futureAction = await FutureAction.findById(order.futureActionId);
+      const futureAction = await OrderFutureAction.findById(order.futureActionId);
       if (futureAction && futureAction.tipoAccionFutura === "documento") {
         futureAction.documentoUrl = documentoUrl;
         futureAction.estadoAccion = "documento_presentado";
         await futureAction.save();
       }
     }
-
-    
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
@@ -611,8 +605,6 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
     const categoryName = categoryInfo?.name || order.category || "pedido";
     const subcategoriesText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoriesText}`;
-
-    
 
     const supervisorRoles = await Role.find({
       tenantId: req.tenantObjectId,

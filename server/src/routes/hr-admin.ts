@@ -8,7 +8,7 @@ import { OrderType } from "../models/OrderType.js";
 import { Pdf } from "../models/Pdf.js";
 import { Tenant } from "../models/Tenant.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
-import { HRDocument } from "../models/Document.js";
+import { OrderDocument } from "../models/OrderDocument.js";
 import { Notification } from "../models/Notification.js";
 import { authenticateToken, AuthenticatedRequest, requireRole } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -950,7 +950,7 @@ router.post("/documents", async (req: AuthenticatedRequest & TenantRequest, res)
     const data = createDocumentSchema.parse(req.body);
     const uploaderId = req.user!.userId;
 
-    const document = new HRDocument({
+    const document = new OrderDocument({
       tenantId: req.tenantObjectId,
       userId: new Types.ObjectId(data.userId),
       type: data.type,
@@ -989,7 +989,7 @@ router.post("/documents", async (req: AuthenticatedRequest & TenantRequest, res)
 
 router.delete("/documents/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const document = await HRDocument.findOneAndDelete({
+    const document = await OrderDocument.findOneAndDelete({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });

@@ -1,4 +1,4 @@
-export interface FutureAction {
+export interface OrderFutureAction {
   _id: string;
   tenantId: string;
   orderId: string;
@@ -36,7 +36,7 @@ export function setUrgentDaysThreshold(days: number) {
   DOCUMENT_BADGE_CONFIG.urgentDaysThreshold = days;
 }
 
-export function getDocumentBadgeStyle(futureAction: FutureAction | null): DocumentBadgeStyle | null {
+export function getDocumentBadgeStyle(futureAction: OrderFutureAction | null): DocumentBadgeStyle | null {
   if (!futureAction || futureAction.tipoAccionFutura !== "documento") {
     return null;
   }

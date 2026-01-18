@@ -44,9 +44,9 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const [dynamicValue, setDynamicValue] = useState<any>("");
   const [amount, setAmount] = useState<number>(0);
   const [actionCompleted, setActionCompleted] = useState(false);
-  const [futureActionPlazoDias, setFutureActionPlazoDias] = useState<number | undefined>(undefined);
-  const [futureActionFechaLimite, setFutureActionFechaLimite] = useState("");
-  const [futureActionDocumento, setFutureActionDocumento] = useState("");
+  const [futureActionPlazoDias, setOrderFutureActionPlazoDias] = useState<number | undefined>(undefined);
+  const [futureActionFechaLimite, setOrderFutureActionFechaLimite] = useState("");
+  const [futureActionDocumento, setOrderFutureActionDocumento] = useState("");
 
   const selectedCategory = categories.find((c) => c._id === selectedCategoryId) || null;
 
@@ -85,13 +85,13 @@ export default function Orders({ onNavigate }: OrdersProps) {
     setActionCompleted(false);
 
     if (selectedCategory?.deadlineMode === "plazoDias" && selectedCategory.plazoDias) {
-      setFutureActionPlazoDias(selectedCategory.plazoDias);
+      setOrderFutureActionPlazoDias(selectedCategory.plazoDias);
     } else {
-      setFutureActionPlazoDias(undefined);
+      setOrderFutureActionPlazoDias(undefined);
     }
 
-    setFutureActionFechaLimite("");
-    setFutureActionDocumento("");
+    setOrderFutureActionFechaLimite("");
+    setOrderFutureActionDocumento("");
 
     if (selectedCategory && selectedCategory.categoryType !== "objeto" && selectedCategory.categoryType !== "otros") {
       setPhoto(null);
@@ -181,8 +181,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
       setDynamicValue("");
       setAmount(0);
       setActionCompleted(false);
-      setFutureActionFechaLimite("");
-      setFutureActionDocumento("");
+      setOrderFutureActionFechaLimite("");
+      setOrderFutureActionDocumento("");
       setPhoto(null);
       setPhotoPreview(null);
       setDocument(null);
@@ -271,7 +271,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     )}
 
                     <div className="pt-3">
-                      <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onFutureActionPlazoDiasChange={setFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onFutureActionFechaLimiteChange={setFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onFutureActionDocumentoChange={setFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} />
+                      <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} />
                     </div>
                   </div>
 

@@ -8,7 +8,7 @@ import { Pdf } from "../../api/pdfs";
 
 import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderTypes";
 import { InfoModal } from "../ui/InfoModal";
-import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/futureAction";
+import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/orderFutureAction";
 
 interface OrderCategoryFormProps {
   formData: {
@@ -111,7 +111,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     otra: "Acción requerida por el usuario",
   };
 
-  const handleFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
+  const handleOrderFutureActionTypeChange = (newType: TipoAccionFutura | "") => {
     setFormData((prev: any) => ({
       ...prev,
       futureActionType: newType,
@@ -133,7 +133,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
     });
   };
 
-  const renderFutureActionConditionalFields = () => {
+  const renderOrderFutureActionConditionalFields = () => {
     if (!formData.futureActionType) return null;
 
     switch (formData.futureActionType) {
@@ -460,7 +460,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
                     <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
                   </button>
                 </div>
-                <select required value={formData.futureActionType} onChange={(e) => handleFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2">
+                <select required value={formData.futureActionType} onChange={(e) => handleOrderFutureActionTypeChange(e.target.value as TipoAccionFutura)} className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2">
                   <option value="">Selecciona un tipo...</option>
                   <option value="documento">{tipoAccionFuturaLabels.documento}</option>
                   <option value="otra">{tipoAccionFuturaLabels.otra}</option>
@@ -468,7 +468,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               </div>
 
               {/* Campos condicionales excepto sinVencimiento */}
-              {renderFutureActionConditionalFields()}
+              {renderOrderFutureActionConditionalFields()}
 
               {/* Confirmación del Usuario */}
               {formData.futureActionType && (

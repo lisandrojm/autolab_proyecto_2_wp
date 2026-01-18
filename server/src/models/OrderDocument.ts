@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export interface IDocument extends Document {
+export interface IOrderDocument extends Document {
   tenantId: Types.ObjectId;
   userId: Types.ObjectId;
   type: "contract" | "payroll" | "certificate" | "other";
@@ -15,7 +15,7 @@ export interface IDocument extends Document {
   updatedAt: Date;
 }
 
-const documentSchema = new Schema<IDocument>(
+const documentSchema = new Schema<IOrderDocument>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -40,4 +40,4 @@ documentSchema.index({ tenantId: 1, userId: 1, type: 1 });
 documentSchema.index({ tenantId: 1, userId: 1, isVisibleToEmployee: 1 });
 documentSchema.index({ tenantId: 1, uploadedAt: -1 });
 
-export const HRDocument = mongoose.model<IDocument>("HRDocument", documentSchema);
+export const OrderDocument = mongoose.model<IOrderDocument>("OrderDocument", documentSchema);

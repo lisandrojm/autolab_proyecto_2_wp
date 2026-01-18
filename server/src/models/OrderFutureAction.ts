@@ -10,7 +10,7 @@ export type ResponsableAccion = "usuario" | "cliente" | "area_interna";
 
 export type QuienDefineVencimiento = "cliente" | "sistema" | "area_interna";
 
-export interface IFutureAction extends Document {
+export interface IOrderFutureAction extends Document {
   tenantId: Types.ObjectId;
   orderId: Types.ObjectId;
   requiereAccionFutura: boolean;
@@ -31,7 +31,7 @@ export interface IFutureAction extends Document {
   updatedAt: Date;
 }
 
-const futureActionSchema = new Schema<IFutureAction>(
+const futureActionSchema = new Schema<IOrderFutureAction>(
   {
     tenantId: {
       type: Schema.Types.ObjectId,
@@ -131,4 +131,4 @@ futureActionSchema.pre("save", function (next) {
   next();
 });
 
-export const FutureAction = mongoose.model<IFutureAction>("FutureAction", futureActionSchema);
+export const OrderFutureAction = mongoose.model<IOrderFutureAction>("OrderFutureAction", futureActionSchema);

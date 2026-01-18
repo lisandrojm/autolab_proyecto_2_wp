@@ -8,7 +8,7 @@ export type ResponsableAccion = "usuario" | "cliente" | "area_interna";
 
 export type QuienDefineVencimiento = "cliente" | "sistema" | "area_interna";
 
-export interface FutureAction {
+export interface OrderFutureAction {
   _id: string;
   tenantId: string;
   orderId: string;
@@ -29,7 +29,7 @@ export interface FutureAction {
   updatedAt: string;
 }
 
-export interface CreateFutureActionPayload {
+export interface CreateOrderFutureActionPayload {
   orderId: string;
   tipoAccionFutura: TipoAccionFutura;
   descripcionAccion: string;
@@ -41,7 +41,7 @@ export interface CreateFutureActionPayload {
   metadata?: Record<string, any>;
 }
 
-export interface UpdateFutureActionPayload {
+export interface UpdateOrderFutureActionPayload {
   estadoAccion?: EstadoAccion;
   fechaCumplimiento?: string;
   fechaLimite?: string;
@@ -49,7 +49,7 @@ export interface UpdateFutureActionPayload {
   metadata?: Record<string, any>;
 }
 
-export interface FutureActionStats {
+export interface OrderFutureActionStats {
   pendiente: number;
   cumplida: number;
   vencida: number;
@@ -57,7 +57,7 @@ export interface FutureActionStats {
   overdue: number;
 }
 
-export interface FutureActionQueryParams {
+export interface OrderFutureActionQueryParams {
   estadoAccion?: EstadoAccion;
   tipoAccionFutura?: TipoAccionFutura;
   responsableAccion?: ResponsableAccion;
@@ -68,8 +68,8 @@ export interface FutureActionQueryParams {
   limit?: number;
 }
 
-export interface FutureActionResponse {
-  data: FutureAction[];
+export interface OrderFutureActionResponse {
+  data: OrderFutureAction[];
   pagination: {
     page: number;
     limit: number;

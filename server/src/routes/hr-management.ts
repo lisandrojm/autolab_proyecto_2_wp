@@ -8,7 +8,7 @@ import { dirname } from "path";
 import { z } from "zod";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { UserProfile } from "../models/UserProfile.js";
-import { HRDocument } from "../models/Document.js";
+import { OrderDocument } from "../models/OrderDocument.js";
 import { Order } from "../models/Order.js";
 import { OrderType } from "../models/OrderType.js";
 import { Vacation } from "../models/Vacation.js";
@@ -188,7 +188,7 @@ router.get("/hrdocuments", async (req: AuthenticatedRequest & TenantRequest, res
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [documents, total] = await Promise.all([HRDocument.find(filter).sort({ uploadedAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("uploadedBy", "firstName lastName email"), HRDocument.countDocuments(filter)]);
+    const [documents, total] = await Promise.all([OrderDocument.find(filter).sort({ uploadedAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("uploadedBy", "firstName lastName email"), OrderDocument.countDocuments(filter)]);
 
     res.json({
       documents,
@@ -207,7 +207,7 @@ router.get("/hrdocuments", async (req: AuthenticatedRequest & TenantRequest, res
 
 router.get("/hrdocuments/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const count = await HRDocument.countDocuments({ tenantId: req.tenantObjectId });
+    const count = await OrderDocument.countDocuments({ tenantId: req.tenantObjectId });
     res.json({ count });
   } catch (error) {
     console.error("Count HR documents error:", error);

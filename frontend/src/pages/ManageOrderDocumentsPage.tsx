@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faSearch } from "@fortawesome/free-solid-svg-icons";
-import { hrManagementAPI, HRDocument } from "../api/hrManagement";
+import { hrManagementAPI, OrderDocument } from "../api/hrManagement";
 import { PageLayout } from "../components/ui/PageLayout";
 
-export const ManageHRDocumentsPage: React.FC = () => {
-  const [documents, setDocuments] = useState<HRDocument[]>([]);
+export const ManageOrderDocumentsPage: React.FC = () => {
+  const [documents, setDocuments] = useState<OrderDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);

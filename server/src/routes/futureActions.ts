@@ -1,14 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { FutureAction } from "../models/FutureAction.js";
+import { OrderFutureAction } from "../models/OrderFutureAction.js";
 import { Order } from "../models/Order.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
-import {
-  createFutureActionSchema,
-  updateFutureActionSchema,
-  queryFutureActionsSchema,
-} from "../validators/futureActionSchemas.js";
+import { createFutureActionSchema, updateFutureActionSchema, queryFutureActionsSchema } from "../validators/futureActionSchemas.js";
 
 const router = Router();
 
@@ -48,14 +44,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
 
-    const [futureActions, total] = await Promise.all([
-      FutureAction.find(filter)
-        .sort({ fechaCreacionAccion: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("orderId", "title description category status"),
-      FutureAction.countDocuments(filter),
-    ]);
+    const [futureActions, total] = await Promise.all([OrderFutureAction.find(filter).sort({ fechaCreacionAccion: -1 }).skip(skip).limit(limit).populate("orderId", "title description category status"), OrderFutureAction.countDocuments(filter)]);
 
     res.json({
       data: futureActions,
@@ -80,7 +69,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
 
-    const stats = await FutureAction.aggregate([
+    const stats = await OrderFutureAction.aggregate([
       { $match: { tenantId: req.tenantObjectId } },
       {
         $group: {
@@ -95,10 +84,10 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
         acc[item._id] = item.count;
         return acc;
       },
-      { pendiente: 0, cumplida: 0, vencida: 0, en_revision: 0 }
+      { pendiente: 0, cumplida: 0, vencida: 0, en_revision: 0 },
     );
 
-    const overdueCount = await FutureAction.countDocuments({
+    const overdueCount = await OrderFutureAction.countDocuments({
       tenantId: req.tenantObjectId,
       estadoAccion: "pendiente",
       fechaLimite: { $lt: new Date() },
@@ -116,7 +105,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
 router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const futureAction = await FutureAction.findOne({
+    const futureAction = await OrderFutureAction.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     }).populate("orderId", "title description category status userId");
@@ -153,7 +142,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       return;
     }
 
-    const futureAction = new FutureAction({
+    const futureAction = new OrderFutureAction({
       tenantId: req.tenantObjectId,
       orderId: data.orderId,
       requiereAccionFutura: true,
@@ -175,8 +164,6 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     order.futureActionId = futureAction._id as any;
     await order.save();
 
-    
-
     res.status(201).json(futureAction);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -193,7 +180,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const data = updateFutureActionSchema.parse(req.body);
 
-    const futureAction = await FutureAction.findOne({
+    const futureAction = await OrderFutureAction.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -210,8 +197,6 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     Object.assign(futureAction, data);
     await futureAction.save();
 
-    
-
     res.json(futureAction);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -227,7 +212,7 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
   try {
     const userId = req.user!.userId;
 
-    const futureAction = await FutureAction.findOne({
+    const futureAction = await OrderFutureAction.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -237,14 +222,9 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
       return;
     }
 
-    await Order.updateOne(
-      { _id: futureAction.orderId },
-      { $unset: { futureActionId: 1 }, $set: { requiereAccionFutura: false } }
-    );
+    await Order.updateOne({ _id: futureAction.orderId }, { $unset: { futureActionId: 1 }, $set: { requiereAccionFutura: false } });
 
-    await FutureAction.findByIdAndDelete(futureAction._id);
-
-    
+    await OrderFutureAction.findByIdAndDelete(futureAction._id);
 
     res.json({ message: "Future action deleted successfully" });
   } catch (error) {
@@ -257,7 +237,7 @@ router.post("/check-expired", async (req: AuthenticatedRequest & TenantRequest, 
   try {
     const now = new Date();
 
-    const result = await FutureAction.updateMany(
+    const result = await OrderFutureAction.updateMany(
       {
         tenantId: req.tenantObjectId,
         estadoAccion: "pendiente",
@@ -265,7 +245,7 @@ router.post("/check-expired", async (req: AuthenticatedRequest & TenantRequest, 
       },
       {
         $set: { estadoAccion: "vencida" },
-      }
+      },
     );
 
     res.json({

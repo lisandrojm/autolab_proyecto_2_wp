@@ -1,50 +1,36 @@
 import axios from "./axiosConfig";
-import type {
-  FutureAction,
-  CreateFutureActionPayload,
-  UpdateFutureActionPayload,
-  FutureActionStats,
-  FutureActionQueryParams,
-  FutureActionResponse,
-} from "../types/futureAction";
+import type { OrderFutureAction, CreateOrderFutureActionPayload, UpdateOrderFutureActionPayload, OrderFutureActionStats, OrderFutureActionQueryParams, OrderFutureActionResponse } from "../types/orderFutureAction";
 
-export const getFutureActions = async (
-  params?: FutureActionQueryParams
-): Promise<FutureActionResponse> => {
+export const getOrderFutureActions = async (params?: OrderFutureActionQueryParams): Promise<OrderFutureActionResponse> => {
   const response = await axios.get("/future-actions", { params });
   return response.data;
 };
 
-export const getFutureActionById = async (id: string): Promise<FutureAction> => {
+export const getOrderFutureActionById = async (id: string): Promise<OrderFutureAction> => {
   const response = await axios.get(`/future-actions/${id}`);
   return response.data;
 };
 
-export const getFutureActionStats = async (): Promise<FutureActionStats> => {
+export const getOrderFutureActionStats = async (): Promise<OrderFutureActionStats> => {
   const response = await axios.get("/future-actions/stats");
   return response.data;
 };
 
-export const createFutureAction = async (
-  data: CreateFutureActionPayload
-): Promise<FutureAction> => {
+export const createOrderFutureAction = async (data: CreateOrderFutureActionPayload): Promise<OrderFutureAction> => {
   const response = await axios.post("/future-actions", data);
   return response.data;
 };
 
-export const updateFutureAction = async (
-  id: string,
-  data: UpdateFutureActionPayload
-): Promise<FutureAction> => {
+export const updateOrderFutureAction = async (id: string, data: UpdateOrderFutureActionPayload): Promise<OrderFutureAction> => {
   const response = await axios.put(`/future-actions/${id}`, data);
   return response.data;
 };
 
-export const deleteFutureAction = async (id: string): Promise<void> => {
+export const deleteOrderFutureAction = async (id: string): Promise<void> => {
   await axios.delete(`/future-actions/${id}`);
 };
 
-export const checkExpiredFutureActions = async (): Promise<{
+export const checkExpiredOrderFutureActions = async (): Promise<{
   message: string;
   updated: number;
 }> => {

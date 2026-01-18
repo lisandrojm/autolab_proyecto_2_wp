@@ -1,6 +1,6 @@
 import { StatusType } from "../config/statusConfig";
 
-export interface FutureAction {
+export interface OrderFutureAction {
   _id: string;
   tipoAccionFutura: "documento" | "condicion" | "accion" | "presentacionDocumento" | "vencimientoSistema" | "vencimientoInterno" | "sinVencimiento";
   estadoAccion: "pendiente" | "cumplida" | "vencida" | "pendiente_documento" | "documento_presentado" | "en_revision";
@@ -41,7 +41,7 @@ export function mapOrderStatusToStatusTypeForMobile(status: string): StatusType 
   return statusMap[status] || "pendiente";
 }
 
-export function mapDocumentStateToStatusType(futureAction: FutureAction | null | undefined): StatusType | null {
+export function mapDocumentStateToStatusType(futureAction: OrderFutureAction | null | undefined): StatusType | null {
   if (!futureAction || futureAction.tipoAccionFutura !== "documento") {
     return null;
   }

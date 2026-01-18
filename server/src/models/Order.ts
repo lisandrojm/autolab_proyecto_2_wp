@@ -61,7 +61,7 @@ const orderSchema = new Schema<IOrder>(
     actionCompleted: { type: Boolean },
     dynamicValue: { type: Schema.Types.Mixed },
     requiereAccionFutura: { type: Boolean, default: false },
-    futureActionId: { type: Schema.Types.ObjectId, ref: "FutureAction" },
+    futureActionId: { type: Schema.Types.ObjectId, ref: "OrderFutureAction" },
     signatureStatus: { type: String, enum: ["not_required", "pending", "sent", "signed"], default: "not_required" },
     signatureSentAt: { type: Date },
     signatureNotifiedAt: { type: Date },

@@ -7,12 +7,12 @@ import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { UserProfile } from "../models/UserProfile.js";
 import { Pdf } from "../models/Pdf.js";
-import { HRDocument } from "../models/Document.js";
+import { OrderDocument } from "../models/OrderDocument.js";
 import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { OrderType } from "../models/OrderType.js";
-import { FutureAction } from "../models/FutureAction.js";
+import { OrderFutureAction } from "../models/OrderFutureAction.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
 import { Level } from "../models/Level.js";
@@ -1045,12 +1045,12 @@ export async function seedOnStart() {
     //   console.log("✔️ Vacation requests already present");
     // }
 
-    console.log("ℹ️ Order, OrderCategory and FutureAction seeding skipped by user request.");
+    console.log("ℹ️ Order, OrderCategory and OrderFutureAction seeding skipped by user request.");
 
-    // ---- Document (HRDocument) ----
-    const documentsCount = await HRDocument.countDocuments({ tenantId });
+    // ---- Document (OrderDocument) ----
+    const documentsCount = await OrderDocument.countDocuments({ tenantId });
     if (documentsCount === 0) {
-      await HRDocument.create([
+      await OrderDocument.create([
         {
           tenantId,
           userId: collab._id,
@@ -1082,7 +1082,7 @@ export async function seedOnStart() {
           isVisibleToEmployee: true,
         },
       ]);
-      console.log("✅ Document (HRDocument) seeded");
+      console.log("✅ Document (OrderDocument) seeded");
     } else {
       console.log("✔️ Document already present");
     }

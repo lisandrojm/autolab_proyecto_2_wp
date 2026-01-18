@@ -43,7 +43,7 @@ import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPa
 import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
 
 import { ManageUserProfilesPage } from "./pages/ManageUserProfilesPage";
-import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
+import { ManageOrderDocumentsPage } from "./pages/ManageOrderDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageOrderTypesPage } from "./pages/ManageOrderTypesPage";
 import { ManageVacationsPage } from "./pages/ManageVacationsPage";
@@ -439,7 +439,7 @@ function App() {
                 path="/hr/documents"
                 element={
                   <ProtectedRoute>
-                    <ManageHRDocumentsPage />
+                    <ManageOrderDocumentsPage />
                   </ProtectedRoute>
                 }
               />

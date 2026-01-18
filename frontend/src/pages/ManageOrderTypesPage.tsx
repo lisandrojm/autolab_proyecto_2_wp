@@ -12,7 +12,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { OrderCategoryForm } from "../components/orders/OrderCategoryForm";
-import { tipoAccionFuturaLabels } from "../types/futureAction";
+import { tipoAccionFuturaLabels } from "../types/orderFutureAction";
 import { pdfPreviewAPI } from "../api/pdfPreview";
 import Swal from "sweetalert2";
 

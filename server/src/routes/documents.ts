@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { HRDocument } from "../models/Document.js";
+import { OrderDocument } from "../models/OrderDocument.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import path from "path";
@@ -17,7 +17,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
 
-    const documents = await HRDocument.find({
+    const documents = await OrderDocument.find({
       tenantId: req.tenantObjectId,
       userId,
       isVisibleToEmployee: true,
@@ -26,7 +26,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       .populate({
         path: "uploadedBy",
         select: "firstName lastName email",
-        options: { strictPopulate: false }
+        options: { strictPopulate: false },
       })
       .lean();
 
@@ -52,12 +52,12 @@ router.get("/filter", async (req: AuthenticatedRequest & TenantRequest, res) => 
       filter.type = type;
     }
 
-    const documents = await HRDocument.find(filter)
+    const documents = await OrderDocument.find(filter)
       .sort({ uploadedAt: -1 })
       .populate({
         path: "uploadedBy",
         select: "firstName lastName email",
-        options: { strictPopulate: false }
+        options: { strictPopulate: false },
       })
       .lean();
 
@@ -72,7 +72,7 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.user!.userId;
 
-    const document = await HRDocument.findOne({
+    const document = await OrderDocument.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
       userId,
@@ -95,7 +95,7 @@ router.get("/download/:id", async (req: AuthenticatedRequest & TenantRequest, re
   try {
     const userId = req.user!.userId;
 
-    const document = await HRDocument.findOne({
+    const document = await OrderDocument.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
       userId,

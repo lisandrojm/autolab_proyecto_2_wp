@@ -65,7 +65,7 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-export interface HRDocument {
+export interface OrderDocument {
   _id: string;
   tenantId: string;
   userId: any;
@@ -201,7 +201,7 @@ export const hrManagementAPI = {
 
   hrDocuments: {
     list: async (params?: { page?: number; limit?: number; type?: string; userId?: string }) => {
-      const { data } = await axios.get<{ documents: HRDocument[]; pagination: Pagination }>("/hr-management/hrdocuments", { params });
+      const { data } = await axios.get<{ documents: OrderDocument[]; pagination: Pagination }>("/hr-management/hrdocuments", { params });
       return data;
     },
     count: async () => {

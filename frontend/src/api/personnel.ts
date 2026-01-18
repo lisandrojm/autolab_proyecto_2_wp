@@ -133,7 +133,7 @@ export interface EmployeeData {
   };
 }
 
-export interface FutureAction {
+export interface OrderFutureAction {
   _id: string;
   tenantId: string;
   orderId: string;
@@ -199,7 +199,7 @@ export interface OrderData {
   };
   approvedAt?: string;
   deliveredAt?: string;
-  futureActionId?: FutureAction | string;
+  futureActionId?: OrderFutureAction | string;
   signatureStatus?: "not_required" | "pending" | "sent" | "signed";
   signatureSentAt?: string;
   signatureNotifiedAt?: string;
