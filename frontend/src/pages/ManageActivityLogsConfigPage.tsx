@@ -113,7 +113,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
     sweetAlert.success("Configuración Guardada", `Se ha actualizado la frecuencia para ${selectedProject?.name || "el proyecto"}`);
   };
 
-  const handleBack = () => navigate("/hr/activity-logs");
+  const handleBack = () => navigate("/activity-logs");
 
   // ABM Handlers
   const openCreateModal = () => {

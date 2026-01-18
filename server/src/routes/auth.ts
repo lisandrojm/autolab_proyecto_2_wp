@@ -143,7 +143,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
     const permissions = [...new Set(rolePermissions)];
 
     // Calcular redirectTo basado en permisos
-    let redirectTo = "/hr/orders"; // Ruta por defecto
+    let redirectTo = "/orders"; // Ruta por defecto
     if (primaryRoleName.toLowerCase() === "superadmin") {
       redirectTo = "/tenants";
     } else if (permissions.includes("mobile_collaborator:view") || permissions.includes("mobile_coordinator:view")) {

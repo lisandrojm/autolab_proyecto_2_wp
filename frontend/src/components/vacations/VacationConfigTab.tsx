@@ -278,7 +278,7 @@ export const VacationConfigTab: React.FC = () => {
                               <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                                 No existe una plantilla activa para vacaciones (Código esperado: <strong>vacaciones</strong>). El PDF no se generará correctamente.
                               </p>
-                              <Link to="/hr/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
+                              <Link to="/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
                                 Crear plantilla en Configuración &rarr;
                               </Link>
                             </div>

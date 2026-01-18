@@ -163,18 +163,18 @@ export const MobileNavbar: React.FC = () => {
 
       // Admin GENERAL Items
       if (hasPermission("admin_clients:view")) base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
-      if (hasPermission("admin_activity_logs:view")) base.push({ path: "/hr/activity-logs", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
-      if (hasPermission("admin_orders:view")) base.push({ path: "/hr/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
-      if (hasPermission("admin_vacations:view")) base.push({ path: "/hr/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("admin_calendar:view")) base.push({ path: "/hr/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
-      if (hasPermission("admin_employee_profiles:view")) base.push({ path: "/hr/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
-      if (hasPermission("admin_hr_documents:view")) base.push({ path: "/hr/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
+      if (hasPermission("admin_activity_logs:view")) base.push({ path: "/activity-logs", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
+      if (hasPermission("admin_orders:view")) base.push({ path: "/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
+      if (hasPermission("admin_vacations:view")) base.push({ path: "/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
+      if (hasPermission("admin_calendar:view")) base.push({ path: "/calendar-events", disabled: true, icon: faCalendar, label: "Calendario", scope: "global" });
+      if (hasPermission("admin_employee_profiles:view")) base.push({ path: "/employee-profiles", disabled: true, icon: faUsers, label: "Perfiles de Empleados", scope: "global" });
+      if (hasPermission("admin_hr_documents:view")) base.push({ path: "/documents", disabled: true, icon: faFileText, label: "Documentos RRHH", scope: "global" });
 
       // CONFIGURACION Items
-      if (hasPermission("config_activity_logs:view")) base.push({ path: "/hr/activity-logs/config", icon: faFileText, label: "Novedades", scope: "global" });
-      if (hasPermission("config_orders:view")) base.push({ path: "/hr/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
-      if (hasPermission("config_vacations:view")) base.push({ path: "/hr/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
-      if (hasPermission("config_pdf_templates:view")) base.push({ path: "/hr/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
+      if (hasPermission("config_activity_logs:view")) base.push({ path: "/activity-logs/config", icon: faFileText, label: "Novedades", scope: "global" });
+      if (hasPermission("config_orders:view")) base.push({ path: "/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
+      if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
+      if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
     }
 
     return base;
@@ -258,9 +258,9 @@ export const MobileNavbar: React.FC = () => {
 
     const managementItems = adminItems.filter((item) => ["/projects"].includes(item.path));
 
-    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/dashboard", "/tenants", "/clients", "/platform/usage", "/platform/settings"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/hr/orders", "/hr/vacations", "/hr/activity-logs", "/hr/calendar-events", "/hr/employee-profiles", "/hr/documents"].includes(item.path));
+    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/dashboard", "/tenants", "/clients", "/platform/usage", "/platform/settings"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/orders", "/vacations", "/activity-logs", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
-    const configItems = adminItems.filter((item) => ["/hr/order-types", "/hr/pdfs", "/hr/vacations-rules", "/hr/activity-logs/config"].includes(item.path));
+    const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/activity-logs/config"].includes(item.path));
 
     const renderMenuItem = (item: any) => {
       if (item.external) {

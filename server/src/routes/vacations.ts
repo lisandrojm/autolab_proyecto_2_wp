@@ -600,7 +600,7 @@ router.put("/:id/approve", async (req: any, res) => {
         type: "vacation",
         title: "Documento enviado para firma",
         message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada. Revisá tu casilla de email para firmar el documento.`,
-        linkUrl: `/hr/vacations`,
+        linkUrl: `/vacations`,
       });
     } else {
       await Notification.create({
@@ -609,7 +609,7 @@ router.put("/:id/approve", async (req: any, res) => {
         type: "vacation",
         title: "Solicitud de vacaciones aprobada",
         message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada.`,
-        linkUrl: `/hr/vacations`,
+        linkUrl: `/vacations`,
       });
     }
 
@@ -647,7 +647,7 @@ router.put("/:id/reject", async (req: any, res) => {
       type: "vacation",
       title: "Solicitud de Vacaciones Rechazada",
       message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido rechazada.`,
-      linkUrl: `/hr/vacations`,
+      linkUrl: `/vacations`,
     });
 
     res.json(vacation);
@@ -714,7 +714,7 @@ router.put("/:id/deliver", async (req: any, res) => {
       type: "vacation",
       title: "Vacaciones Confirmadas",
       message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido confirmada y entregada.`,
-      linkUrl: `/hr/vacations`,
+      linkUrl: `/vacations`,
     });
 
     res.json(vacation);
@@ -752,7 +752,7 @@ router.put("/:id/send-signature", async (req: any, res) => {
       type: "vacation",
       title: "Documento enviado para firma",
       message: `El documento de tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido enviado para firma.`,
-      linkUrl: `/hr/vacations`,
+      linkUrl: `/vacations`,
     });
 
     res.json(vacation);
@@ -793,7 +793,7 @@ router.put("/:id/notify-signature", async (req: any, res) => {
         type: "vacation",
         title: "Firma completada por usuario",
         message: `El usuario ha notificado que completó la firma de la solicitud N°: ${vacation.vacationNumber}. Por favor verificá.`,
-        linkUrl: `/hr/vacations?id=${vacation._id}`,
+        linkUrl: `/vacations?id=${vacation._id}`,
       });
     }
 
@@ -836,7 +836,7 @@ router.put("/:id/mark-signed", async (req: any, res) => {
         type: "vacation",
         title: "Documento firmado por colaborador",
         message: `El colaborador ha confirmado la firma de la solicitud N°: ${vacation.vacationNumber}. Verifique el documento.`,
-        linkUrl: `/hr/vacations/${vacation._id}`,
+        linkUrl: `/vacations/${vacation._id}`,
       });
     }
 

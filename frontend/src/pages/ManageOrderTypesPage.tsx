@@ -496,7 +496,7 @@ export const ManageOrderTypesPage: React.FC = () => {
       title="Pedidos | Configuración"
       subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
       faIcon={{ icon: faGear }}
-      onBack={() => navigate("/hr/orders")}
+      onBack={() => navigate("/orders")}
       shouldShowInfo={hasHelp(HELP_KEY)}
       infoModal={{
         isOpen: showMainInfo,
@@ -522,7 +522,7 @@ export const ManageOrderTypesPage: React.FC = () => {
               <button onClick={openCreateModal} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faPlus} />
               </button>
-              <button onClick={() => navigate("/hr/pdfs")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+              <button onClick={() => navigate("/pdfs")} className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
                 <FontAwesomeIcon icon={faFilePdf} />
                 <span className="hidden lg:block">Plantillas PDF</span>
               </button>

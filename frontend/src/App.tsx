@@ -404,7 +404,7 @@ function App() {
 
               {/* HR Management Routes */}
               <Route
-                path="/hr/activity-logs"
+                path="/activity-logs"
                 element={
                   <ProtectedRoute>
                     <ManageActivityLogsPage />
@@ -412,7 +412,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/activity-logs/config"
+                path="/activity-logs/config"
                 element={
                   <ProtectedRoute>
                     <ManageActivityLogsConfigPage />
@@ -420,7 +420,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/activity-logs/create"
+                path="/activity-logs/create"
                 element={
                   <ProtectedRoute>
                     <CreateActivityReportPage />
@@ -428,7 +428,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/employee-profiles"
+                path="/employee-profiles"
                 element={
                   <ProtectedRoute>
                     <ManageUserProfilesPage />
@@ -436,7 +436,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/documents"
+                path="/documents"
                 element={
                   <ProtectedRoute>
                     <ManageOrderDocumentsPage />
@@ -444,7 +444,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/orders"
+                path="/orders"
                 element={
                   <ProtectedRoute>
                     <ManageOrdersPage />
@@ -452,7 +452,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/order-types"
+                path="/order-types"
                 element={
                   <ProtectedRoute>
                     <ManageOrderTypesPage />
@@ -460,7 +460,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/vacations"
+                path="/vacations"
                 element={
                   <ProtectedRoute>
                     <ManageVacationsPage />
@@ -468,7 +468,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/vacations/calendar"
+                path="/vacations/calendar"
                 element={
                   <ProtectedRoute>
                     <ManageVacationsCalendarPage />
@@ -476,7 +476,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/vacations-rules"
+                path="/vacations-rules"
                 element={
                   <ProtectedRoute>
                     <ManageVacationsRulesPage />
@@ -484,7 +484,7 @@ function App() {
                 }
               />
               <Route
-                path="/hr/pdfs"
+                path="/pdfs"
                 element={
                   <ProtectedRoute>
                     <PdfTemplatesPage />
