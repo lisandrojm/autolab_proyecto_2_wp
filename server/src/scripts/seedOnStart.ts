@@ -6,7 +6,6 @@ import { User } from "../models/User.js";
 import { Tenant } from "../models/Tenant.js";
 import { Role } from "../models/Role.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
-import { VacationRequest } from "../models/VacationRequest.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
@@ -19,7 +18,7 @@ import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
 import { Level } from "../models/Level.js";
-import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
+import { GlobalVacationConfig } from "../models/VacationGlobalConfig.js";
 import { Vacation } from "../models/Vacation.js";
 
 import { VacationCounter } from "../models/VacationCounter.js";
@@ -1000,61 +999,9 @@ export async function seedOnStart() {
       console.log(`✅ Ensure Profile: ${p.email} (${p.department})`);
     }
 
-    // ---- VacationRequest ----
-    const vacationRequestsLegacyCount = await VacationRequest.countDocuments({ tenantId });
-    if (vacationRequestsLegacyCount === 0) {
-      await VacationRequest.create([
-        // Colaborador: aprobada pasado
-        {
-          tenantId,
-          userId: collab._id,
-          startDate: new Date(2024, 0, 15),
-          endDate: new Date(2024, 0, 19),
-          daysRequested: 5,
-          status: "approved",
-          reason: "Family vacation",
-          managerComment: "Approved - Enjoy your time off!",
-          approvedBy: adminId,
-          approvedAt: new Date(2024, 0, 5),
-        },
-        // Colaborador: pendiente futuro
-        {
-          tenantId,
-          userId: collab._id,
-          startDate: new Date(2025, 11, 20),
-          endDate: new Date(2025, 11, 30),
-          daysRequested: 11,
-          status: "pending",
-          reason: "Summer vacation",
-        },
-        // Colaborador: rechazada
-        {
-          tenantId,
-          userId: collab._id,
-          startDate: new Date(2024, 2, 1),
-          endDate: new Date(2024, 2, 3),
-          daysRequested: 3,
-          status: "rejected",
-          reason: "Personal matters",
-          managerComment: "Cannot approve due to project deadline",
-        },
-        // Coordinadora: aprobada
-        {
-          tenantId,
-          userId: coord._id,
-          startDate: new Date(2024, 3, 15),
-          endDate: new Date(2024, 3, 19),
-          daysRequested: 5,
-          status: "approved",
-          reason: "Conference attendance",
-          approvedBy: adminId,
-          approvedAt: new Date(2024, 3, 1),
-        },
-      ]);
-      console.log("✅ VacationRequest seeded");
-    } else {
-      console.log("✔️ VacationRequest already present");
-    }
+    // ---- Vacation (Seeding disabled) ----
+    // const VacationsLegacyCount = await Vacation.countDocuments({ tenantId });
+    // if (VacationsLegacyCount === 0) { ... }
 
     // ---- Global Vacation Config ----
     let globalConfig = await GlobalVacationConfig.findOne({ tenantId });
@@ -1083,71 +1030,64 @@ export async function seedOnStart() {
       console.log("✔️ Global vacation config already present");
     }
 
-    // ---- Vacation Requests (vacations collection) ----
-    const vacationRequestsCount = await Vacation.countDocuments({ tenantId });
-    if (vacationRequestsCount === 0) {
-      const rulesSnapshot = {
-        diasBeneficio: globalConfig.diasBeneficio,
-        maxDiasGozados: globalConfig.maxDiasGozados,
-        permiteArrastre: globalConfig.permiteArrastre,
-        maxDiasArrastre: globalConfig.maxDiasArrastre,
-        vencimientoArrastreDias: globalConfig.vencimientoArrastreDias,
-
-        maxDiasHabiles: globalConfig.maxDiasHabiles,
-        anticipacionMinimaDias: globalConfig.anticipacionMinimaDias,
-        permiteFraccionadas: globalConfig.permiteFraccionadas,
-        requiereFirma: globalConfig.requiereFirma,
-        pdfTemplateId: globalConfig.pdfTemplateId,
-      };
-
-      /* Requests disabled for clean start */
-      console.log("✅ Vacation requests (4 requests with diverse signature states) seeded");
-    } else {
-      console.log("✔️ Vacation requests already present");
-    }
+    // ---- Vacation Requests (Seeding disabled) ----
+    // const VacationsCount = await Vacation.countDocuments({ tenantId });
+    // if (VacationsCount === 0) {
+    //   /* Logic removed */
+    // } else {
+    //   console.log("✔️ Vacation requests already present");
+    // }
 
     // ---- RequestTypes ----
     const requestTypesCount = await RequestType.countDocuments({ tenantId });
     if (requestTypesCount === 0) {
-      await RequestType.create([
-        {
-          tenantId,
-          name: "Vacaciones",
-          key: "vacation",
-          description: "Solicitud de vacaciones anuales",
-          isSystem: true,
-          isDeletable: false,
-          isActive: true,
-        },
-        {
-          tenantId,
-          name: "Licencias especiales",
-          key: "special_leave",
-          description: "Licencias por motivos especiales (matrimonio, fallecimiento, etc.)",
-          isSystem: true,
-          isDeletable: true,
-          isActive: true,
-        },
-        {
-          tenantId,
-          name: "Compensatorios",
-          key: "compensatory",
-          description: "Días compensatorios por horas extras",
-          isSystem: true,
-          isDeletable: true,
-          isActive: true,
-        },
-        {
-          tenantId,
-          name: "Pedidos extraordinarios",
-          key: "extra",
-          description: "Otros tipos de pedidos no categorizado",
-          isSystem: true,
-          isDeletable: true,
-          isActive: true,
-        },
-      ]);
-      console.log("✅ RequestType seeded");
+      try {
+        await RequestType.create([
+          {
+            tenantId,
+            name: "Vacaciones",
+            key: "vacation",
+            description: "Solicitud de vacaciones anuales",
+            isSystem: true,
+            isDeletable: false,
+            isActive: true,
+          },
+          {
+            tenantId,
+            name: "Licencias especiales",
+            key: "special_leave",
+            description: "Licencias por motivos especiales (matrimonio, fallecimiento, etc.)",
+            isSystem: true,
+            isDeletable: true,
+            isActive: true,
+          },
+          {
+            tenantId,
+            name: "Compensatorios",
+            key: "compensatory",
+            description: "Días compensatorios por horas extras",
+            isSystem: true,
+            isDeletable: true,
+            isActive: true,
+          },
+          {
+            tenantId,
+            name: "Pedidos extraordinarios",
+            key: "extra",
+            description: "Otros tipos de pedidos no categorizado",
+            isSystem: true,
+            isDeletable: true,
+            isActive: true,
+          },
+        ]);
+        console.log("✅ RequestType seeded");
+      } catch (error: any) {
+        if (error.code === 11000) {
+          console.log("✔️ RequestType already seeded (race condition handled)");
+        } else {
+          console.error("Error seeding RequestType:", error);
+        }
+      }
     } else {
       console.log("✔️ RequestType already present");
     }
@@ -1239,14 +1179,14 @@ export async function seedOnStart() {
           userId: collab._id,
           action: "vacation_request_created",
           description: "Created vacation request for 11 days",
-          entityType: "VacationRequest",
+          entityType: "Vacation",
         },
         {
           tenantId,
           userId: collab._id,
           action: "vacation_request_approved",
           description: "Vacation request approved by manager",
-          entityType: "VacationRequest",
+          entityType: "Vacation",
         },
         {
           tenantId,

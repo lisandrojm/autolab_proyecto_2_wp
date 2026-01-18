@@ -19,7 +19,7 @@ const attendanceRecordSchema = new Schema(
     scheduleOutTime: { type: String }, // Expected Exit
     notes: { type: String },
   },
-  { _id: true }
+  { _id: true },
 );
 
 export interface IActivityReport extends Document {
@@ -48,7 +48,7 @@ const activityReportSchema = new Schema<IActivityReport>(
     attendance: [attendanceRecordSchema],
     submittedAt: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "activity_reports" },
 );
 
 // Indexes

@@ -32,8 +32,8 @@ const PdfGlobalConfigSchema = new Schema<IPdfGlobalConfig>(
   },
   {
     timestamps: true,
-    collection: "pdfGlobalConfig", // Explicit collection name
-  }
+    collection: "pdf_global_config", // Explicit collection name
+  },
 );
 
 PdfGlobalConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {

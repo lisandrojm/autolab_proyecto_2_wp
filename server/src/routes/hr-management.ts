@@ -12,7 +12,7 @@ import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
-import { VacationRequest } from "../models/VacationRequest.js";
+import { Vacation } from "../models/Vacation.js";
 import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
@@ -502,7 +502,7 @@ router.delete("/orders/:id", async (req: AuthenticatedRequest & TenantRequest, r
   }
 });
 
-router.get("/vacationrequests", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/Vacations", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { page = 1, limit = 50, status, userId, year } = req.query;
 
@@ -519,7 +519,7 @@ router.get("/vacationrequests", async (req: AuthenticatedRequest & TenantRequest
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [vacations, total] = await Promise.all([VacationRequest.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email"), VacationRequest.countDocuments(filter)]);
+    const [vacations, total] = await Promise.all([Vacation.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email"), Vacation.countDocuments(filter)]);
 
     res.json({
       vacations,
@@ -536,9 +536,9 @@ router.get("/vacationrequests", async (req: AuthenticatedRequest & TenantRequest
   }
 });
 
-router.get("/vacationrequests/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/Vacations/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const count = await VacationRequest.countDocuments({ tenantId: req.tenantObjectId });
+    const count = await Vacation.countDocuments({ tenantId: req.tenantObjectId });
     res.json({ count });
   } catch (error) {
     console.error("Count vacation requests error:", error);
@@ -1025,3 +1025,4 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
 });
 
 export { router as hrManagementRoutes };
+

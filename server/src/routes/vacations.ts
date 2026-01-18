@@ -1,7 +1,7 @@
 import express from "express";
 import { Types } from "mongoose";
 import { Vacation } from "../models/Vacation.js";
-import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
+import { GlobalVacationConfig } from "../models/VacationGlobalConfig.js";
 import { Notification } from "../models/Notification.js";
 import { ActivityLog } from "../models/ActivityLog.js";
 import { Tenant } from "../models/Tenant.js";
@@ -418,9 +418,11 @@ router.post("/", async (req, res) => {
       daysRequested,
       diasDeVacacionesAnuales: totalAnnualDays,
       balance: newBalance,
+      reason: reason || "Solicitud de vacaciones",
       comments: reason, // Map 'reason' from body to 'comments' in db
       requiresSignature: globalConfig.requiereFirma,
       rules: {
+        diasAnuales: totalAnnualDays,
         diasBeneficio: globalConfig.diasBeneficio,
         maxDiasGozados: globalConfig.maxDiasGozados,
         permiteArrastre: globalConfig.permiteArrastre,

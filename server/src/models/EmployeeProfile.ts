@@ -54,7 +54,7 @@ const employeeProfileSchema = new Schema<IEmployeeProfile>(
     },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "employee_profiles" },
 );
 
 employeeProfileSchema.index({ tenantId: 1, userId: 1 }, { unique: true });

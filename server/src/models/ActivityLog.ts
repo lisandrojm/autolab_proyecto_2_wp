@@ -22,7 +22,7 @@ const activityLogSchema = new Schema<IActivityLog>(
     entityId: { type: Schema.Types.ObjectId },
     metadata: { type: Schema.Types.Mixed },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "activity_logs" },
 );
 
 activityLogSchema.index({ tenantId: 1, userId: 1, createdAt: -1 });

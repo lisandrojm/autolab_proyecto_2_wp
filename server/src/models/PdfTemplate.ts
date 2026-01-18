@@ -45,7 +45,7 @@ const pdfTemplateSchema = new Schema<IPdfTemplate>(
       index: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "pdf_templates" },
 );
 
 pdfTemplateSchema.index({ tenantId: 1, code: 1 }, { unique: true });

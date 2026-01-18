@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { User } from "../models/User.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
-import { VacationRequest } from "../models/VacationRequest.js";
+import { Vacation } from "../models/Vacation.js";
 import { Order } from "../models/Order.js";
 import { OrderCategory } from "../models/OrderCategory.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
@@ -185,7 +185,7 @@ router.put("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) 
         userId: user._id,
       },
       { $set: data },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
 
     res.json(profile);
@@ -207,7 +207,7 @@ router.delete("/users/:id", async (req: AuthenticatedRequest & TenantRequest, re
         userId: req.params.id,
       },
       { $set: { isActive: false } },
-      { new: true }
+      { new: true },
     );
 
     if (!profile) {
@@ -224,7 +224,7 @@ router.delete("/users/:id", async (req: AuthenticatedRequest & TenantRequest, re
 
 router.get("/vacations/pending", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const vacations = await VacationRequest.find({
+    const vacations = await Vacation.find({
       tenantId: req.tenantObjectId,
       status: "pending",
     })
@@ -243,7 +243,7 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
     const { managerComment } = approveVacationSchema.parse(req.body);
     const approverId = req.user!.userId;
 
-    const vacation = await VacationRequest.findOne({
+    const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -295,7 +295,7 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       userId: vacation.userId,
       action: "vacation_request_approved",
       description: `Solicitud de vacaciones aprobada`,
-      entityType: "VacationRequest",
+      entityType: "Vacation",
       entityId: vacation._id,
     });
 
@@ -314,7 +314,7 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
   try {
     const { managerComment } = rejectVacationSchema.parse(req.body);
 
-    const vacation = await VacationRequest.findOne({
+    const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -349,7 +349,7 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       userId: vacation.userId,
       action: "vacation_request_rejected",
       description: `Solicitud de vacaciones rechazada`,
-      entityType: "VacationRequest",
+      entityType: "Vacation",
       entityId: vacation._id,
     });
 
@@ -368,7 +368,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
   try {
     const preApproverId = req.user!.userId;
 
-    const vacation = await VacationRequest.findOne({
+    const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     }).populate("userId");
@@ -434,7 +434,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
       userId: vacation.userId,
       action: "vacation_request_pre_approved",
       description: `Solicitud de vacaciones preaprobada`,
-      entityType: "VacationRequest",
+      entityType: "Vacation",
       entityId: vacation._id,
     });
 
@@ -447,7 +447,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
 
 router.put("/vacations/:id/deliver", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const vacation = await VacationRequest.findOne({
+    const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -485,7 +485,7 @@ router.put("/vacations/:id/deliver", async (req: AuthenticatedRequest & TenantRe
 
 router.put("/vacations/:id/send-signature", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const vacation = await VacationRequest.findOne({
+    const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -519,7 +519,7 @@ router.put("/vacations/:id/send-signature", async (req: AuthenticatedRequest & T
       linkUrl: `/vacations/${vacation._id}`,
     });
 
-    const finalVacation = await VacationRequest.findById(vacation._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email");
+    const finalVacation = await Vacation.findById(vacation._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email");
 
     res.json(finalVacation);
   } catch (error) {
@@ -532,7 +532,7 @@ router.put("/vacations/:id/mark-signed", async (req: AuthenticatedRequest & Tena
   try {
     const signedById = req.user!.userId;
 
-    const vacation = await VacationRequest.findOne({
+    const vacation = await Vacation.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -567,7 +567,7 @@ router.put("/vacations/:id/mark-signed", async (req: AuthenticatedRequest & Tena
       linkUrl: `/vacations/${vacation._id}`,
     });
 
-    const finalVacation = await VacationRequest.findById(vacation._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email").populate("signedBy", "firstName lastName email");
+    const finalVacation = await Vacation.findById(vacation._id).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email").populate("signedBy", "firstName lastName email");
 
     res.json(finalVacation);
   } catch (error) {
@@ -979,7 +979,7 @@ router.put("/calendar/events/:id", async (req: AuthenticatedRequest & TenantRequ
           updatedBy: new Types.ObjectId(updaterId),
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!event) {
@@ -1079,3 +1079,4 @@ router.delete("/documents/:id", async (req: AuthenticatedRequest & TenantRequest
 });
 
 export { router as hrAdminRoutes };
+

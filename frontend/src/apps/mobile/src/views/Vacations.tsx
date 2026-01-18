@@ -120,6 +120,26 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
   const hasNoDays = calculatedAvailable <= 0;
 
+  const suggestedEndDate = useMemo(() => {
+    if (!startDate || calculatedAvailable <= 0) return null;
+    const s = parseISO(startDate);
+    const limit = Math.max(0, calculatedAvailable);
+
+    if (applyConsecutiveDaysRule) {
+      return addDays(s, limit - 1);
+    } else {
+      let needed = limit;
+      let current = s;
+      while (needed > 0) {
+        if (!isSaturday(current) && !isSunday(current)) {
+          needed--;
+        }
+        if (needed > 0) current = addDays(current, 1);
+      }
+      return current;
+    }
+  }, [startDate, calculatedAvailable, applyConsecutiveDaysRule]);
+
   const handleCalendarConfirm = async () => {
     if (startDate && endDate) {
       const start = parseISO(startDate);
@@ -644,16 +664,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
               <form onSubmit={handleSubmit} className="p-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de inicio</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fechas</label>
                   <div onClick={() => !hasNoDays && setCalendarOpen("start")} className={`relative ${hasNoDays ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-                    <input type="text" value={startDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
-                    <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha de fin</label>
-                  <div onClick={() => !hasNoDays && setCalendarOpen("end")} className={`relative ${hasNoDays ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-                    <input type="text" value={endDate} readOnly disabled={hasNoDays} placeholder="Seleccionar fecha" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
+                    <input type="text" value={startDate && endDate ? `Desde ${format(getLocalDate(startDate), "dd/MM/yyyy")} Hasta ${format(getLocalDate(endDate), "dd/MM/yyyy")}` : startDate ? `Desde ${format(getLocalDate(startDate), "dd/MM/yyyy")} ...` : ""} readOnly disabled={hasNoDays} placeholder="Seleccionar rango de fechas" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
                     <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
@@ -819,6 +832,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   const isDisabled = isPast || isExceedingLimit;
 
                   const isSelected = isStart || isEnd || isInRange;
+                  const isSuggested = !isSelected && !isDisabled && !isOccupiedDay && suggestedEndDate && calendarOpen === "end" && startDate && isAfter(day, parseISO(startDate)) && (isBefore(day, suggestedEndDate) || isSameDay(day, suggestedEndDate));
 
                   // Base classes
                   let classes = "h-10 w-full flex items-center justify-center text-sm font-medium transition-all relative";
@@ -867,6 +881,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     else classes += " border-l-transparent rounded-l-none";
                     if (isEnd || isSun) classes += " border-r-blue-800 dark:border-r-blue-400 rounded-r-lg";
                     else classes += " border-r-transparent rounded-r-none";
+                  } else if (isSuggested) {
+                    classes += " bg-sky-100 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300 rounded";
+                    classes += " border border-sky-200 dark:border-sky-800 border-dashed";
                   } else {
                     classes += " border-transparent border-2";
                     classes += !isCurrentMonth ? " text-slate-300 dark:text-slate-700" : " text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded";
@@ -881,39 +898,85 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-4 bg-slate-50 dark:bg-slate-800/50">
-              <div className="pb-2">
-                <div className="flex flex-col gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded bg-red-100 border border-red-200 dark:bg-red-900/30 dark:border-red-800"></span>
-                    <span>Solicitudes entregadas / aprobadas</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded bg-amber-100 border border-amber-200 dark:bg-amber-900/30 dark:border-amber-800"></span>
-                    <span>Solicitudes pendientes</span>
-                    <button type="button" onClick={() => setShowPendingInfoModal(true)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                      <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3" />
-                    </button>
-                  </div>
+            {/* FOOTER DEL CALENDARIO */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+              {returnDate && (
+                <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded-lg text-xs text-green-700 dark:text-green-300 flex items-center justify-center gap-2">
+                  <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
+                  <span>
+                    Vuelve a trabajar el <strong className="capitalize">{format(returnDate, "EEEE d 'de' MMMM", { locale: es })}</strong>
+                  </span>
+                </div>
+              )}
+              {/* Estadísticas de Selección */}
+              <div className="flex justify-between items-center mb-3 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                <div className="flex flex-col items-center w-full">
+                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Disponibles</span>
+                  <span className="text-lg font-bold text-blue-500">{Math.max(0, calculatedAvailable)}</span>
+                </div>
+                <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+                <div className="flex flex-col items-center w-full">
+                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Seleccionados {applyConsecutiveDaysRule ? "(Corr.)" : "(Háb.)"}</span>
+                  <span
+                    className={`text-lg font-bold ${(() => {
+                      // Calcular días seleccionados
+                      if (!startDate || !endDate) return "text-slate-400";
+                      // Reutilizamos lógica simple aquí o la extraemos
+                      const s = parseISO(startDate);
+                      const e = parseISO(endDate);
+                      if (isBefore(e, s)) return "text-slate-400";
+
+                      let count = 0;
+                      if (applyConsecutiveDaysRule) {
+                        count = differenceInDays(e, s) + 1;
+                      } else {
+                        // Días hábiles
+                        const days = eachDayOfInterval({ start: s, end: e });
+                        count = days.filter((d) => !isSaturday(d) && !isSunday(d)).length;
+                      }
+
+                      return count > calculatedAvailable ? "text-red-500" : "text-slate-900 dark:text-white";
+                    })()}`}
+                  >
+                    {(() => {
+                      if (!startDate || !endDate) return 0;
+                      const s = parseISO(startDate);
+                      const e = parseISO(endDate);
+                      if (isBefore(e, s)) return 0;
+                      if (applyConsecutiveDaysRule) {
+                        return differenceInDays(e, s) + 1;
+                      } else {
+                        const days = eachDayOfInterval({ start: s, end: e });
+                        return days.filter((d) => !isSaturday(d) && !isSunday(d)).length;
+                      }
+                    })()}
+                  </span>
                 </div>
               </div>
 
-              {returnDate && (
-                <div className="px-1 mb-2">
-                  <div className="px-3 py-2 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded text-xs text-green-700 dark:text-green-300 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
-                    <span>
-                      Vuelve a trabajar el <strong className="capitalize">{format(returnDate!, "EEEE d 'de' MMMM", { locale: es })}</strong>
-                    </span>
-                  </div>
+              <div className="flex flex-col gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full border border-green-500/50 bg-green-500/20"></div>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Solicitudes entregadas / aprobadas</span>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full border border-yellow-500/50 bg-yellow-500/20"></div>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Solicitudes pendientes</span>
+                  <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3 text-slate-400 ml-auto" onClick={() => setShowPendingInfoModal(true)} />
+                </div>
+              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => setCalendarOpen(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    handleClearSelection();
+                    setCalendarOpen(null);
+                  }}
+                  className="flex-1 rounded-lg h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                >
                   Cancelar
                 </button>
-                <button onClick={handleCalendarConfirm} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">
+                <button onClick={handleCalendarConfirm} className="flex-1 rounded-lg h-10 bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
                   Confirmar
                 </button>
               </div>

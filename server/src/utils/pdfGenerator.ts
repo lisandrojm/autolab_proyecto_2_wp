@@ -5,7 +5,7 @@ import { IOrder } from "../models/Order.js";
 import { IOrderCategory } from "../models/OrderCategory.js";
 import { IPdfTemplate } from "../models/PdfTemplate.js";
 import { IUser } from "../models/User.js";
-import { IVacationRequest } from "../models/VacationRequest.js";
+import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
 import { PdfGlobalConfig } from "../models/PdfGlobalConfig.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables } from "./pdfVariableReplacer.js";
@@ -240,7 +240,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderCategory, 
   }
 }
 
-export async function generateVacationPDF(vacation: IVacationRequest, template: IPdfTemplate, user: IUser, tenantId: string, tenantName: string, vacationNumber: string): Promise<GeneratePdfResult> {
+export async function generateVacationPDF(vacation: IVacation, template: IPdfTemplate, user: IUser, tenantId: string, tenantName: string, vacationNumber: string): Promise<GeneratePdfResult> {
   try {
     console.log("[PDF GENERATOR] Starting vacation PDF generation...");
     console.log("[PDF GENERATOR] Vacation ID:", vacation._id);
@@ -316,3 +316,4 @@ export async function generateVacationPDF(vacation: IVacationRequest, template: 
     };
   }
 }
+

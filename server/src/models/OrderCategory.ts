@@ -67,13 +67,13 @@ const orderCategorySchema = new Schema<IOrderCategory>(
       type: String,
       enum: ["fecha", "dinero", "objeto", "otros"],
       default: "otros",
-      index: true
+      index: true,
     },
     dateMode: {
       type: String,
       enum: ["single", "range"],
       default: "single",
-      trim: true
+      trim: true,
     },
     config: { type: Schema.Types.Mixed, default: {} },
     montoMaximo: { type: Number, min: 0 },
@@ -84,13 +84,13 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     futureActionType: {
       type: String,
       enum: ["documento", "otra"],
-      trim: true
+      trim: true,
     },
     deadlineMode: {
       type: String,
       enum: ["none", "plazoDias", "fechaEspecifica"],
       default: "none",
-      trim: true
+      trim: true,
     },
     plazoDias: { type: Number, min: 1, max: 365 },
     fechaLimite: { type: Date },
@@ -99,7 +99,7 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     requiresUserConfirmation: { type: Boolean, default: false },
     pdfTemplateId: { type: Schema.Types.ObjectId, ref: "PdfTemplate" },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "order_categories" },
 );
 
 orderCategorySchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });

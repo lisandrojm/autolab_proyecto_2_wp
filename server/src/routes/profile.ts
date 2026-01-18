@@ -2,7 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
-import { VacationRequest } from "../models/VacationRequest.js";
+import { Vacation } from "../models/Vacation.js";
 import { User } from "../models/User.js";
 import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
@@ -301,7 +301,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     if (!effectiveVacationConfig && user && user.projectIds && user.projectIds.length > 0) {
       try {
         const Project = (await import("../models/Project.js")).Project;
-        const GlobalVacationConfig = (await import("../models/GlobalVacationConfig.js")).GlobalVacationConfig;
+        const GlobalVacationConfig = (await import("../models/VacationGlobalConfig.js")).GlobalVacationConfig;
 
         const globalConfig = await GlobalVacationConfig.findOne({ tenantId });
         const defaultGlobal = {
@@ -431,3 +431,5 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 });
 
 export { router as profileRoutes };
+
+

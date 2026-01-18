@@ -33,7 +33,7 @@ const calendarEventSchema = new Schema<ICalendarEvent>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "calendar_events" },
 );
 
 calendarEventSchema.index({ tenantId: 1, userId: 1, start: 1 });

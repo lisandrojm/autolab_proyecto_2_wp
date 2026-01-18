@@ -18,7 +18,7 @@ const vacationOverlapSchema = new Schema<IVacationOverlap>(
     description: { type: String },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "vacation_overlaps" },
 );
 
 // Índice compuesto para asegurar unicidad de regla por área en un tenant

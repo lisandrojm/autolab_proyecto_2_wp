@@ -112,7 +112,8 @@ const futureActionSchema = new Schema<IFutureAction>(
   },
   {
     timestamps: true,
-  }
+    collection: "future_actions",
+  },
 );
 
 futureActionSchema.index({ tenantId: 1, estadoAccion: 1 });

@@ -1,5 +1,5 @@
 import express from "express";
-import { GlobalVacationConfig } from "../models/GlobalVacationConfig.js";
+import { GlobalVacationConfig } from "../models/VacationGlobalConfig.js";
 import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -77,3 +77,4 @@ router.put("/", async (req, res) => {
 });
 
 export const globalVacationConfigRoutes = router;
+

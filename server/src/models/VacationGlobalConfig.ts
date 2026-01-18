@@ -92,8 +92,8 @@ const GlobalVacationConfigSchema = new Schema<IGlobalVacationConfig>(
   },
   {
     timestamps: true,
-    collection: "globalVacationConfig",
-  }
+    collection: "vacation_global_config",
+  },
 );
 
 GlobalVacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {
