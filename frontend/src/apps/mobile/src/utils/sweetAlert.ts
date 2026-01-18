@@ -12,8 +12,8 @@ export const sweetAlert = {
       position: "top",
       timerProgressBar: true,
       customClass: {
-        popup: 'mobile-swal-popup',
-        title: 'mobile-swal-title',
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
       },
       didOpen: (toast) => {
         toast.addEventListener("mouseenter", Swal.stopTimer);
@@ -30,18 +30,27 @@ export const sweetAlert = {
       confirmButtonText,
       confirmButtonColor: "#3b82f6",
       customClass: {
-        popup: 'mobile-swal-popup',
-        title: 'mobile-swal-title',
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
       },
     });
   },
 
-  confirm: (
-    title: string,
-    text: string,
-    confirmText = "Confirmar",
-    cancelText = "Cancelar"
-  ) => {
+  alert: (title: string, text: string, icon: "warning" | "info" = "warning", confirmButtonText = "Entendido") => {
+    return Swal.fire({
+      icon,
+      title,
+      text,
+      confirmButtonText,
+      confirmButtonColor: "#3b82f6",
+      customClass: {
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
+      },
+    });
+  },
+
+  confirm: (title: string, text: string, confirmText = "Confirmar", cancelText = "Cancelar") => {
     return Swal.fire({
       title,
       text,
@@ -54,8 +63,8 @@ export const sweetAlert = {
       reverseButtons: true,
       focusCancel: true,
       customClass: {
-        popup: 'mobile-swal-popup',
-        title: 'mobile-swal-title',
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
       },
     });
   },
@@ -71,8 +80,8 @@ export const sweetAlert = {
       position: "top",
       timerProgressBar: true,
       customClass: {
-        popup: 'mobile-swal-popup',
-        title: 'mobile-swal-title',
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
       },
     });
   },
@@ -88,8 +97,8 @@ export const sweetAlert = {
       position: "top",
       timerProgressBar: true,
       customClass: {
-        popup: 'mobile-swal-popup',
-        title: 'mobile-swal-title',
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
       },
       didOpen: (toast) => {
         toast.addEventListener("mouseenter", Swal.stopTimer);
@@ -106,8 +115,8 @@ export const sweetAlert = {
       allowEscapeKey: false,
       showConfirmButton: false,
       customClass: {
-        popup: 'mobile-swal-popup',
-        title: 'mobile-swal-title',
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
       },
       didOpen: () => {
         Swal.showLoading();
@@ -131,8 +140,8 @@ export const sweetAlert = {
       cancelButtonText: "Cancelar",
       reverseButtons: true,
       customClass: {
-        popup: 'mobile-swal-popup',
-        title: 'mobile-swal-title',
+        popup: "mobile-swal-popup",
+        title: "mobile-swal-title",
       },
     });
   },

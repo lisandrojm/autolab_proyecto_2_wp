@@ -171,6 +171,17 @@ export default function Orders({ onNavigate }: OrdersProps) {
         setSubmitting(true);
       }
 
+      if (selectedCategory?.requiresAction && selectedCategory?.futureActionType === "documento" && !document) {
+        setSubmitting(false);
+        // @ts-ignore - alert method added dynamically
+        const result = await sweetAlert.alert("Atención", "Para que este pedido se realice tiene que subir el documento en cuanto cuente con el mismo.", "warning", "Entendido");
+        if (!result.isConfirmed) {
+          setSubmitting(false); // Make sure it stays false
+          return;
+        }
+        setSubmitting(true);
+      }
+
       await createOrder(orderData);
 
       await sweetAlert.success("¡Pedido creado!", "Tu pedido ha sido enviado correctamente");
