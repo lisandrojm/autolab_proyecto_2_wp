@@ -19,12 +19,12 @@ export interface UserProfile {
 
 export interface VacationRequest {
   id: string;
-  tipo: 'vacaciones' | 'compensatorio' | 'personal';
+  tipo: "vacaciones" | "compensatorio" | "personal";
   fechaInicio: string;
   fechaFin: string;
   dias: number;
   motivo: string;
-  estado: 'pendiente' | 'aprobada' | 'rechazada';
+  estado: "pendiente" | "aprobada" | "rechazada";
   fechaSolicitud: string;
   aprobadoPor?: string;
   comentarios?: string;
@@ -32,7 +32,7 @@ export interface VacationRequest {
 
 export interface Document {
   id: string;
-  tipo: 'contrato' | 'recibo' | 'certificado' | 'liquidacion' | 'otro';
+  tipo: "contrato" | "recibo" | "certificado" | "liquidacion" | "otro";
   nombre: string;
   descripcion: string;
   fechaEmision: string;
@@ -42,12 +42,12 @@ export interface Document {
 
 export interface Order {
   id: string;
-  tipo: 'equipo' | 'software' | 'utiles' | 'otro';
+  tipo: "equipo" | "software" | "utiles" | "otro";
   articulo: string;
   descripcion: string;
   cantidad: number;
-  urgencia: 'baja' | 'media' | 'alta';
-  estado: 'pendiente' | 'aprobado' | 'rechazado' | 'entregado';
+  urgencia: "baja" | "media" | "alta";
+  estado: "pendiente" | "aprobado" | "rechazado" | "entregado";
   fechaSolicitud: string;
   fechaEntregaEstimada?: string;
 }
@@ -56,7 +56,7 @@ export interface CalendarEvent {
   id: string;
   titulo: string;
   descripcion: string;
-  tipo: 'reunion' | 'capacitacion' | 'evento' | 'deadline' | 'vacaciones';
+  tipo: "reunion" | "capacitacion" | "evento" | "deadline" | "vacaciones";
   fechaInicio: string;
   fechaFin: string;
   ubicacion?: string;
@@ -66,7 +66,7 @@ export interface CalendarEvent {
 
 export interface Notification {
   id: string;
-  tipo: 'info' | 'success' | 'warning' | 'error';
+  tipo: "info" | "success" | "warning" | "error";
   titulo: string;
   mensaje: string;
   fecha: string;
@@ -77,15 +77,6 @@ export interface Notification {
   };
 }
 
-export interface Activity {
-  id: string;
-  tipo: 'solicitud' | 'aprobacion' | 'rechazo' | 'comentario' | 'documento';
-  descripcion: string;
-  fecha: string;
-  usuario: string;
-  icono: string;
-}
-
 export interface Employee {
   id: string;
   nombre: string;
@@ -94,17 +85,17 @@ export interface Employee {
   puesto: string;
   departamento: string;
   fechaIngreso: string;
-  estado: 'activo' | 'inactivo' | 'suspendido';
+  estado: "activo" | "inactivo" | "suspendido";
   avatar?: string;
 }
 
 export interface PendingApproval {
   id: string;
-  tipo: 'vacaciones' | 'compensatorio' | 'pedido' | 'documento';
+  tipo: "vacaciones" | "compensatorio" | "pedido" | "documento";
   solicitante: string;
   descripcion: string;
   fechaSolicitud: string;
-  urgencia: 'baja' | 'media' | 'alta';
+  urgencia: "baja" | "media" | "alta";
 }
 
 export interface ProfileData {
@@ -134,7 +125,7 @@ export interface VacationRequestAPI {
   endDate: string;
   days: number;
   reason?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   createdAt: string;
   approvedBy?: string;
   approvedAt?: string;
@@ -150,7 +141,7 @@ export interface VacationStats {
 export interface DocumentAPI {
   _id: string;
   employeeId: string;
-  type: 'contract' | 'payslip' | 'certificate' | 'other';
+  type: "contract" | "payslip" | "certificate" | "other";
   title: string;
   fileName: string;
   url: string;
@@ -163,7 +154,7 @@ export interface CalendarEventAPI {
   description?: string;
   startDate: string;
   endDate?: string;
-  type: 'holiday' | 'meeting' | 'deadline' | 'other';
+  type: "holiday" | "meeting" | "deadline" | "other";
   createdBy: string;
   createdAt: string;
 }
@@ -173,17 +164,8 @@ export interface NotificationAPI {
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
+  type: "info" | "warning" | "success" | "error";
   read: boolean;
-  createdAt: string;
-}
-
-export interface ActivityRecordAPI {
-  _id: string;
-  userId: string;
-  action: string;
-  description: string;
-  type: string;
   createdAt: string;
 }
 
@@ -194,18 +176,18 @@ export interface EmployeeDataAPI {
   lastName?: string;
   position?: string;
   department?: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   photoUrl?: string;
 }
 
 export interface OrderRequestAPI {
   _id: string;
   employeeId: string;
-  type: 'equipment' | 'software' | 'supplies' | 'other';
+  type: "equipment" | "software" | "supplies" | "other";
   description: string;
   quantity: number;
-  urgency: 'low' | 'medium' | 'high';
-  status: 'pending' | 'approved' | 'rejected' | 'delivered';
+  urgency: "low" | "medium" | "high";
+  status: "pending" | "approved" | "rejected" | "delivered";
   createdAt: string;
   deliveredAt?: string;
   requestedBy?: string;

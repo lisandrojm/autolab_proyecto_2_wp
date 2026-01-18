@@ -10,10 +10,9 @@ import { PdfTemplate } from "../models/PdfTemplate.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
-import { ActivityLog } from "../models/ActivityLog.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { RequestType } from "../models/RequestType.js";
-import { OrderCategory } from "../models/OrderCategory.js";
+import { OrderType } from "../models/OrderType.js";
 import { FutureAction } from "../models/FutureAction.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
@@ -1170,80 +1169,43 @@ export async function seedOnStart() {
       console.log("✔️ Notification already present");
     }
 
-    // ---- ActivityLog ----
-    const activityCount = await ActivityLog.countDocuments({ tenantId });
-    if (activityCount === 0) {
-      await ActivityLog.create([
-        {
-          tenantId,
-          userId: collab._id,
-          action: "vacation_request_created",
-          description: "Created vacation request for 11 days",
-          entityType: "Vacation",
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          action: "vacation_request_approved",
-          description: "Vacation request approved by manager",
-          entityType: "Vacation",
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          action: "order_created",
-          description: "Pedido creado: Standing Desk",
-          entityType: "Order",
-        },
-        {
-          tenantId,
-          userId: collab._id,
-          action: "order_approved",
-          description: 'Order "External Monitor" approved by manager',
-          entityType: "Order",
-        },
-      ]);
-      console.log("✅ ActivityLog seeded");
-      // ---- CalendarEvent ----
-      try {
-        const eventsCount = await CalendarEvent.countDocuments({ tenantId });
-        if (eventsCount === 0) {
-          await CalendarEvent.insertMany(
-            [
-              {
-                tenantId,
-                userId: collab._id, // evento para el colaborador
-                title: "Team Weekly Sync",
-                description: "Weekly team status meeting",
-                start: new Date(2024, 2, 18, 10, 0), // marzo (0-based)
-                end: new Date(2024, 2, 18, 11, 0),
-                isAllDay: false,
-                visibility: "team",
-                createdBy: adminUser._id,
-              },
-              {
-                tenantId,
-                userId: adminUser._id, // evento para el admin (company-wide)
-                title: "All Hands Meeting",
-                description: "Quarterly all hands meeting",
-                start: new Date(2024, 2, 25, 14, 0),
-                end: new Date(2024, 2, 25, 16, 0),
-                isAllDay: false,
-                visibility: "company",
-                createdBy: adminUser._id,
-              },
-            ],
-            { ordered: true },
-          );
-          console.log("✅ CalendarEvent seeded");
-        } else {
-          console.log(`✔️ CalendarEvent already present: ${eventsCount}`);
-        }
-      } catch (err) {
-        console.error("❌ Error seeding CalendarEvent:", err);
+    // ---- CalendarEvent ----
+    try {
+      const eventsCount = await CalendarEvent.countDocuments({ tenantId });
+      if (eventsCount === 0) {
+        await CalendarEvent.insertMany(
+          [
+            {
+              tenantId,
+              userId: collab._id,
+              title: "Team Weekly Sync",
+              description: "Weekly team status meeting",
+              start: new Date(2024, 2, 18, 10, 0),
+              end: new Date(2024, 2, 18, 11, 0),
+              isAllDay: false,
+              visibility: "team",
+              createdBy: adminUser._id,
+            },
+            {
+              tenantId,
+              userId: adminUser._id,
+              title: "All Hands Meeting",
+              description: "Quarterly all hands meeting",
+              start: new Date(2024, 2, 25, 14, 0),
+              end: new Date(2024, 2, 25, 16, 0),
+              isAllDay: false,
+              visibility: "company",
+              createdBy: adminUser._id,
+            },
+          ],
+          { ordered: true },
+        );
+        console.log("✅ CalendarEvent seeded");
+      } else {
+        console.log(`✔️ CalendarEvent already present: ${eventsCount}`);
       }
-    } else {
-      console.log("✔️ ActivityLog already present");
+    } catch (err) {
+      console.error("❌ Error seeding CalendarEvent:", err);
     }
 
     // ---- PDF TEMPLATES ----
@@ -1263,7 +1225,7 @@ export async function seedOnStart() {
 
     for (const item of repairMap) {
       // Find the category
-      const category = await OrderCategory.findOne({ tenantId, name: item.name });
+      const category = await OrderType.findOne({ tenantId, name: item.name });
 
       if (category) {
         // Find the template

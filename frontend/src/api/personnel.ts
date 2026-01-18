@@ -113,17 +113,6 @@ export interface Notification {
   createdAt: string;
 }
 
-export interface ActivityRecord {
-  _id: string;
-  tenantId: string;
-  userId: string;
-  action: string;
-  description: string;
-  entityType?: string;
-  entityId?: string;
-  createdAt: string;
-}
-
 export interface EmployeeData {
   _id: string;
   email: string;
@@ -378,17 +367,6 @@ export const personnelAPI = {
 
   deleteNotification: async (id: string): Promise<{ message: string }> => {
     const { data } = await axios.delete(`/notifications/${id}`);
-    return data;
-  },
-
-  // Activity endpoints
-  getRecentActivity: async (): Promise<ActivityRecord[]> => {
-    const { data } = await axios.get("/activity/recent");
-    return data;
-  },
-
-  getAllActivity: async (page = 1, limit = 20): Promise<{ activities: ActivityRecord[]; pagination: { page: number; limit: number; total: number; pages: number } }> => {
-    const { data } = await axios.get("/activity/all", { params: { page, limit } });
     return data;
   },
 

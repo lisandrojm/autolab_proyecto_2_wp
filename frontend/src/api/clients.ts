@@ -41,6 +41,12 @@ export interface Client {
   /** favorito del cliente */
   favorite?: boolean;
 
+  brandKit?: {
+    logos?: any[];
+    colors?: any[];
+    fonts?: any[];
+  };
+
   createdAt: string | Date;
   updatedAt: string | Date;
 }

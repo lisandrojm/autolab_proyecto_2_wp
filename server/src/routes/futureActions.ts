@@ -2,7 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { FutureAction } from "../models/FutureAction.js";
 import { Order } from "../models/Order.js";
-import { ActivityLog } from "../models/ActivityLog.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import {
@@ -176,14 +175,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     order.futureActionId = futureAction._id as any;
     await order.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "future_action_created",
-      description: `Created future action: ${futureAction.descripcionAccion}`,
-      entityType: "FutureAction",
-      entityId: futureAction._id,
-    });
+    
 
     res.status(201).json(futureAction);
   } catch (error) {
@@ -218,14 +210,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     Object.assign(futureAction, data);
     await futureAction.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "future_action_updated",
-      description: `Updated future action: ${futureAction.descripcionAccion} (new status: ${futureAction.estadoAccion})`,
-      entityType: "FutureAction",
-      entityId: futureAction._id,
-    });
+    
 
     res.json(futureAction);
   } catch (error) {
@@ -259,14 +244,7 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
 
     await FutureAction.findByIdAndDelete(futureAction._id);
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "future_action_deleted",
-      description: `Deleted future action: ${futureAction.descripcionAccion}`,
-      entityType: "FutureAction",
-      entityId: futureAction._id,
-    });
+    
 
     res.json({ message: "Future action deleted successfully" });
   } catch (error) {

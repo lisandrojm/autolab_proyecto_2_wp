@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
-import { OrderCategory } from "../models/OrderCategory.js";
+import { OrderType } from "../models/OrderType.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
-import { ActivityLog } from "../models/ActivityLog.js";
+
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import mongoose from "mongoose";
@@ -57,7 +57,7 @@ const createCategorySchema = z
     {
       message: "actionText is required when requiresUserConfirmation is true",
       path: ["actionText"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -69,7 +69,7 @@ const createCategorySchema = z
     {
       message: "plazoDias is required and must be between 1 and 365 when deadlineMode is plazoDias",
       path: ["plazoDias"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -81,7 +81,7 @@ const createCategorySchema = z
     {
       message: "fechaLimite is required when deadlineMode is fechaEspecifica",
       path: ["fechaLimite"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -93,7 +93,7 @@ const createCategorySchema = z
     {
       message: "documentoRequerido is required when futureActionType is documento",
       path: ["documentoRequerido"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -105,7 +105,7 @@ const createCategorySchema = z
     {
       message: "tituloAccion is required when futureActionType is otra",
       path: ["tituloAccion"],
-    }
+    },
   );
 
 const updateCategorySchema = z
@@ -141,7 +141,7 @@ const updateCategorySchema = z
     {
       message: "actionText is required when requiresUserConfirmation is true",
       path: ["actionText"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -153,7 +153,7 @@ const updateCategorySchema = z
     {
       message: "plazoDias is required and must be between 1 and 365 when deadlineMode is plazoDias",
       path: ["plazoDias"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -165,7 +165,7 @@ const updateCategorySchema = z
     {
       message: "fechaLimite is required when deadlineMode is fechaEspecifica",
       path: ["fechaLimite"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -177,7 +177,7 @@ const updateCategorySchema = z
     {
       message: "documentoRequerido is required when futureActionType is documento",
       path: ["documentoRequerido"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -189,7 +189,7 @@ const updateCategorySchema = z
     {
       message: "tituloAccion is required when futureActionType is otra",
       path: ["tituloAccion"],
-    }
+    },
   );
 
 const reorderCategoriesSchema = z.object({
@@ -198,7 +198,7 @@ const reorderCategoriesSchema = z.object({
       z.object({
         id: z.string(),
         sortOrder: z.number().int().min(0),
-      })
+      }),
     )
     .min(1),
 });
@@ -212,7 +212,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       filter.isActive = isActive === "true";
     }
 
-    const categories = await OrderCategory.find(filter).sort({ sortOrder: 1, name: 1 });
+    const categories = await OrderType.find(filter).sort({ sortOrder: 1, name: 1 });
 
     res.json(categories);
   } catch (error) {
@@ -223,7 +223,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
 router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const category = await OrderCategory.findOne({
+    const category = await OrderType.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -246,7 +246,7 @@ router.put("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) =>
     const { categories } = reorderCategoriesSchema.parse(req.body);
 
     const categoryIds = categories.map((c) => c.id);
-    const existingCategories = await OrderCategory.find({
+    const existingCategories = await OrderType.find({
       _id: { $in: categoryIds },
       tenantId: req.tenantObjectId,
     });
@@ -256,17 +256,9 @@ router.put("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) =>
       return;
     }
 
-    const updatePromises = categories.map(({ id, sortOrder }) => OrderCategory.findByIdAndUpdate(id, { sortOrder }, { new: true }));
+    const updatePromises = categories.map(({ id, sortOrder }) => OrderType.findByIdAndUpdate(id, { sortOrder }, { new: true }));
 
     await Promise.all(updatePromises);
-
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "order_categories_reordered",
-      description: `Reordered ${categories.length} order categories`,
-      entityType: "OrderCategory",
-    });
 
     res.json({ message: "Categories reordered successfully" });
   } catch (error) {
@@ -284,7 +276,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const data = createCategorySchema.parse(req.body);
 
-    const existingCategory = await OrderCategory.findOne({
+    const existingCategory = await OrderType.findOne({
       tenantId: req.tenantObjectId,
       name: data.name,
     });
@@ -312,7 +304,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       }
     }
 
-    const maxOrderCategory = await OrderCategory.findOne({
+    const maxOrderCategory = await OrderType.findOne({
       tenantId: req.tenantObjectId,
     })
       .sort({ sortOrder: -1 })
@@ -335,18 +327,9 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       categoryData.futureActionType = "sinVencimiento";
     }
 
-    const category = new OrderCategory(categoryData);
+    const category = new OrderType(categoryData);
 
     await category.save();
-
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "order_category_created",
-      description: `Pedido creado category: ${category.name}`,
-      entityType: "OrderCategory",
-      entityId: category._id,
-    });
 
     res.status(201).json(category);
   } catch (error) {
@@ -364,7 +347,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const userId = req.user!.userId;
     const data = updateCategorySchema.parse(req.body);
 
-    const category = await OrderCategory.findOne({
+    const category = await OrderType.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -375,7 +358,7 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     }
 
     if (data.name && data.name !== category.name) {
-      const existingCategory = await OrderCategory.findOne({
+      const existingCategory = await OrderType.findOne({
         tenantId: req.tenantObjectId,
         name: data.name,
         _id: { $ne: category._id },
@@ -413,15 +396,6 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     Object.assign(category, updateData);
     await category.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "order_category_updated",
-      description: `Updated order category: ${category.name}`,
-      entityType: "OrderCategory",
-      entityId: category._id,
-    });
-
     res.json(category);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -437,7 +411,7 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
   try {
     const userId = req.user!.userId;
 
-    const category = await OrderCategory.findOne({
+    const category = await OrderType.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });
@@ -447,16 +421,7 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
       return;
     }
 
-    await OrderCategory.findByIdAndDelete(category._id);
-
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "order_category_deleted",
-      description: `Deleted order category: ${category.name}`,
-      entityType: "OrderCategory",
-      entityId: category._id,
-    });
+    await OrderType.findByIdAndDelete(category._id);
 
     res.json({ message: "Category deleted successfully" });
   } catch (error) {
@@ -465,4 +430,4 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
   }
 });
 
-export { router as orderCategoryRoutes };
+export { router as orderTypeRoutes };

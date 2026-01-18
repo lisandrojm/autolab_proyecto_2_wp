@@ -7,9 +7,8 @@ import mongoose from "mongoose";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { Order } from "../models/Order.js";
-import { OrderCategory } from "../models/OrderCategory.js";
+import { OrderType } from "../models/OrderType.js";
 import { FutureAction } from "../models/FutureAction.js";
-import { ActivityLog } from "../models/ActivityLog.js";
 import { Notification } from "../models/Notification.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
@@ -160,16 +159,13 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
       (acc: any, order: any) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
 
-        if (order.futureActionId &&
-            typeof order.futureActionId === 'object' &&
-            order.futureActionId.tipoAccionFutura === "documento" &&
-            order.futureActionId.estadoAccion === "pendiente_documento") {
+        if (order.futureActionId && typeof order.futureActionId === "object" && order.futureActionId.tipoAccionFutura === "documento" && order.futureActionId.estadoAccion === "pendiente_documento") {
           acc.pendingDocuments = (acc.pendingDocuments || 0) + 1;
         }
 
         return acc;
       },
-      { pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0, pendingDocuments: 0 }
+      { pending: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0, pendingDocuments: 0 },
     );
 
     res.json(stats);
@@ -253,7 +249,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     });
 
     if (data.categoryId) {
-      const category = await OrderCategory.findOne({
+      const category = await OrderType.findOne({
         _id: data.categoryId,
         tenantId: req.tenantObjectId,
         isActive: true,
@@ -266,7 +262,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
 
       if (data.subcategories && data.subcategories.length > 0 && category.config?.subtipos) {
         const validSubtypes = category.config.subtipos.map((st: any) => st.id);
-        const invalidSubs = data.subcategories.filter(sub => !validSubtypes.includes(sub));
+        const invalidSubs = data.subcategories.filter((sub) => !validSubtypes.includes(sub));
 
         if (invalidSubs.length > 0) {
           res.status(400).json({ error: `Invalid subcategories: ${invalidSubs.join(", ")}` });
@@ -296,7 +292,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       if (category.categoryType === "dinero" && category.montoMaximo) {
         const montoSolicitado = data.amount || 0;
         if (montoSolicitado > category.montoMaximo) {
-          res.status(400).json({ error: `El monto solicitado ($${montoSolicitado.toLocaleString('es-ES')}) excede el máximo permitido ($${category.montoMaximo.toLocaleString('es-ES')})` });
+          res.status(400).json({ error: `El monto solicitado ($${montoSolicitado.toLocaleString("es-ES")}) excede el máximo permitido ($${category.montoMaximo.toLocaleString("es-ES")})` });
           return;
         }
       }
@@ -312,7 +308,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     };
 
     if (data.categoryId) {
-      const category = await OrderCategory.findById(data.categoryId);
+      const category = await OrderType.findById(data.categoryId);
       if (category?.requiresSignature) {
         orderData.signatureStatus = "pending";
       }
@@ -331,10 +327,9 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     }
 
     if (data.categoryId) {
-      const category = await OrderCategory.findById(data.categoryId);
+      const category = await OrderType.findById(data.categoryId);
 
-      const shouldCreateFutureAction = category?.requiresAction &&
-        (!category.requiresUserConfirmation || data.actionCompleted);
+      const shouldCreateFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
 
       if (shouldCreateFutureAction) {
         // Default to "sinVencimiento" if futureActionType is not set
@@ -408,7 +403,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
-    const categoryDoc = data.categoryId ? await OrderCategory.findById(data.categoryId) : null;
+    const categoryDoc = data.categoryId ? await OrderType.findById(data.categoryId) : null;
     const categoryName = categoryDoc?.name || data.category;
 
     let subcategoryText = "";
@@ -424,14 +419,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
 
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "order_created",
-      description: `Pedido creado: ${orderDisplayName}`,
-      entityType: "Order",
-      entityId: order._id,
-    });
+    
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
@@ -505,18 +493,11 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
     await order.save();
 
     if (req.body.status === "cancelled") {
-      const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+      const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
       const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
       const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-      await ActivityLog.create({
-        tenantId: req.tenantObjectId,
-        userId,
-        action: "order_cancelled",
-        description: `Pedido cancelado: ${orderDisplayName}`,
-        entityType: "Order",
-        entityId: order._id,
-      });
+      
     }
 
     const populatedOrder = await Order.findById(order._id)
@@ -571,14 +552,7 @@ router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRe
       }
     }
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "document_uploaded",
-      description: `Documento subido para pedido ${order.orderNumber}`,
-      entityType: "Order",
-      entityId: order._id,
-    });
+    
 
     const populatedOrder = await Order.findById(order._id)
       .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
@@ -638,21 +612,17 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
     const subcategoriesText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoriesText}`;
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      action: "user_notified_signature",
-      description: `Usuario notificó que completó la firma del pedido "${orderDisplayName}"`,
-      entityType: "Order",
-      entityId: order._id,
-    });
+    
 
     const supervisorRoles = await Role.find({
       tenantId: req.tenantObjectId,
       name: { $in: ["admin", "manager", "superadmin"] },
     });
 
-    console.log(`Found ${supervisorRoles.length} supervisor roles:`, supervisorRoles.map(r => r.name));
+    console.log(
+      `Found ${supervisorRoles.length} supervisor roles:`,
+      supervisorRoles.map((r) => r.name),
+    );
 
     if (supervisorRoles.length === 0) {
       console.warn("No supervisor roles found in database for signature notification");
@@ -675,7 +645,7 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
       return res.json({ success: true, message: "Notificación registrada (sin supervisores activos)" });
     }
 
-    const notificationPromises = supervisors.map(supervisor =>
+    const notificationPromises = supervisors.map((supervisor) =>
       Notification.create({
         tenantId: req.tenantObjectId,
         userId: supervisor._id,
@@ -683,20 +653,20 @@ router.post("/:id/notify-signature-completed", async (req: AuthenticatedRequest 
         title: "Usuario indica firma completada",
         message: `El usuario ${userName} indica que completó la firma del documento del pedido ${orderDisplayName} N°: ${getPlainOrderNumber(order.orderNumber)}. Por favor verificá antes de confirmar.`,
         linkUrl: `/hr-management/orders`,
-      }).catch(err => {
+      }).catch((err) => {
         console.error(`Error creating notification for user ${supervisor._id}:`, err);
         return null;
-      })
+      }),
     );
 
     const results = await Promise.all(notificationPromises);
-    const successCount = results.filter(r => r !== null).length;
+    const successCount = results.filter((r) => r !== null).length;
     console.log(`Created ${successCount}/${supervisors.length} notifications successfully`);
 
     res.json({
       success: true,
       message: `Notificación enviada a ${successCount} supervisor(es) correctamente`,
-      notifiedCount: successCount
+      notifiedCount: successCount,
     });
   } catch (error) {
     console.error("Notify signature error:", error);

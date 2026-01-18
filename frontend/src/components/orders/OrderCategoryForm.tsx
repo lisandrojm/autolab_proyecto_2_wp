@@ -5,7 +5,7 @@ import { faCircleInfo, faToggleOn, faToggleOff, faEye, faExclamationTriangle } f
 import Swal from "sweetalert2";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 
-import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderCategories";
+import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderTypes";
 import { InfoModal } from "../ui/InfoModal";
 import { tipoAccionFuturaLabels, deadlineModeLabels } from "../../types/futureAction";
 

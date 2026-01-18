@@ -4,13 +4,12 @@ import { User } from "../models/User.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { Vacation } from "../models/Vacation.js";
 import { Order } from "../models/Order.js";
-import { OrderCategory } from "../models/OrderCategory.js";
+import { OrderType } from "../models/OrderType.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
 import { Tenant } from "../models/Tenant.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { HRDocument } from "../models/Document.js";
 import { Notification } from "../models/Notification.js";
-import { ActivityLog } from "../models/ActivityLog.js";
 import { authenticateToken, AuthenticatedRequest, requireRole } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
@@ -290,14 +289,7 @@ router.put("/vacations/:id/approve", async (req: AuthenticatedRequest & TenantRe
       });
     }
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: vacation.userId,
-      action: "vacation_request_approved",
-      description: `Solicitud de vacaciones aprobada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     res.json(vacation);
   } catch (error) {
@@ -344,14 +336,7 @@ router.put("/vacations/:id/reject", async (req: AuthenticatedRequest & TenantReq
       linkUrl: `/vacations/${vacation._id}`,
     });
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: vacation.userId,
-      action: "vacation_request_rejected",
-      description: `Solicitud de vacaciones rechazada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     res.json(vacation);
   } catch (error) {
@@ -429,14 +414,7 @@ router.put("/vacations/:id/pre-approve", async (req: AuthenticatedRequest & Tena
 
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: vacation.userId,
-      action: "vacation_request_pre_approved",
-      description: `Solicitud de vacaciones preaprobada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     res.json(vacation);
   } catch (error) {
@@ -625,14 +603,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      action: "order_pre_approved",
-      description: `Pedido "${orderDisplayName}" preaprobado`,
-      entityType: "Order",
-      entityId: order._id,
-    });
+    
 
     if (category && category.pdfTemplateId) {
       try {
@@ -653,24 +624,10 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
             order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
             await order.save();
 
-            await ActivityLog.create({
-              tenantId: req.tenantObjectId,
-              userId: order.userId,
-              action: "pdf_generated",
-              description: `PDF generado automáticamente para pedido "${orderDisplayName}"`,
-              entityType: "Order",
-              entityId: order._id,
-            });
+            
           } else {
             console.error("PDF generation failed:", pdfResult.error);
-            await ActivityLog.create({
-              tenantId: req.tenantObjectId,
-              userId: preApproverId,
-              action: "pdf_generation_failed",
-              description: `Error al generar PDF para pedido "${orderDisplayName}": ${pdfResult.error}`,
-              entityType: "Order",
-              entityId: order._id,
-            });
+            
           }
         }
       } catch (pdfError) {
@@ -744,14 +701,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       });
     }
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      action: "order_approved",
-      description: `Pedido "${orderDisplayName}" aprobado`,
-      entityType: "Order",
-      entityId: order._id,
-    });
+    
 
     res.json(order);
   } catch (error) {
@@ -781,7 +731,7 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -858,14 +808,7 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: adminId,
-      action: "pdf_regenerated",
-      description: `PDF regenerado manualmente para pedido "${orderDisplayName}"`,
-      entityType: "Order",
-      entityId: order._id,
-    });
+    
 
     res.json({
       success: true,
@@ -900,7 +843,7 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -1079,4 +1022,3 @@ router.delete("/documents/:id", async (req: AuthenticatedRequest & TenantRequest
 });
 
 export { router as hrAdminRoutes };
-

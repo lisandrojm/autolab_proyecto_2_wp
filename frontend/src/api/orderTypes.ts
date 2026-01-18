@@ -1,4 +1,4 @@
-import axios from './axiosConfig';
+import axios from "./axiosConfig";
 
 export type TipoAccionFutura = "documento" | "otra";
 
@@ -13,14 +13,14 @@ export interface Subtype {
   [key: string]: any;
 }
 
-export interface CategoryConfig {
+export interface TypeConfig {
   subtipos?: Subtype[];
   [key: string]: any;
 }
 
 export type CategoryType = "fecha" | "dinero" | "objeto" | "otros";
 
-export interface OrderCategory {
+export interface OrderType {
   _id: string;
   tenantId: string;
   name: string;
@@ -30,7 +30,7 @@ export interface OrderCategory {
   sortOrder: number;
   categoryType: CategoryType;
   dateMode?: DateMode;
-  config: CategoryConfig;
+  config: TypeConfig;
   montoMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
@@ -48,40 +48,20 @@ export interface OrderCategory {
   updatedAt: string;
 }
 
-export const orderCategoriesAPI = {
-  getAll: async (isActive?: boolean): Promise<OrderCategory[]> => {
+export const orderTypesAPI = {
+  getAll: async (isActive?: boolean): Promise<OrderType[]> => {
     const params = isActive !== undefined ? { isActive } : {};
-    const { data } = await axios.get<OrderCategory[]>('/order-categories', { params });
+    const { data } = await axios.get<OrderType[]>("/order-types", { params });
     return data;
   },
 
-  getById: async (id: string): Promise<OrderCategory> => {
-    const { data } = await axios.get<OrderCategory>(`/order-categories/${id}`);
+  getById: async (id: string): Promise<OrderType> => {
+    const { data } = await axios.get<OrderType>(`/order-types/${id}`);
     return data;
   },
 
-  create: async (categoryData: {
-    name: string;
-    informacion?: string;
-    isActive?: boolean;
-    sortOrder?: number;
-    categoryType?: CategoryType;
-    dateMode?: DateMode;
-    config?: CategoryConfig;
-    montoMaximo?: number;
-    requiresAction?: boolean;
-    actionText?: string;
-    actionDescription?: string;
-    tituloAccion?: string;
-    futureActionType?: TipoAccionFutura;
-    deadlineMode?: DeadlineMode;
-    plazoDias?: number;
-    fechaLimite?: string;
-    documentoRequerido?: string;
-    requiresSignature?: boolean;
-    pdfTemplateId?: string;
-  }): Promise<OrderCategory> => {
-    const { data } = await axios.post<OrderCategory>('/order-categories', categoryData);
+  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfTemplateId?: string }): Promise<OrderType> => {
+    const { data } = await axios.post<OrderType>("/order-types", typeData);
     return data;
   },
 
@@ -94,7 +74,7 @@ export const orderCategoriesAPI = {
       sortOrder?: number;
       categoryType?: CategoryType;
       dateMode?: DateMode;
-      config?: CategoryConfig;
+      config?: TypeConfig;
       montoMaximo?: number;
       requiresAction?: boolean;
       actionText?: string;
@@ -107,17 +87,17 @@ export const orderCategoriesAPI = {
       documentoRequerido?: string;
       requiresSignature?: boolean;
       pdfTemplateId?: string;
-    }
-  ): Promise<OrderCategory> => {
-    const { data } = await axios.put<OrderCategory>(`/order-categories/${id}`, updates);
+    },
+  ): Promise<OrderType> => {
+    const { data } = await axios.put<OrderType>(`/order-types/${id}`, updates);
     return data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await axios.delete(`/order-categories/${id}`);
+    await axios.delete(`/order-types/${id}`);
   },
 
   reorder: async (categories: Array<{ id: string; sortOrder: number }>): Promise<void> => {
-    await axios.put('/order-categories/reorder', { categories });
+    await axios.put("/order-types/reorder", { categories });
   },
 };

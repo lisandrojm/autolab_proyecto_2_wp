@@ -6,7 +6,7 @@ import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapS
 import { ViewType } from "../types";
 import { useOrders } from "../hooks/useOrders";
 import axios from "../../../../api/axiosConfig";
-import { OrderCategory } from "../../../../api/orderCategories";
+import { OrderType } from "../../../../api/orderTypes";
 import { DynamicCategoryInput } from "../components/DynamicCategoryInput";
 import { sweetAlert } from "../utils/sweetAlert";
 import OrderDetailModal from "../components/OrderDetailModal";
@@ -22,7 +22,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const { orders, loading, createOrder, updateOrderStatus, refetch } = useOrders();
   const [showForm, setShowForm] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [categories, setCategories] = useState<OrderCategory[]>([]);
+  const [categories, setCategories] = useState<OrderType[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -54,7 +54,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
     const loadCategories = async () => {
       try {
         setLoadingCategories(true);
-        const { data } = await axios.get<OrderCategory[]>("/order-categories", { params: { isActive: true } });
+        const { data } = await axios.get<OrderType[]>("/order-types", { params: { isActive: true } });
         setCategories(data.sort((a, b) => a.sortOrder - b.sortOrder));
         if (data.length > 0) {
           setSelectedCategoryId(data[0]._id);
@@ -84,7 +84,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
     setActionCompleted(false);
 
-    if (selectedCategory?.futureActionType === "plazoDias" && selectedCategory.plazoDias) {
+    if (selectedCategory?.deadlineMode === "plazoDias" && selectedCategory.plazoDias) {
       setFutureActionPlazoDias(selectedCategory.plazoDias);
     } else {
       setFutureActionPlazoDias(undefined);
@@ -267,7 +267,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                         ))}
                       </select>
                     ) : (
-                      <div className="w-full rounded border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay categorías disponibles. Contacta al administrador.</div>
+                      <div className="w-full rounded border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-2 text-red-600 dark:text-red-400 text-sm">No hay "Tipos de pedido" disponibles. Contacta al administrador.</div>
                     )}
 
                     <div className="pt-3">

@@ -1,11 +1,10 @@
 import React, { useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCamera, faImage, faTimes, faCalendar } from "@fortawesome/free-solid-svg-icons";
-import { OrderCategory } from "../../../../api/orderCategories";
-import { tipoAccionFuturaLabels } from "../../../../types/futureAction";
+import { faCalendar } from "@fortawesome/free-solid-svg-icons";
+import { OrderType } from "../../../../api/orderTypes";
 
 interface DynamicCategoryInputProps {
-  category: OrderCategory | null;
+  category: OrderType | null;
   subcategories: string;
   onSubcategoriesChange: (value: string) => void;
   dynamicValue: any;
@@ -31,6 +30,8 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const today = new Date().toISOString().split("T")[0];
 
   const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
 
@@ -88,6 +89,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                       console.log("Calling onDynamicValueChange with:", newValue);
                       onDynamicValueChange(newValue);
                     }}
+                    min={today}
                     required
                     className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
                   />
@@ -106,7 +108,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                       console.log("Calling onDynamicValueChange with:", newValue);
                       onDynamicValueChange(newValue);
                     }}
-                    min={fechaDesde || ""}
+                    min={fechaDesde || today}
                     required
                     className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
                   />
@@ -118,7 +120,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           return (
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha</label>
-              <input type="date" value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+              <input type="date" min={today} value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
             </div>
           );
         }

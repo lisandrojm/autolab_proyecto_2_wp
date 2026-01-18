@@ -3,7 +3,6 @@ import { Types } from "mongoose";
 import { Vacation } from "../models/Vacation.js";
 import { GlobalVacationConfig } from "../models/VacationGlobalConfig.js";
 import { Notification } from "../models/Notification.js";
-import { ActivityLog } from "../models/ActivityLog.js";
 import { Tenant } from "../models/Tenant.js";
 import { PdfTemplate } from "../models/PdfTemplate.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -515,14 +514,7 @@ router.put("/:id/pre-approve", async (req: any, res) => {
 
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_pre_approved",
-      description: `Solicitud de vacaciones preaprobada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     // Generate PDF
     let templateId = vacation.rules?.pdfTemplateId;
@@ -603,14 +595,7 @@ router.put("/:id/approve", async (req: any, res) => {
 
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_approved",
-      description: `Solicitud de vacaciones aprobada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     if (requiresSignature) {
       await Notification.create({
@@ -660,14 +645,7 @@ router.put("/:id/reject", async (req: any, res) => {
     vacation.status = "rejected";
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_rejected",
-      description: `Solicitud de vacaciones rechazada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     await Notification.create({
       tenantId,
@@ -707,14 +685,7 @@ router.put("/:id/cancel", async (req: any, res) => {
     vacation.cancelledAt = new Date();
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_cancelled",
-      description: `Solicitud de vacaciones cancelada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     res.json(vacation);
   } catch (error: any) {
@@ -745,14 +716,7 @@ router.put("/:id/deliver", async (req: any, res) => {
     vacation.deliveredAt = new Date();
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_delivered",
-      description: `Solicitud de vacaciones marcada como entregada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     await Notification.create({
       tenantId,
@@ -792,14 +756,7 @@ router.put("/:id/send-signature", async (req: any, res) => {
     vacation.signatureSentAt = new Date();
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_signature_sent",
-      description: `Solicitud de vacaciones enviada para firma`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     await Notification.create({
       tenantId,
@@ -839,14 +796,7 @@ router.put("/:id/notify-signature", async (req: any, res) => {
     vacation.signatureNotifiedAt = new Date();
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_signature_notified",
-      description: `Usuario notificó firma completada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     // Notify the approver (Supervisor/Admin)
     const approverId = vacation.approvedBy; // Assuming approvedBy is the admin/manager
@@ -892,14 +842,7 @@ router.put("/:id/mark-signed", async (req: any, res) => {
     vacation.signedBy = new Types.ObjectId(signerId);
     await vacation.save();
 
-    await ActivityLog.create({
-      tenantId,
-      userId: vacation.userId,
-      action: "vacation_signed",
-      description: `Solicitud de vacaciones marcada como firmada`,
-      entityType: "Vacation",
-      entityId: vacation._id,
-    });
+    
 
     // Notify the approver (Supervisor/Admin)
     if (vacation.approvedBy) {

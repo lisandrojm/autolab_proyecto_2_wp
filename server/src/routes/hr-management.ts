@@ -6,12 +6,11 @@ import mongoose from "mongoose";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { z } from "zod";
-import { ActivityLog } from "../models/ActivityLog.js";
 import { CalendarEvent } from "../models/CalendarEvent.js";
 import { EmployeeProfile } from "../models/EmployeeProfile.js";
 import { HRDocument } from "../models/Document.js";
 import { Order } from "../models/Order.js";
-import { OrderCategory } from "../models/OrderCategory.js";
+import { OrderType } from "../models/OrderType.js";
 import { Vacation } from "../models/Vacation.js";
 import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
@@ -91,45 +90,6 @@ const updateOrderSchema = z.object({
   amount: z.number().min(0).optional(),
   status: z.enum(["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
-});
-
-router.get("/activitylogs", async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const { page = 1, limit = 50, userId, action, entityType } = req.query;
-
-    const filter: any = { tenantId: req.tenantObjectId };
-
-    if (userId) filter.userId = userId;
-    if (action) filter.action = action;
-    if (entityType) filter.entityType = entityType;
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const [logs, total] = await Promise.all([ActivityLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("entityId"), ActivityLog.countDocuments(filter)]);
-
-    res.json({
-      logs,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total,
-        pages: Math.ceil(total / Number(limit)),
-      },
-    });
-  } catch (error) {
-    console.error("Get activity logs error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.get("/activitylogs/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const count = await ActivityLog.countDocuments({ tenantId: req.tenantObjectId });
-    res.json({ count });
-  } catch (error) {
-    console.error("Count activity logs error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
 });
 
 router.get("/calendarevents", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -341,18 +301,9 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
 
         await order.save();
 
-        const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+        const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
         const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
         const orderDisplayName = `${categoryName}${subcategoryText}`;
-
-        await ActivityLog.create({
-          tenantId: req.tenantObjectId,
-          userId,
-          action: "order_created",
-          description: `Pedido creado: ${orderDisplayName}`,
-          entityType: "Order",
-          entityId: order._id,
-        });
 
         const populatedOrder = await Order.findById(order._id)
           .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
@@ -441,18 +392,9 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     await order.save();
 
     if (req.body.status === "cancelled") {
-      const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+      const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
       const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
       const orderDisplayName = `${categoryName}${subcategoryText}`;
-
-      await ActivityLog.create({
-        tenantId: req.tenantObjectId,
-        userId,
-        action: "order_cancelled",
-        description: `Pedido cancelado: ${orderDisplayName}`,
-        entityType: "Order",
-        entityId: order._id,
-      });
     }
 
     const populatedOrder = await Order.findById(order._id)
@@ -589,15 +531,6 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     }
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      action: "order_pre_approved",
-      description: `Pedido "${orderDisplayName}" preaprobado`,
-      entityType: "Order",
-      entityId: order._id,
-    });
-
     console.log("[PDF DEBUG] Starting PDF generation check...");
     console.log(`[PDF DEBUG] Order ID: ${order._id}, Status: ${order.status}`);
 
@@ -606,7 +539,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     if (!pdfCategory) {
       console.warn("[PDF WARNING] Order has no populated value for 'categoryId'. Trying to fetch manual.");
       if (order.categoryId) {
-        pdfCategory = await OrderCategory.findById(order.categoryId);
+        pdfCategory = await OrderType.findById(order.categoryId);
       }
     }
 
@@ -659,15 +592,6 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
           // Force save again to persist the URL
           await Order.updateOne({ _id: order._id }, { $set: { pdfPreAprobacionUrl: pdfResult.pdfUrl } });
           console.log("[PDF DEBUG] PDF URL saved to order:", order.pdfPreAprobacionUrl);
-
-          await ActivityLog.create({
-            tenantId: req.tenantObjectId,
-            userId: order.userId,
-            action: "pdf_generated",
-            description: `PDF generado automáticamente para pedido "${orderDisplayName}"`,
-            entityType: "Order",
-            entityId: order._id,
-          });
         } else {
           console.error("[PDF ERROR] Error generating PDF:", pdfResult.error);
         }
@@ -754,15 +678,6 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
       linkUrl: `/orders/${order._id}`,
     });
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      action: "order_approved",
-      description: `Pedido "${orderDisplayName}" aprobado`,
-      entityType: "Order",
-      entityId: order._id,
-    });
-
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
@@ -801,7 +716,7 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
 
     await order.save();
 
-    const category = order.categoryId ? await OrderCategory.findById(order.categoryId) : null;
+    const category = order.categoryId ? await OrderType.findById(order.categoryId) : null;
     const categoryName = category?.name || order.category;
     let subcategoryText = "";
     if (order.subcategories && order.subcategories.length > 0) {
@@ -865,7 +780,7 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -984,7 +899,7 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
 
     await order.save();
 
-    const categoryName = order.categoryId ? (await OrderCategory.findById(order.categoryId))?.name || order.category : order.category;
+    const categoryName = order.categoryId ? (await OrderType.findById(order.categoryId))?.name || order.category : order.category;
     const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
     const orderDisplayName = `${categoryName}${subcategoryText}`;
 
@@ -995,15 +910,6 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
       title: "Firma confirmada",
       message: `Tu firma del pedido ${orderDisplayName} N°: ${getPlainOrderNumber(order.orderNumber)} ha sido verificada y confirmada.`,
       linkUrl: `/orders/${order._id}`,
-    });
-
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId: order.userId,
-      action: "order_signed",
-      description: `Order "${orderDisplayName}" marked as signed`,
-      entityType: "Order",
-      entityId: order._id,
     });
 
     const finalOrder = await Order.findById(order._id)
@@ -1025,4 +931,3 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
 });
 
 export { router as hrManagementRoutes };
-

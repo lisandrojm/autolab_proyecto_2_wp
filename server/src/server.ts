@@ -38,10 +38,10 @@ import { profileRoutes } from "./routes/profile.js";
 
 import { documentRoutes } from "./routes/documents.js";
 import { orderRoutes } from "./routes/orders.js";
-import { orderCategoryRoutes } from "./routes/orderCategories.js";
+import { orderTypeRoutes } from "./routes/orderTypes.js";
 import { calendarRoutes } from "./routes/calendar.js";
 import { notificationRoutes } from "./routes/notifications.js";
-import { activityRoutes } from "./routes/activity.js";
+
 import { hrAdminRoutes } from "./routes/hr-admin.js";
 import { hrManagementRoutes } from "./routes/hr-management.js";
 import { requestRoutes } from "./routes/requests.js";
@@ -91,7 +91,7 @@ app.use(
     max: env.NODE_ENV === "development" ? 500 : 200,
     standardHeaders: true,
     legacyHeaders: false,
-  })
+  }),
 );
 
 // ───────────────── CORS ─────────────────
@@ -121,7 +121,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type", "X-Requested-With", "X-Tenant-Id"],
-  })
+  }),
 );
 
 // Preflight
@@ -154,10 +154,10 @@ app.use("/api/v1/profile", profileRoutes);
 
 app.use("/api/v1/documents", documentRoutes);
 app.use("/api/v1/orders", orderRoutes);
-app.use("/api/v1/order-categories", orderCategoryRoutes);
+app.use("/api/v1/order-types", orderTypeRoutes);
 app.use("/api/v1/calendar", calendarRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
-app.use("/api/v1/activity", activityRoutes);
+
 app.use("/api/v1/hr-admin", hrAdminRoutes);
 app.use("/api/v1/hr-management", hrManagementRoutes);
 app.use("/api/v1/requests", requestRoutes);

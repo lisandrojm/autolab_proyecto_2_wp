@@ -91,22 +91,6 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       submittedAt: new Date(),
     });
 
-    // Log the activity
-    const ActivityLog = (await import("../models/ActivityLog.js")).ActivityLog;
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "activity_report_created",
-      description: `Novedades del día ${data.date}`,
-      entityType: "ActivityReport",
-      entityId: report._id,
-      metadata: {
-        date: data.date,
-        hasActivity: data.hasActivity,
-        projectId: data.projectId,
-      },
-    });
-
     res.status(201).json(report);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -165,21 +149,6 @@ router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => 
       return;
     }
 
-    // Log the activity
-    const ActivityLog = (await import("../models/ActivityLog.js")).ActivityLog;
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "activity_report_deleted",
-      description: `Novedades eliminadas del día ${report.date}`,
-      entityType: "ActivityReport",
-      entityId: report._id,
-      metadata: {
-        date: report.date,
-        projectId: report.projectId,
-      },
-    });
-
     res.json({ message: "Reporte eliminado correctamente" });
   } catch (error) {
     console.error("Delete report error:", error);
@@ -221,22 +190,6 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       res.status(404).json({ error: "Reporte no encontrado o no autorizado para editar" });
       return;
     }
-
-    // Log the activity
-    const ActivityLog = (await import("../models/ActivityLog.js")).ActivityLog;
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "activity_report_updated",
-      description: `Novedades actualizadas del día ${data.date}`,
-      entityType: "ActivityReport",
-      entityId: report._id,
-      metadata: {
-        date: data.date,
-        hasActivity: data.hasActivity,
-        projectId: data.projectId,
-      },
-    });
 
     res.json(report);
   } catch (error) {

@@ -1,12 +1,11 @@
 // apps/web/src/App.tsx
 import { useEffect, lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "./stores/authStore";
 import { useThemeStore } from "./stores/themeStore";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterClientPage } from "./pages/RegisterClientPage";
-import { DashboardPage } from "./pages/DashboardPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
 import { AnalyticsPage } from "./pages/AnalyticsPage";
@@ -36,7 +35,7 @@ import { DailyReportPage } from "./pages/DailyReportPage";
 
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
-import { ActivityPage } from "./pages/ActivityPage";
+
 import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
 
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
@@ -46,7 +45,7 @@ import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
 import { ManageEmployeeProfilesPage } from "./pages/ManageEmployeeProfilesPage";
 import { ManageHRDocumentsPage } from "./pages/ManageHRDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
-import { ManageOrdersCategoriesPage } from "./pages/ManageOrdersCategoriesPage";
+import { ManageOrderTypesPage } from "./pages/ManageOrderTypesPage";
 import { ManageVacationsPage } from "./pages/ManageVacationsPage";
 import { ManageVacationsRulesPage } from "./pages/ManageVacationsRulesPage";
 import { ManageVacationsCalendarPage } from "./pages/ManageVacationsCalendarPage";
@@ -60,7 +59,7 @@ const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 const DashboardRouter: React.FC = () => {
   const { user } = useAuthStore();
   if (!user) return null;
-  if (user.tenantSlug === "superadmin") return <DashboardPage />;
+  if (user.tenantSlug === "superadmin") return <Navigate to="/tenants" replace />;
   if (["admin", "manager"].includes(user.primaryRole || "")) return <UsersPage />;
   return <ClientDashboardPage />;
 };
@@ -393,14 +392,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/personal/actividad"
-                element={
-                  <ProtectedRoute>
-                    <ActivityPage />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/admin/administracion/empleados"
                 element={
@@ -460,10 +452,10 @@ function App() {
                 }
               />
               <Route
-                path="/hr/order-categories"
+                path="/hr/order-types"
                 element={
                   <ProtectedRoute>
-                    <ManageOrdersCategoriesPage />
+                    <ManageOrderTypesPage />
                   </ProtectedRoute>
                 }
               />

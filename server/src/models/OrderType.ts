@@ -22,13 +22,13 @@ export interface IFutureActionConfig {
   documentoRequerido?: string;
 }
 
-export interface ICategoryConfig {
+export interface ITypeConfig {
   subtipos?: ISubtype[];
   futureActionConfig?: IFutureActionConfig;
   [key: string]: any;
 }
 
-export interface IOrderCategory extends Document {
+export interface IOrderType extends Document {
   tenantId: Types.ObjectId;
   name: string;
   informacion?: string;
@@ -37,7 +37,7 @@ export interface IOrderCategory extends Document {
   sortOrder: number;
   categoryType: "fecha" | "dinero" | "objeto" | "otros";
   dateMode?: DateMode;
-  config: ICategoryConfig;
+  config: ITypeConfig;
   montoMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
@@ -55,7 +55,7 @@ export interface IOrderCategory extends Document {
   updatedAt: Date;
 }
 
-const orderCategorySchema = new Schema<IOrderCategory>(
+const orderTypeSchema = new Schema<IOrderType>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
@@ -99,11 +99,11 @@ const orderCategorySchema = new Schema<IOrderCategory>(
     requiresUserConfirmation: { type: Boolean, default: false },
     pdfTemplateId: { type: Schema.Types.ObjectId, ref: "PdfTemplate" },
   },
-  { timestamps: true, collection: "order_categories" },
+  { timestamps: true, collection: "order_types" },
 );
 
-orderCategorySchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
-orderCategorySchema.index({ tenantId: 1, name: 1 }, { unique: true });
-orderCategorySchema.index({ tenantId: 1, categoryType: 1 });
+orderTypeSchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
+orderTypeSchema.index({ tenantId: 1, name: 1 }, { unique: true });
+orderTypeSchema.index({ tenantId: 1, categoryType: 1 });
 
-export const OrderCategory = mongoose.model<IOrderCategory>("OrderCategory", orderCategorySchema);
+export const OrderType = mongoose.model<IOrderType>("OrderType", orderTypeSchema);

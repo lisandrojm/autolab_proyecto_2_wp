@@ -1,5 +1,5 @@
 import { IOrder } from "../models/Order.js";
-import { IOrderCategory } from "../models/OrderCategory.js";
+import { IOrderType } from "../models/OrderType.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 
@@ -108,7 +108,7 @@ function calculateDays(fechaDesde: Date | string | undefined, fechaHasta: Date |
   }
 }
 
-export function prepareVariables(order: IOrder, category: IOrderCategory, user: IUser, tenantName: string): Record<string, string> {
+export function prepareVariables(order: IOrder, category: IOrderType, user: IUser, tenantName: string): Record<string, string> {
   const nombreCompleto = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Usuario";
 
   const categoryName = category.name || "-";
@@ -365,4 +365,3 @@ export function getDummyVariables(code: string): Record<string, string> {
 // Actually, PdfVariables IS a Record<string, string> compatible shape if keys are string.
 // But earlier it was: function replacePdfVariables(htmlTemplate: string, variables: PdfVariables)
 // So I will make generic: (htmlTemplate: string, variables: PdfVariables | Record<string, string>)
-

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faSearch, faFilter, faList, faImage, faEye, faUser, faCalendar, faTag, faDollarSign, faInfoCircle, faShoppingCart, faListCheck, faTable, faTableList, faGrip, faFileArrowUp, faCamera, faUpload, faFileAlt, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faChevronLeft, faChevronRight, faCircleInfo, faFileLines, faChartSimple, faFilePdf, faDownload, faTrash, faCheck, faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/hrManagement";
-import { OrderCategory, CategoryType } from "../api/orderCategories";
+import { OrderType, CategoryType } from "../api/orderTypes";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ImageModal } from "../components/ui/ImageModal";
@@ -146,7 +146,7 @@ export const ManageOrdersPage: React.FC = () => {
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     try {
-      await hrManagementAPI.orders.update(orderId, { status: newStatus });
+      await hrManagementAPI.orders.update(orderId, { status: newStatus as any });
       await loadOrders();
       await sweetAlert.success("Estado actualizado", `El pedido ha sido ${newStatus === "approved" ? "aprobado" : newStatus === "rejected" ? "rechazado" : newStatus === "delivered" ? "marcado como entregado" : "actualizado"}`);
     } catch (error: any) {
@@ -447,7 +447,7 @@ export const ManageOrdersPage: React.FC = () => {
   const getSubcategoryDisplay = (order: Order): string => {
     if (!order.categoryId || typeof order.categoryId === "string") return "N/A";
 
-    const category = order.categoryId as OrderCategory;
+    const category = order.categoryId as OrderType;
 
     if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return "Sin opciones";
 
@@ -462,7 +462,7 @@ export const ManageOrdersPage: React.FC = () => {
   const getSubcategoriesArray = (order: Order): string[] => {
     if (!order.categoryId || typeof order.categoryId === "string") return [];
 
-    const category = order.categoryId as OrderCategory;
+    const category = order.categoryId as OrderType;
 
     if (!order.subcategories || order.subcategories.length === 0 || !category.config.subtipos) return [];
 
@@ -478,14 +478,14 @@ export const ManageOrdersPage: React.FC = () => {
 
   const hasRequiresAction = (order: Order): boolean => {
     if (!order.categoryId || typeof order.categoryId === "string") return false;
-    const category = order.categoryId as OrderCategory;
+    const category = order.categoryId as OrderType;
     return category.requiresAction || false;
   };
 
   const getCategoryName = (order: Order): string => {
     if (!order.categoryId) return order.category || "Sin categoría";
     if (typeof order.categoryId === "string") return order.category || "Sin categoría";
-    const category = order.categoryId as OrderCategory;
+    const category = order.categoryId as OrderType;
     return category.name || order.category || "Sin categoría";
   };
 
@@ -737,7 +737,7 @@ export const ManageOrdersPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/hr/order-categories")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full">
+          <button onClick={() => navigate("/hr/order-types")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full">
             <FontAwesomeIcon icon={faGear} />
           </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de pedidos" title="Ver resumen de pedidos">

@@ -2,7 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { Request } from "../models/Request.js";
 import { User } from "../models/User.js";
-import { ActivityLog } from "../models/ActivityLog.js";
 import { Notification } from "../models/Notification.js";
 import { authenticateToken, AuthenticatedRequest, requireRole } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -186,14 +185,7 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     await request.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "request_created",
-      description: `Created ${data.typeKey} request for ${daysCount} days`,
-      entityType: "Request",
-      entityId: request._id,
-    });
+    
 
     const supervisors = await User.find({
       tenantId: req.tenantObjectId,
@@ -261,14 +253,7 @@ router.patch("/:id/approve", requireRole(["admin", "manager", "superadmin"]), as
 
     await request.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "request_approved",
-      description: `Approved ${request.typeKey} request`,
-      entityType: "Request",
-      entityId: request._id,
-    });
+    
 
     await Notification.create({
       tenantId: req.tenantObjectId,
@@ -322,14 +307,7 @@ router.patch("/:id/reject", requireRole(["admin", "manager", "superadmin"]), asy
 
     await request.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "request_rejected",
-      description: `Rejected ${request.typeKey} request`,
-      entityType: "Request",
-      entityId: request._id,
-    });
+    
 
     await Notification.create({
       tenantId: req.tenantObjectId,
@@ -381,14 +359,7 @@ router.patch("/:id/cancel", async (req: AuthenticatedRequest & TenantRequest, re
 
     await request.save();
 
-    await ActivityLog.create({
-      tenantId: req.tenantObjectId,
-      userId,
-      action: "request_cancelled",
-      description: `Cancelled ${request.typeKey} request`,
-      entityType: "Request",
-      entityId: request._id,
-    });
+    
 
     const populatedRequest = await Request.findById(request._id)
       .populate("employeeId", "firstName lastName email")

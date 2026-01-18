@@ -41,7 +41,7 @@ const orderSchema = new Schema<IOrder>(
     orderNumber: { type: String, trim: true, uppercase: true, index: true },
     description: { type: String, required: false, trim: true, default: "" },
     category: { type: String, required: true, trim: true, default: "other" },
-    categoryId: { type: Schema.Types.ObjectId, ref: "OrderCategory", index: true },
+    categoryId: { type: Schema.Types.ObjectId, ref: "OrderType", index: true },
     subcategories: { type: [String], default: [], index: true },
     status: {
       type: String,
@@ -70,7 +70,7 @@ const orderSchema = new Schema<IOrder>(
     pdfPreAprobacionUrl: { type: String, trim: true },
     metadata: { type: Schema.Types.Mixed },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 orderSchema.index({ tenantId: 1, userId: 1, status: 1 });

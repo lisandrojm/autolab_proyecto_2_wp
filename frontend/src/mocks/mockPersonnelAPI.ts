@@ -1,37 +1,21 @@
-import {
-  mockProfileData,
-  mockProfileStats,
-  mockVacationBalance,
-  mockVacationStats,
-  mockNotificationCount,
-} from './profile';
-import { mockVacationRequestsAPI } from './vacations';
-import { mockDocumentsAPI } from './documents';
-import { mockNotificationsAPI } from './notifications';
-import { mockActivityRecordsAPI } from './activity';
-import { mockEmployeesAPI } from './admin';
-import { mockOrderRequestsAPI } from './orders';
+import { mockProfileData, mockProfileStats, mockVacationBalance, mockVacationStats, mockNotificationCount } from "./profile";
+import { mockVacationRequestsAPI } from "./vacations";
+import { mockDocumentsAPI } from "./documents";
+import { mockNotificationsAPI } from "./notifications";
 
-import type {
-  ProfileData,
-  ProfileStats,
-  VacationRequestAPI,
-  VacationStats,
-  DocumentAPI,
-  NotificationAPI,
-  ActivityRecordAPI,
-  EmployeeDataAPI,
-  OrderRequestAPI,
-} from './types';
+import { mockEmployeesAPI } from "./admin";
+import { mockOrderRequestsAPI } from "./orders";
+
+import type { ProfileData, ProfileStats, VacationRequestAPI, VacationStats, DocumentAPI, NotificationAPI, EmployeeDataAPI, OrderRequestAPI } from "./types";
 
 const STORAGE_KEYS = {
-  vacations: 'mock_vacations',
-  documents: 'mock_documents',
-  notifications: 'mock_notifications',
-  activity: 'mock_activity',
-  employees: 'mock_employees',
-  orders: 'mock_orders',
-  profile: 'mock_profile',
+  vacations: "mock_vacations",
+  documents: "mock_documents",
+  notifications: "mock_notifications",
+
+  employees: "mock_employees",
+  orders: "mock_orders",
+  profile: "mock_profile",
 };
 
 const delay = (ms: number = 300) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -92,7 +76,7 @@ export const mockPersonnelAPI = {
     await delay();
     const vacations = await mockPersonnelAPI.getVacations();
     const vacation = vacations.find((v) => v._id === id);
-    if (!vacation) throw new Error('Vacation not found');
+    if (!vacation) throw new Error("Vacation not found");
     return vacation;
   },
 
@@ -101,12 +85,12 @@ export const mockPersonnelAPI = {
     const vacations = await mockPersonnelAPI.getVacations();
     const newVacation: VacationRequestAPI = {
       _id: `vac_${Date.now()}`,
-      employeeId: 'user_001',
-      startDate: vacationData.startDate || '',
-      endDate: vacationData.endDate || '',
+      employeeId: "user_001",
+      startDate: vacationData.startDate || "",
+      endDate: vacationData.endDate || "",
       days: vacationData.days || 0,
       reason: vacationData.reason,
-      status: 'pending',
+      status: "pending",
       createdAt: new Date().toISOString(),
     };
     const updated = [newVacation, ...vacations];
@@ -118,7 +102,7 @@ export const mockPersonnelAPI = {
     await delay();
     const vacations = await mockPersonnelAPI.getVacations();
     const index = vacations.findIndex((v) => v._id === id);
-    if (index === -1) throw new Error('Vacation not found');
+    if (index === -1) throw new Error("Vacation not found");
     const updated = { ...vacations[index], ...vacationData };
     vacations[index] = updated;
     setStorageData(STORAGE_KEYS.vacations, vacations);
@@ -151,14 +135,14 @@ export const mockPersonnelAPI = {
     await delay();
     const documents = await mockPersonnelAPI.getDocuments();
     const document = documents.find((d) => d._id === id);
-    if (!document) throw new Error('Document not found');
+    if (!document) throw new Error("Document not found");
     return document;
   },
 
   downloadDocument: async (id: string): Promise<Blob> => {
     await delay(800);
     const content = `Mock document content for ${id}`;
-    return new Blob([content], { type: 'application/pdf' });
+    return new Blob([content], { type: "application/pdf" });
   },
 
   filterDocuments: async (type: string): Promise<DocumentAPI[]> => {
@@ -172,8 +156,8 @@ export const mockPersonnelAPI = {
     const documents = await mockPersonnelAPI.getDocuments();
     const newDocument: DocumentAPI = {
       _id: `doc_${Date.now()}`,
-      employeeId: 'user_001',
-      type: type as DocumentAPI['type'],
+      employeeId: "user_001",
+      type: type as DocumentAPI["type"],
       title,
       fileName: file.name,
       url: `/documents/${file.name}`,
@@ -198,7 +182,7 @@ export const mockPersonnelAPI = {
 
   getCalendarEvent: async (id: string): Promise<any> => {
     await delay();
-    throw new Error('Calendar event not found');
+    throw new Error("Calendar event not found");
   },
 
   getCalendarEventsMonth: async (year: number, month: number): Promise<any[]> => {
@@ -261,17 +245,6 @@ export const mockPersonnelAPI = {
     setStorageData(STORAGE_KEYS.notifications, filtered);
   },
 
-  getRecentActivity: async (): Promise<ActivityRecordAPI[]> => {
-    await delay();
-    const activity = getStorageData(STORAGE_KEYS.activity, mockActivityRecordsAPI);
-    return activity.slice(0, 10);
-  },
-
-  getAllActivity: async (): Promise<ActivityRecordAPI[]> => {
-    await delay();
-    return getStorageData(STORAGE_KEYS.activity, mockActivityRecordsAPI);
-  },
-
   getEmployees: async (): Promise<EmployeeDataAPI[]> => {
     await delay();
     return getStorageData(STORAGE_KEYS.employees, mockEmployeesAPI);
@@ -281,7 +254,7 @@ export const mockPersonnelAPI = {
     await delay();
     const employees = await mockPersonnelAPI.getEmployees();
     const employee = employees.find((e) => e._id === id);
-    if (!employee) throw new Error('Employee not found');
+    if (!employee) throw new Error("Employee not found");
     return employee;
   },
 
@@ -289,7 +262,7 @@ export const mockPersonnelAPI = {
     await delay();
     const employees = await mockPersonnelAPI.getEmployees();
     const index = employees.findIndex((e) => e._id === id);
-    if (index === -1) throw new Error('Employee not found');
+    if (index === -1) throw new Error("Employee not found");
     const updated = { ...employees[index], ...employeeData };
     employees[index] = updated;
     setStorageData(STORAGE_KEYS.employees, employees);
@@ -306,16 +279,16 @@ export const mockPersonnelAPI = {
   getPendingVacations: async (): Promise<VacationRequestAPI[]> => {
     await delay();
     const vacations = await mockPersonnelAPI.getVacations();
-    return vacations.filter((v) => v.status === 'pending');
+    return vacations.filter((v) => v.status === "pending");
   },
 
   approveVacation: async (id: string): Promise<VacationRequestAPI> => {
     await delay();
     const vacations = await mockPersonnelAPI.getVacations();
     const index = vacations.findIndex((v) => v._id === id);
-    if (index === -1) throw new Error('Vacation not found');
-    vacations[index].status = 'approved';
-    vacations[index].approvedBy = 'Admin';
+    if (index === -1) throw new Error("Vacation not found");
+    vacations[index].status = "approved";
+    vacations[index].approvedBy = "Admin";
     vacations[index].approvedAt = new Date().toISOString();
     setStorageData(STORAGE_KEYS.vacations, vacations);
     return vacations[index];
@@ -325,9 +298,9 @@ export const mockPersonnelAPI = {
     await delay();
     const vacations = await mockPersonnelAPI.getVacations();
     const index = vacations.findIndex((v) => v._id === id);
-    if (index === -1) throw new Error('Vacation not found');
-    vacations[index].status = 'rejected';
-    vacations[index].approvedBy = 'Admin';
+    if (index === -1) throw new Error("Vacation not found");
+    vacations[index].status = "rejected";
+    vacations[index].approvedBy = "Admin";
     setStorageData(STORAGE_KEYS.vacations, vacations);
     return vacations[index];
   },
@@ -335,15 +308,15 @@ export const mockPersonnelAPI = {
   getPendingOrders: async (): Promise<OrderRequestAPI[]> => {
     await delay();
     const orders = getStorageData(STORAGE_KEYS.orders, mockOrderRequestsAPI);
-    return orders.filter((o) => o.status === 'pending' || o.status === 'approved');
+    return orders.filter((o) => o.status === "pending" || o.status === "approved");
   },
 
   approveOrder: async (id: string): Promise<OrderRequestAPI> => {
     await delay();
     const orders = getStorageData(STORAGE_KEYS.orders, mockOrderRequestsAPI);
     const index = orders.findIndex((o) => o._id === id);
-    if (index === -1) throw new Error('Order not found');
-    orders[index].status = 'approved';
+    if (index === -1) throw new Error("Order not found");
+    orders[index].status = "approved";
     setStorageData(STORAGE_KEYS.orders, orders);
     return orders[index];
   },
@@ -352,8 +325,8 @@ export const mockPersonnelAPI = {
     await delay();
     const orders = getStorageData(STORAGE_KEYS.orders, mockOrderRequestsAPI);
     const index = orders.findIndex((o) => o._id === id);
-    if (index === -1) throw new Error('Order not found');
-    orders[index].status = 'rejected';
+    if (index === -1) throw new Error("Order not found");
+    orders[index].status = "rejected";
     setStorageData(STORAGE_KEYS.orders, orders);
     return orders[index];
   },
@@ -362,8 +335,8 @@ export const mockPersonnelAPI = {
     await delay();
     const orders = getStorageData(STORAGE_KEYS.orders, mockOrderRequestsAPI);
     const index = orders.findIndex((o) => o._id === id);
-    if (index === -1) throw new Error('Order not found');
-    orders[index].status = 'delivered';
+    if (index === -1) throw new Error("Order not found");
+    orders[index].status = "delivered";
     orders[index].deliveredAt = new Date().toISOString();
     setStorageData(STORAGE_KEYS.orders, orders);
     return orders[index];

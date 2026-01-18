@@ -2,7 +2,7 @@ import htmlPdf from "html-pdf-node";
 import path from "path";
 import fs from "fs";
 import { IOrder } from "../models/Order.js";
-import { IOrderCategory } from "../models/OrderCategory.js";
+import { IOrderType } from "../models/OrderType.js";
 import { IPdfTemplate } from "../models/PdfTemplate.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
@@ -163,7 +163,7 @@ interface GeneratePdfResult {
   error?: string;
 }
 
-export async function generateOrderPDF(order: IOrder, category: IOrderCategory, template: IPdfTemplate, user: IUser, tenantId: string, tenantName: string): Promise<GeneratePdfResult> {
+export async function generateOrderPDF(order: IOrder, category: IOrderType, template: IPdfTemplate, user: IUser, tenantId: string, tenantName: string): Promise<GeneratePdfResult> {
   try {
     console.log("[PDF GENERATOR] Starting PDF generation...");
     console.log("[PDF GENERATOR] Order ID:", order._id);
@@ -316,4 +316,3 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdfTem
     };
   }
 }
-

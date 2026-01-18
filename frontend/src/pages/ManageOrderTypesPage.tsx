@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract, faFilePdf, faEye } from "@fortawesome/free-solid-svg-icons";
-import { orderCategoriesAPI, OrderCategory, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderCategories";
+import { orderTypesAPI, OrderType, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderTypes";
 import { pdfTemplatesAPI, PdfTemplate } from "../api/pdfTemplates";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
@@ -17,19 +17,19 @@ import { pdfPreviewAPI } from "../api/pdfPreview";
 import Swal from "sweetalert2";
 
 interface SortableRowProps {
-  category: OrderCategory;
+  orderType: OrderType;
   index: number;
   isReorderMode: boolean;
-  onEdit: (category: OrderCategory) => void;
-  onDelete: (category: OrderCategory) => void;
-  onToggleActive: (category: OrderCategory) => void;
+  onEdit: (orderType: OrderType) => void;
+  onDelete: (orderType: OrderType) => void;
+  onToggleActive: (orderType: OrderType) => void;
   onEnableReorder: () => void;
   pdfTemplates: PdfTemplate[];
   onPreviewPdf: (content: string, code: string) => void;
 }
 
-const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMode, onEdit, onDelete, onToggleActive, onEnableReorder, pdfTemplates, onPreviewPdf }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category._id, disabled: !isReorderMode });
+const SortableRow: React.FC<SortableRowProps> = ({ orderType, index, isReorderMode, onEdit, onDelete, onToggleActive, onEnableReorder, pdfTemplates, onPreviewPdf }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: orderType._id, disabled: !isReorderMode });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -45,7 +45,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
   };
 
   const getExpectedTemplateCode = (): string | null => {
-    const { categoryType, dateMode } = category;
+    const { categoryType, dateMode } = orderType;
     if (categoryType === "fecha") {
       return dateMode === "range" ? "fechaRango" : "fechaUnica";
     }
@@ -79,18 +79,18 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
         <span className="text-sm font-medium">{index + 1}</span>
       </td>
       <td className="py-3 px-4">
-        <div className="font-medium text-gray-900 dark:text-gray-100">{category.name}</div>
-        {category.categoryType === "dinero" && category.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${category.montoMaximo.toLocaleString("es-ES")}</div>}
+        <div className="font-medium text-gray-900 dark:text-gray-100">{orderType.name}</div>
+        {orderType.categoryType === "dinero" && orderType.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${orderType.montoMaximo.toLocaleString("es-ES")}</div>}
       </td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${category.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : category.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : category.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[category.categoryType] || category.categoryType}</span>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${orderType.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderType.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderType.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderType.categoryType] || orderType.categoryType}</span>
       </td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${category.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{category.config?.subtipos?.length ? "Sí" : "No"}</span>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${orderType.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{orderType.config?.subtipos?.length ? "Sí" : "No"}</span>
       </td>
-      <td className="py-3 px-4">{category.requiresAction ? <div className="flex justify-start items-center gap-1">{category.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${category.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[category.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
+      <td className="py-3 px-4">{orderType.requiresAction ? <div className="flex justify-start items-center gap-1">{orderType.futureActionType && <span className={`px-2 py-1 rounded text-xs font-medium ${orderType.futureActionType === "documento" ? "bg-teal-100 text-teal-800 dark:bg-teal-500/30 dark:text-teal-200" : "bg-amber-100 text-amber-800 dark:bg-amber-500/30 dark:text-amber-200"}`}>{tipoAccionFuturaLabels[orderType.futureActionType]}</span>}</div> : <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 p-1">No</span>}</td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${(category.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(category.requiresSignature ?? true) ? "Sí" : "No"}</span>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${(orderType.requiresSignature ?? true) ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{(orderType.requiresSignature ?? true) ? "Sí" : "No"}</span>
       </td>
       <td className="py-3 px-4">
         {matchingTemplate ? (
@@ -102,17 +102,17 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
         )}
       </td>
       <td className="py-3 px-4">
-        <button onClick={() => onToggleActive(category)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${category.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
-          <FontAwesomeIcon icon={category.isActive ? faToggleOn : faToggleOff} className="mr-1" />
-          {category.isActive ? "Activa" : "Inactiva"}
+        <button onClick={() => onToggleActive(orderType)} disabled={isReorderMode} className={`px-3 py-1 rounded text-xs font-medium transition-colors flex items-center flex-nowrap ${orderType.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 text-now flex flex-nowrap"} ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`}>
+          <FontAwesomeIcon icon={orderType.isActive ? faToggleOn : faToggleOff} className="mr-1" />
+          {orderType.isActive ? "Activa" : "Inactiva"}
         </button>
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <button onClick={() => onEdit(category)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
+          <button onClick={() => onEdit(orderType)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
-          <button onClick={() => onDelete(category)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
+          <button onClick={() => onDelete(orderType)} disabled={isReorderMode} className={`p-1.5 rounded text-gray-600 dark:text-gray-400 transition-colors hover:text-gray-800 dark:hover:text-gray-300 ${isReorderMode ? "opacity-50 cursor-not-allowed" : ""}`} title="Eliminar">
             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
           </button>
         </div>
@@ -121,15 +121,15 @@ const SortableRow: React.FC<SortableRowProps> = ({ category, index, isReorderMod
   );
 };
 
-const HELP_KEY = "orderCategories";
+const HELP_KEY = "orderTypes"; // Consider changing help key if needed, or keep for compatibility if help content is shared
 
-export const ManageOrdersCategoriesPage: React.FC = () => {
+export const ManageOrderTypesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<OrderCategory[]>([]);
+  const [orderTypes, setOrderTypes] = useState<OrderType[]>([]);
   const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<OrderCategory | null>(null);
+  const [editingOrderType, setEditingOrderType] = useState<OrderType | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
     informacion: string;
@@ -173,11 +173,11 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
-  const [tempCategories, setTempCategories] = useState<OrderCategory[]>([]);
+  const [tempOrderTypes, setTempOrderTypes] = useState<OrderType[]>([]);
 
   const [showMainInfo, setShowMainInfo] = useState(false);
 
-  const helpEntry = getHelp(HELP_KEY);
+  const helpEntry = getHelp(HELP_KEY) || getHelp("orderCategories"); // Fallback if user hasn't updated help content
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -186,13 +186,13 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
     }),
   );
 
-  const loadCategories = async () => {
+  const loadOrderTypes = async () => {
     try {
       setLoading(true);
-      const data = await orderCategoriesAPI.getAll();
-      setCategories(data);
+      const data = await orderTypesAPI.getAll();
+      setOrderTypes(data);
     } catch (error) {
-      console.error("Error loading categories:", error);
+      console.error("Error loading order types:", error);
       sweetAlert.error("Error", "No se pudieron cargar los tipos de pedidos");
     } finally {
       setLoading(false);
@@ -230,12 +230,12 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadCategories();
+    loadOrderTypes();
     loadPdfTemplates();
   }, []);
 
   const openCreateModal = () => {
-    setEditingCategory(null);
+    setEditingOrderType(null);
     setFormData({
       name: "",
       informacion: "",
@@ -259,28 +259,28 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const openEditModal = (category: OrderCategory) => {
-    setEditingCategory(category);
+  const openEditModal = (orderType: OrderType) => {
+    setEditingOrderType(orderType);
     setFormData({
-      name: category.name,
-      informacion: category.informacion || "",
-      isActive: category.isActive,
-      categoryType: category.categoryType || "fecha",
-      dateMode: category.dateMode || "single",
-      montoMaximo: category.montoMaximo,
-      requiresAction: category.requiresAction || false,
-      actionText: category.actionText || "",
-      actionDescription: category.actionDescription || "",
-      tituloAccion: category.tituloAccion || undefined,
-      futureActionType: category.futureActionType || "",
-      deadlineMode: category.deadlineMode || "none",
-      subtipos: category.config?.subtipos ?? [],
-      plazoDias: category.plazoDias,
-      fechaLimite: category.fechaLimite,
-      documentoRequerido: category.documentoRequerido,
-      requiresSignature: category.requiresSignature ?? true,
-      requiresUserConfirmation: category.requiresUserConfirmation ?? false,
-      pdfTemplateId: category.pdfTemplateId,
+      name: orderType.name,
+      informacion: orderType.informacion || "",
+      isActive: orderType.isActive,
+      categoryType: orderType.categoryType || "fecha",
+      dateMode: orderType.dateMode || "single",
+      montoMaximo: orderType.montoMaximo,
+      requiresAction: orderType.requiresAction || false,
+      actionText: orderType.actionText || "",
+      actionDescription: orderType.actionDescription || "",
+      tituloAccion: orderType.tituloAccion || undefined,
+      futureActionType: orderType.futureActionType || "",
+      deadlineMode: orderType.deadlineMode || "none",
+      subtipos: orderType.config?.subtipos ?? [],
+      plazoDias: orderType.plazoDias,
+      fechaLimite: orderType.fechaLimite,
+      documentoRequerido: orderType.documentoRequerido,
+      requiresSignature: orderType.requiresSignature ?? true,
+      requiresUserConfirmation: orderType.requiresUserConfirmation ?? false,
+      pdfTemplateId: orderType.pdfTemplateId,
     });
     setShowModal(true);
   };
@@ -386,15 +386,12 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
         payload.requiresUserConfirmation = false;
         payload.actionText = undefined;
       } else {
-        // mantiene fecha o días si corresponden, SIN borrarlos por error
-        // --- copiar EXACTAMENTE la lógica de plazoDias pero aplicada a fechaLimite ---
         if (formData.deadlineMode === "plazoDias") {
           payload.plazoDias = formData.plazoDias || undefined;
           payload.fechaLimite = undefined;
         }
 
         if (formData.deadlineMode === "fechaEspecifica") {
-          // convertir correctamente la fecha al formato YYYY-MM-DD
           const raw = formData.fechaLimite;
           payload.fechaLimite = raw ? new Date(raw).toISOString().split("T")[0] : undefined;
           payload.plazoDias = undefined;
@@ -417,39 +414,39 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
         }
       }
 
-      if (editingCategory) {
-        await orderCategoriesAPI.update(editingCategory._id, payload);
-        sweetAlert.success("Categoría actualizada", "La categoría se actualizó correctamente");
+      if (editingOrderType) {
+        await orderTypesAPI.update(editingOrderType._id, payload);
+        sweetAlert.success("Tipo de pedido actualizado", "El tipo de pedido se actualizó correctamente");
       } else {
-        await orderCategoriesAPI.create(payload);
-        sweetAlert.success("Categoría creada", "La categoría se creó correctamente");
+        await orderTypesAPI.create(payload);
+        sweetAlert.success("Tipo de pedido creado", "El tipo de pedido se creó correctamente");
       }
       setShowModal(false);
-      loadCategories();
+      loadOrderTypes();
     } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo guardar la categoría");
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo guardar el tipo de pedido");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (category: OrderCategory) => {
-    const result = await sweetAlert.confirm("¿Eliminar categoría?", `¿Estás seguro de eliminar la categoría "${category.name}"?`);
+  const handleDelete = async (orderType: OrderType) => {
+    const result = await sweetAlert.confirm("¿Eliminar tipo de pedido?", `¿Estás seguro de eliminar el tipo de pedido "${orderType.name}"?`);
     if (!result.isConfirmed) return;
 
     try {
-      await orderCategoriesAPI.delete(category._id);
-      sweetAlert.success("Categoría eliminada", "La categoría se eliminó correctamente");
-      loadCategories();
+      await orderTypesAPI.delete(orderType._id);
+      sweetAlert.success("Eliminado", "El tipo de pedido se eliminó correctamente");
+      loadOrderTypes();
     } catch (error: any) {
-      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo eliminar la categoría");
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo eliminar el tipo de pedido");
     }
   };
 
-  const handleToggleActive = async (category: OrderCategory) => {
+  const handleToggleActive = async (orderType: OrderType) => {
     try {
-      await orderCategoriesAPI.update(category._id, { isActive: !category.isActive });
-      loadCategories();
+      await orderTypesAPI.update(orderType._id, { isActive: !orderType.isActive });
+      loadOrderTypes();
     } catch (error: any) {
       sweetAlert.error("Error", error?.response?.data?.error || "No se pudo actualizar el estado");
     }
@@ -457,26 +454,26 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
 
   const handleStartReorder = () => {
     setIsReorderMode(true);
-    setTempCategories([...categories]);
+    setTempOrderTypes([...orderTypes]);
   };
 
   const handleCancelReorder = () => {
     setIsReorderMode(false);
-    setTempCategories([]);
+    setTempOrderTypes([]);
   };
 
   const handleSaveReorder = async () => {
-    const reorderData = tempCategories.map((cat, index) => ({
+    const reorderData = tempOrderTypes.map((cat, index) => ({
       id: cat._id,
       sortOrder: index + 1,
     }));
 
     try {
-      await orderCategoriesAPI.reorder(reorderData);
-      sweetAlert.success("Orden guardado", "El orden de los tipos de pedidos se actualizó correctamente");
+      await orderTypesAPI.reorder(reorderData);
+      sweetAlert.success("Orden guardado", "El orden se actualizó correctamente");
       setIsReorderMode(false);
-      setTempCategories([]);
-      loadCategories();
+      setTempOrderTypes([]);
+      loadOrderTypes();
     } catch (error: any) {
       sweetAlert.error("Error", error?.response?.data?.error || "No se pudo guardar el orden");
     }
@@ -486,7 +483,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setTempCategories((items) => {
+      setTempOrderTypes((items) => {
         const oldIndex = items.findIndex((item) => item._id === active.id);
         const newIndex = items.findIndex((item) => item._id === over.id);
         return arrayMove(items, oldIndex, newIndex);
@@ -529,14 +526,10 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
                 <FontAwesomeIcon icon={faFilePdf} />
                 <span className="hidden lg:block">Plantillas PDF</span>
               </button>
-              <button onClick={handleStartReorder} disabled={categories.length < 2} className="px-4 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+              <button onClick={handleStartReorder} disabled={orderTypes.length < 2} className="px-4 py-2 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                 <FontAwesomeIcon icon={faGripVertical} />
                 <span className="hidden lg:block">Ordenar</span>
               </button>
-              {/*               <button onClick={() => navigate("/hr/orders")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-                <FontAwesomeIcon icon={faShoppingCart} className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="hidden lg:block">Volver a Pedidos</span>
-              </button> */}
             </>
           )}
         </div>
@@ -575,10 +568,10 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                       </tr>
                     </thead>
-                    <SortableContext items={(isReorderMode ? tempCategories : categories).map((c) => c._id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext items={(isReorderMode ? tempOrderTypes : orderTypes).map((c) => c._id)} strategy={verticalListSortingStrategy}>
                       <tbody>
-                        {(isReorderMode ? tempCategories : categories).map((category, index) => (
-                          <SortableRow key={category._id} category={category} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} pdfTemplates={pdfTemplates} onPreviewPdf={handlePreviewPdf} />
+                        {(isReorderMode ? tempOrderTypes : orderTypes).map((orderType, index) => (
+                          <SortableRow key={orderType._id} orderType={orderType} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} pdfTemplates={pdfTemplates} onPreviewPdf={handlePreviewPdf} />
                         ))}
                       </tbody>
                     </SortableContext>
@@ -586,10 +579,10 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
                 </div>
               </DndContext>
 
-              {categories.length === 0 && (
+              {orderTypes.length === 0 && (
                 <div className="text-center py-12">
                   <FontAwesomeIcon icon={faList} className="h-16 w-16 text-gray-400 mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">No hay los tipos de pedido registrados</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">No hay tipos de pedido registrados</p>
                   <button onClick={openCreateModal} className="btn-primary">
                     Crear Primer Tipo de Pedido
                   </button>
@@ -603,7 +596,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editingCategory ? "Editar Tipo de Pedido" : "Nuevo Tipo de Pedido"}
+        title={editingOrderType ? "Editar Tipo de Pedido" : "Nuevo Tipo de Pedido"}
         size="lg"
         footer={
           <div className="flex gap-3 w-full">
@@ -611,7 +604,7 @@ export const ManageOrdersCategoriesPage: React.FC = () => {
               Cancelar
             </button>
             <button type="submit" form="order-category-form" disabled={submitting} className="flex-1 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? "Guardando..." : editingCategory ? "Actualizar" : "Crear"}
+              {submitting ? "Guardando..." : editingOrderType ? "Actualizar" : "Crear"}
             </button>
           </div>
         }
