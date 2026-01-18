@@ -61,7 +61,7 @@ const MODULE_LABELS: Record<string, string> = {
   "admin_clients:view": "Clientes",
   "admin_orders:view": "Pedidos",
   "admin_vacations:view": "Vacaciones",
-  "admin_activity_logs:view": "Registro de novedades",
+  "admin_activity_logs:view": "Novedades",
   "admin_areas:view": "Areas",
   "admin_positions:view": "Cargos",
   "admin_levels:view": "Niveles",
