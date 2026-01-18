@@ -7,7 +7,7 @@ import { Order } from "../models/Order.js";
 import { OrderType } from "../models/OrderType.js";
 import { Pdf } from "../models/Pdf.js";
 import { Tenant } from "../models/Tenant.js";
-import { CalendarEvent } from "../models/CalendarEvent.js";
+import { Calendar } from "../models/Calendar.js";
 import { OrderDocument } from "../models/OrderDocument.js";
 import { Notification } from "../models/Notification.js";
 import { authenticateToken, AuthenticatedRequest, requireRole } from "../middleware/auth.js";
@@ -855,7 +855,7 @@ router.post("/calendar/events", async (req: AuthenticatedRequest & TenantRequest
 
     const targetUserId = data.userId ? new Types.ObjectId(data.userId) : new Types.ObjectId(creatorId);
 
-    const event = new CalendarEvent({
+    const event = new Calendar({
       tenantId: req.tenantObjectId,
       userId: targetUserId,
       title: data.title,
@@ -896,7 +896,7 @@ router.put("/calendar/events/:id", async (req: AuthenticatedRequest & TenantRequ
     const data = updateEventSchema.parse(req.body);
     const updaterId = req.user!.userId;
 
-    const event = await CalendarEvent.findOneAndUpdate(
+    const event = await Calendar.findOneAndUpdate(
       {
         _id: req.params.id,
         tenantId: req.tenantObjectId,
@@ -928,7 +928,7 @@ router.put("/calendar/events/:id", async (req: AuthenticatedRequest & TenantRequ
 
 router.delete("/calendar/events/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const event = await CalendarEvent.findOneAndDelete({
+    const event = await Calendar.findOneAndDelete({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
     });

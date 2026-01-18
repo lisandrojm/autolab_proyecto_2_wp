@@ -79,7 +79,7 @@ export interface DocumentData {
   isVisibleToEmployee: boolean;
 }
 
-export interface CalendarEvent {
+export interface Calendar {
   _id: string;
   tenantId: string;
   userId: string;
@@ -324,17 +324,17 @@ export const personnelAPI = {
   },
 
   // Calendar endpoints
-  getCalendarEvents: async (): Promise<CalendarEvent[]> => {
+  getCalendarEvents: async (): Promise<Calendar[]> => {
     const { data } = await axios.get("/calendar/events");
     return data;
   },
 
-  getCalendarEvent: async (id: string): Promise<CalendarEvent> => {
+  getCalendarEvent: async (id: string): Promise<Calendar> => {
     const { data } = await axios.get(`/calendar/events/${id}`);
     return data;
   },
 
-  getCalendarEventsMonth: async (year: number, month: number): Promise<CalendarEvent[]> => {
+  getCalendarEventsMonth: async (year: number, month: number): Promise<Calendar[]> => {
     const { data } = await axios.get(`/calendar/events/month/${year}/${month}`);
     return data;
   },
@@ -416,12 +416,12 @@ export const personnelAPI = {
   },
 
   // Admin calendar endpoints
-  createCalendarEventForUser: async (eventData: { userId?: string; title: string; description?: string; start: string; end: string; isAllDay?: boolean; visibility?: "private" | "team" | "company" }): Promise<CalendarEvent> => {
+  createCalendarEventForUser: async (eventData: { userId?: string; title: string; description?: string; start: string; end: string; isAllDay?: boolean; visibility?: "private" | "team" | "company" }): Promise<Calendar> => {
     const { data } = await axios.post("/hr-admin/calendar/events", eventData);
     return data;
   },
 
-  updateCalendarEventAdmin: async (id: string, eventData: any): Promise<CalendarEvent> => {
+  updateCalendarEventAdmin: async (id: string, eventData: any): Promise<Calendar> => {
     const { data } = await axios.put(`/hr-admin/calendar/events/${id}`, eventData);
     return data;
   },

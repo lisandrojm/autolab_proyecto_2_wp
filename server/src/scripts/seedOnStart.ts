@@ -10,7 +10,7 @@ import { Pdf } from "../models/Pdf.js";
 import { OrderDocument } from "../models/OrderDocument.js";
 import { Order } from "../models/Order.js";
 import { Notification } from "../models/Notification.js";
-import { CalendarEvent } from "../models/CalendarEvent.js";
+import { Calendar } from "../models/Calendar.js";
 import { OrderType } from "../models/OrderType.js";
 import { OrderFutureAction } from "../models/OrderFutureAction.js";
 import { Position } from "../models/Position.js";
@@ -1123,11 +1123,11 @@ export async function seedOnStart() {
       console.log("✔️ Notification already present");
     }
 
-    // ---- CalendarEvent ----
+    // ---- Calendar ----
     try {
-      const eventsCount = await CalendarEvent.countDocuments({ tenantId });
+      const eventsCount = await Calendar.countDocuments({ tenantId });
       if (eventsCount === 0) {
-        await CalendarEvent.insertMany(
+        await Calendar.insertMany(
           [
             {
               tenantId,
@@ -1154,12 +1154,12 @@ export async function seedOnStart() {
           ],
           { ordered: true },
         );
-        console.log("✅ CalendarEvent seeded");
+        console.log("✅ Calendar seeded");
       } else {
-        console.log(`✔️ CalendarEvent already present: ${eventsCount}`);
+        console.log(`✔️ Calendar already present: ${eventsCount}`);
       }
     } catch (err) {
-      console.error("❌ Error seeding CalendarEvent:", err);
+      console.error("❌ Error seeding Calendar:", err);
     }
 
     // ---- PDF TEMPLATES ----

@@ -243,7 +243,7 @@ export const ManageVacationsCalendarPage: React.FC = () => {
               <option value="delivered">Entregadas</option>
               <option value="rejected">Rechazadas</option>
             </select>
-            <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
+            {/*             <FontAwesomeIcon icon={faFilter} className="text-gray-400" /> */}
           </div>
         </div>
 

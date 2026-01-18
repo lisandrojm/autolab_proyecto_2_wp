@@ -52,7 +52,7 @@ export interface Order {
   fechaEntregaEstimada?: string;
 }
 
-export interface CalendarEvent {
+export interface Calendar {
   id: string;
   titulo: string;
   descripcion: string;
@@ -148,7 +148,7 @@ export interface DocumentAPI {
   createdAt: string;
 }
 
-export interface CalendarEventAPI {
+export interface CalendarAPI {
   _id: string;
   title: string;
   description?: string;

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export interface ICalendarEvent extends Document {
+export interface ICalendar extends Document {
   tenantId: Types.ObjectId;
   userId: Types.ObjectId;
   title: string;
@@ -15,7 +15,7 @@ export interface ICalendarEvent extends Document {
   updatedAt: Date;
 }
 
-const calendarEventSchema = new Schema<ICalendarEvent>(
+const calendarSchema = new Schema<ICalendar>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
@@ -33,11 +33,11 @@ const calendarEventSchema = new Schema<ICalendarEvent>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: true, collection: "calendar_events" },
+  { timestamps: true, collection: "calendar" },
 );
 
-calendarEventSchema.index({ tenantId: 1, userId: 1, start: 1 });
-calendarEventSchema.index({ tenantId: 1, visibility: 1, start: 1 });
-calendarEventSchema.index({ tenantId: 1, start: 1, end: 1 });
+calendarSchema.index({ tenantId: 1, userId: 1, start: 1 });
+calendarSchema.index({ tenantId: 1, visibility: 1, start: 1 });
+calendarSchema.index({ tenantId: 1, start: 1, end: 1 });
 
-export const CalendarEvent = mongoose.model<ICalendarEvent>("CalendarEvent", calendarEventSchema);
+export const Calendar = mongoose.model<ICalendar>("Calendar", calendarSchema);

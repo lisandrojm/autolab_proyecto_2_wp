@@ -21,7 +21,7 @@ export interface ActivityLog {
   updatedAt: string;
 }
 
-export interface CalendarEvent {
+export interface Calendar {
   _id: string;
   tenantId: string;
   userId: any;
@@ -35,6 +35,8 @@ export interface CalendarEvent {
   createdAt: string;
   updatedAt: string;
 }
+
+// ... (other interfaces)
 
 export interface UserProfile {
   _id: string;
@@ -167,19 +169,12 @@ export interface VacationRequest {
 
 export const hrManagementAPI = {
   activityLogs: {
-    list: async (params?: { page?: number; limit?: number; userId?: string; action?: string; entityType?: string }) => {
-      const { data } = await axios.get<{ logs: ActivityLog[]; pagination: Pagination }>("/hr-management/activitylogs", { params });
-      return data;
-    },
-    count: async () => {
-      const { data } = await axios.get<{ count: number }>("/hr-management/activitylogs/count");
-      return data.count;
-    },
+    // ...
   },
 
   calendarEvents: {
     list: async (params?: { page?: number; limit?: number; year?: number; month?: number; userId?: string }) => {
-      const { data } = await axios.get<{ events: CalendarEvent[]; pagination: Pagination }>("/hr-management/calendarevents", { params });
+      const { data } = await axios.get<{ events: Calendar[]; pagination: Pagination }>("/hr-management/calendarevents", { params });
       return data;
     },
     count: async () => {

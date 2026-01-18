@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { z } from "zod";
-import { CalendarEvent } from "../models/CalendarEvent.js";
+import { Calendar } from "../models/Calendar.js";
 import { UserProfile } from "../models/UserProfile.js";
 import { OrderDocument } from "../models/OrderDocument.js";
 import { Order } from "../models/Order.js";
@@ -108,7 +108,7 @@ router.get("/calendarevents", async (req: AuthenticatedRequest & TenantRequest, 
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [events, total] = await Promise.all([CalendarEvent.find(filter).sort({ start: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("createdBy", "firstName lastName email"), CalendarEvent.countDocuments(filter)]);
+    const [events, total] = await Promise.all([Calendar.find(filter).sort({ start: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("createdBy", "firstName lastName email"), Calendar.countDocuments(filter)]);
 
     res.json({
       events,
@@ -127,7 +127,7 @@ router.get("/calendarevents", async (req: AuthenticatedRequest & TenantRequest, 
 
 router.get("/calendarevents/count", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const count = await CalendarEvent.countDocuments({ tenantId: req.tenantObjectId });
+    const count = await Calendar.countDocuments({ tenantId: req.tenantObjectId });
     res.json({ count });
   } catch (error) {
     console.error("Count calendar events error:", error);

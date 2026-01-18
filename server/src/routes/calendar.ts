@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { CalendarEvent } from "../models/CalendarEvent.js";
+import { Calendar } from "../models/Calendar.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -11,7 +11,7 @@ router.get("/events", async (req: AuthenticatedRequest & TenantRequest, res) => 
   try {
     const userId = req.user!.userId;
 
-    const events = await CalendarEvent.find({
+    const events = await Calendar.find({
       tenantId: req.tenantObjectId,
       userId,
     })
@@ -19,7 +19,7 @@ router.get("/events", async (req: AuthenticatedRequest & TenantRequest, res) => 
       .populate({
         path: "createdBy",
         select: "firstName lastName email",
-        options: { strictPopulate: false }
+        options: { strictPopulate: false },
       })
       .lean();
 
@@ -34,7 +34,7 @@ router.get("/events/:id", async (req: AuthenticatedRequest & TenantRequest, res)
   try {
     const userId = req.user!.userId;
 
-    const event = await CalendarEvent.findOne({
+    const event = await Calendar.findOne({
       _id: req.params.id,
       tenantId: req.tenantObjectId,
       userId,
@@ -66,7 +66,7 @@ router.get("/events/month/:year/:month", async (req: AuthenticatedRequest & Tena
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    const events = await CalendarEvent.find({
+    const events = await Calendar.find({
       tenantId: req.tenantObjectId,
       userId,
       start: { $gte: startDate, $lte: endDate },
