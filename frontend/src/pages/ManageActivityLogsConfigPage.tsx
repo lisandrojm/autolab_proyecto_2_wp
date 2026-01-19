@@ -7,7 +7,7 @@ import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers,
 import { useNavigate } from "react-router-dom";
 import { ReportSchedule } from "../types/activityTypes";
 import { sweetAlert } from "../utils/sweetAlert";
-import { activityLogTypesAPI } from "../api/activityLogTypes";
+import { activityLogTypesAPI } from "../api/requestConfig";
 
 import { projectsAPI, Project } from "../api/projects";
 import { Modal } from "../components/ui/Modal";

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faSearch, faFilter, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple } from "@fortawesome/free-solid-svg-icons";
-import { hrManagementAPI, Order } from "../api/hrManagement";
+import { hrManagementAPI, Order } from "../api/management";
 import { OrderConfig } from "../api/orderConfig";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";

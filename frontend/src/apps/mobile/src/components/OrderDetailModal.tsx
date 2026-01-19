@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faBell, faClock, faCheckCircle, faDownload } from "@fortawesome/free-solid-svg-icons";
-import { Order } from "../../../../api/hrManagement";
+import { Order } from "../../../../api/management";
 import { personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
 import { getUserName, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";

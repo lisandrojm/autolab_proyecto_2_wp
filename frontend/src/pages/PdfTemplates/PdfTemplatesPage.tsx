@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList } from "@fortawesome/free-solid-svg-icons";
 
-import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode } from "../../api/pdfs";
+import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode } from "../../api/pdf";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 
 import Swal from "sweetalert2";

@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isFuture, isToday, isBefore, isAfter, getDate, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { activityLogTypesAPI, RequestConfig } from "../../../../api/activityLogTypes";
+import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
 
-import { activityReportsAPI, ActivityReport } from "../../../../api/activityReports";
+import { activityReportsAPI, ActivityReport } from "../../../../api/request";
 import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

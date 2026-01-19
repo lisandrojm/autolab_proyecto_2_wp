@@ -9,8 +9,8 @@ import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
 import { ActivityReport as BaseActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { activityReportsAPI } from "../api/activityReports";
-import { activityLogTypesAPI, RequestConfig } from "../api/activityLogTypes";
+import { activityReportsAPI } from "../api/request";
+import { activityLogTypesAPI, RequestConfig } from "../api/requestConfig";
 import { usersAPI, User } from "../api/users";
 import { sweetAlert } from "../utils/sweetAlert";
 

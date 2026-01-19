@@ -2,47 +2,38 @@ import api from "./axiosConfig";
 
 export interface VacationOverlap {
   _id: string;
-  tenantId: string;
-  areaId:
-    | {
-        _id: string;
-        name: string;
-      }
-    | string; // Populate via backend
+  areaId: string | { _id: string; name: string };
   maxSimultaneousUsers: number;
   description?: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export type CreateVacationOverlapData = {
+export interface VacationOverlapInput {
   areaId: string;
   maxSimultaneousUsers: number;
   description?: string;
   isActive?: boolean;
-};
-
-export type UpdateVacationOverlapData = Partial<CreateVacationOverlapData>;
+}
 
 export const vacationOverlapsAPI = {
-  list: async () => {
-    const { data } = await api.get<VacationOverlap[]>("/vacation-overlaps");
-    return data;
+  list: async (): Promise<VacationOverlap[]> => {
+    const response = await api.get("/vacation-overlaps");
+    return response.data;
   },
 
-  create: async (payload: CreateVacationOverlapData) => {
-    const { data } = await api.post<VacationOverlap>("/vacation-overlaps", payload);
-    return data;
+  create: async (data: VacationOverlapInput): Promise<VacationOverlap> => {
+    const response = await api.post("/vacation-overlaps", data);
+    return response.data;
   },
 
-  update: async (id: string, payload: UpdateVacationOverlapData) => {
-    const { data } = await api.put<VacationOverlap>(`/vacation-overlaps/${id}`, payload);
-    return data;
+  update: async (id: string, data: Partial<VacationOverlapInput>): Promise<VacationOverlap> => {
+    const response = await api.put(`/vacation-overlaps/${id}`, data);
+    return response.data;
   },
 
-  remove: async (id: string) => {
-    const { data } = await api.delete<{ message: string }>(`/vacation-overlaps/${id}`);
-    return data;
+  remove: async (id: string): Promise<void> => {
+    await api.delete(`/vacation-overlaps/${id}`);
   },
 };

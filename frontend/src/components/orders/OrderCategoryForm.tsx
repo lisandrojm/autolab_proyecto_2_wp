@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faToggleOn, faToggleOff, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
-import { Pdf } from "../../api/pdfs";
+import { Pdf } from "../../api/pdf";
 
 import { CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../../api/orderConfig";
 import { InfoModal } from "../ui/InfoModal";

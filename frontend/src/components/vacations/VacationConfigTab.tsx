@@ -5,7 +5,7 @@ import { faSpinner, faCircleInfo, faSave, faEye, faExclamationTriangle } from "@
 import Swal from "sweetalert2";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { InfoModal } from "../ui/InfoModal";
-import { pdfsAPI, Pdf } from "../../api/pdfs";
+import { pdfsAPI, Pdf } from "../../api/pdf";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
 

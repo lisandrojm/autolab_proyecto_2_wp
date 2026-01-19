@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear, faSpinner, faPlus, faEdit, faTrash, faList, faToggleOn, faToggleOff, faGripVertical, faFileContract, faFilePdf, faEye } from "@fortawesome/free-solid-svg-icons";
 import { orderConfigAPI, OrderConfig, CategoryType, DateMode, Subtype, TipoAccionFutura, DeadlineMode } from "../api/orderConfig";
-import { pdfsAPI, Pdf } from "../api/pdfs";
+import { pdfsAPI, Pdf } from "../api/pdf";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";

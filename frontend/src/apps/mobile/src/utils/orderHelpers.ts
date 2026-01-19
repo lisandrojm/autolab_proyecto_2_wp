@@ -1,4 +1,4 @@
-import { Order } from "../../../../api/hrManagement";
+import { Order } from "../../../../api/management";
 
 export const getUserName = (user: any): string => {
   if (!user) return "Usuario desconocido";
