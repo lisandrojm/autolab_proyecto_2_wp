@@ -44,7 +44,7 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
 // GET /roles - Listar roles
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_roles:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { page = 1, limit = 20, name, _id } = req.query;
+    const { page = 1, limit = 1000, name, _id } = req.query;
     const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
     let filter: any = {};
 

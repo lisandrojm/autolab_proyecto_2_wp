@@ -494,7 +494,7 @@ export const OrderTypesPage: React.FC = () => {
   return (
     <PageLayout
       title="Pedidos | Configuración"
-      /*       itemCount={orderTypes.length} */
+      itemCount={orderTypes.length}
       subtitle="Administra los tipos de pedidos que se muestran en el formulario de pedidos"
       faIcon={{ icon: faGear }}
       onBack={() => navigate("/orders")}

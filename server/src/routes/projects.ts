@@ -54,7 +54,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
   try {
     const { q } = req.query as { q?: string };
     const page = Number(req.query.page ?? 1);
-    const limit = Number(req.query.limit ?? 20);
+    const limit = Number(req.query.limit ?? 1000);
 
     const filter: any = {
       tenantId: req.tenantObjectId,
@@ -78,7 +78,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
 
     const skip = (page - 1) * limit;
 
-    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name"), Project.countDocuments(filter)]);
+    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").lean(), Project.countDocuments(filter)]);
 
     console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
 
@@ -157,7 +157,7 @@ router.get(
     try {
       const { q } = req.query as { q?: string };
       const page = Number(req.query.page ?? 1);
-      const limit = Number(req.query.limit ?? 20);
+      const limit = Number(req.query.limit ?? 1000);
       const { clientId } = req.params;
 
       // Cast explícito a ObjectId

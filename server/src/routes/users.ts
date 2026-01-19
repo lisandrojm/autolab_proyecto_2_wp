@@ -108,7 +108,7 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
 // GET /users - Listar usuarios
 router.get("/", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { page = 1, limit = 20, email, isActive, areaId } = req.query;
+    const { page = 1, limit = 50, email, isActive, areaId } = req.query;
     const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
     const filter: any = isSuperAdmin ? {} : { tenantId: req.tenantObjectId };
 
@@ -131,28 +131,9 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       filter.isActive = isActive === "true";
     }
 
-    // Add populate for tenant to show in UI
-    const usersQuery = User.find(filter)
-      .select("-password") // Nunca devolver password
-      .populate("roles", "name description permissions")
-      .populate("clientIds", "name")
-      .populate("projectIds", "name")
-      .populate("positionId", "name description")
-      .populate("levelId", "name description")
-      .populate("areaId", "name description")
-      .populate("tenantId", "name slug")
-      .sort({ createdAt: -1 });
-
-    // If superadmin, populate tenant field if it references a model, otherwise we might rely on tenantId string?
-    // User model has tenant field? let's check interface... "tenant?: TenantRef".
-    // It seems the schema (usersController) might not have "tenant" field populated by default?
-    // Let's assume tenantId is there.
-    // Ideally we populate tenant details if possible, but User model schema (viewed earlier) has "tenantId" ref?
-    // User.ts model was not viewed. I will assume standard population if needed, but for now just raw list.
-
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [users, total] = await Promise.all([usersQuery.skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
+    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description").populate("tenantId", "name slug").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
 
     // Enhance users with tenant info if needed (manually or via population if schema supports)
     // For now returning as is. Frontend uses tenantId or User interface has tenant?: TenantRef.

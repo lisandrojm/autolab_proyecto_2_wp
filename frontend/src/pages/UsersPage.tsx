@@ -14,7 +14,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -52,11 +52,17 @@ export const UsersPage: React.FC = () => {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
+  const [totalUsers, setTotalUsers] = useState(0);
 
   // búsqueda/filters (server-side)
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(50);
 
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
@@ -117,18 +123,30 @@ export const UsersPage: React.FC = () => {
   // Debounce para refrescar la lista cuando cambian searchTerm / filterActive / fechas
   useEffect(() => {
     const h = setTimeout(() => {
-      fetchUsers({ silent: true });
+      setCurrentPage(1); // Reset to first page on search/filter change
+      fetchUsers({ silent: true, page: 1 });
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, startDate, endDate]);
 
-  const fetchUsers = async ({ silent = false }: { silent?: boolean } = {}) => {
+  // Refrescar cuando cambia la página
+  useEffect(() => {
+    if (!initialLoading) {
+      fetchUsers({ silent: true, page: currentPage });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, limit]);
+
+  const fetchUsers = async ({ silent = false, page = currentPage }: { silent?: boolean; page?: number } = {}) => {
     try {
       if (!silent) setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
-      const params: any = {};
+      const params: any = {
+        page,
+        limit,
+      };
       if (searchTerm) params.email = searchTerm;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
@@ -137,9 +155,10 @@ export const UsersPage: React.FC = () => {
 
       // Solo aplico si esta respuesta es la más reciente
       if (currentId === requestIdRef.current) {
-        // Mostrar TODOS los usuarios de la base de datos
         setUsers(response.users);
-        console.log("📋 Usuarios cargados:", response.users.length);
+        setTotalUsers(response.pagination.total);
+        setTotalPages(response.pagination.pages);
+        console.log("📋 Usuarios cargados:", response.users.length, "de un total de:", response.pagination.total);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -391,7 +410,7 @@ export const UsersPage: React.FC = () => {
   return (
     <PageLayout
       title="Usuarios"
-      itemCount={users.length}
+      itemCount={totalUsers}
       subtitle="Gestiona usuarios y sus roles"
       faIcon={{ icon: faUser }}
       infoModal={{
@@ -1185,6 +1204,61 @@ export const UsersPage: React.FC = () => {
             />
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-6 pb-8 gap-4">
+            <div className="flex-1 flex justify-between sm:hidden w-full">
+              <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                Anterior
+              </button>
+              <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                Siguiente
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between w-full">
+              <div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Mostrando <span className="font-semibold text-primary-600 dark:text-primary-400">{(currentPage - 1) * limit + 1}</span> a <span className="font-semibold text-primary-600 dark:text-primary-400">{Math.min(currentPage * limit, totalUsers)}</span> de <span className="font-semibold text-primary-600 dark:text-primary-400">{totalUsers}</span> usuarios
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                    <span className="sr-only">Anterior</span>
+                    <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+                  </button>
+
+                  {/* Page Numbers */}
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const pageNum = i + 1;
+                    // Only show first, last, and pages around current
+                    if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)) {
+                      return (
+                        <button key={pageNum} onClick={() => setCurrentPage(pageNum)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold transition-all ${currentPage === pageNum ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                    if ((pageNum === 2 && currentPage > 4) || (pageNum === totalPages - 1 && currentPage < totalPages - 3)) {
+                      return (
+                        <span key={`dots-${pageNum}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                    <span className="sr-only">Siguiente</span>
+                    <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Empty state */}

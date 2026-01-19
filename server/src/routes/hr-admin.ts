@@ -86,24 +86,24 @@ const createDocumentSchema = z.object({
 
 router.get("/users", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { page = 1, limit = 20, department, isActive } = req.query;
+    const { page = 1, limit = 1000, department, isActive } = req.query;
 
     const filter: any = { tenantId: req.tenantObjectId };
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
+    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(), User.countDocuments(filter)]);
 
     const userIds = users.map((u) => u._id);
     const profiles = await UserProfile.find({
       tenantId: req.tenantObjectId,
       userId: { $in: userIds },
-    });
+    }).lean();
 
     const profileMap = new Map(profiles.map((p) => [String(p.userId), p]));
 
     const usersWithProfiles = users.map((user) => ({
-      ...user.toObject(),
+      ...user,
       profile: profileMap.get(String(user._id)) || null,
     }));
 
