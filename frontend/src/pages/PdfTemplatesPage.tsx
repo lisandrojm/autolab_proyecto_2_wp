@@ -211,6 +211,7 @@ export function PdfTemplatesPage() {
   return (
     <PageLayout
       title="Plantillas PDF"
+      itemCount={activeTab === "templates" ? filteredTemplates.length : undefined}
       subtitle="Crea y gestiona plantillas PDF para pedidos y vacaciones"
       faIcon={{ icon: faFileContract }}
       infoModal={{

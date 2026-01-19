@@ -1,81 +1,6 @@
-import { Schema, model, type Document, type HydratedDocument, Types, Model } from "mongoose";
+import { Schema, model, type Document, type HydratedDocument, Types } from "mongoose";
 import bcrypt from "bcryptjs";
 import { differenceInYears, differenceInMonths, differenceInDays, endOfYear } from "date-fns";
-import UserProject from "./UserProject.js";
-
-export interface IExternalProject {
-  proyecto_id: number;
-  empleado_id: number;
-  estado_id: number;
-  categoria_sat_id: number;
-  fecha_alta_contrato: string;
-  fecha_baja_contrato: string;
-  tipo_contrato_id: number;
-  cantidad_jornadas_laborales: number;
-  sueldo_jornada: number;
-  sueldo_mano: number;
-  sueldo_mano_texto: string;
-  reemplazo: boolean | null;
-  empleado_id_reemplezado: number | null;
-  observaciones: string;
-  sede_id: number;
-  rol_frame_id: number;
-  fecha_inicio_participacion: string | null;
-  fecha_fin_participacion: string | null;
-  hora_inicio: string;
-  hora_fin: string;
-  calificacion: number | null;
-  fecha_carga: string;
-  puede_renovar_contrato: boolean;
-  nombre_proyecto: string;
-  nombre_estado_empleado: string;
-  nombre_categoria_sat: string;
-  nombre_contrato: string;
-  nombre_sede: string;
-  nombre_rol_frame: string;
-}
-
-export interface IUserMetadata {
-  id?: number;
-  nombre?: string;
-  apellido?: string;
-  generoId?: number | null;
-  tipoDocumentoId?: number;
-  documento?: string;
-  cuit?: string;
-  estadoCivil?: string | null;
-  calle?: string;
-  altura?: string;
-  pisoDepto?: string | null;
-  codigoPostal?: string | null;
-  localidad?: string | null;
-  paisId?: number;
-  nacionalidadId?: number;
-  nivelEstudioId?: number;
-  osId?: number | null;
-  osPrepaga?: boolean | null;
-  fechaNac?: string;
-  fechaAlta?: string;
-  telefono?: string;
-  telefono2?: string | null;
-  visa?: boolean | null;
-  activo?: boolean;
-  bancoId?: number | null;
-  cbu?: string | null;
-  tipoDeCuentaBancaria?: string | null;
-  nroDeCuentaBancaria?: string | null;
-  aliasBancario?: string | null;
-  email?: string;
-  estadoId?: number | null;
-  inHouse?: boolean | null;
-  numeroLegajoTango?: string | null;
-  afiliadoAlSindicato?: boolean | null;
-  rutaImagen?: string | null;
-  bancoReceptor?: string | null;
-  swift?: string | null;
-  informacionBancariaAdicional?: string | null;
-  projects?: Types.ObjectId[] | IExternalProject[] | any[];
-}
 
 export interface IUser extends Document {
   email: string;
@@ -98,10 +23,9 @@ export interface IUser extends Document {
   updatedAt: Date;
   vacationDays: { lawDays: number; extraDays: number; carryOverDays: number; totalDays: number };
   seniorityAtEndOfYear: number;
+  metadata?: Record<string, any>;
   comparePassword(candidatePassword: string): Promise<boolean>;
   closeYear(maxDiasArrastre?: number): Promise<void>;
-  name: string; // Keep name for backward compat if needed, or derived
-  metadata?: IUserMetadata;
 }
 
 const userSchema = new Schema<IUser>(
@@ -130,50 +54,9 @@ const userSchema = new Schema<IUser>(
     extraVacationDays: { type: Number, default: 0 },
     carryOverVacationDays: { type: Number, default: 0 },
     lastLoginAt: { type: Date },
-    name: { type: String }, // Optional compatibility field
-    metadata: {
-      id: Number,
-      nombre: String,
-      apellido: String,
-      generoId: Number,
-      tipoDocumentoId: Number,
-      documento: String,
-      cuit: String,
-      estadoCivil: String,
-      calle: String,
-      altura: String,
-      pisoDepto: String,
-      codigoPostal: String,
-      localidad: String,
-      paisId: Number,
-      nacionalidadId: Number,
-      nivelEstudioId: Number,
-      osId: Number,
-      osPrepaga: Boolean,
-      fechaNac: String,
-      fechaAlta: String,
-      telefono: String,
-      telefono2: String,
-      visa: Boolean,
-      activo: Boolean,
-      bancoId: Number,
-      cbu: String,
-      tipoDeCuentaBancaria: String,
-      nroDeCuentaBancaria: String,
-      aliasBancario: String,
-      email: String,
-      estadoId: Number,
-      inHouse: Boolean,
-      numeroLegajoTango: String,
-      afiliadoAlSindicato: Boolean,
-      rutaImagen: String,
-      bancoReceptor: String,
-      swift: String,
-      informacionBancariaAdicional: String,
-      projects: [{ type: Schema.Types.ObjectId, ref: "UserProject" }],
-    },
+    metadata: { type: Schema.Types.Mixed, default: {} },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 // Virtual: Antigüedad proyectada al 31 de diciembre del año actual
@@ -203,6 +86,8 @@ userSchema.virtual("vacationDays").get(function (this: IUser) {
   // Reglas de la LCT N° 20.744
   if (monthsOfService < 6) {
     // Menos de 6 meses: 1 día por cada 20 trabajados
+    // Calculamos días trabajados hasta el 31/12 (o hasta hoy si es menor, aunque la ley dice al 31/12 para el derecho pleno,
+    // para el proporcional se suele tomar hasta fin de año si sigue empleado)
     const daysWorked = differenceInDays(endOfCurrentYear, hireDate);
     lawDays = Math.floor(daysWorked / 20);
   } else if (yearsOfService < 5) {
@@ -246,7 +131,15 @@ userSchema.methods.comparePassword = async function (this: IUser, candidatePassw
 };
 
 // Contemplación del Cierre de Año
+// Esta función simula la lógica de transición de periodo.
+// Al cerrar el año, los días restantes (disponibles) se convierten en 'carryOverVacationDays' para el nuevo año,
+// respetando el límite máximo (FIFO: lo que no se usó de arrastre viejo se pierde, lo nuevo se arrastra).
 userSchema.methods.closeYear = async function (this: IUser, remainingDays: number, maxDiasArrastre = 0) {
+  // Lógica FIFO implícita:
+  // Si remainingDays > 0, significa que sobraron días.
+  // Estos días sobrantes son candidatos a ser el NUEVO arrastre.
+  // El arrastre viejo (carryOverVacationDays actual) ya se considera 'vencido' o 'consumido' en la lógica del nuevo cálculo.
+
   let newCarryOver = remainingDays;
 
   // Aplicar límite si existe
@@ -255,7 +148,19 @@ userSchema.methods.closeYear = async function (this: IUser, remainingDays: numbe
   }
 
   this.carryOverVacationDays = newCarryOver;
+  // Nota: extraVacationDays (beneficio) se mantiene o resetea según política aparte, aquí solo tocamos el arrastre.
   await this.save();
 };
 
-export const User: Model<IUser> = model<IUser>("User", userSchema);
+// No exponer password en respuestas JSON
+userSchema.set("toJSON", {
+  virtuals: true,
+  transform: function (_doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+export type UserDocument = HydratedDocument<IUser>;
+export const User = model<IUser>("User", userSchema);

@@ -159,6 +159,7 @@ export const PositionsPage: React.FC = () => {
   return (
     <PageLayout
       title="Cargos"
+      itemCount={filteredPositions.length}
       subtitle="Gestiona los cargos de la organización"
       faIcon={{ icon: faUserTie }}
       infoModal={{

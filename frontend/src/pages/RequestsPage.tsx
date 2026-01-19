@@ -585,6 +585,7 @@ export const RequestsPage: React.FC = () => {
   return (
     <PageLayout
       title="Novedades"
+      itemCount={reports.length}
       subtitle="Historial de reportes diarios de asistencia y novedades"
       faIcon={{ icon: faFileText }}
       infoModal={{

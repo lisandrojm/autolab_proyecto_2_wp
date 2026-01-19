@@ -344,6 +344,7 @@ export const RolesPage: React.FC = () => {
   return (
     <PageLayout
       title="Roles"
+      itemCount={filteredRoles.length}
       subtitle="Gestiona roles y permisos del sistema"
       faIcon={{ icon: faUserShield }}
       infoModal={{

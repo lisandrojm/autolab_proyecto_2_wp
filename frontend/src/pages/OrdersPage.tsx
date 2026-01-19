@@ -739,6 +739,7 @@ export const OrdersPage: React.FC = () => {
   return (
     <PageLayout
       title="Pedidos"
+      itemCount={filteredOrders.length}
       subtitle="Administra todos los pedidos del personal"
       faIcon={{ icon: faShoppingCart }}
       infoModal={{

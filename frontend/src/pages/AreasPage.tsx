@@ -151,6 +151,7 @@ export const AreasPage: React.FC = () => {
   return (
     <PageLayout
       title="Áreas"
+      itemCount={filteredAreas.length}
       subtitle="Gestiona las áreas de la organización"
       faIcon={{ icon: faLayerGroup }}
       shouldShowInfo={false}

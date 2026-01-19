@@ -30,6 +30,8 @@ const createUserSchema = z
     extraVacationDays: z.number().default(0),
     clientIds: z.array(z.string()).default([]),
     projectIds: z.array(z.string()).default([]),
+    name: z.string().optional(),
+    metadata: z.any().optional(),
   })
   .refine(
     (data) => {
@@ -42,7 +44,7 @@ const createUserSchema = z
     {
       message: "No se puede asignar un nivel sin un cargo. Por favor, asigna un cargo primero.",
       path: ["levelId"],
-    }
+    },
   );
 
 const updateUserSchema = z
@@ -63,6 +65,8 @@ const updateUserSchema = z
     extraVacationDays: z.number().optional(),
     clientIds: z.array(z.string()).optional(),
     projectIds: z.array(z.string()).optional(),
+    name: z.string().optional(),
+    metadata: z.any().optional(),
   })
   .refine(
     (data) => {
@@ -75,7 +79,7 @@ const updateUserSchema = z
     {
       message: "No se puede asignar un nivel sin un cargo. Por favor, asigna un cargo primero.",
       path: ["levelId"],
-    }
+    },
   );
 
 const updatePasswordSchema = z.object({

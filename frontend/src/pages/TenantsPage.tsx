@@ -287,6 +287,7 @@ export const TenantsPage: React.FC = () => {
   return (
     <PageLayout
       title="Tenants"
+      itemCount={tenants.length}
       faIcon={{ icon: faBuilding }}
       subtitle="Gestiona tenants y sus configuraciones"
       infoModal={{

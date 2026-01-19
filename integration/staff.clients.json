@@ -1,0 +1,585 @@
+[{
+  "_id": {
+    "$oid": "69642161888f8216c84872f9"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "1",
+  "cuit": "30710295839",
+  "name": "Frame",
+  "email": "mica@mica.com",
+  "company": "FZERO",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Mica",
+      "email": "mica@mica.com",
+      "_id": {
+        "$oid": "69642161888f8216c84872fa"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "active",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.069Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.069Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642161888f8216c84872fd"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "2",
+  "cuit": "21795701001",
+  "name": "Pegsa",
+  "email": "administracion-uy@uy.pegsagroup.com",
+  "company": "PEGSA URUGUAY S.A.",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Juan Roberto Makintach",
+      "email": "administracion-uy@uy.pegsagroup.com",
+      "_id": {
+        "$oid": "69642161888f8216c84872fe"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.193Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.193Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642161888f8216c8487301"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "3",
+  "cuit": "30717880702",
+  "name": "Yr Entertainment",
+  "email": "chiqui@yreargentina.com",
+  "company": "YR ENTERTAINMENT SRL",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Agustin Santiago Palleres",
+      "email": "chiqui@yreargentina.com",
+      "_id": {
+        "$oid": "69642161888f8216c8487302"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.321Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.321Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642161888f8216c8487305"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "4",
+  "cuit": "30714453595",
+  "name": "Storylab",
+  "email": "dp@storylab.com.ar",
+  "company": "STORYLAB S.A.",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Diego Palacios",
+      "email": "dp@storylab.com.ar",
+      "_id": {
+        "$oid": "69642161888f8216c8487306"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.443Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.443Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642161888f8216c8487309"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "5",
+  "cuit": "23052221",
+  "name": "El estudio",
+  "email": "coordinacion@elestudio.net",
+  "company": "CL PRODUCCIONES DE RL DE CV",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Carolina Maciel",
+      "email": "coordinacion@elestudio.net",
+      "_id": {
+        "$oid": "69642161888f8216c848730a"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.562Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.562Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642161888f8216c848730d"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "6",
+  "cuit": "30701749150",
+  "name": "La Nación",
+  "email": "efactura_proveedores@lanacion.com.ar",
+  "company": "PUBLIREVISTAS S.A.",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Aldo de Cesare",
+      "email": "efactura_proveedores@lanacion.com.ar",
+      "_id": {
+        "$oid": "69642161888f8216c848730e"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.682Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.682Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642161888f8216c8487311"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "7",
+  "cuit": "33715047379",
+  "name": "Tronito",
+  "email": "gonziarias@gmail.com",
+  "company": "GM COMUNICACION S.R.L.",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Gonzalo Arias",
+      "email": "gonziarias@gmail.com",
+      "_id": {
+        "$oid": "69642161888f8216c8487312"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.798Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.798Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642161888f8216c8487315"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "8",
+  "cuit": "30661584048",
+  "name": "Amc",
+  "email": "marcelo.lezama@amcnetworks.com",
+  "company": "AMC NETWORKS ARGENTINA S.C.A.",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Marcelo Lezama",
+      "email": "marcelo.Lezama@amcnetworks.com",
+      "_id": {
+        "$oid": "69642161888f8216c8487316"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:05.925Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:05.925Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642162888f8216c8487319"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "9",
+  "cuit": "768968772",
+  "name": "Oro Films",
+  "email": "domingaortuzar@gmail.com",
+  "company": "PRODUCCIONES AUDIOVISUALES ORO FILMS LTDA",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Domiga Ortuzar",
+      "email": "domingaortuzar@gmail.com",
+      "_id": {
+        "$oid": "69642162888f8216c848731a"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:06.042Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:06.042Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642162888f8216c848731d"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "10",
+  "cuit": "000000000",
+  "name": "Sablanut",
+  "email": "clara@sablanut.com",
+  "company": "Claridades LLC",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Clara Analia Hamra",
+      "email": "clara@sablanut.com",
+      "_id": {
+        "$oid": "69642162888f8216c848731e"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:06.161Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:06.161Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642162888f8216c8487321"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "11",
+  "cuit": "33-71767374-9",
+  "name": "Lumba",
+  "email": "hola@somoslumba.com",
+  "company": "GRINI S.R.L.",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Esteban Civilla",
+      "email": "hola@somoslumba.com",
+      "_id": {
+        "$oid": "69642162888f8216c8487322"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:06.273Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:06.273Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642162888f8216c8487325"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "12",
+  "cuit": "0000000000000000000000",
+  "name": "Reel Short",
+  "email": "maritza@crazymaplestudio.com",
+  "company": "REELSHORT LLC",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "Maritza Castro",
+      "email": "maritza@crazymaplestudio.com",
+      "_id": {
+        "$oid": "69642162888f8216c8487326"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:06.390Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:06.390Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69642162888f8216c8487329"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "externalId": "13",
+  "cuit": "30-63945373-8",
+  "name": "TELECOM",
+  "email": "gevangelista@teco.com.ar",
+  "company": "TELECOM ARGENTINA S.A.",
+  "attachments": [],
+  "contacts": [
+    {
+      "name": "GONZALO EVANGELISTA",
+      "email": "GEvangelista@teco.com.ar",
+      "_id": {
+        "$oid": "69642162888f8216c848732a"
+      }
+    }
+  ],
+  "proyectos": [],
+  "brief": {
+    "objectives": []
+  },
+  "costCenters": [],
+  "status": "inactive",
+  "assignedUsers": [],
+  "usuarios": [],
+  "favorite": false,
+  "brandKit": {
+    "logos": [],
+    "documents": [],
+    "colors": [],
+    "fonts": []
+  },
+  "createdAt": {
+    "$date": "2026-01-11T22:17:06.548Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-11T22:17:06.548Z"
+  },
+  "__v": 0
+}]

@@ -1,0 +1,6488 @@
+[{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f5c"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "685_GM_QUE_PREFERIS_COPRO",
+  "description": "Aporte por coproducción con productora GM para su PGM \"Que preferis\". Se contempla storage del material por 4 semanas",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-10-14T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-12-06T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 715,
+  "metadata": {
+    "id": 715,
+    "nombre": "685_GM_QUE_PREFERIS_COPRO",
+    "descripcion": "Aporte por coproducción con productora GM para su PGM \"Que preferis\". Se contempla storage del material por 4 semanas",
+    "responsableId": 28,
+    "clienteId": 7,
+    "fechaInicio": "2024-10-14T00:00:00.000Z",
+    "fechaFin": "2024-12-06T00:00:00.000Z",
+    "fechaAlta": "2024-10-16T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 10
+  },
+  "createdAt": {
+    "$date": "2024-10-16T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2024-10-16T00:00:00.000Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f5f"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "688_GM_LLQL_POST",
+  "description": "Cotización por servicio de postproducción para GM para su proyecto La LLama Que Llama. Se contempla la post de edición integral de 5 EP x 10 minutos aprox. cada uno. Se contempla: ingesta, edición offline, online, color, mecla de sonido y mastering. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto:25/11/2024 , fin de proyecto: 31/01/2025. Excedido este período, este presupuesto incurrirá en extras. SE REALIZA 50% DE BONIFICACIÓN SOBRE EQUIPAMIENTO. FZEROCORP ACLARACIONES FORMA DE PAGO 30% ADELANTO / 70% CONTRAENTREGA FINAL.",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-11-25T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-01-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e99eac3e71e00bc599e"
+    },
+    {
+      "$oid": "69640f17eac3e71e00bc5d66"
+    },
+    {
+      "$oid": "69640f90eac3e71e00bc60af"
+    },
+    {
+      "$oid": "69640faeeac3e71e00bc618f"
+    },
+    {
+      "$oid": "69641108eac3e71e00bc6b84"
+    },
+    {
+      "$oid": "69641918a863a0e82a291544"
+    },
+    {
+      "$oid": "69641994a863a0e82a291928"
+    },
+    {
+      "$oid": "69641a10a863a0e82a291c6d"
+    },
+    {
+      "$oid": "69641a30a863a0e82a291d5b"
+    },
+    {
+      "$oid": "69641b98a863a0e82a29270a"
+    },
+    {
+      "$oid": "69642200888f8216c848776a"
+    },
+    {
+      "$oid": "6964227d888f8216c8487b41"
+    },
+    {
+      "$oid": "696422fa888f8216c8487e86"
+    },
+    {
+      "$oid": "6964231a888f8216c8487f66"
+    },
+    {
+      "$oid": "69642488888f8216c8488929"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 718,
+  "metadata": {
+    "id": 718,
+    "nombre": "688_GM_LLQL_POST",
+    "descripcion": "Cotización por servicio de postproducción para GM para su proyecto La LLama Que Llama. Se contempla la post de edición integral de 5 EP x 10 minutos aprox. cada uno. Se contempla: ingesta, edición offline, online, color, mecla de sonido y mastering. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto:25/11/2024 , fin de proyecto: 31/01/2025. Excedido este período, este presupuesto incurrirá en extras. SE REALIZA 50% DE BONIFICACIÓN SOBRE EQUIPAMIENTO. FZEROCORP ACLARACIONES FORMA DE PAGO 30% ADELANTO / 70% CONTRAENTREGA FINAL.",
+    "responsableId": 28,
+    "clienteId": 7,
+    "fechaInicio": "2024-11-25T00:00:00.000Z",
+    "fechaFin": "2025-01-31T00:00:00.000Z",
+    "fechaAlta": "2024-12-09T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 14
+  },
+  "createdAt": {
+    "$date": "2024-12-09T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:01.039Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f62"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "678_ORO_TLM_POST_ONLINE_COPRO",
+  "description": "Cotización por aporte de postproducción para el proyecto \"TODOS LOS MALES\", película 90 minutos para la productora WHISKY. Se contempla storage, edición online (conformado y delivery SDR) y color grading . También se contempla la coordinación del proyecto en la fase online. J",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-09-02T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-03-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640eaaeac3e71e00bc5a36"
+    },
+    {
+      "$oid": "6964192aa863a0e82a2915ea"
+    },
+    {
+      "$oid": "69642212888f8216c8487802"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 716,
+  "metadata": {
+    "id": 716,
+    "nombre": "678_ORO_TLM_POST_ONLINE_COPRO",
+    "descripcion": "Cotización por aporte de postproducción para el proyecto \"TODOS LOS MALES\", película 90 minutos para la productora WHISKY. Se contempla storage, edición online (conformado y delivery SDR) y color grading . También se contempla la coordinación del proyecto en la fase online. J",
+    "responsableId": 28,
+    "clienteId": 9,
+    "fechaInicio": "2024-09-02T00:00:00.000Z",
+    "fechaFin": "2025-03-31T00:00:00.000Z",
+    "fechaAlta": "2024-12-02T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 13
+  },
+  "createdAt": {
+    "$date": "2024-12-02T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:19:27.209Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f65"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "689_CDI",
+  "description": "true crime",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-12-16T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-03-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640eadeac3e71e00bc5a52"
+    },
+    {
+      "$oid": "69640f9eeac3e71e00bc6109"
+    },
+    {
+      "$oid": "69640fa1eac3e71e00bc6124"
+    },
+    {
+      "$oid": "69640fa4eac3e71e00bc6144"
+    },
+    {
+      "$oid": "69640fb0eac3e71e00bc61a0"
+    },
+    {
+      "$oid": "69640fb1eac3e71e00bc61a7"
+    },
+    {
+      "$oid": "69641017eac3e71e00bc648c"
+    },
+    {
+      "$oid": "69641038eac3e71e00bc659b"
+    },
+    {
+      "$oid": "6964103deac3e71e00bc65c1"
+    },
+    {
+      "$oid": "69641050eac3e71e00bc6660"
+    },
+    {
+      "$oid": "6964192da863a0e82a291606"
+    },
+    {
+      "$oid": "69641a1da863a0e82a291cc7"
+    },
+    {
+      "$oid": "69641a21a863a0e82a291ce2"
+    },
+    {
+      "$oid": "69641a24a863a0e82a291d02"
+    },
+    {
+      "$oid": "69641a32a863a0e82a291d6c"
+    },
+    {
+      "$oid": "69641a33a863a0e82a291d73"
+    },
+    {
+      "$oid": "69641aa1a863a0e82a292058"
+    },
+    {
+      "$oid": "69641ac3a863a0e82a292160"
+    },
+    {
+      "$oid": "69641ac8a863a0e82a292186"
+    },
+    {
+      "$oid": "69641adba863a0e82a29221d"
+    },
+    {
+      "$oid": "69642215888f8216c848781e"
+    },
+    {
+      "$oid": "69642308888f8216c8487ee0"
+    },
+    {
+      "$oid": "6964230c888f8216c8487efb"
+    },
+    {
+      "$oid": "69642310888f8216c8487f1b"
+    },
+    {
+      "$oid": "6964231c888f8216c8487f77"
+    },
+    {
+      "$oid": "6964231d888f8216c8487f7e"
+    },
+    {
+      "$oid": "6964238a888f8216c8488277"
+    },
+    {
+      "$oid": "696423ae888f8216c848837f"
+    },
+    {
+      "$oid": "696423b3888f8216c84883a5"
+    },
+    {
+      "$oid": "696423c9888f8216c848843c"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 719,
+  "metadata": {
+    "id": 719,
+    "nombre": "689_CDI",
+    "descripcion": "true crime",
+    "responsableId": 28,
+    "clienteId": 1,
+    "fechaInicio": "2024-12-16T00:00:00.000Z",
+    "fechaFin": "2025-03-31T00:00:00.000Z",
+    "fechaAlta": "2025-01-02T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 15
+  },
+  "createdAt": {
+    "$date": "2025-01-02T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:22:45.645Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f68"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "99_PRODUCTORA",
+  "description": null,
+  "status": "active",
+  "startDate": {
+    "$date": "2021-08-12T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-12-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e1feac3e71e00bc5601"
+    },
+    {
+      "$oid": "69640e37eac3e71e00bc56c5"
+    },
+    {
+      "$oid": "69640e3beac3e71e00bc56e6"
+    },
+    {
+      "$oid": "69640e42eac3e71e00bc5711"
+    },
+    {
+      "$oid": "69640e44eac3e71e00bc5728"
+    },
+    {
+      "$oid": "69640e48eac3e71e00bc5739"
+    },
+    {
+      "$oid": "69640e54eac3e71e00bc5788"
+    },
+    {
+      "$oid": "69640e5ceac3e71e00bc57c6"
+    },
+    {
+      "$oid": "69640e68eac3e71e00bc5827"
+    },
+    {
+      "$oid": "69640e8deac3e71e00bc594b"
+    },
+    {
+      "$oid": "69640ea4eac3e71e00bc59ff"
+    },
+    {
+      "$oid": "69640eaceac3e71e00bc5a44"
+    },
+    {
+      "$oid": "69640eb1eac3e71e00bc5a73"
+    },
+    {
+      "$oid": "69640ee4eac3e71e00bc5c16"
+    },
+    {
+      "$oid": "69640ef9eac3e71e00bc5ca3"
+    },
+    {
+      "$oid": "69640f09eac3e71e00bc5d03"
+    },
+    {
+      "$oid": "69640f3ceac3e71e00bc5e58"
+    },
+    {
+      "$oid": "69640f4eeac3e71e00bc5ed3"
+    },
+    {
+      "$oid": "69640f4feac3e71e00bc5eda"
+    },
+    {
+      "$oid": "69640f5beac3e71e00bc5f33"
+    },
+    {
+      "$oid": "69640f5ceac3e71e00bc5f3a"
+    },
+    {
+      "$oid": "69640f63eac3e71e00bc5f6b"
+    },
+    {
+      "$oid": "69640f69eac3e71e00bc5f96"
+    },
+    {
+      "$oid": "69640f6eeac3e71e00bc5fbb"
+    },
+    {
+      "$oid": "69640f8deac3e71e00bc609c"
+    },
+    {
+      "$oid": "69640fa1eac3e71e00bc6124"
+    },
+    {
+      "$oid": "69640fa6eac3e71e00bc6155"
+    },
+    {
+      "$oid": "69640fb8eac3e71e00bc61d8"
+    },
+    {
+      "$oid": "69640fbaeac3e71e00bc61e8"
+    },
+    {
+      "$oid": "69640fbaeac3e71e00bc61ef"
+    },
+    {
+      "$oid": "69640fbfeac3e71e00bc620e"
+    },
+    {
+      "$oid": "69640fd4eac3e71e00bc62ad"
+    },
+    {
+      "$oid": "6964101beac3e71e00bc64b2"
+    },
+    {
+      "$oid": "69641033eac3e71e00bc6570"
+    },
+    {
+      "$oid": "69641035eac3e71e00bc6580"
+    },
+    {
+      "$oid": "69641038eac3e71e00bc659b"
+    },
+    {
+      "$oid": "6964103aeac3e71e00bc65ab"
+    },
+    {
+      "$oid": "6964103deac3e71e00bc65c1"
+    },
+    {
+      "$oid": "69641040eac3e71e00bc65db"
+    },
+    {
+      "$oid": "69641041eac3e71e00bc65ef"
+    },
+    {
+      "$oid": "69641050eac3e71e00bc6660"
+    },
+    {
+      "$oid": "69641055eac3e71e00bc668c"
+    },
+    {
+      "$oid": "6964105feac3e71e00bc66d1"
+    },
+    {
+      "$oid": "696410fbeac3e71e00bc6b2a"
+    },
+    {
+      "$oid": "69641107eac3e71e00bc6b7a"
+    },
+    {
+      "$oid": "69641132eac3e71e00bc6cac"
+    },
+    {
+      "$oid": "6964114feac3e71e00bc6d70"
+    },
+    {
+      "$oid": "696418a1a863a0e82a2911a7"
+    },
+    {
+      "$oid": "696418b9a863a0e82a29126b"
+    },
+    {
+      "$oid": "696418bea863a0e82a29128c"
+    },
+    {
+      "$oid": "696418c4a863a0e82a2912b7"
+    },
+    {
+      "$oid": "696418c6a863a0e82a2912ce"
+    },
+    {
+      "$oid": "696418caa863a0e82a2912df"
+    },
+    {
+      "$oid": "696418d5a863a0e82a29132e"
+    },
+    {
+      "$oid": "696418dda863a0e82a29136c"
+    },
+    {
+      "$oid": "696418e9a863a0e82a2913cd"
+    },
+    {
+      "$oid": "6964190da863a0e82a2914f1"
+    },
+    {
+      "$oid": "69641924a863a0e82a2915b3"
+    },
+    {
+      "$oid": "6964192ca863a0e82a2915f8"
+    },
+    {
+      "$oid": "69641931a863a0e82a291627"
+    },
+    {
+      "$oid": "69641964a863a0e82a2917ca"
+    },
+    {
+      "$oid": "69641978a863a0e82a291857"
+    },
+    {
+      "$oid": "69641986a863a0e82a2918c5"
+    },
+    {
+      "$oid": "696419b9a863a0e82a291a16"
+    },
+    {
+      "$oid": "696419cba863a0e82a291a91"
+    },
+    {
+      "$oid": "696419cca863a0e82a291a98"
+    },
+    {
+      "$oid": "696419d8a863a0e82a291af1"
+    },
+    {
+      "$oid": "696419d9a863a0e82a291af8"
+    },
+    {
+      "$oid": "696419e1a863a0e82a291b29"
+    },
+    {
+      "$oid": "696419e7a863a0e82a291b54"
+    },
+    {
+      "$oid": "696419eca863a0e82a291b79"
+    },
+    {
+      "$oid": "69641a0da863a0e82a291c5a"
+    },
+    {
+      "$oid": "69641a21a863a0e82a291ce2"
+    },
+    {
+      "$oid": "69641a26a863a0e82a291d13"
+    },
+    {
+      "$oid": "69641a3aa863a0e82a291da4"
+    },
+    {
+      "$oid": "69641a3ca863a0e82a291db4"
+    },
+    {
+      "$oid": "69641a3da863a0e82a291dbb"
+    },
+    {
+      "$oid": "69641a41a863a0e82a291dda"
+    },
+    {
+      "$oid": "69641a58a863a0e82a291e79"
+    },
+    {
+      "$oid": "69641aa5a863a0e82a29207e"
+    },
+    {
+      "$oid": "69641abda863a0e82a292135"
+    },
+    {
+      "$oid": "69641ac0a863a0e82a292145"
+    },
+    {
+      "$oid": "69641ac3a863a0e82a292160"
+    },
+    {
+      "$oid": "69641ac5a863a0e82a292170"
+    },
+    {
+      "$oid": "69641ac8a863a0e82a292186"
+    },
+    {
+      "$oid": "69641acaa863a0e82a29219f"
+    },
+    {
+      "$oid": "69641acca863a0e82a2921ad"
+    },
+    {
+      "$oid": "69641adba863a0e82a29221d"
+    },
+    {
+      "$oid": "69641ae0a863a0e82a292249"
+    },
+    {
+      "$oid": "69641aeaa863a0e82a29228e"
+    },
+    {
+      "$oid": "69641b8ca863a0e82a2926b0"
+    },
+    {
+      "$oid": "69641b97a863a0e82a292700"
+    },
+    {
+      "$oid": "69641bc5a863a0e82a292827"
+    },
+    {
+      "$oid": "69641be2a863a0e82a2928dd"
+    },
+    {
+      "$oid": "69642189888f8216c84873cd"
+    },
+    {
+      "$oid": "696421a1888f8216c8487491"
+    },
+    {
+      "$oid": "696421a5888f8216c84874b2"
+    },
+    {
+      "$oid": "696421ac888f8216c84874dd"
+    },
+    {
+      "$oid": "696421ae888f8216c84874f4"
+    },
+    {
+      "$oid": "696421b2888f8216c8487505"
+    },
+    {
+      "$oid": "696421bd888f8216c8487554"
+    },
+    {
+      "$oid": "696421c5888f8216c8487592"
+    },
+    {
+      "$oid": "696421d1888f8216c84875f3"
+    },
+    {
+      "$oid": "696421f5888f8216c8487717"
+    },
+    {
+      "$oid": "6964220b888f8216c84877cb"
+    },
+    {
+      "$oid": "69642214888f8216c8487810"
+    },
+    {
+      "$oid": "69642219888f8216c848783f"
+    },
+    {
+      "$oid": "6964224c888f8216c84879e2"
+    },
+    {
+      "$oid": "69642261888f8216c8487a6f"
+    },
+    {
+      "$oid": "6964226f888f8216c8487acf"
+    },
+    {
+      "$oid": "696422a2888f8216c8487c2f"
+    },
+    {
+      "$oid": "696422b4888f8216c8487caa"
+    },
+    {
+      "$oid": "696422b5888f8216c8487cb1"
+    },
+    {
+      "$oid": "696422c2888f8216c8487d0a"
+    },
+    {
+      "$oid": "696422c3888f8216c8487d11"
+    },
+    {
+      "$oid": "696422cb888f8216c8487d42"
+    },
+    {
+      "$oid": "696422d1888f8216c8487d6d"
+    },
+    {
+      "$oid": "696422d7888f8216c8487d92"
+    },
+    {
+      "$oid": "696422f7888f8216c8487e73"
+    },
+    {
+      "$oid": "6964230c888f8216c8487efb"
+    },
+    {
+      "$oid": "69642312888f8216c8487f2c"
+    },
+    {
+      "$oid": "69642324888f8216c8487faf"
+    },
+    {
+      "$oid": "69642326888f8216c8487fbf"
+    },
+    {
+      "$oid": "69642327888f8216c8487fc6"
+    },
+    {
+      "$oid": "6964232b888f8216c8487fe5"
+    },
+    {
+      "$oid": "69642342888f8216c8488084"
+    },
+    {
+      "$oid": "6964238e888f8216c848829d"
+    },
+    {
+      "$oid": "696423a8888f8216c8488354"
+    },
+    {
+      "$oid": "696423aa888f8216c8488364"
+    },
+    {
+      "$oid": "696423ae888f8216c848837f"
+    },
+    {
+      "$oid": "696423b0888f8216c848838f"
+    },
+    {
+      "$oid": "696423b3888f8216c84883a5"
+    },
+    {
+      "$oid": "696423b6888f8216c84883be"
+    },
+    {
+      "$oid": "696423b8888f8216c84883cc"
+    },
+    {
+      "$oid": "696423c9888f8216c848843c"
+    },
+    {
+      "$oid": "696423ce888f8216c8488468"
+    },
+    {
+      "$oid": "696423d9888f8216c84884ad"
+    },
+    {
+      "$oid": "6964247b888f8216c84888cf"
+    },
+    {
+      "$oid": "69642486888f8216c848891f"
+    },
+    {
+      "$oid": "696424b3888f8216c8488a46"
+    },
+    {
+      "$oid": "696424d1888f8216c8488afc"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 706,
+  "metadata": {
+    "id": 706,
+    "nombre": "99_PRODUCTORA",
+    "descripcion": null,
+    "responsableId": 28,
+    "clienteId": 1,
+    "fechaInicio": "2021-08-12T00:00:00.000Z",
+    "fechaFin": "2024-12-31T00:00:00.000Z",
+    "fechaAlta": "2024-09-12T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 3
+  },
+  "createdAt": {
+    "$date": "2024-09-12T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:32.391Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f6b"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "673_EL_ESTUDIO_AL_CHILE_POST_ING_ONLINE",
+  "description": "Cotización por servicio de postproducción online para la productora EL ESTUDIO, para su proyecto AL CHILE para la plataforma VIX, 4 Ep de 50 minutos. Se contempla post online: conformado, corrección de color, diseño sonoro 5.1, delivery y QC de 4 episodios de 50 minutos. Se contempla también la ingesta del material en alta, sincronización y armado de proxies para envío a MEX, donde se realizará la post offline. Se contempla desarrollo de Key Visual. Se cotiza forced narratives (en español), subtitulos en ingles, ADescrip en español e inglés y grabación y edición de ADR (6 jornadas de 3hs de grabación en Mexico mas edición).",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-03-11T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-10-30T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640fa3eac3e71e00bc613a"
+    },
+    {
+      "$oid": "69641044eac3e71e00bc6606"
+    },
+    {
+      "$oid": "69641a23a863a0e82a291cf8"
+    },
+    {
+      "$oid": "69641acea863a0e82a2921c3"
+    },
+    {
+      "$oid": "6964230e888f8216c8487f11"
+    },
+    {
+      "$oid": "696423ba888f8216c84883e2"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 707,
+  "metadata": {
+    "id": 707,
+    "nombre": "673_EL_ESTUDIO_AL_CHILE_POST_ING_ONLINE",
+    "descripcion": "Cotización por servicio de postproducción online para la productora EL ESTUDIO, para su proyecto AL CHILE para la plataforma VIX, 4 Ep de 50 minutos. Se contempla post online: conformado, corrección de color, diseño sonoro 5.1, delivery y QC de 4 episodios de 50 minutos. Se contempla también la ingesta del material en alta, sincronización y armado de proxies para envío a MEX, donde se realizará la post offline. Se contempla desarrollo de Key Visual. Se cotiza forced narratives (en español), subtitulos en ingles, ADescrip en español e inglés y grabación y edición de ADR (6 jornadas de 3hs de grabación en Mexico mas edición).",
+    "responsableId": 750,
+    "clienteId": 1,
+    "fechaInicio": "2024-03-11T00:00:00.000Z",
+    "fechaFin": "2024-10-30T00:00:00.000Z",
+    "fechaAlta": "2024-09-20T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 1
+  },
+  "createdAt": {
+    "$date": "2024-09-20T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:22:39.549Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f6e"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "680_YR_ENTERTAINMENT_LPEPV_PELI_POST",
+  "description": "Aporte de servicio de postproducción para el proyecto película 90 minutos LO PEOR ESTA POR VENIR. Se contempla storage y backup en rodaje y post, ingesta, armado de proxies, equipamiento de post de video integral, la coordinación de post del proyecto, asistente de edición offline y online, editor x 8 semanas para el proyecto y realización de masters",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-09-09T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-02-21T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "696410fbeac3e71e00bc6b2a"
+    },
+    {
+      "$oid": "6964110deac3e71e00bc6bae"
+    },
+    {
+      "$oid": "69641b8ca863a0e82a2926b0"
+    },
+    {
+      "$oid": "69641b9ea863a0e82a292734"
+    },
+    {
+      "$oid": "6964247b888f8216c84888cf"
+    },
+    {
+      "$oid": "6964248d888f8216c8488953"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 709,
+  "metadata": {
+    "id": 709,
+    "nombre": "680_YR_ENTERTAINMENT_LPEPV_PELI_POST",
+    "descripcion": "Aporte de servicio de postproducción para el proyecto película 90 minutos LO PEOR ESTA POR VENIR. Se contempla storage y backup en rodaje y post, ingesta, armado de proxies, equipamiento de post de video integral, la coordinación de post del proyecto, asistente de edición offline y online, editor x 8 semanas para el proyecto y realización de masters ",
+    "responsableId": 28,
+    "clienteId": 3,
+    "fechaInicio": "2024-09-09T00:00:00.000Z",
+    "fechaFin": "2025-02-21T00:00:00.000Z",
+    "fechaAlta": "2024-10-10T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 6
+  },
+  "createdAt": {
+    "$date": "2024-10-10T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:03.717Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef195be848a048e8f71"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "664_STORYLAB_ML_RENTAL_ESTUDIO_RRHH",
+  "description": "Cotización por servicio de rental mensual de Estudio para STORYLAB para la grabación de los pgm ML y JV. Se contemplan 4 jornadas de grabación al mes los viernes donde se grabarán ambos pgm y disponibilidad del estudio todo el mes. En esta cotización se contemplan los RRHH relacionados al rental.",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-03-01T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-12-27T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 710,
+  "metadata": {
+    "id": 710,
+    "nombre": "664_STORYLAB_ML_RENTAL_ESTUDIO_RRHH",
+    "descripcion": "Cotización por servicio de rental mensual de Estudio para STORYLAB para la grabación de los pgm ML y JV. Se contemplan 4 jornadas de grabación al mes los viernes donde se grabarán ambos pgm y disponibilidad del estudio todo el mes. En esta cotización se contemplan los RRHH relacionados al rental. ",
+    "responsableId": 28,
+    "clienteId": 4,
+    "fechaInicio": "2024-03-01T00:00:00.000Z",
+    "fechaFin": "2024-12-27T00:00:00.000Z",
+    "fechaAlta": "2024-10-10T00:00:00.000Z",
+    "sedeId": 4,
+    "activo": true,
+    "centroCostoId": 5
+  },
+  "createdAt": {
+    "$date": "2024-10-10T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2024-10-10T00:00:00.000Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f74"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "6730001_EL_ESTUDIO_AL_CHILE_TRAILERS_POST",
+  "description": "Cotización por servicio de postproducción para ELESTUDIO para su proyecto Trailers AL CHILE (1 trailer de 1 min, 1 video promo de 30 seg, 1 de 15 seg y 1 de 10 seg). Se contempla montaje, mezcla de sonido, mater y entrega. No se contempla color, ya que se trabajará con material ya trabajado en color correction previamente.",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-06-01T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-12-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640f17eac3e71e00bc5d66"
+    },
+    {
+      "$oid": "6964103deac3e71e00bc65c1"
+    },
+    {
+      "$oid": "6964116ceac3e71e00bc6e36"
+    },
+    {
+      "$oid": "69641994a863a0e82a291928"
+    },
+    {
+      "$oid": "69641ac8a863a0e82a292186"
+    },
+    {
+      "$oid": "69641c01a863a0e82a2929bf"
+    },
+    {
+      "$oid": "6964227d888f8216c8487b41"
+    },
+    {
+      "$oid": "696423b3888f8216c84883a5"
+    },
+    {
+      "$oid": "696424f0888f8216c8488bc2"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 711,
+  "metadata": {
+    "id": 711,
+    "nombre": "6730001_EL_ESTUDIO_AL_CHILE_TRAILERS_POST",
+    "descripcion": "Cotización por servicio de postproducción para ELESTUDIO para su proyecto Trailers AL CHILE (1 trailer de 1 min, 1 video promo de 30 seg, 1 de 15 seg y 1 de 10 seg). Se contempla montaje, mezcla de sonido, mater y entrega. No se contempla color, ya que se trabajará con material ya trabajado en color correction previamente. ",
+    "responsableId": 28,
+    "clienteId": 5,
+    "fechaInicio": "2024-06-01T00:00:00.000Z",
+    "fechaFin": "2024-12-31T00:00:00.000Z",
+    "fechaAlta": "2024-10-10T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 7
+  },
+  "createdAt": {
+    "$date": "2024-10-10T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:44.971Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f77"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "426_LN+",
+  "description": "Personal de producción técnica y postproducción para el canal LN+",
+  "status": "active",
+  "startDate": {
+    "$date": "2023-02-22T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-02-22T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e20eac3e71e00bc560b"
+    },
+    {
+      "$oid": "69640e26eac3e71e00bc563c"
+    },
+    {
+      "$oid": "69640e27eac3e71e00bc5643"
+    },
+    {
+      "$oid": "69640e28eac3e71e00bc564a"
+    },
+    {
+      "$oid": "69640e29eac3e71e00bc5651"
+    },
+    {
+      "$oid": "69640e2aeac3e71e00bc5658"
+    },
+    {
+      "$oid": "69640e2beac3e71e00bc5665"
+    },
+    {
+      "$oid": "69640e2ceac3e71e00bc566f"
+    },
+    {
+      "$oid": "69640e2eeac3e71e00bc567f"
+    },
+    {
+      "$oid": "69640e2feac3e71e00bc5686"
+    },
+    {
+      "$oid": "69640e30eac3e71e00bc5690"
+    },
+    {
+      "$oid": "69640e31eac3e71e00bc569a"
+    },
+    {
+      "$oid": "69640e32eac3e71e00bc56a1"
+    },
+    {
+      "$oid": "69640e36eac3e71e00bc56be"
+    },
+    {
+      "$oid": "69640e42eac3e71e00bc5711"
+    },
+    {
+      "$oid": "69640e43eac3e71e00bc571e"
+    },
+    {
+      "$oid": "69640e45eac3e71e00bc572f"
+    },
+    {
+      "$oid": "69640e48eac3e71e00bc5740"
+    },
+    {
+      "$oid": "69640e4aeac3e71e00bc5747"
+    },
+    {
+      "$oid": "69640e4beac3e71e00bc574e"
+    },
+    {
+      "$oid": "69640e4deac3e71e00bc575c"
+    },
+    {
+      "$oid": "69640e4feac3e71e00bc576a"
+    },
+    {
+      "$oid": "69640e53eac3e71e00bc5781"
+    },
+    {
+      "$oid": "69640e57eac3e71e00bc57aa"
+    },
+    {
+      "$oid": "69640e58eac3e71e00bc57b1"
+    },
+    {
+      "$oid": "69640e5aeac3e71e00bc57b8"
+    },
+    {
+      "$oid": "69640e61eac3e71e00bc57f6"
+    },
+    {
+      "$oid": "69640e64eac3e71e00bc5812"
+    },
+    {
+      "$oid": "69640e66eac3e71e00bc5820"
+    },
+    {
+      "$oid": "69640e6ceac3e71e00bc584f"
+    },
+    {
+      "$oid": "69640e70eac3e71e00bc585d"
+    },
+    {
+      "$oid": "69640e71eac3e71e00bc586b"
+    },
+    {
+      "$oid": "69640e76eac3e71e00bc5891"
+    },
+    {
+      "$oid": "69640e77eac3e71e00bc5898"
+    },
+    {
+      "$oid": "69640e88eac3e71e00bc5928"
+    },
+    {
+      "$oid": "69640e8beac3e71e00bc5944"
+    },
+    {
+      "$oid": "69640e8feac3e71e00bc5959"
+    },
+    {
+      "$oid": "69640e92eac3e71e00bc5975"
+    },
+    {
+      "$oid": "69640ea5eac3e71e00bc5a0c"
+    },
+    {
+      "$oid": "69640ea7eac3e71e00bc5a21"
+    },
+    {
+      "$oid": "69640eb7eac3e71e00bc5aa1"
+    },
+    {
+      "$oid": "69640eb9eac3e71e00bc5ab6"
+    },
+    {
+      "$oid": "69640ec3eac3e71e00bc5b09"
+    },
+    {
+      "$oid": "69640ec4eac3e71e00bc5b10"
+    },
+    {
+      "$oid": "69640ed5eac3e71e00bc5b97"
+    },
+    {
+      "$oid": "69640ed8eac3e71e00bc5bb2"
+    },
+    {
+      "$oid": "69640edeeac3e71e00bc5be6"
+    },
+    {
+      "$oid": "69640ee5eac3e71e00bc5c1d"
+    },
+    {
+      "$oid": "69640ef9eac3e71e00bc5c9c"
+    },
+    {
+      "$oid": "69640efbeac3e71e00bc5cb3"
+    },
+    {
+      "$oid": "69640f0aeac3e71e00bc5d0a"
+    },
+    {
+      "$oid": "69640f19eac3e71e00bc5d73"
+    },
+    {
+      "$oid": "69640f24eac3e71e00bc5dbc"
+    },
+    {
+      "$oid": "69640f25eac3e71e00bc5dc6"
+    },
+    {
+      "$oid": "69640f32eac3e71e00bc5e19"
+    },
+    {
+      "$oid": "69640f35eac3e71e00bc5e23"
+    },
+    {
+      "$oid": "69640f42eac3e71e00bc5e83"
+    },
+    {
+      "$oid": "69640f4aeac3e71e00bc5eb1"
+    },
+    {
+      "$oid": "69640f4beac3e71e00bc5eb8"
+    },
+    {
+      "$oid": "69640f4beac3e71e00bc5ebf"
+    },
+    {
+      "$oid": "69640f4ceac3e71e00bc5ec6"
+    },
+    {
+      "$oid": "69640f51eac3e71e00bc5eed"
+    },
+    {
+      "$oid": "69640f59eac3e71e00bc5f25"
+    },
+    {
+      "$oid": "69640f5aeac3e71e00bc5f2c"
+    },
+    {
+      "$oid": "69640f5ceac3e71e00bc5f41"
+    },
+    {
+      "$oid": "69640f5eeac3e71e00bc5f48"
+    },
+    {
+      "$oid": "69640f5feac3e71e00bc5f4f"
+    },
+    {
+      "$oid": "69640f60eac3e71e00bc5f56"
+    },
+    {
+      "$oid": "69640f61eac3e71e00bc5f5d"
+    },
+    {
+      "$oid": "69640f61eac3e71e00bc5f64"
+    },
+    {
+      "$oid": "69640f70eac3e71e00bc5fc8"
+    },
+    {
+      "$oid": "69640f7aeac3e71e00bc6012"
+    },
+    {
+      "$oid": "69640f7beac3e71e00bc6019"
+    },
+    {
+      "$oid": "69640f7ceac3e71e00bc6020"
+    },
+    {
+      "$oid": "69640f7deac3e71e00bc6027"
+    },
+    {
+      "$oid": "69640f7eeac3e71e00bc602e"
+    },
+    {
+      "$oid": "69640f83eac3e71e00bc6050"
+    },
+    {
+      "$oid": "69640f88eac3e71e00bc606f"
+    },
+    {
+      "$oid": "69640f88eac3e71e00bc6076"
+    },
+    {
+      "$oid": "69640f89eac3e71e00bc607d"
+    },
+    {
+      "$oid": "69640f8beac3e71e00bc608e"
+    },
+    {
+      "$oid": "69640f8ceac3e71e00bc6095"
+    },
+    {
+      "$oid": "69640f92eac3e71e00bc60bf"
+    },
+    {
+      "$oid": "69640f93eac3e71e00bc60c6"
+    },
+    {
+      "$oid": "69640f93eac3e71e00bc60cd"
+    },
+    {
+      "$oid": "69640f98eac3e71e00bc60ed"
+    },
+    {
+      "$oid": "69640f9aeac3e71e00bc60f4"
+    },
+    {
+      "$oid": "69640f9deac3e71e00bc6102"
+    },
+    {
+      "$oid": "69640f9feac3e71e00bc6116"
+    },
+    {
+      "$oid": "69640fa0eac3e71e00bc611d"
+    },
+    {
+      "$oid": "69640fa5eac3e71e00bc614b"
+    },
+    {
+      "$oid": "69640fa8eac3e71e00bc6162"
+    },
+    {
+      "$oid": "69640fabeac3e71e00bc617b"
+    },
+    {
+      "$oid": "69640fadeac3e71e00bc6188"
+    },
+    {
+      "$oid": "69640fb3eac3e71e00bc61b5"
+    },
+    {
+      "$oid": "69640fc0eac3e71e00bc6215"
+    },
+    {
+      "$oid": "69640fc0eac3e71e00bc621c"
+    },
+    {
+      "$oid": "69640fc1eac3e71e00bc6223"
+    },
+    {
+      "$oid": "69640fc2eac3e71e00bc622a"
+    },
+    {
+      "$oid": "69640fc5eac3e71e00bc623d"
+    },
+    {
+      "$oid": "69640fc5eac3e71e00bc6244"
+    },
+    {
+      "$oid": "69640fc7eac3e71e00bc6254"
+    },
+    {
+      "$oid": "69640fc9eac3e71e00bc625e"
+    },
+    {
+      "$oid": "69640fcaeac3e71e00bc6265"
+    },
+    {
+      "$oid": "69640fd4eac3e71e00bc62b4"
+    },
+    {
+      "$oid": "69640fd6eac3e71e00bc62be"
+    },
+    {
+      "$oid": "69640fdbeac3e71e00bc62e2"
+    },
+    {
+      "$oid": "69640fdeeac3e71e00bc62e9"
+    },
+    {
+      "$oid": "69640fdfeac3e71e00bc62f3"
+    },
+    {
+      "$oid": "69640fe7eac3e71e00bc6338"
+    },
+    {
+      "$oid": "69641006eac3e71e00bc6422"
+    },
+    {
+      "$oid": "69641007eac3e71e00bc6429"
+    },
+    {
+      "$oid": "69641008eac3e71e00bc6430"
+    },
+    {
+      "$oid": "6964100beac3e71e00bc6443"
+    },
+    {
+      "$oid": "6964100ceac3e71e00bc644a"
+    },
+    {
+      "$oid": "6964100eeac3e71e00bc645a"
+    },
+    {
+      "$oid": "6964100feac3e71e00bc6461"
+    },
+    {
+      "$oid": "69641010eac3e71e00bc6468"
+    },
+    {
+      "$oid": "69641014eac3e71e00bc6475"
+    },
+    {
+      "$oid": "69641015eac3e71e00bc647f"
+    },
+    {
+      "$oid": "6964101aeac3e71e00bc64ab"
+    },
+    {
+      "$oid": "6964101feac3e71e00bc64d6"
+    },
+    {
+      "$oid": "69641021eac3e71e00bc64e4"
+    },
+    {
+      "$oid": "69641022eac3e71e00bc64eb"
+    },
+    {
+      "$oid": "69641024eac3e71e00bc64ff"
+    },
+    {
+      "$oid": "69641027eac3e71e00bc6512"
+    },
+    {
+      "$oid": "69641029eac3e71e00bc651f"
+    },
+    {
+      "$oid": "69641035eac3e71e00bc6587"
+    },
+    {
+      "$oid": "69641037eac3e71e00bc6591"
+    },
+    {
+      "$oid": "69641045eac3e71e00bc6610"
+    },
+    {
+      "$oid": "69641046eac3e71e00bc6617"
+    },
+    {
+      "$oid": "69641046eac3e71e00bc661e"
+    },
+    {
+      "$oid": "69641047eac3e71e00bc6625"
+    },
+    {
+      "$oid": "69641048eac3e71e00bc662c"
+    },
+    {
+      "$oid": "69641049eac3e71e00bc6636"
+    },
+    {
+      "$oid": "6964104aeac3e71e00bc663d"
+    },
+    {
+      "$oid": "6964104beac3e71e00bc6644"
+    },
+    {
+      "$oid": "6964104eeac3e71e00bc664b"
+    },
+    {
+      "$oid": "6964104feac3e71e00bc6652"
+    },
+    {
+      "$oid": "69641050eac3e71e00bc6659"
+    },
+    {
+      "$oid": "6964105ceac3e71e00bc66c0"
+    },
+    {
+      "$oid": "6964105deac3e71e00bc66ca"
+    },
+    {
+      "$oid": "69641060eac3e71e00bc66d8"
+    },
+    {
+      "$oid": "69641063eac3e71e00bc66f4"
+    },
+    {
+      "$oid": "6964106eeac3e71e00bc6734"
+    },
+    {
+      "$oid": "6964106feac3e71e00bc673e"
+    },
+    {
+      "$oid": "69641070eac3e71e00bc6748"
+    },
+    {
+      "$oid": "6964107aeac3e71e00bc678c"
+    },
+    {
+      "$oid": "6964107beac3e71e00bc6796"
+    },
+    {
+      "$oid": "6964107ceac3e71e00bc679d"
+    },
+    {
+      "$oid": "6964107deac3e71e00bc67a4"
+    },
+    {
+      "$oid": "69641080eac3e71e00bc67bf"
+    },
+    {
+      "$oid": "6964108deac3e71e00bc681d"
+    },
+    {
+      "$oid": "6964108eeac3e71e00bc6824"
+    },
+    {
+      "$oid": "696410a3eac3e71e00bc68c5"
+    },
+    {
+      "$oid": "696410a5eac3e71e00bc68cf"
+    },
+    {
+      "$oid": "696410b0eac3e71e00bc6918"
+    },
+    {
+      "$oid": "696410b1eac3e71e00bc691f"
+    },
+    {
+      "$oid": "696410b2eac3e71e00bc6930"
+    },
+    {
+      "$oid": "696410b4eac3e71e00bc693d"
+    },
+    {
+      "$oid": "696410baeac3e71e00bc696c"
+    },
+    {
+      "$oid": "696410bbeac3e71e00bc6976"
+    },
+    {
+      "$oid": "696410bfeac3e71e00bc6995"
+    },
+    {
+      "$oid": "696410c1eac3e71e00bc699f"
+    },
+    {
+      "$oid": "696410cbeac3e71e00bc69f1"
+    },
+    {
+      "$oid": "696410cdeac3e71e00bc69fb"
+    },
+    {
+      "$oid": "696410ceeac3e71e00bc6a05"
+    },
+    {
+      "$oid": "696410e4eac3e71e00bc6a99"
+    },
+    {
+      "$oid": "696410e5eac3e71e00bc6aa0"
+    },
+    {
+      "$oid": "696410ebeac3e71e00bc6ac8"
+    },
+    {
+      "$oid": "696410eeeac3e71e00bc6adb"
+    },
+    {
+      "$oid": "696410f9eac3e71e00bc6b19"
+    },
+    {
+      "$oid": "696410faeac3e71e00bc6b20"
+    },
+    {
+      "$oid": "69641100eac3e71e00bc6b4c"
+    },
+    {
+      "$oid": "69641110eac3e71e00bc6bc4"
+    },
+    {
+      "$oid": "69641111eac3e71e00bc6bcb"
+    },
+    {
+      "$oid": "69641113eac3e71e00bc6bd8"
+    },
+    {
+      "$oid": "69641125eac3e71e00bc6c57"
+    },
+    {
+      "$oid": "69641126eac3e71e00bc6c5e"
+    },
+    {
+      "$oid": "6964112feac3e71e00bc6c98"
+    },
+    {
+      "$oid": "69641131eac3e71e00bc6ca5"
+    },
+    {
+      "$oid": "69641134eac3e71e00bc6cbc"
+    },
+    {
+      "$oid": "69641136eac3e71e00bc6cc6"
+    },
+    {
+      "$oid": "6964113aeac3e71e00bc6cd6"
+    },
+    {
+      "$oid": "6964113beac3e71e00bc6ce0"
+    },
+    {
+      "$oid": "6964113deac3e71e00bc6cf0"
+    },
+    {
+      "$oid": "69641148eac3e71e00bc6d45"
+    },
+    {
+      "$oid": "69641149eac3e71e00bc6d52"
+    },
+    {
+      "$oid": "6964114ceac3e71e00bc6d59"
+    },
+    {
+      "$oid": "6964114deac3e71e00bc6d60"
+    },
+    {
+      "$oid": "69641153eac3e71e00bc6d8f"
+    },
+    {
+      "$oid": "69641156eac3e71e00bc6da0"
+    },
+    {
+      "$oid": "69641157eac3e71e00bc6daa"
+    },
+    {
+      "$oid": "69641158eac3e71e00bc6db4"
+    },
+    {
+      "$oid": "6964115beac3e71e00bc6dbe"
+    },
+    {
+      "$oid": "69641161eac3e71e00bc6de7"
+    },
+    {
+      "$oid": "69641164eac3e71e00bc6e00"
+    },
+    {
+      "$oid": "69641167eac3e71e00bc6e13"
+    },
+    {
+      "$oid": "69641168eac3e71e00bc6e1a"
+    },
+    {
+      "$oid": "69641169eac3e71e00bc6e21"
+    },
+    {
+      "$oid": "69641169eac3e71e00bc6e28"
+    },
+    {
+      "$oid": "6964116aeac3e71e00bc6e2f"
+    },
+    {
+      "$oid": "6964116eeac3e71e00bc6e4c"
+    },
+    {
+      "$oid": "6964116feac3e71e00bc6e53"
+    },
+    {
+      "$oid": "69641174eac3e71e00bc6e6c"
+    },
+    {
+      "$oid": "69641178eac3e71e00bc6e88"
+    },
+    {
+      "$oid": "69641179eac3e71e00bc6e92"
+    },
+    {
+      "$oid": "6964117ceac3e71e00bc6ea6"
+    },
+    {
+      "$oid": "6964117eeac3e71e00bc6eb0"
+    },
+    {
+      "$oid": "6964117feac3e71e00bc6eb7"
+    },
+    {
+      "$oid": "69641180eac3e71e00bc6ebe"
+    },
+    {
+      "$oid": "69641181eac3e71e00bc6ec5"
+    },
+    {
+      "$oid": "69641182eac3e71e00bc6ecc"
+    },
+    {
+      "$oid": "69641184eac3e71e00bc6ed3"
+    },
+    {
+      "$oid": "696418a2a863a0e82a2911b1"
+    },
+    {
+      "$oid": "696418a7a863a0e82a2911e2"
+    },
+    {
+      "$oid": "696418a8a863a0e82a2911e9"
+    },
+    {
+      "$oid": "696418a9a863a0e82a2911f0"
+    },
+    {
+      "$oid": "696418aaa863a0e82a2911f7"
+    },
+    {
+      "$oid": "696418aba863a0e82a2911fe"
+    },
+    {
+      "$oid": "696418aca863a0e82a29120b"
+    },
+    {
+      "$oid": "696418aea863a0e82a291215"
+    },
+    {
+      "$oid": "696418b0a863a0e82a291225"
+    },
+    {
+      "$oid": "696418b1a863a0e82a29122c"
+    },
+    {
+      "$oid": "696418b2a863a0e82a291236"
+    },
+    {
+      "$oid": "696418b3a863a0e82a291240"
+    },
+    {
+      "$oid": "696418b4a863a0e82a291247"
+    },
+    {
+      "$oid": "696418b8a863a0e82a291264"
+    },
+    {
+      "$oid": "696418c4a863a0e82a2912b7"
+    },
+    {
+      "$oid": "696418c5a863a0e82a2912c4"
+    },
+    {
+      "$oid": "696418c7a863a0e82a2912d5"
+    },
+    {
+      "$oid": "696418caa863a0e82a2912e6"
+    },
+    {
+      "$oid": "696418cca863a0e82a2912ed"
+    },
+    {
+      "$oid": "696418cda863a0e82a2912f4"
+    },
+    {
+      "$oid": "696418cfa863a0e82a291302"
+    },
+    {
+      "$oid": "696418d0a863a0e82a291310"
+    },
+    {
+      "$oid": "696418d4a863a0e82a291327"
+    },
+    {
+      "$oid": "696418d9a863a0e82a291350"
+    },
+    {
+      "$oid": "696418daa863a0e82a291357"
+    },
+    {
+      "$oid": "696418dba863a0e82a29135e"
+    },
+    {
+      "$oid": "696418e2a863a0e82a29139c"
+    },
+    {
+      "$oid": "696418e6a863a0e82a2913b8"
+    },
+    {
+      "$oid": "696418e7a863a0e82a2913c6"
+    },
+    {
+      "$oid": "696418eea863a0e82a2913f5"
+    },
+    {
+      "$oid": "696418f1a863a0e82a291403"
+    },
+    {
+      "$oid": "696418f3a863a0e82a291411"
+    },
+    {
+      "$oid": "696418f7a863a0e82a291437"
+    },
+    {
+      "$oid": "696418f9a863a0e82a29143e"
+    },
+    {
+      "$oid": "69641909a863a0e82a2914ce"
+    },
+    {
+      "$oid": "6964190ca863a0e82a2914ea"
+    },
+    {
+      "$oid": "6964190fa863a0e82a2914ff"
+    },
+    {
+      "$oid": "69641912a863a0e82a29151b"
+    },
+    {
+      "$oid": "69641925a863a0e82a2915c0"
+    },
+    {
+      "$oid": "69641927a863a0e82a2915d5"
+    },
+    {
+      "$oid": "69641936a863a0e82a291655"
+    },
+    {
+      "$oid": "69641938a863a0e82a29166a"
+    },
+    {
+      "$oid": "69641943a863a0e82a2916bd"
+    },
+    {
+      "$oid": "69641944a863a0e82a2916c4"
+    },
+    {
+      "$oid": "69641955a863a0e82a29174b"
+    },
+    {
+      "$oid": "69641958a863a0e82a291766"
+    },
+    {
+      "$oid": "6964195ea863a0e82a29179a"
+    },
+    {
+      "$oid": "69641965a863a0e82a2917d1"
+    },
+    {
+      "$oid": "69641978a863a0e82a291850"
+    },
+    {
+      "$oid": "6964197ba863a0e82a291867"
+    },
+    {
+      "$oid": "69641987a863a0e82a2918cc"
+    },
+    {
+      "$oid": "69641996a863a0e82a291935"
+    },
+    {
+      "$oid": "696419a1a863a0e82a29197e"
+    },
+    {
+      "$oid": "696419a2a863a0e82a291988"
+    },
+    {
+      "$oid": "696419afa863a0e82a2919db"
+    },
+    {
+      "$oid": "696419b2a863a0e82a2919e5"
+    },
+    {
+      "$oid": "696419bfa863a0e82a291a41"
+    },
+    {
+      "$oid": "696419c7a863a0e82a291a6f"
+    },
+    {
+      "$oid": "696419c8a863a0e82a291a76"
+    },
+    {
+      "$oid": "696419c8a863a0e82a291a7d"
+    },
+    {
+      "$oid": "696419c9a863a0e82a291a84"
+    },
+    {
+      "$oid": "696419cea863a0e82a291aab"
+    },
+    {
+      "$oid": "696419d7a863a0e82a291ae3"
+    },
+    {
+      "$oid": "696419d7a863a0e82a291aea"
+    },
+    {
+      "$oid": "696419daa863a0e82a291aff"
+    },
+    {
+      "$oid": "696419dba863a0e82a291b06"
+    },
+    {
+      "$oid": "696419dca863a0e82a291b0d"
+    },
+    {
+      "$oid": "696419dda863a0e82a291b14"
+    },
+    {
+      "$oid": "696419dea863a0e82a291b1b"
+    },
+    {
+      "$oid": "696419dfa863a0e82a291b22"
+    },
+    {
+      "$oid": "696419eea863a0e82a291b86"
+    },
+    {
+      "$oid": "696419f9a863a0e82a291bd0"
+    },
+    {
+      "$oid": "696419faa863a0e82a291bd7"
+    },
+    {
+      "$oid": "696419faa863a0e82a291bde"
+    },
+    {
+      "$oid": "696419fca863a0e82a291be5"
+    },
+    {
+      "$oid": "696419fda863a0e82a291bec"
+    },
+    {
+      "$oid": "69641a02a863a0e82a291c0e"
+    },
+    {
+      "$oid": "69641a07a863a0e82a291c2d"
+    },
+    {
+      "$oid": "69641a08a863a0e82a291c34"
+    },
+    {
+      "$oid": "69641a09a863a0e82a291c3b"
+    },
+    {
+      "$oid": "69641a0ba863a0e82a291c4c"
+    },
+    {
+      "$oid": "69641a0ca863a0e82a291c53"
+    },
+    {
+      "$oid": "69641a12a863a0e82a291c7d"
+    },
+    {
+      "$oid": "69641a13a863a0e82a291c84"
+    },
+    {
+      "$oid": "69641a14a863a0e82a291c8b"
+    },
+    {
+      "$oid": "69641a18a863a0e82a291cab"
+    },
+    {
+      "$oid": "69641a1aa863a0e82a291cb2"
+    },
+    {
+      "$oid": "69641a1ca863a0e82a291cc0"
+    },
+    {
+      "$oid": "69641a1ea863a0e82a291cd4"
+    },
+    {
+      "$oid": "69641a20a863a0e82a291cdb"
+    },
+    {
+      "$oid": "69641a25a863a0e82a291d09"
+    },
+    {
+      "$oid": "69641a28a863a0e82a291d20"
+    },
+    {
+      "$oid": "69641a2ca863a0e82a291d39"
+    },
+    {
+      "$oid": "69641a2ea863a0e82a291d54"
+    },
+    {
+      "$oid": "69641a34a863a0e82a291d81"
+    },
+    {
+      "$oid": "69641a42a863a0e82a291de1"
+    },
+    {
+      "$oid": "69641a43a863a0e82a291de8"
+    },
+    {
+      "$oid": "69641a44a863a0e82a291def"
+    },
+    {
+      "$oid": "69641a45a863a0e82a291df6"
+    },
+    {
+      "$oid": "69641a48a863a0e82a291e09"
+    },
+    {
+      "$oid": "69641a49a863a0e82a291e10"
+    },
+    {
+      "$oid": "69641a4ba863a0e82a291e20"
+    },
+    {
+      "$oid": "69641a4da863a0e82a291e2a"
+    },
+    {
+      "$oid": "69641a4ea863a0e82a291e31"
+    },
+    {
+      "$oid": "69641a59a863a0e82a291e80"
+    },
+    {
+      "$oid": "69641a5ba863a0e82a291e8a"
+    },
+    {
+      "$oid": "69641a60a863a0e82a291eae"
+    },
+    {
+      "$oid": "69641a63a863a0e82a291eb5"
+    },
+    {
+      "$oid": "69641a64a863a0e82a291ebf"
+    },
+    {
+      "$oid": "69641a6da863a0e82a291f04"
+    },
+    {
+      "$oid": "69641a8fa863a0e82a291fee"
+    },
+    {
+      "$oid": "69641a90a863a0e82a291ff5"
+    },
+    {
+      "$oid": "69641a92a863a0e82a291ffc"
+    },
+    {
+      "$oid": "69641a94a863a0e82a29200f"
+    },
+    {
+      "$oid": "69641a96a863a0e82a292016"
+    },
+    {
+      "$oid": "69641a98a863a0e82a292026"
+    },
+    {
+      "$oid": "69641a99a863a0e82a29202d"
+    },
+    {
+      "$oid": "69641a9aa863a0e82a292034"
+    },
+    {
+      "$oid": "69641a9da863a0e82a292041"
+    },
+    {
+      "$oid": "69641a9fa863a0e82a29204b"
+    },
+    {
+      "$oid": "69641aa4a863a0e82a292077"
+    },
+    {
+      "$oid": "69641aa9a863a0e82a2920a2"
+    },
+    {
+      "$oid": "69641aaba863a0e82a2920b0"
+    },
+    {
+      "$oid": "69641aaca863a0e82a2920b7"
+    },
+    {
+      "$oid": "69641aaea863a0e82a2920cb"
+    },
+    {
+      "$oid": "69641ab2a863a0e82a2920de"
+    },
+    {
+      "$oid": "69641ab3a863a0e82a2920eb"
+    },
+    {
+      "$oid": "69641ac0a863a0e82a29214c"
+    },
+    {
+      "$oid": "69641ac2a863a0e82a292156"
+    },
+    {
+      "$oid": "69641acfa863a0e82a2921cd"
+    },
+    {
+      "$oid": "69641ad0a863a0e82a2921d4"
+    },
+    {
+      "$oid": "69641ad1a863a0e82a2921db"
+    },
+    {
+      "$oid": "69641ad2a863a0e82a2921e2"
+    },
+    {
+      "$oid": "69641ad3a863a0e82a2921e9"
+    },
+    {
+      "$oid": "69641ad4a863a0e82a2921f3"
+    },
+    {
+      "$oid": "69641ad5a863a0e82a2921fa"
+    },
+    {
+      "$oid": "69641ad6a863a0e82a292201"
+    },
+    {
+      "$oid": "69641ad9a863a0e82a292208"
+    },
+    {
+      "$oid": "69641adaa863a0e82a29220f"
+    },
+    {
+      "$oid": "69641adaa863a0e82a292216"
+    },
+    {
+      "$oid": "69641ae7a863a0e82a29227d"
+    },
+    {
+      "$oid": "69641ae8a863a0e82a292287"
+    },
+    {
+      "$oid": "69641aeba863a0e82a292295"
+    },
+    {
+      "$oid": "69641aefa863a0e82a2922b1"
+    },
+    {
+      "$oid": "69641af9a863a0e82a2922f1"
+    },
+    {
+      "$oid": "69641afba863a0e82a2922fb"
+    },
+    {
+      "$oid": "69641afca863a0e82a292305"
+    },
+    {
+      "$oid": "69641b06a863a0e82a292349"
+    },
+    {
+      "$oid": "69641b07a863a0e82a292353"
+    },
+    {
+      "$oid": "69641b08a863a0e82a29235a"
+    },
+    {
+      "$oid": "69641b09a863a0e82a292361"
+    },
+    {
+      "$oid": "69641b0da863a0e82a29237c"
+    },
+    {
+      "$oid": "69641b1ba863a0e82a2923ce"
+    },
+    {
+      "$oid": "69641b1ba863a0e82a2923d5"
+    },
+    {
+      "$oid": "69641b32a863a0e82a292466"
+    },
+    {
+      "$oid": "69641b33a863a0e82a292470"
+    },
+    {
+      "$oid": "69641b3fa863a0e82a2924b9"
+    },
+    {
+      "$oid": "69641b40a863a0e82a2924c0"
+    },
+    {
+      "$oid": "69641b41a863a0e82a2924cd"
+    },
+    {
+      "$oid": "69641b43a863a0e82a2924d7"
+    },
+    {
+      "$oid": "69641b49a863a0e82a292502"
+    },
+    {
+      "$oid": "69641b4aa863a0e82a29250c"
+    },
+    {
+      "$oid": "69641b4fa863a0e82a29252b"
+    },
+    {
+      "$oid": "69641b50a863a0e82a292535"
+    },
+    {
+      "$oid": "69641b5ba863a0e82a29257b"
+    },
+    {
+      "$oid": "69641b5ea863a0e82a292585"
+    },
+    {
+      "$oid": "69641b5fa863a0e82a29258f"
+    },
+    {
+      "$oid": "69641b75a863a0e82a292623"
+    },
+    {
+      "$oid": "69641b76a863a0e82a29262a"
+    },
+    {
+      "$oid": "69641b7ba863a0e82a292652"
+    },
+    {
+      "$oid": "69641b7ea863a0e82a292665"
+    },
+    {
+      "$oid": "69641b8aa863a0e82a29269f"
+    },
+    {
+      "$oid": "69641b8ba863a0e82a2926a6"
+    },
+    {
+      "$oid": "69641b90a863a0e82a2926d2"
+    },
+    {
+      "$oid": "69641ba1a863a0e82a29274a"
+    },
+    {
+      "$oid": "69641ba2a863a0e82a292751"
+    },
+    {
+      "$oid": "69641ba4a863a0e82a29275e"
+    },
+    {
+      "$oid": "69641bb7a863a0e82a2927d2"
+    },
+    {
+      "$oid": "69641bb8a863a0e82a2927d9"
+    },
+    {
+      "$oid": "69641bc2a863a0e82a292813"
+    },
+    {
+      "$oid": "69641bc4a863a0e82a292820"
+    },
+    {
+      "$oid": "69641bc7a863a0e82a292837"
+    },
+    {
+      "$oid": "69641bc9a863a0e82a292841"
+    },
+    {
+      "$oid": "69641bcda863a0e82a292851"
+    },
+    {
+      "$oid": "69641bcea863a0e82a29285b"
+    },
+    {
+      "$oid": "69641bd1a863a0e82a29286b"
+    },
+    {
+      "$oid": "69641bdba863a0e82a2928b2"
+    },
+    {
+      "$oid": "69641bdda863a0e82a2928bf"
+    },
+    {
+      "$oid": "69641bdfa863a0e82a2928c6"
+    },
+    {
+      "$oid": "69641be0a863a0e82a2928cd"
+    },
+    {
+      "$oid": "69641be6a863a0e82a2928fc"
+    },
+    {
+      "$oid": "69641be9a863a0e82a29290d"
+    },
+    {
+      "$oid": "69641beaa863a0e82a292917"
+    },
+    {
+      "$oid": "69641beba863a0e82a292921"
+    },
+    {
+      "$oid": "69641beea863a0e82a29292b"
+    },
+    {
+      "$oid": "69641bf4a863a0e82a292962"
+    },
+    {
+      "$oid": "69641bf7a863a0e82a29297b"
+    },
+    {
+      "$oid": "69641bfaa863a0e82a29298e"
+    },
+    {
+      "$oid": "69641bfba863a0e82a292995"
+    },
+    {
+      "$oid": "69641bfda863a0e82a2929aa"
+    },
+    {
+      "$oid": "69641bfea863a0e82a2929b1"
+    },
+    {
+      "$oid": "69641bffa863a0e82a2929b8"
+    },
+    {
+      "$oid": "69641c03a863a0e82a2929d5"
+    },
+    {
+      "$oid": "69641c04a863a0e82a2929dc"
+    },
+    {
+      "$oid": "69641c09a863a0e82a2929f5"
+    },
+    {
+      "$oid": "69641c0ea863a0e82a292a11"
+    },
+    {
+      "$oid": "69641c10a863a0e82a292a1b"
+    },
+    {
+      "$oid": "69641c14a863a0e82a292a2f"
+    },
+    {
+      "$oid": "69641c15a863a0e82a292a39"
+    },
+    {
+      "$oid": "69641c16a863a0e82a292a40"
+    },
+    {
+      "$oid": "69641c17a863a0e82a292a47"
+    },
+    {
+      "$oid": "69641c18a863a0e82a292a4e"
+    },
+    {
+      "$oid": "69641c19a863a0e82a292a55"
+    },
+    {
+      "$oid": "69641c1ba863a0e82a292a5c"
+    },
+    {
+      "$oid": "6964218a888f8216c84873d7"
+    },
+    {
+      "$oid": "69642190888f8216c8487408"
+    },
+    {
+      "$oid": "69642191888f8216c848740f"
+    },
+    {
+      "$oid": "69642192888f8216c8487416"
+    },
+    {
+      "$oid": "69642192888f8216c848741d"
+    },
+    {
+      "$oid": "69642193888f8216c8487424"
+    },
+    {
+      "$oid": "69642195888f8216c8487431"
+    },
+    {
+      "$oid": "69642196888f8216c848743b"
+    },
+    {
+      "$oid": "69642198888f8216c848744b"
+    },
+    {
+      "$oid": "69642199888f8216c8487452"
+    },
+    {
+      "$oid": "6964219a888f8216c848745c"
+    },
+    {
+      "$oid": "6964219c888f8216c8487466"
+    },
+    {
+      "$oid": "6964219c888f8216c848746d"
+    },
+    {
+      "$oid": "696421a0888f8216c848748a"
+    },
+    {
+      "$oid": "696421ac888f8216c84874dd"
+    },
+    {
+      "$oid": "696421ad888f8216c84874ea"
+    },
+    {
+      "$oid": "696421af888f8216c84874fb"
+    },
+    {
+      "$oid": "696421b3888f8216c848750c"
+    },
+    {
+      "$oid": "696421b4888f8216c8487513"
+    },
+    {
+      "$oid": "696421b5888f8216c848751a"
+    },
+    {
+      "$oid": "696421b7888f8216c8487528"
+    },
+    {
+      "$oid": "696421b8888f8216c8487536"
+    },
+    {
+      "$oid": "696421bc888f8216c848754d"
+    },
+    {
+      "$oid": "696421c0888f8216c8487576"
+    },
+    {
+      "$oid": "696421c1888f8216c848757d"
+    },
+    {
+      "$oid": "696421c3888f8216c8487584"
+    },
+    {
+      "$oid": "696421ca888f8216c84875c2"
+    },
+    {
+      "$oid": "696421cd888f8216c84875de"
+    },
+    {
+      "$oid": "696421cf888f8216c84875ec"
+    },
+    {
+      "$oid": "696421d6888f8216c848761b"
+    },
+    {
+      "$oid": "696421d9888f8216c8487629"
+    },
+    {
+      "$oid": "696421db888f8216c8487637"
+    },
+    {
+      "$oid": "696421df888f8216c848765d"
+    },
+    {
+      "$oid": "696421e1888f8216c8487664"
+    },
+    {
+      "$oid": "696421f1888f8216c84876f4"
+    },
+    {
+      "$oid": "696421f4888f8216c8487710"
+    },
+    {
+      "$oid": "696421f7888f8216c8487725"
+    },
+    {
+      "$oid": "696421fa888f8216c8487741"
+    },
+    {
+      "$oid": "6964220d888f8216c84877d8"
+    },
+    {
+      "$oid": "6964220f888f8216c84877ed"
+    },
+    {
+      "$oid": "6964221e888f8216c848786d"
+    },
+    {
+      "$oid": "69642221888f8216c8487882"
+    },
+    {
+      "$oid": "6964222b888f8216c84878d5"
+    },
+    {
+      "$oid": "6964222c888f8216c84878dc"
+    },
+    {
+      "$oid": "6964223d888f8216c8487963"
+    },
+    {
+      "$oid": "69642240888f8216c848797e"
+    },
+    {
+      "$oid": "69642246888f8216c84879b2"
+    },
+    {
+      "$oid": "6964224d888f8216c84879e9"
+    },
+    {
+      "$oid": "69642260888f8216c8487a68"
+    },
+    {
+      "$oid": "69642263888f8216c8487a7f"
+    },
+    {
+      "$oid": "69642270888f8216c8487ad6"
+    },
+    {
+      "$oid": "6964227f888f8216c8487b4e"
+    },
+    {
+      "$oid": "6964228a888f8216c8487b97"
+    },
+    {
+      "$oid": "6964228b888f8216c8487ba1"
+    },
+    {
+      "$oid": "69642298888f8216c8487bf4"
+    },
+    {
+      "$oid": "6964229b888f8216c8487bfe"
+    },
+    {
+      "$oid": "696422a8888f8216c8487c5a"
+    },
+    {
+      "$oid": "696422b0888f8216c8487c88"
+    },
+    {
+      "$oid": "696422b1888f8216c8487c8f"
+    },
+    {
+      "$oid": "696422b2888f8216c8487c96"
+    },
+    {
+      "$oid": "696422b2888f8216c8487c9d"
+    },
+    {
+      "$oid": "696422b8888f8216c8487cc4"
+    },
+    {
+      "$oid": "696422c0888f8216c8487cfc"
+    },
+    {
+      "$oid": "696422c1888f8216c8487d03"
+    },
+    {
+      "$oid": "696422c4888f8216c8487d18"
+    },
+    {
+      "$oid": "696422c5888f8216c8487d1f"
+    },
+    {
+      "$oid": "696422c6888f8216c8487d26"
+    },
+    {
+      "$oid": "696422c7888f8216c8487d2d"
+    },
+    {
+      "$oid": "696422c8888f8216c8487d34"
+    },
+    {
+      "$oid": "696422c9888f8216c8487d3b"
+    },
+    {
+      "$oid": "696422d8888f8216c8487d9f"
+    },
+    {
+      "$oid": "696422e3888f8216c8487de9"
+    },
+    {
+      "$oid": "696422e4888f8216c8487df0"
+    },
+    {
+      "$oid": "696422e5888f8216c8487df7"
+    },
+    {
+      "$oid": "696422e6888f8216c8487dfe"
+    },
+    {
+      "$oid": "696422e7888f8216c8487e05"
+    },
+    {
+      "$oid": "696422ec888f8216c8487e27"
+    },
+    {
+      "$oid": "696422f1888f8216c8487e46"
+    },
+    {
+      "$oid": "696422f2888f8216c8487e4d"
+    },
+    {
+      "$oid": "696422f3888f8216c8487e54"
+    },
+    {
+      "$oid": "696422f5888f8216c8487e65"
+    },
+    {
+      "$oid": "696422f6888f8216c8487e6c"
+    },
+    {
+      "$oid": "696422fd888f8216c8487e96"
+    },
+    {
+      "$oid": "696422fd888f8216c8487e9d"
+    },
+    {
+      "$oid": "696422fe888f8216c8487ea4"
+    },
+    {
+      "$oid": "69642303888f8216c8487ec4"
+    },
+    {
+      "$oid": "69642305888f8216c8487ecb"
+    },
+    {
+      "$oid": "69642307888f8216c8487ed9"
+    },
+    {
+      "$oid": "6964230a888f8216c8487eed"
+    },
+    {
+      "$oid": "6964230b888f8216c8487ef4"
+    },
+    {
+      "$oid": "69642310888f8216c8487f22"
+    },
+    {
+      "$oid": "69642313888f8216c8487f39"
+    },
+    {
+      "$oid": "69642317888f8216c8487f52"
+    },
+    {
+      "$oid": "69642319888f8216c8487f5f"
+    },
+    {
+      "$oid": "6964231f888f8216c8487f8c"
+    },
+    {
+      "$oid": "6964232c888f8216c8487fec"
+    },
+    {
+      "$oid": "6964232d888f8216c8487ff3"
+    },
+    {
+      "$oid": "6964232e888f8216c8487ffa"
+    },
+    {
+      "$oid": "6964232f888f8216c8488001"
+    },
+    {
+      "$oid": "69642331888f8216c8488014"
+    },
+    {
+      "$oid": "69642332888f8216c848801b"
+    },
+    {
+      "$oid": "69642334888f8216c848802b"
+    },
+    {
+      "$oid": "69642336888f8216c8488035"
+    },
+    {
+      "$oid": "69642337888f8216c848803c"
+    },
+    {
+      "$oid": "69642342888f8216c848808b"
+    },
+    {
+      "$oid": "69642344888f8216c8488095"
+    },
+    {
+      "$oid": "6964234a888f8216c84880b9"
+    },
+    {
+      "$oid": "6964234c888f8216c84880c0"
+    },
+    {
+      "$oid": "6964234e888f8216c84880ca"
+    },
+    {
+      "$oid": "69642357888f8216c848810f"
+    },
+    {
+      "$oid": "69642378888f8216c84881fe"
+    },
+    {
+      "$oid": "69642379888f8216c8488205"
+    },
+    {
+      "$oid": "6964237b888f8216c8488211"
+    },
+    {
+      "$oid": "6964237d888f8216c8488228"
+    },
+    {
+      "$oid": "6964237f888f8216c8488235"
+    },
+    {
+      "$oid": "69642381888f8216c8488245"
+    },
+    {
+      "$oid": "69642382888f8216c848824c"
+    },
+    {
+      "$oid": "69642383888f8216c8488253"
+    },
+    {
+      "$oid": "69642386888f8216c8488260"
+    },
+    {
+      "$oid": "69642388888f8216c848826a"
+    },
+    {
+      "$oid": "6964238d888f8216c8488296"
+    },
+    {
+      "$oid": "69642393888f8216c84882c1"
+    },
+    {
+      "$oid": "69642395888f8216c84882cf"
+    },
+    {
+      "$oid": "69642396888f8216c84882d6"
+    },
+    {
+      "$oid": "69642398888f8216c84882ea"
+    },
+    {
+      "$oid": "6964239b888f8216c84882fd"
+    },
+    {
+      "$oid": "6964239d888f8216c848830a"
+    },
+    {
+      "$oid": "696423ab888f8216c848836b"
+    },
+    {
+      "$oid": "696423ad888f8216c8488375"
+    },
+    {
+      "$oid": "696423bc888f8216c84883ec"
+    },
+    {
+      "$oid": "696423bc888f8216c84883f3"
+    },
+    {
+      "$oid": "696423bd888f8216c84883fa"
+    },
+    {
+      "$oid": "696423be888f8216c8488401"
+    },
+    {
+      "$oid": "696423bf888f8216c8488408"
+    },
+    {
+      "$oid": "696423c1888f8216c8488412"
+    },
+    {
+      "$oid": "696423c2888f8216c8488419"
+    },
+    {
+      "$oid": "696423c3888f8216c8488420"
+    },
+    {
+      "$oid": "696423c6888f8216c8488427"
+    },
+    {
+      "$oid": "696423c7888f8216c848842e"
+    },
+    {
+      "$oid": "696423c8888f8216c8488435"
+    },
+    {
+      "$oid": "696423d5888f8216c848849c"
+    },
+    {
+      "$oid": "696423d7888f8216c84884a6"
+    },
+    {
+      "$oid": "696423d9888f8216c84884b4"
+    },
+    {
+      "$oid": "696423dd888f8216c84884d0"
+    },
+    {
+      "$oid": "696423e8888f8216c8488510"
+    },
+    {
+      "$oid": "696423e9888f8216c848851a"
+    },
+    {
+      "$oid": "696423eb888f8216c8488524"
+    },
+    {
+      "$oid": "696423f5888f8216c8488568"
+    },
+    {
+      "$oid": "696423f6888f8216c8488572"
+    },
+    {
+      "$oid": "696423f7888f8216c8488579"
+    },
+    {
+      "$oid": "696423f8888f8216c8488580"
+    },
+    {
+      "$oid": "696423fc888f8216c848859b"
+    },
+    {
+      "$oid": "69642409888f8216c84885ed"
+    },
+    {
+      "$oid": "6964240a888f8216c84885f4"
+    },
+    {
+      "$oid": "69642420888f8216c8488685"
+    },
+    {
+      "$oid": "69642421888f8216c848868f"
+    },
+    {
+      "$oid": "6964242d888f8216c84886d8"
+    },
+    {
+      "$oid": "6964242e888f8216c84886df"
+    },
+    {
+      "$oid": "6964242f888f8216c84886ec"
+    },
+    {
+      "$oid": "69642431888f8216c84886f6"
+    },
+    {
+      "$oid": "69642438888f8216c8488721"
+    },
+    {
+      "$oid": "69642439888f8216c848872b"
+    },
+    {
+      "$oid": "6964243e888f8216c848874a"
+    },
+    {
+      "$oid": "6964243f888f8216c8488754"
+    },
+    {
+      "$oid": "6964244a888f8216c848879a"
+    },
+    {
+      "$oid": "6964244c888f8216c84887a4"
+    },
+    {
+      "$oid": "6964244e888f8216c84887ae"
+    },
+    {
+      "$oid": "69642464888f8216c8488842"
+    },
+    {
+      "$oid": "69642465888f8216c8488849"
+    },
+    {
+      "$oid": "6964246b888f8216c8488871"
+    },
+    {
+      "$oid": "6964246e888f8216c8488884"
+    },
+    {
+      "$oid": "69642479888f8216c84888be"
+    },
+    {
+      "$oid": "6964247a888f8216c84888c5"
+    },
+    {
+      "$oid": "6964247f888f8216c84888f1"
+    },
+    {
+      "$oid": "69642490888f8216c8488969"
+    },
+    {
+      "$oid": "69642491888f8216c8488970"
+    },
+    {
+      "$oid": "69642493888f8216c848897d"
+    },
+    {
+      "$oid": "696424a5888f8216c84889f1"
+    },
+    {
+      "$oid": "696424a6888f8216c84889f8"
+    },
+    {
+      "$oid": "696424b1888f8216c8488a32"
+    },
+    {
+      "$oid": "696424b3888f8216c8488a3f"
+    },
+    {
+      "$oid": "696424b6888f8216c8488a56"
+    },
+    {
+      "$oid": "696424b7888f8216c8488a60"
+    },
+    {
+      "$oid": "696424bc888f8216c8488a70"
+    },
+    {
+      "$oid": "696424bd888f8216c8488a7a"
+    },
+    {
+      "$oid": "696424bf888f8216c8488a8a"
+    },
+    {
+      "$oid": "696424ca888f8216c8488ad1"
+    },
+    {
+      "$oid": "696424cc888f8216c8488ade"
+    },
+    {
+      "$oid": "696424ce888f8216c8488ae5"
+    },
+    {
+      "$oid": "696424cf888f8216c8488aec"
+    },
+    {
+      "$oid": "696424d6888f8216c8488b1b"
+    },
+    {
+      "$oid": "696424d8888f8216c8488b2c"
+    },
+    {
+      "$oid": "696424d9888f8216c8488b36"
+    },
+    {
+      "$oid": "696424db888f8216c8488b40"
+    },
+    {
+      "$oid": "696424de888f8216c8488b4a"
+    },
+    {
+      "$oid": "696424e3888f8216c8488b73"
+    },
+    {
+      "$oid": "696424e7888f8216c8488b8c"
+    },
+    {
+      "$oid": "696424ea888f8216c8488b9f"
+    },
+    {
+      "$oid": "696424eb888f8216c8488ba6"
+    },
+    {
+      "$oid": "696424ec888f8216c8488bad"
+    },
+    {
+      "$oid": "696424ed888f8216c8488bb4"
+    },
+    {
+      "$oid": "696424ee888f8216c8488bbb"
+    },
+    {
+      "$oid": "696424f2888f8216c8488bd8"
+    },
+    {
+      "$oid": "696424f3888f8216c8488bdf"
+    },
+    {
+      "$oid": "696424f8888f8216c8488bf8"
+    },
+    {
+      "$oid": "696424fc888f8216c8488c14"
+    },
+    {
+      "$oid": "696424fd888f8216c8488c1e"
+    },
+    {
+      "$oid": "69642500888f8216c8488c32"
+    },
+    {
+      "$oid": "69642502888f8216c8488c3c"
+    },
+    {
+      "$oid": "69642503888f8216c8488c43"
+    },
+    {
+      "$oid": "69642504888f8216c8488c4a"
+    },
+    {
+      "$oid": "69642505888f8216c8488c51"
+    },
+    {
+      "$oid": "69642506888f8216c8488c58"
+    },
+    {
+      "$oid": "69642508888f8216c8488c5f"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 705,
+  "metadata": {
+    "id": 705,
+    "nombre": "426_LN+",
+    "descripcion": "Personal de producción técnica y postproducción para el canal LN+",
+    "responsableId": 27,
+    "clienteId": 6,
+    "fechaInicio": "2023-02-22T00:00:00.000Z",
+    "fechaFin": "2025-02-22T00:00:00.000Z",
+    "fechaAlta": "2024-09-12T00:00:00.000Z",
+    "sedeId": 1,
+    "activo": true,
+    "centroCostoId": 4
+  },
+  "createdAt": {
+    "$date": "2024-09-12T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:55.127Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f7a"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "683_GM_COPA_AMERICA_2024_POST",
+  "description": "Cotización por servicio de postproducción para GM para su proyecto documental COPA AMERICA 2024, 6 EP x 30 min. Se contempla ingesta, sincro, realización de proxies, edición offline, online, color, mezcla de sonido, mastering y delivery.",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-10-14T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-01-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e99eac3e71e00bc599e"
+    },
+    {
+      "$oid": "69640f17eac3e71e00bc5d66"
+    },
+    {
+      "$oid": "69640f95eac3e71e00bc60da"
+    },
+    {
+      "$oid": "69640f9ceac3e71e00bc60fb"
+    },
+    {
+      "$oid": "69640fa1eac3e71e00bc6124"
+    },
+    {
+      "$oid": "69640fafeac3e71e00bc6196"
+    },
+    {
+      "$oid": "69640fb4eac3e71e00bc61bc"
+    },
+    {
+      "$oid": "69640febeac3e71e00bc6356"
+    },
+    {
+      "$oid": "6964101deac3e71e00bc64c2"
+    },
+    {
+      "$oid": "69641020eac3e71e00bc64dd"
+    },
+    {
+      "$oid": "69641041eac3e71e00bc65ef"
+    },
+    {
+      "$oid": "69641050eac3e71e00bc6660"
+    },
+    {
+      "$oid": "696410fbeac3e71e00bc6b2a"
+    },
+    {
+      "$oid": "69641918a863a0e82a291544"
+    },
+    {
+      "$oid": "69641994a863a0e82a291928"
+    },
+    {
+      "$oid": "69641a16a863a0e82a291c98"
+    },
+    {
+      "$oid": "69641a1ba863a0e82a291cb9"
+    },
+    {
+      "$oid": "69641a21a863a0e82a291ce2"
+    },
+    {
+      "$oid": "69641a31a863a0e82a291d62"
+    },
+    {
+      "$oid": "69641a36a863a0e82a291d88"
+    },
+    {
+      "$oid": "69641a72a863a0e82a291f22"
+    },
+    {
+      "$oid": "69641aa7a863a0e82a29208e"
+    },
+    {
+      "$oid": "69641aaaa863a0e82a2920a9"
+    },
+    {
+      "$oid": "69641acca863a0e82a2921ad"
+    },
+    {
+      "$oid": "69641adba863a0e82a29221d"
+    },
+    {
+      "$oid": "69641b8ca863a0e82a2926b0"
+    },
+    {
+      "$oid": "69642200888f8216c848776a"
+    },
+    {
+      "$oid": "6964227d888f8216c8487b41"
+    },
+    {
+      "$oid": "69642301888f8216c8487eb1"
+    },
+    {
+      "$oid": "69642306888f8216c8487ed2"
+    },
+    {
+      "$oid": "6964230c888f8216c8487efb"
+    },
+    {
+      "$oid": "6964231b888f8216c8487f6d"
+    },
+    {
+      "$oid": "69642320888f8216c8487f93"
+    },
+    {
+      "$oid": "6964235b888f8216c8488132"
+    },
+    {
+      "$oid": "69642391888f8216c84882ad"
+    },
+    {
+      "$oid": "69642394888f8216c84882c8"
+    },
+    {
+      "$oid": "696423b8888f8216c84883cc"
+    },
+    {
+      "$oid": "696423c9888f8216c848843c"
+    },
+    {
+      "$oid": "6964247b888f8216c84888cf"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 712,
+  "metadata": {
+    "id": 712,
+    "nombre": "683_GM_COPA_AMERICA_2024_POST",
+    "descripcion": "Cotización por servicio de postproducción para GM para su proyecto documental COPA AMERICA 2024, 6 EP x 30 min. Se contempla ingesta, sincro, realización de proxies, edición offline, online, color, mezcla de sonido, mastering y delivery. ",
+    "responsableId": 28,
+    "clienteId": 7,
+    "fechaInicio": "2024-10-14T00:00:00.000Z",
+    "fechaFin": "2025-01-31T00:00:00.000Z",
+    "fechaAlta": "2024-10-10T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 8
+  },
+  "createdAt": {
+    "$date": "2024-10-10T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:23:55.630Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f7d"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "675_AMC_GINASTERA_MUS_UNIVER_REAL_INT",
+  "description": "Cotización por servicio de realización integral para AMC, para el proyecto GINASTERA, MUSICA DEL UNIVERSO. Se contempla la preproducción, realización y grabación del contenido para el documental. Se contempla 1 jornada de rodaje con DF, director (cachet no contemplado) y equipamiento para realizar una entrevista.",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-06-01T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-12-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69641054eac3e71e00bc6682"
+    },
+    {
+      "$oid": "69641adfa863a0e82a29223f"
+    },
+    {
+      "$oid": "696423cd888f8216c848845e"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 713,
+  "metadata": {
+    "id": 713,
+    "nombre": "675_AMC_GINASTERA_MUS_UNIVER_REAL_INT",
+    "descripcion": "Cotización por servicio de realización integral para AMC, para el proyecto GINASTERA, MUSICA DEL UNIVERSO. Se contempla la preproducción, realización y grabación del contenido para el documental. Se contempla 1 jornada de rodaje con DF, director (cachet no contemplado) y equipamiento para realizar una entrevista. ",
+    "responsableId": 28,
+    "clienteId": 8,
+    "fechaInicio": "2024-06-01T00:00:00.000Z",
+    "fechaFin": "2024-12-31T00:00:00.000Z",
+    "fechaAlta": "2024-10-14T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 9
+  },
+  "createdAt": {
+    "$date": "2024-10-14T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:22:47.410Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f80"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "684_GM_YENDO_INGESTA_COPRO",
+  "description": "Aporte por coproducción con productora GM para su película \"Yendo\". Se contempla la ingesta y backup del material. 15 jornadas de rodaje . Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto:14/10/2024, fin de proyecto: 06/12/24. Excedido este período, este presupuesto incurrirá en extras.",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-10-14T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-12-06T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640eadeac3e71e00bc5a52"
+    },
+    {
+      "$oid": "69641023eac3e71e00bc64f2"
+    },
+    {
+      "$oid": "69641055eac3e71e00bc668c"
+    },
+    {
+      "$oid": "6964116ceac3e71e00bc6e36"
+    },
+    {
+      "$oid": "6964192da863a0e82a291606"
+    },
+    {
+      "$oid": "69641aada863a0e82a2920be"
+    },
+    {
+      "$oid": "69641ae0a863a0e82a292249"
+    },
+    {
+      "$oid": "69641c01a863a0e82a2929bf"
+    },
+    {
+      "$oid": "69642215888f8216c848781e"
+    },
+    {
+      "$oid": "69642396888f8216c84882dd"
+    },
+    {
+      "$oid": "696423ce888f8216c8488468"
+    },
+    {
+      "$oid": "696424f0888f8216c8488bc2"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 714,
+  "metadata": {
+    "id": 714,
+    "nombre": "684_GM_YENDO_INGESTA_COPRO",
+    "descripcion": "Aporte por coproducción con productora GM para su película \"Yendo\". Se contempla la ingesta y backup del material. 15 jornadas de rodaje . Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto:14/10/2024, fin de proyecto: 06/12/24. Excedido este período, este presupuesto incurrirá en extras.",
+    "responsableId": 28,
+    "clienteId": 7,
+    "fechaInicio": "2024-10-14T00:00:00.000Z",
+    "fechaFin": "2024-12-06T00:00:00.000Z",
+    "fechaAlta": "2024-10-16T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 11
+  },
+  "createdAt": {
+    "$date": "2024-10-16T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:45.132Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f83"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "674_AMC_CONCIERTO_CARO_POST",
+  "description": "674_AMC_CONCIERTO_CARO_POST",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-08-01T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-12-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640fa3eac3e71e00bc613a"
+    },
+    {
+      "$oid": "69641a23a863a0e82a291cf8"
+    },
+    {
+      "$oid": "6964230e888f8216c8487f11"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 720,
+  "metadata": {
+    "id": 720,
+    "nombre": "674_AMC_CONCIERTO_CARO_POST",
+    "descripcion": "674_AMC_CONCIERTO_CARO_POST",
+    "responsableId": 28,
+    "clienteId": 8,
+    "fechaInicio": "2024-08-01T00:00:00.000Z",
+    "fechaFin": "2024-12-31T00:00:00.000Z",
+    "fechaAlta": "2025-01-22T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 16
+  },
+  "createdAt": {
+    "$date": "2025-01-22T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:21:18.037Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f86"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "682_PEGSA_FILMATIC_UNREAL_ON11E",
+  "description": "Servicios de animación en UNREAL para armado Filmatic.",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-09-30T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2024-10-25T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e84eac3e71e00bc590a"
+    },
+    {
+      "$oid": "69640f56eac3e71e00bc5f09"
+    },
+    {
+      "$oid": "69640f72eac3e71e00bc5fd5"
+    },
+    {
+      "$oid": "69641041eac3e71e00bc65e8"
+    },
+    {
+      "$oid": "69641178eac3e71e00bc6e88"
+    },
+    {
+      "$oid": "69641905a863a0e82a2914b0"
+    },
+    {
+      "$oid": "696419d3a863a0e82a291ac7"
+    },
+    {
+      "$oid": "696419f0a863a0e82a291b93"
+    },
+    {
+      "$oid": "69641acba863a0e82a2921a6"
+    },
+    {
+      "$oid": "69641c0ea863a0e82a292a11"
+    },
+    {
+      "$oid": "696421ee888f8216c84876d6"
+    },
+    {
+      "$oid": "696422bc888f8216c8487ce0"
+    },
+    {
+      "$oid": "696422da888f8216c8487dac"
+    },
+    {
+      "$oid": "696423b7888f8216c84883c5"
+    },
+    {
+      "$oid": "696424fc888f8216c8488c14"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 708,
+  "metadata": {
+    "id": 708,
+    "nombre": "682_PEGSA_FILMATIC_UNREAL_ON11E",
+    "descripcion": "Servicios de animación en UNREAL para armado Filmatic.",
+    "responsableId": 28,
+    "clienteId": 2,
+    "fechaInicio": "2024-09-30T00:00:00.000Z",
+    "fechaFin": "2024-10-25T00:00:00.000Z",
+    "fechaAlta": "2024-10-10T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 1
+  },
+  "createdAt": {
+    "$date": "2024-10-10T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:50.620Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef295be848a048e8f89"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "690_SABLANUT_EL_CONQUISTADOR_RRHH_POST",
+  "description": "Se contempla la contratación de todo el rrhh para el proyecto. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 21/01/2025, fin de proyecto: 31/08/2025. Excedido este período, este presupuesto incurrirá en extras. NO SE CONTEMPLAN ACTUALIZACIONES DE SUELDO DE SATSAID NI BONOS, SOLO SE CONTEMPLA BONO DE ROPA DE MAYO 2025.",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-01-21T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-08-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e24eac3e71e00bc5627"
+    },
+    {
+      "$oid": "69640e38eac3e71e00bc56cc"
+    },
+    {
+      "$oid": "69640e3aeac3e71e00bc56dc"
+    },
+    {
+      "$oid": "69640e65eac3e71e00bc5819"
+    },
+    {
+      "$oid": "69640e89eac3e71e00bc592f"
+    },
+    {
+      "$oid": "69640e8eeac3e71e00bc5952"
+    },
+    {
+      "$oid": "69640e91eac3e71e00bc596e"
+    },
+    {
+      "$oid": "69640e98eac3e71e00bc5997"
+    },
+    {
+      "$oid": "69640e9deac3e71e00bc59c0"
+    },
+    {
+      "$oid": "69640e9deac3e71e00bc59c7"
+    },
+    {
+      "$oid": "69640ea1eac3e71e00bc59e3"
+    },
+    {
+      "$oid": "69640ea1eac3e71e00bc59ea"
+    },
+    {
+      "$oid": "69640eabeac3e71e00bc5a3d"
+    },
+    {
+      "$oid": "69640eadeac3e71e00bc5a52"
+    },
+    {
+      "$oid": "69640ebceac3e71e00bc5ace"
+    },
+    {
+      "$oid": "69640ebeeac3e71e00bc5ae3"
+    },
+    {
+      "$oid": "69640ecceac3e71e00bc5b4b"
+    },
+    {
+      "$oid": "69640edeeac3e71e00bc5bdf"
+    },
+    {
+      "$oid": "69640ee1eac3e71e00bc5bfb"
+    },
+    {
+      "$oid": "69640f30eac3e71e00bc5e0c"
+    },
+    {
+      "$oid": "69640f8aeac3e71e00bc6084"
+    },
+    {
+      "$oid": "69640f95eac3e71e00bc60da"
+    },
+    {
+      "$oid": "69640f9eeac3e71e00bc6109"
+    },
+    {
+      "$oid": "69640fafeac3e71e00bc6196"
+    },
+    {
+      "$oid": "69640fb2eac3e71e00bc61ae"
+    },
+    {
+      "$oid": "69640fcbeac3e71e00bc626f"
+    },
+    {
+      "$oid": "69640fcceac3e71e00bc6276"
+    },
+    {
+      "$oid": "69640fcdeac3e71e00bc627d"
+    },
+    {
+      "$oid": "69640fcfeac3e71e00bc6284"
+    },
+    {
+      "$oid": "69640fd0eac3e71e00bc628b"
+    },
+    {
+      "$oid": "69640fd1eac3e71e00bc6292"
+    },
+    {
+      "$oid": "69640fd1eac3e71e00bc6299"
+    },
+    {
+      "$oid": "69640fd8eac3e71e00bc62cb"
+    },
+    {
+      "$oid": "69640fd9eac3e71e00bc62d5"
+    },
+    {
+      "$oid": "69640fe1eac3e71e00bc6300"
+    },
+    {
+      "$oid": "69640fe1eac3e71e00bc6307"
+    },
+    {
+      "$oid": "69640fe2eac3e71e00bc630e"
+    },
+    {
+      "$oid": "69640fe3eac3e71e00bc6315"
+    },
+    {
+      "$oid": "69640fe4eac3e71e00bc631c"
+    },
+    {
+      "$oid": "69640fe5eac3e71e00bc6323"
+    },
+    {
+      "$oid": "69640fe6eac3e71e00bc632a"
+    },
+    {
+      "$oid": "69640fe6eac3e71e00bc6331"
+    },
+    {
+      "$oid": "69640fe8eac3e71e00bc633f"
+    },
+    {
+      "$oid": "69640feaeac3e71e00bc634c"
+    },
+    {
+      "$oid": "69640feeeac3e71e00bc636c"
+    },
+    {
+      "$oid": "69640ff2eac3e71e00bc6382"
+    },
+    {
+      "$oid": "69640ff2eac3e71e00bc6389"
+    },
+    {
+      "$oid": "69640ff3eac3e71e00bc6393"
+    },
+    {
+      "$oid": "69640ff4eac3e71e00bc639a"
+    },
+    {
+      "$oid": "69640ff5eac3e71e00bc63a1"
+    },
+    {
+      "$oid": "69640ff6eac3e71e00bc63a8"
+    },
+    {
+      "$oid": "69640ff7eac3e71e00bc63af"
+    },
+    {
+      "$oid": "69640ff8eac3e71e00bc63b6"
+    },
+    {
+      "$oid": "69640ffceac3e71e00bc63d2"
+    },
+    {
+      "$oid": "69640ffceac3e71e00bc63d9"
+    },
+    {
+      "$oid": "69640ffeeac3e71e00bc63e3"
+    },
+    {
+      "$oid": "69641002eac3e71e00bc63ff"
+    },
+    {
+      "$oid": "69641002eac3e71e00bc6406"
+    },
+    {
+      "$oid": "69641003eac3e71e00bc640d"
+    },
+    {
+      "$oid": "69641004eac3e71e00bc6414"
+    },
+    {
+      "$oid": "69641005eac3e71e00bc641b"
+    },
+    {
+      "$oid": "69641018eac3e71e00bc6496"
+    },
+    {
+      "$oid": "69641018eac3e71e00bc649d"
+    },
+    {
+      "$oid": "69641019eac3e71e00bc64a4"
+    },
+    {
+      "$oid": "69641023eac3e71e00bc64f2"
+    },
+    {
+      "$oid": "6964102aeac3e71e00bc6526"
+    },
+    {
+      "$oid": "6964102beac3e71e00bc652d"
+    },
+    {
+      "$oid": "69641062eac3e71e00bc66e6"
+    },
+    {
+      "$oid": "69641062eac3e71e00bc66ed"
+    },
+    {
+      "$oid": "6964107feac3e71e00bc67b8"
+    },
+    {
+      "$oid": "69641108eac3e71e00bc6b84"
+    },
+    {
+      "$oid": "69641109eac3e71e00bc6b91"
+    },
+    {
+      "$oid": "6964110beac3e71e00bc6b9b"
+    },
+    {
+      "$oid": "69641122eac3e71e00bc6c41"
+    },
+    {
+      "$oid": "69641146eac3e71e00bc6d2a"
+    },
+    {
+      "$oid": "69641154eac3e71e00bc6d96"
+    },
+    {
+      "$oid": "6964115deac3e71e00bc6dce"
+    },
+    {
+      "$oid": "6964117aeac3e71e00bc6e99"
+    },
+    {
+      "$oid": "69641185eac3e71e00bc6eda"
+    },
+    {
+      "$oid": "696418a5a863a0e82a2911cd"
+    },
+    {
+      "$oid": "696418baa863a0e82a291272"
+    },
+    {
+      "$oid": "696418bca863a0e82a291282"
+    },
+    {
+      "$oid": "696418e6a863a0e82a2913bf"
+    },
+    {
+      "$oid": "6964190aa863a0e82a2914d5"
+    },
+    {
+      "$oid": "6964190ea863a0e82a2914f8"
+    },
+    {
+      "$oid": "69641911a863a0e82a291514"
+    },
+    {
+      "$oid": "69641917a863a0e82a29153d"
+    },
+    {
+      "$oid": "6964191ca863a0e82a291566"
+    },
+    {
+      "$oid": "6964191da863a0e82a29156d"
+    },
+    {
+      "$oid": "69641920a863a0e82a291589"
+    },
+    {
+      "$oid": "69641921a863a0e82a291597"
+    },
+    {
+      "$oid": "6964192ba863a0e82a2915f1"
+    },
+    {
+      "$oid": "6964192da863a0e82a291606"
+    },
+    {
+      "$oid": "6964193ca863a0e82a291682"
+    },
+    {
+      "$oid": "6964193ea863a0e82a291697"
+    },
+    {
+      "$oid": "6964194ba863a0e82a2916ff"
+    },
+    {
+      "$oid": "6964195da863a0e82a291793"
+    },
+    {
+      "$oid": "69641961a863a0e82a2917af"
+    },
+    {
+      "$oid": "696419ada863a0e82a2919ce"
+    },
+    {
+      "$oid": "69641a0aa863a0e82a291c42"
+    },
+    {
+      "$oid": "69641a16a863a0e82a291c98"
+    },
+    {
+      "$oid": "69641a1da863a0e82a291cc7"
+    },
+    {
+      "$oid": "69641a31a863a0e82a291d62"
+    },
+    {
+      "$oid": "69641a33a863a0e82a291d7a"
+    },
+    {
+      "$oid": "69641a50a863a0e82a291e3b"
+    },
+    {
+      "$oid": "69641a51a863a0e82a291e42"
+    },
+    {
+      "$oid": "69641a52a863a0e82a291e49"
+    },
+    {
+      "$oid": "69641a53a863a0e82a291e50"
+    },
+    {
+      "$oid": "69641a54a863a0e82a291e57"
+    },
+    {
+      "$oid": "69641a55a863a0e82a291e5e"
+    },
+    {
+      "$oid": "69641a56a863a0e82a291e65"
+    },
+    {
+      "$oid": "69641a5da863a0e82a291e97"
+    },
+    {
+      "$oid": "69641a5fa863a0e82a291ea1"
+    },
+    {
+      "$oid": "69641a66a863a0e82a291ecc"
+    },
+    {
+      "$oid": "69641a67a863a0e82a291ed3"
+    },
+    {
+      "$oid": "69641a68a863a0e82a291eda"
+    },
+    {
+      "$oid": "69641a69a863a0e82a291ee1"
+    },
+    {
+      "$oid": "69641a6aa863a0e82a291ee8"
+    },
+    {
+      "$oid": "69641a6ba863a0e82a291eef"
+    },
+    {
+      "$oid": "69641a6ca863a0e82a291ef6"
+    },
+    {
+      "$oid": "69641a6ca863a0e82a291efd"
+    },
+    {
+      "$oid": "69641a6ea863a0e82a291f0b"
+    },
+    {
+      "$oid": "69641a70a863a0e82a291f18"
+    },
+    {
+      "$oid": "69641a75a863a0e82a291f38"
+    },
+    {
+      "$oid": "69641a78a863a0e82a291f4e"
+    },
+    {
+      "$oid": "69641a79a863a0e82a291f55"
+    },
+    {
+      "$oid": "69641a7aa863a0e82a291f5f"
+    },
+    {
+      "$oid": "69641a7ba863a0e82a291f66"
+    },
+    {
+      "$oid": "69641a7ca863a0e82a291f6d"
+    },
+    {
+      "$oid": "69641a7da863a0e82a291f74"
+    },
+    {
+      "$oid": "69641a7ea863a0e82a291f7b"
+    },
+    {
+      "$oid": "69641a7fa863a0e82a291f82"
+    },
+    {
+      "$oid": "69641a84a863a0e82a291f9e"
+    },
+    {
+      "$oid": "69641a85a863a0e82a291fa5"
+    },
+    {
+      "$oid": "69641a86a863a0e82a291faf"
+    },
+    {
+      "$oid": "69641a8aa863a0e82a291fcb"
+    },
+    {
+      "$oid": "69641a8ba863a0e82a291fd2"
+    },
+    {
+      "$oid": "69641a8ca863a0e82a291fd9"
+    },
+    {
+      "$oid": "69641a8da863a0e82a291fe0"
+    },
+    {
+      "$oid": "69641a8ea863a0e82a291fe7"
+    },
+    {
+      "$oid": "69641aa2a863a0e82a292062"
+    },
+    {
+      "$oid": "69641aa2a863a0e82a292069"
+    },
+    {
+      "$oid": "69641aa3a863a0e82a292070"
+    },
+    {
+      "$oid": "69641aada863a0e82a2920be"
+    },
+    {
+      "$oid": "69641ab4a863a0e82a2920f2"
+    },
+    {
+      "$oid": "69641ab5a863a0e82a2920f9"
+    },
+    {
+      "$oid": "69641aeda863a0e82a2922a3"
+    },
+    {
+      "$oid": "69641aeea863a0e82a2922aa"
+    },
+    {
+      "$oid": "69641b0ca863a0e82a292375"
+    },
+    {
+      "$oid": "69641b98a863a0e82a29270a"
+    },
+    {
+      "$oid": "69641b9aa863a0e82a292717"
+    },
+    {
+      "$oid": "69641b9ba863a0e82a292721"
+    },
+    {
+      "$oid": "69641bb4a863a0e82a2927bc"
+    },
+    {
+      "$oid": "69641bd9a863a0e82a2928a5"
+    },
+    {
+      "$oid": "69641be7a863a0e82a292903"
+    },
+    {
+      "$oid": "69641bf0a863a0e82a29293b"
+    },
+    {
+      "$oid": "69641c12a863a0e82a292a22"
+    },
+    {
+      "$oid": "69641c1da863a0e82a292a63"
+    },
+    {
+      "$oid": "6964218e888f8216c84873f3"
+    },
+    {
+      "$oid": "696421a2888f8216c8487498"
+    },
+    {
+      "$oid": "696421a4888f8216c84874a8"
+    },
+    {
+      "$oid": "696421ce888f8216c84875e5"
+    },
+    {
+      "$oid": "696421f2888f8216c84876fb"
+    },
+    {
+      "$oid": "696421f6888f8216c848771e"
+    },
+    {
+      "$oid": "696421f9888f8216c848773a"
+    },
+    {
+      "$oid": "696421ff888f8216c8487763"
+    },
+    {
+      "$oid": "69642204888f8216c848778c"
+    },
+    {
+      "$oid": "69642205888f8216c8487793"
+    },
+    {
+      "$oid": "69642208888f8216c84877af"
+    },
+    {
+      "$oid": "69642209888f8216c84877b6"
+    },
+    {
+      "$oid": "69642213888f8216c8487809"
+    },
+    {
+      "$oid": "69642215888f8216c848781e"
+    },
+    {
+      "$oid": "69642224888f8216c848789a"
+    },
+    {
+      "$oid": "69642226888f8216c84878af"
+    },
+    {
+      "$oid": "69642234888f8216c8487917"
+    },
+    {
+      "$oid": "69642246888f8216c84879ab"
+    },
+    {
+      "$oid": "69642249888f8216c84879c7"
+    },
+    {
+      "$oid": "69642296888f8216c8487be7"
+    },
+    {
+      "$oid": "696422f4888f8216c8487e5b"
+    },
+    {
+      "$oid": "69642301888f8216c8487eb1"
+    },
+    {
+      "$oid": "69642308888f8216c8487ee0"
+    },
+    {
+      "$oid": "6964231b888f8216c8487f6d"
+    },
+    {
+      "$oid": "6964231e888f8216c8487f85"
+    },
+    {
+      "$oid": "69642339888f8216c8488046"
+    },
+    {
+      "$oid": "6964233a888f8216c848804d"
+    },
+    {
+      "$oid": "6964233b888f8216c8488054"
+    },
+    {
+      "$oid": "6964233c888f8216c848805b"
+    },
+    {
+      "$oid": "6964233e888f8216c8488062"
+    },
+    {
+      "$oid": "6964233e888f8216c8488069"
+    },
+    {
+      "$oid": "6964233f888f8216c8488070"
+    },
+    {
+      "$oid": "69642346888f8216c84880a2"
+    },
+    {
+      "$oid": "69642348888f8216c84880ac"
+    },
+    {
+      "$oid": "69642350888f8216c84880d7"
+    },
+    {
+      "$oid": "69642351888f8216c84880de"
+    },
+    {
+      "$oid": "69642352888f8216c84880e5"
+    },
+    {
+      "$oid": "69642353888f8216c84880ec"
+    },
+    {
+      "$oid": "69642353888f8216c84880f3"
+    },
+    {
+      "$oid": "69642354888f8216c84880fa"
+    },
+    {
+      "$oid": "69642355888f8216c8488101"
+    },
+    {
+      "$oid": "69642356888f8216c8488108"
+    },
+    {
+      "$oid": "69642358888f8216c8488116"
+    },
+    {
+      "$oid": "6964235a888f8216c8488123"
+    },
+    {
+      "$oid": "6964235e888f8216c8488148"
+    },
+    {
+      "$oid": "69642362888f8216c848815e"
+    },
+    {
+      "$oid": "69642363888f8216c8488165"
+    },
+    {
+      "$oid": "69642364888f8216c848816f"
+    },
+    {
+      "$oid": "69642365888f8216c8488176"
+    },
+    {
+      "$oid": "69642366888f8216c848817d"
+    },
+    {
+      "$oid": "69642367888f8216c8488184"
+    },
+    {
+      "$oid": "69642368888f8216c848818b"
+    },
+    {
+      "$oid": "69642369888f8216c8488192"
+    },
+    {
+      "$oid": "6964236d888f8216c84881ae"
+    },
+    {
+      "$oid": "6964236e888f8216c84881b5"
+    },
+    {
+      "$oid": "6964236f888f8216c84881bf"
+    },
+    {
+      "$oid": "69642373888f8216c84881db"
+    },
+    {
+      "$oid": "69642374888f8216c84881e2"
+    },
+    {
+      "$oid": "69642375888f8216c84881e9"
+    },
+    {
+      "$oid": "69642376888f8216c84881f0"
+    },
+    {
+      "$oid": "69642377888f8216c84881f7"
+    },
+    {
+      "$oid": "6964238b888f8216c8488281"
+    },
+    {
+      "$oid": "6964238c888f8216c8488288"
+    },
+    {
+      "$oid": "6964238c888f8216c848828f"
+    },
+    {
+      "$oid": "69642396888f8216c84882dd"
+    },
+    {
+      "$oid": "6964239e888f8216c8488311"
+    },
+    {
+      "$oid": "6964239f888f8216c8488318"
+    },
+    {
+      "$oid": "696423db888f8216c84884c2"
+    },
+    {
+      "$oid": "696423dc888f8216c84884c9"
+    },
+    {
+      "$oid": "696423fb888f8216c8488594"
+    },
+    {
+      "$oid": "69642488888f8216c8488929"
+    },
+    {
+      "$oid": "69642489888f8216c8488936"
+    },
+    {
+      "$oid": "6964248a888f8216c8488940"
+    },
+    {
+      "$oid": "696424a2888f8216c84889db"
+    },
+    {
+      "$oid": "696424c8888f8216c8488ac4"
+    },
+    {
+      "$oid": "696424d6888f8216c8488b22"
+    },
+    {
+      "$oid": "696424e0888f8216c8488b5a"
+    },
+    {
+      "$oid": "696424fe888f8216c8488c25"
+    },
+    {
+      "$oid": "69642509888f8216c8488c66"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 721,
+  "metadata": {
+    "id": 721,
+    "nombre": "690_SABLANUT_EL_CONQUISTADOR_RRHH_POST",
+    "descripcion": "Se contempla la contratación de todo el rrhh para el proyecto. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 21/01/2025, fin de proyecto: 31/08/2025. Excedido este período, este presupuesto incurrirá en extras. NO SE CONTEMPLAN ACTUALIZACIONES DE SUELDO DE SATSAID NI BONOS, SOLO SE CONTEMPLA BONO DE ROPA DE MAYO 2025.",
+    "responsableId": 28,
+    "clienteId": 10,
+    "fechaInicio": "2025-01-21T00:00:00.000Z",
+    "fechaFin": "2025-08-31T00:00:00.000Z",
+    "fechaAlta": "2025-01-28T00:00:00.000Z",
+    "sedeId": 1,
+    "activo": true,
+    "centroCostoId": 17
+  },
+  "createdAt": {
+    "$date": "2025-01-28T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:55.643Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef395be848a048e8f8c"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "686_ABRAKADABRA_KO_LA_OG_POST",
+  "description": "Cotización por servicio de postproducción para Abrakadabra (MEX) para su proyecto KO I LA OG (100 min). Se contempla servicio de post: ingesta, armado de proxies, syncro, montaje de show y docufollow (100 minutos total aprox), conforming, color HDR/SDR, mezcla de sonido 5.1, mastering y delivery. Se contempla además la post de un trailer de 1.30 minutos de duración y un teaser de 15 segundos. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 26/11/2024, fin de proyecto: 30/01/2024. Excedido este período, este presupuesto incurrirá en extras. FZEROCORP ACLARACIONES FORMA DE PAGO A DEFINIR CON CLIENTE #SIMPLE #MEDIBLE #TRANSPARENTE",
+  "status": "active",
+  "startDate": {
+    "$date": "2024-11-26T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-01-30T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640f14eac3e71e00bc5d50"
+    },
+    {
+      "$oid": "69640f8aeac3e71e00bc6084"
+    },
+    {
+      "$oid": "69640fd2eac3e71e00bc62a0"
+    },
+    {
+      "$oid": "69641017eac3e71e00bc648c"
+    },
+    {
+      "$oid": "69641038eac3e71e00bc659b"
+    },
+    {
+      "$oid": "69641044eac3e71e00bc6606"
+    },
+    {
+      "$oid": "6964107eeac3e71e00bc67b1"
+    },
+    {
+      "$oid": "6964116ceac3e71e00bc6e36"
+    },
+    {
+      "$oid": "69641991a863a0e82a291912"
+    },
+    {
+      "$oid": "69641a0aa863a0e82a291c42"
+    },
+    {
+      "$oid": "69641a57a863a0e82a291e6c"
+    },
+    {
+      "$oid": "69641aa1a863a0e82a292058"
+    },
+    {
+      "$oid": "69641ac3a863a0e82a292160"
+    },
+    {
+      "$oid": "69641acea863a0e82a2921c3"
+    },
+    {
+      "$oid": "69641b0ba863a0e82a29236e"
+    },
+    {
+      "$oid": "69641c01a863a0e82a2929bf"
+    },
+    {
+      "$oid": "6964227a888f8216c8487b2b"
+    },
+    {
+      "$oid": "696422f4888f8216c8487e5b"
+    },
+    {
+      "$oid": "69642340888f8216c8488077"
+    },
+    {
+      "$oid": "6964238a888f8216c8488277"
+    },
+    {
+      "$oid": "696423ae888f8216c848837f"
+    },
+    {
+      "$oid": "696423ba888f8216c84883e2"
+    },
+    {
+      "$oid": "696423fa888f8216c848858d"
+    },
+    {
+      "$oid": "696424f0888f8216c8488bc2"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 717,
+  "metadata": {
+    "id": 717,
+    "nombre": "686_ABRAKADABRA_KO_LA_OG_POST",
+    "descripcion": "Cotización por servicio de postproducción para Abrakadabra (MEX) para su proyecto KO I LA OG (100 min). Se contempla servicio de post: ingesta, armado de proxies, syncro, montaje de show y docufollow (100 minutos total aprox), conforming, color HDR/SDR, mezcla de sonido 5.1, mastering y delivery. Se contempla además la post de un trailer de 1.30 minutos de duración y un teaser de 15 segundos. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 26/11/2024, fin de proyecto: 30/01/2024. Excedido este período, este presupuesto incurrirá en extras. FZEROCORP ACLARACIONES FORMA DE PAGO A DEFINIR CON CLIENTE #SIMPLE #MEDIBLE #TRANSPARENTE",
+    "responsableId": 28,
+    "clienteId": 1,
+    "fechaInicio": "2024-11-26T00:00:00.000Z",
+    "fechaFin": "2025-01-30T00:00:00.000Z",
+    "fechaAlta": "2024-12-02T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 12
+  },
+  "createdAt": {
+    "$date": "2024-12-02T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:45.304Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef395be848a048e8f8f"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "6880001_GM_LLQL_MOTION_MODELADO",
+  "description": null,
+  "status": "active",
+  "startDate": {
+    "$date": "2025-03-31T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-12-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640eb4eac3e71e00bc5a8d"
+    },
+    {
+      "$oid": "69641934a863a0e82a291641"
+    },
+    {
+      "$oid": "6964221c888f8216c8487859"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 724,
+  "metadata": {
+    "id": 724,
+    "nombre": "6880001_GM_LLQL_MOTION_MODELADO",
+    "descripcion": null,
+    "responsableId": 28,
+    "clienteId": 7,
+    "fechaInicio": "2025-03-31T00:00:00.000Z",
+    "fechaFin": "2025-12-31T00:00:00.000Z",
+    "fechaAlta": "2025-03-31T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 20
+  },
+  "createdAt": {
+    "$date": "2025-03-31T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:19:32.869Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef395be848a048e8f92"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "6630001_GM_DEPAUL_V2_POST",
+  "description": "servicio de postproducción para Gm, para su proyecto \"Documental De Paul\". Se contemplan 4 semanas de trabajo para ajustar 2 Episodios, insertando mas contenido, se contempla montaje, conform, color, mezcla de sonido y . Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 21/04/2025, fin de proyecto: 16/05/2025.",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-04-21T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-05-16T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640fd2eac3e71e00bc62a0"
+    },
+    {
+      "$oid": "69641a57a863a0e82a291e6c"
+    },
+    {
+      "$oid": "69642340888f8216c8488077"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 725,
+  "metadata": {
+    "id": 725,
+    "nombre": "6630001_GM_DEPAUL_V2_POST",
+    "descripcion": " servicio de postproducción para Gm, para su proyecto \"Documental De Paul\". Se contemplan 4 semanas de trabajo para ajustar 2 Episodios, insertando mas contenido, se contempla montaje, conform, color, mezcla de sonido y . Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 21/04/2025, fin de proyecto: 16/05/2025.",
+    "responsableId": 28,
+    "clienteId": 7,
+    "fechaInicio": "2025-04-21T00:00:00.000Z",
+    "fechaFin": "2025-05-16T00:00:00.000Z",
+    "fechaAlta": "2025-04-24T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 21
+  },
+  "createdAt": {
+    "$date": "2025-04-24T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:21:42.402Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef395be848a048e8f95"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "6880002_GM_LLQL_ANIMACION",
+  "description": "Cotización por servicio de post para GM para su proyecto La Llama Que Llama 2025 - PROMOS. Se contempla una dupla de guionistas-directores, un grupo de actores para ensayar las tomas a animar, casting de 7 animadores para la selección de personal y una animadora-diseñadora para el armado de fondos. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 10/03/2025, fin de proyecto: 02/05/2025.",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-03-27T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-07-15T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e1feac3e71e00bc5601"
+    },
+    {
+      "$oid": "69640e73eac3e71e00bc5879"
+    },
+    {
+      "$oid": "69640e78eac3e71e00bc58a2"
+    },
+    {
+      "$oid": "69640e7ceac3e71e00bc58c5"
+    },
+    {
+      "$oid": "69640e80eac3e71e00bc58e8"
+    },
+    {
+      "$oid": "69640e84eac3e71e00bc590a"
+    },
+    {
+      "$oid": "69640eb4eac3e71e00bc5a8d"
+    },
+    {
+      "$oid": "69640ec2eac3e71e00bc5afb"
+    },
+    {
+      "$oid": "69640ec7eac3e71e00bc5b21"
+    },
+    {
+      "$oid": "69640ecaeac3e71e00bc5b36"
+    },
+    {
+      "$oid": "69640eceeac3e71e00bc5b60"
+    },
+    {
+      "$oid": "69640ed1eac3e71e00bc5b75"
+    },
+    {
+      "$oid": "69640ed3eac3e71e00bc5b86"
+    },
+    {
+      "$oid": "69640ed7eac3e71e00bc5bab"
+    },
+    {
+      "$oid": "69640edbeac3e71e00bc5bc7"
+    },
+    {
+      "$oid": "69640fa1eac3e71e00bc6124"
+    },
+    {
+      "$oid": "6964101eeac3e71e00bc64c9"
+    },
+    {
+      "$oid": "69641055eac3e71e00bc668c"
+    },
+    {
+      "$oid": "696418a1a863a0e82a2911a7"
+    },
+    {
+      "$oid": "696418f5a863a0e82a29141f"
+    },
+    {
+      "$oid": "696418faa863a0e82a291448"
+    },
+    {
+      "$oid": "696418fea863a0e82a29146b"
+    },
+    {
+      "$oid": "69641901a863a0e82a29148e"
+    },
+    {
+      "$oid": "69641905a863a0e82a2914b0"
+    },
+    {
+      "$oid": "69641934a863a0e82a291641"
+    },
+    {
+      "$oid": "69641941a863a0e82a2916af"
+    },
+    {
+      "$oid": "69641947a863a0e82a2916d5"
+    },
+    {
+      "$oid": "69641949a863a0e82a2916ea"
+    },
+    {
+      "$oid": "6964194ea863a0e82a291714"
+    },
+    {
+      "$oid": "69641950a863a0e82a291729"
+    },
+    {
+      "$oid": "69641952a863a0e82a29173a"
+    },
+    {
+      "$oid": "69641957a863a0e82a29175f"
+    },
+    {
+      "$oid": "6964195ba863a0e82a29177b"
+    },
+    {
+      "$oid": "69641a21a863a0e82a291ce2"
+    },
+    {
+      "$oid": "69641aa8a863a0e82a292095"
+    },
+    {
+      "$oid": "69641ae0a863a0e82a292249"
+    },
+    {
+      "$oid": "69642189888f8216c84873cd"
+    },
+    {
+      "$oid": "696421dc888f8216c8487645"
+    },
+    {
+      "$oid": "696421e2888f8216c848766e"
+    },
+    {
+      "$oid": "696421e6888f8216c8487691"
+    },
+    {
+      "$oid": "696421ea888f8216c84876b4"
+    },
+    {
+      "$oid": "696421ee888f8216c84876d6"
+    },
+    {
+      "$oid": "6964221c888f8216c8487859"
+    },
+    {
+      "$oid": "6964222a888f8216c84878c7"
+    },
+    {
+      "$oid": "6964222f888f8216c84878ed"
+    },
+    {
+      "$oid": "69642232888f8216c8487902"
+    },
+    {
+      "$oid": "69642236888f8216c848792c"
+    },
+    {
+      "$oid": "69642239888f8216c8487941"
+    },
+    {
+      "$oid": "6964223b888f8216c8487952"
+    },
+    {
+      "$oid": "6964223f888f8216c8487977"
+    },
+    {
+      "$oid": "69642243888f8216c8487993"
+    },
+    {
+      "$oid": "6964230c888f8216c8487efb"
+    },
+    {
+      "$oid": "69642391888f8216c84882b4"
+    },
+    {
+      "$oid": "696423ce888f8216c8488468"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 723,
+  "metadata": {
+    "id": 723,
+    "nombre": "6880002_GM_LLQL_ANIMACION",
+    "descripcion": "Cotización por servicio de post para GM para su proyecto La Llama Que Llama 2025 - PROMOS. Se contempla una dupla de guionistas-directores, un grupo de actores para ensayar las tomas a animar, casting de 7 animadores para la selección de personal y una animadora-diseñadora para el armado de fondos. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 10/03/2025, fin de proyecto: 02/05/2025. ",
+    "responsableId": 20,
+    "clienteId": 7,
+    "fechaInicio": "2025-03-27T00:00:00.000Z",
+    "fechaFin": "2025-07-15T00:00:00.000Z",
+    "fechaAlta": "2025-03-31T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 19
+  },
+  "createdAt": {
+    "$date": "2025-03-31T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:22:48.357Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef395be848a048e8f98"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "2030_2030",
+  "description": "Contratación del personal de Grini SRL (Lumba)",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-03-01T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e35eac3e71e00bc56b7"
+    },
+    {
+      "$oid": "69640e6feac3e71e00bc5856"
+    },
+    {
+      "$oid": "69640e9beac3e71e00bc59b6"
+    },
+    {
+      "$oid": "696418b7a863a0e82a29125d"
+    },
+    {
+      "$oid": "696418f0a863a0e82a2913fc"
+    },
+    {
+      "$oid": "6964191ba863a0e82a29155c"
+    },
+    {
+      "$oid": "6964219f888f8216c8487483"
+    },
+    {
+      "$oid": "696421d8888f8216c8487622"
+    },
+    {
+      "$oid": "69642203888f8216c8487782"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 726,
+  "metadata": {
+    "id": 726,
+    "nombre": "2030_2030",
+    "descripcion": "Contratación del personal de Grini SRL (Lumba)",
+    "responsableId": 28,
+    "clienteId": 11,
+    "fechaInicio": "2025-03-01T00:00:00.000Z",
+    "fechaFin": null,
+    "fechaAlta": "2025-06-02T00:00:00.000Z",
+    "sedeId": 5,
+    "activo": true,
+    "centroCostoId": 22
+  },
+  "createdAt": {
+    "$date": "2025-06-02T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:19:19.179Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef395be848a048e8f9b"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "691_GM_CONCACAF_CUP_POST",
+  "description": "Cotización por servicio de postproducción para GM, para su proyecto CONCACAF CHAMPIONS CUP. Proyecto: DOCUMENTAL 8EPS X 30min. Se contampla servicio de post integral. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 07/03/25 fin de proyecto: 6/06/25.",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-05-20T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-05-20T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640fd2eac3e71e00bc62a0"
+    },
+    {
+      "$oid": "69640ff2eac3e71e00bc6389"
+    },
+    {
+      "$oid": "6964102beac3e71e00bc6534"
+    },
+    {
+      "$oid": "69641050eac3e71e00bc6660"
+    },
+    {
+      "$oid": "696410fbeac3e71e00bc6b2a"
+    },
+    {
+      "$oid": "69641a57a863a0e82a291e6c"
+    },
+    {
+      "$oid": "69641a79a863a0e82a291f55"
+    },
+    {
+      "$oid": "69641ab6a863a0e82a292100"
+    },
+    {
+      "$oid": "69641adba863a0e82a29221d"
+    },
+    {
+      "$oid": "69641b8ca863a0e82a2926b0"
+    },
+    {
+      "$oid": "69642340888f8216c8488077"
+    },
+    {
+      "$oid": "69642363888f8216c8488165"
+    },
+    {
+      "$oid": "696423a0888f8216c848831f"
+    },
+    {
+      "$oid": "696423c9888f8216c848843c"
+    },
+    {
+      "$oid": "6964247b888f8216c84888cf"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 722,
+  "metadata": {
+    "id": 722,
+    "nombre": "691_GM_CONCACAF_CUP_POST",
+    "descripcion": "Cotización por servicio de postproducción para GM, para su proyecto CONCACAF CHAMPIONS CUP. Proyecto: DOCUMENTAL 8EPS X 30min. Se contampla servicio de post integral. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 07/03/25 fin de proyecto: 6/06/25. ",
+    "responsableId": 28,
+    "clienteId": 7,
+    "fechaInicio": "2025-05-20T00:00:00.000Z",
+    "fechaFin": "2025-05-20T00:00:00.000Z",
+    "fechaAlta": "2025-03-10T00:00:00.000Z",
+    "sedeId": 1,
+    "activo": true,
+    "centroCostoId": 18
+  },
+  "createdAt": {
+    "$date": "2025-03-10T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:23:55.856Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8f9e"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "692_TRINITY_TELENOVELAS_POST",
+  "description": null,
+  "status": "active",
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e25eac3e71e00bc562e"
+    },
+    {
+      "$oid": "69640e52eac3e71e00bc5777"
+    },
+    {
+      "$oid": "69640e5beac3e71e00bc57bf"
+    },
+    {
+      "$oid": "69640e68eac3e71e00bc5827"
+    },
+    {
+      "$oid": "69640e79eac3e71e00bc58a9"
+    },
+    {
+      "$oid": "69640e7deac3e71e00bc58cc"
+    },
+    {
+      "$oid": "69640f3ceac3e71e00bc5e58"
+    },
+    {
+      "$oid": "6964103deac3e71e00bc65c1"
+    },
+    {
+      "$oid": "69641041eac3e71e00bc65ef"
+    },
+    {
+      "$oid": "6964116ceac3e71e00bc6e36"
+    },
+    {
+      "$oid": "696418a6a863a0e82a2911d4"
+    },
+    {
+      "$oid": "696418d3a863a0e82a29131d"
+    },
+    {
+      "$oid": "696418dca863a0e82a291365"
+    },
+    {
+      "$oid": "696418e9a863a0e82a2913cd"
+    },
+    {
+      "$oid": "696418faa863a0e82a29144f"
+    },
+    {
+      "$oid": "696418fea863a0e82a291472"
+    },
+    {
+      "$oid": "696419b9a863a0e82a291a16"
+    },
+    {
+      "$oid": "69641ac8a863a0e82a292186"
+    },
+    {
+      "$oid": "69641acca863a0e82a2921ad"
+    },
+    {
+      "$oid": "69641c01a863a0e82a2929bf"
+    },
+    {
+      "$oid": "6964218f888f8216c84873fa"
+    },
+    {
+      "$oid": "696421bb888f8216c8487543"
+    },
+    {
+      "$oid": "696421c4888f8216c848758b"
+    },
+    {
+      "$oid": "696421d1888f8216c84875f3"
+    },
+    {
+      "$oid": "696421e3888f8216c8487675"
+    },
+    {
+      "$oid": "696421e7888f8216c8487698"
+    },
+    {
+      "$oid": "696422a2888f8216c8487c2f"
+    },
+    {
+      "$oid": "696423b3888f8216c84883a5"
+    },
+    {
+      "$oid": "696423b8888f8216c84883cc"
+    },
+    {
+      "$oid": "696424f0888f8216c8488bc2"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 727,
+  "metadata": {
+    "id": 727,
+    "nombre": "692_TRINITY_TELENOVELAS_POST",
+    "descripcion": null,
+    "responsableId": 28,
+    "clienteId": 1,
+    "fechaInicio": null,
+    "fechaFin": null,
+    "fechaAlta": "2025-06-11T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 23
+  },
+  "createdAt": {
+    "$date": "2025-06-11T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:45.464Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8fa1"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "6890002_POWWOW_CODIGO_INV_ESPECIAL",
+  "description": "Cotización por servicio de Postproducción GRAFICA para POWWOW | CODIGO DE INVESTIGACION (Especial 4 episodios). Jornadas de 8hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 13/08/2025, fin de proyecto: 12/09/2025. Excedido este período, este presupuesto incurrirá en extras.",
+  "status": "active",
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69641050eac3e71e00bc6660"
+    },
+    {
+      "$oid": "69641adba863a0e82a29221d"
+    },
+    {
+      "$oid": "696423c9888f8216c848843c"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 728,
+  "metadata": {
+    "id": 728,
+    "nombre": "6890002_POWWOW_CODIGO_INV_ESPECIAL",
+    "descripcion": "Cotización por servicio de Postproducción GRAFICA para POWWOW | CODIGO DE INVESTIGACION (Especial 4 episodios). Jornadas de 8hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 13/08/2025, fin de proyecto: 12/09/2025. Excedido este período, este presupuesto incurrirá en extras. ",
+    "responsableId": 20,
+    "clienteId": 1,
+    "fechaInicio": null,
+    "fechaFin": null,
+    "fechaAlta": "2025-08-12T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 25
+  },
+  "createdAt": {
+    "$date": "2025-08-12T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:22:46.023Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8fa4"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "697_FRAME_IA_AUTOMATIZACION",
+  "description": "PRESUPUESTO INTERNO FRAME - IA AUTOMATIZACION. 3 meses de test/desarrollo. Inicio 15/08/2025 - Fin 15/11/2025. Omar hasta fin de agosto dentro de contratacion vigente cc99. Luego pasa a nuevo cc. // Oficinas JOY y 1 compu HP en el co-work.",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-08-15T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-11-15T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e0feac3e71e00bc55e9"
+    },
+    {
+      "$oid": "69640e5feac3e71e00bc57e5"
+    },
+    {
+      "$oid": "69640fa1eac3e71e00bc6124"
+    },
+    {
+      "$oid": "6964101eeac3e71e00bc64c9"
+    },
+    {
+      "$oid": "69641041eac3e71e00bc65ef"
+    },
+    {
+      "$oid": "69641886a863a0e82a29117d"
+    },
+    {
+      "$oid": "696418e0a863a0e82a29138b"
+    },
+    {
+      "$oid": "69641a21a863a0e82a291ce2"
+    },
+    {
+      "$oid": "69641aa8a863a0e82a292095"
+    },
+    {
+      "$oid": "69641acca863a0e82a2921ad"
+    },
+    {
+      "$oid": "6964214c888f8216c84872db"
+    },
+    {
+      "$oid": "696421c8888f8216c84875b1"
+    },
+    {
+      "$oid": "6964230c888f8216c8487efb"
+    },
+    {
+      "$oid": "69642391888f8216c84882b4"
+    },
+    {
+      "$oid": "696423b8888f8216c84883cc"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 729,
+  "metadata": {
+    "id": 729,
+    "nombre": "697_FRAME_IA_AUTOMATIZACION",
+    "descripcion": "PRESUPUESTO INTERNO FRAME - IA AUTOMATIZACION. 3 meses de test/desarrollo. Inicio 15/08/2025 - Fin 15/11/2025. Omar hasta fin de agosto dentro de contratacion vigente cc99. Luego pasa a nuevo cc. // Oficinas JOY y 1 compu HP en el co-work.",
+    "responsableId": 20,
+    "clienteId": 1,
+    "fechaInicio": "2025-08-15T00:00:00.000Z",
+    "fechaFin": "2025-11-15T00:00:00.000Z",
+    "fechaAlta": "2025-08-14T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 26
+  },
+  "createdAt": {
+    "$date": "2025-08-14T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:22:38.731Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8fa7"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "699_DIRECTV_DNEWS_RENTAL_POST",
+  "description": "Cotización por servicio de rental de postproducción para DirecTV - DNEWS. El presupuesto corresponde al valor mennsual del rental. Periodo a definir con cliente.",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-08-23T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-12-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 730,
+  "metadata": {
+    "id": 730,
+    "nombre": "699_DIRECTV_DNEWS_RENTAL_POST",
+    "descripcion": "Cotización por servicio de rental de postproducción para DirecTV - DNEWS. El presupuesto corresponde al valor mennsual del rental. Periodo a definir con cliente.",
+    "responsableId": 20,
+    "clienteId": 1,
+    "fechaInicio": "2025-08-23T00:00:00.000Z",
+    "fechaFin": "2025-12-31T00:00:00.000Z",
+    "fechaAlta": "2025-08-25T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 28
+  },
+  "createdAt": {
+    "$date": "2025-08-25T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2025-08-25T00:00:00.000Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8faa"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "698_FRAME_PRANDI_YTQEM",
+  "description": "PRESUPUESTO INTERNO_ EDICION VIDEOPITCH_ SERIE y/o FILM: JULIETA PRANDI_\"Yo tendria que esta muerta\" (2 semanas de edicion)",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-08-25T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2025-12-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "6964116ceac3e71e00bc6e36"
+    },
+    {
+      "$oid": "69641c01a863a0e82a2929bf"
+    },
+    {
+      "$oid": "696424f0888f8216c8488bc2"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 731,
+  "metadata": {
+    "id": 731,
+    "nombre": "698_FRAME_PRANDI_YTQEM",
+    "descripcion": "PRESUPUESTO INTERNO_ EDICION VIDEOPITCH_ SERIE y/o FILM: JULIETA PRANDI_\"Yo tendria que esta muerta\" (2 semanas de edicion)",
+    "responsableId": 20,
+    "clienteId": 1,
+    "fechaInicio": "2025-08-25T00:00:00.000Z",
+    "fechaFin": "2025-12-31T00:00:00.000Z",
+    "fechaAlta": "2025-08-26T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 27
+  },
+  "createdAt": {
+    "$date": "2025-08-26T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:45.640Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8fad"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "700_REEL_SHORT_CDDUJDF",
+  "description": "Presupuesto por servicio de produccion para REELSHORT serie ficcion CDDUJDF. 59eps 1min duracion.",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-09-08T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2026-01-08T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e21eac3e71e00bc5612"
+    },
+    {
+      "$oid": "69640e22eac3e71e00bc5619"
+    },
+    {
+      "$oid": "69640e23eac3e71e00bc5620"
+    },
+    {
+      "$oid": "69640e26eac3e71e00bc5635"
+    },
+    {
+      "$oid": "69640e2aeac3e71e00bc5658"
+    },
+    {
+      "$oid": "69640e42eac3e71e00bc5711"
+    },
+    {
+      "$oid": "69640e4ceac3e71e00bc5755"
+    },
+    {
+      "$oid": "69640e4eeac3e71e00bc5763"
+    },
+    {
+      "$oid": "69640e54eac3e71e00bc578f"
+    },
+    {
+      "$oid": "69640e55eac3e71e00bc5796"
+    },
+    {
+      "$oid": "69640e56eac3e71e00bc579d"
+    },
+    {
+      "$oid": "69640e5ceac3e71e00bc57cd"
+    },
+    {
+      "$oid": "69640e5deac3e71e00bc57d7"
+    },
+    {
+      "$oid": "69640e5eeac3e71e00bc57de"
+    },
+    {
+      "$oid": "69640e60eac3e71e00bc57ec"
+    },
+    {
+      "$oid": "69640e62eac3e71e00bc57fd"
+    },
+    {
+      "$oid": "69640e63eac3e71e00bc5804"
+    },
+    {
+      "$oid": "69640e63eac3e71e00bc580b"
+    },
+    {
+      "$oid": "69640e69eac3e71e00bc5831"
+    },
+    {
+      "$oid": "69640e69eac3e71e00bc5838"
+    },
+    {
+      "$oid": "69640e6aeac3e71e00bc583f"
+    },
+    {
+      "$oid": "69640e71eac3e71e00bc5864"
+    },
+    {
+      "$oid": "69640e74eac3e71e00bc5883"
+    },
+    {
+      "$oid": "69640e75eac3e71e00bc588a"
+    },
+    {
+      "$oid": "69640e7aeac3e71e00bc58b0"
+    },
+    {
+      "$oid": "69640e7aeac3e71e00bc58b7"
+    },
+    {
+      "$oid": "69640e7beac3e71e00bc58be"
+    },
+    {
+      "$oid": "69640e7eeac3e71e00bc58d3"
+    },
+    {
+      "$oid": "69640e7feac3e71e00bc58da"
+    },
+    {
+      "$oid": "69640e7feac3e71e00bc58e1"
+    },
+    {
+      "$oid": "69640e81eac3e71e00bc58f2"
+    },
+    {
+      "$oid": "69640e82eac3e71e00bc58fc"
+    },
+    {
+      "$oid": "69640e83eac3e71e00bc5903"
+    },
+    {
+      "$oid": "69640e85eac3e71e00bc5917"
+    },
+    {
+      "$oid": "69640e86eac3e71e00bc591e"
+    },
+    {
+      "$oid": "69640e89eac3e71e00bc5936"
+    },
+    {
+      "$oid": "69640e8aeac3e71e00bc593d"
+    },
+    {
+      "$oid": "69640e8feac3e71e00bc5960"
+    },
+    {
+      "$oid": "69640e90eac3e71e00bc5967"
+    },
+    {
+      "$oid": "69640e94eac3e71e00bc597c"
+    },
+    {
+      "$oid": "69640e95eac3e71e00bc5983"
+    },
+    {
+      "$oid": "69640e96eac3e71e00bc598a"
+    },
+    {
+      "$oid": "69640e9aeac3e71e00bc59a8"
+    },
+    {
+      "$oid": "69640e9beac3e71e00bc59af"
+    },
+    {
+      "$oid": "69640e9eeac3e71e00bc59ce"
+    },
+    {
+      "$oid": "69640e9feac3e71e00bc59d5"
+    },
+    {
+      "$oid": "69640ea2eac3e71e00bc59f1"
+    },
+    {
+      "$oid": "69640ea3eac3e71e00bc59f8"
+    },
+    {
+      "$oid": "69640ea4eac3e71e00bc59ff"
+    },
+    {
+      "$oid": "69640ea6eac3e71e00bc5a13"
+    },
+    {
+      "$oid": "69640ea7eac3e71e00bc5a1a"
+    },
+    {
+      "$oid": "69640ea9eac3e71e00bc5a28"
+    },
+    {
+      "$oid": "69640ea9eac3e71e00bc5a2f"
+    },
+    {
+      "$oid": "69640eadeac3e71e00bc5a4b"
+    },
+    {
+      "$oid": "69640eadeac3e71e00bc5a52"
+    },
+    {
+      "$oid": "69640eb0eac3e71e00bc5a65"
+    },
+    {
+      "$oid": "69640eb0eac3e71e00bc5a6c"
+    },
+    {
+      "$oid": "69640eb1eac3e71e00bc5a73"
+    },
+    {
+      "$oid": "69640eb3eac3e71e00bc5a83"
+    },
+    {
+      "$oid": "69640eb6eac3e71e00bc5a9a"
+    },
+    {
+      "$oid": "69640eb7eac3e71e00bc5aa8"
+    },
+    {
+      "$oid": "69640eb8eac3e71e00bc5aaf"
+    },
+    {
+      "$oid": "69640ebaeac3e71e00bc5abd"
+    },
+    {
+      "$oid": "69640ebbeac3e71e00bc5ac4"
+    },
+    {
+      "$oid": "69640ebdeac3e71e00bc5ad5"
+    },
+    {
+      "$oid": "69640ebeeac3e71e00bc5adc"
+    },
+    {
+      "$oid": "69640ebfeac3e71e00bc5aea"
+    },
+    {
+      "$oid": "69640ec0eac3e71e00bc5af1"
+    },
+    {
+      "$oid": "69640ec2eac3e71e00bc5b02"
+    },
+    {
+      "$oid": "69640ec6eac3e71e00bc5b1a"
+    },
+    {
+      "$oid": "69640ec8eac3e71e00bc5b28"
+    },
+    {
+      "$oid": "69640ec9eac3e71e00bc5b2f"
+    },
+    {
+      "$oid": "69640ecaeac3e71e00bc5b3d"
+    },
+    {
+      "$oid": "69640ecbeac3e71e00bc5b44"
+    },
+    {
+      "$oid": "69640ecdeac3e71e00bc5b52"
+    },
+    {
+      "$oid": "69640eceeac3e71e00bc5b59"
+    },
+    {
+      "$oid": "69640ecfeac3e71e00bc5b67"
+    },
+    {
+      "$oid": "69640ed0eac3e71e00bc5b6e"
+    },
+    {
+      "$oid": "69640ed2eac3e71e00bc5b7f"
+    },
+    {
+      "$oid": "69640ed4eac3e71e00bc5b90"
+    },
+    {
+      "$oid": "69640ed6eac3e71e00bc5ba1"
+    },
+    {
+      "$oid": "69640ed9eac3e71e00bc5bb9"
+    },
+    {
+      "$oid": "69640edaeac3e71e00bc5bc0"
+    },
+    {
+      "$oid": "69640edceac3e71e00bc5bd1"
+    },
+    {
+      "$oid": "69640eddeac3e71e00bc5bd8"
+    },
+    {
+      "$oid": "69640edfeac3e71e00bc5bed"
+    },
+    {
+      "$oid": "69640ee0eac3e71e00bc5bf4"
+    },
+    {
+      "$oid": "69640ee2eac3e71e00bc5c02"
+    },
+    {
+      "$oid": "69640ee3eac3e71e00bc5c09"
+    },
+    {
+      "$oid": "69640ee7eac3e71e00bc5c24"
+    },
+    {
+      "$oid": "69640ee7eac3e71e00bc5c2b"
+    },
+    {
+      "$oid": "69640eefeac3e71e00bc5c5f"
+    },
+    {
+      "$oid": "69640f08eac3e71e00bc5cfc"
+    },
+    {
+      "$oid": "69640fa1eac3e71e00bc6124"
+    },
+    {
+      "$oid": "69640fcaeac3e71e00bc6265"
+    },
+    {
+      "$oid": "69640fd4eac3e71e00bc62b4"
+    },
+    {
+      "$oid": "6964100ceac3e71e00bc644a"
+    },
+    {
+      "$oid": "69641010eac3e71e00bc6468"
+    },
+    {
+      "$oid": "69641041eac3e71e00bc65ef"
+    },
+    {
+      "$oid": "69641048eac3e71e00bc662c"
+    },
+    {
+      "$oid": "69641050eac3e71e00bc6660"
+    },
+    {
+      "$oid": "69641055eac3e71e00bc668c"
+    },
+    {
+      "$oid": "6964105ceac3e71e00bc66c0"
+    },
+    {
+      "$oid": "69641061eac3e71e00bc66df"
+    },
+    {
+      "$oid": "6964116ceac3e71e00bc6e36"
+    },
+    {
+      "$oid": "69641186eac3e71e00bc6ee1"
+    },
+    {
+      "$oid": "69641187eac3e71e00bc6ee8"
+    },
+    {
+      "$oid": "696418a3a863a0e82a2911b8"
+    },
+    {
+      "$oid": "696418a4a863a0e82a2911bf"
+    },
+    {
+      "$oid": "696418a4a863a0e82a2911c6"
+    },
+    {
+      "$oid": "696418a7a863a0e82a2911db"
+    },
+    {
+      "$oid": "696418aba863a0e82a2911fe"
+    },
+    {
+      "$oid": "696418c4a863a0e82a2912b7"
+    },
+    {
+      "$oid": "696418cea863a0e82a2912fb"
+    },
+    {
+      "$oid": "696418d0a863a0e82a291309"
+    },
+    {
+      "$oid": "696418d6a863a0e82a291335"
+    },
+    {
+      "$oid": "696418d7a863a0e82a29133c"
+    },
+    {
+      "$oid": "696418d7a863a0e82a291343"
+    },
+    {
+      "$oid": "696418dea863a0e82a291373"
+    },
+    {
+      "$oid": "696418dfa863a0e82a29137d"
+    },
+    {
+      "$oid": "696418e0a863a0e82a291384"
+    },
+    {
+      "$oid": "696418e1a863a0e82a291392"
+    },
+    {
+      "$oid": "696418e3a863a0e82a2913a3"
+    },
+    {
+      "$oid": "696418e4a863a0e82a2913aa"
+    },
+    {
+      "$oid": "696418e5a863a0e82a2913b1"
+    },
+    {
+      "$oid": "696418eaa863a0e82a2913d7"
+    },
+    {
+      "$oid": "696418eba863a0e82a2913de"
+    },
+    {
+      "$oid": "696418eca863a0e82a2913e5"
+    },
+    {
+      "$oid": "696418f2a863a0e82a29140a"
+    },
+    {
+      "$oid": "696418f6a863a0e82a291429"
+    },
+    {
+      "$oid": "696418f7a863a0e82a291430"
+    },
+    {
+      "$oid": "696418fba863a0e82a291456"
+    },
+    {
+      "$oid": "696418fca863a0e82a29145d"
+    },
+    {
+      "$oid": "696418fda863a0e82a291464"
+    },
+    {
+      "$oid": "696418ffa863a0e82a291479"
+    },
+    {
+      "$oid": "69641900a863a0e82a291480"
+    },
+    {
+      "$oid": "69641901a863a0e82a291487"
+    },
+    {
+      "$oid": "69641903a863a0e82a291498"
+    },
+    {
+      "$oid": "69641904a863a0e82a2914a2"
+    },
+    {
+      "$oid": "69641905a863a0e82a2914a9"
+    },
+    {
+      "$oid": "69641907a863a0e82a2914bd"
+    },
+    {
+      "$oid": "69641907a863a0e82a2914c4"
+    },
+    {
+      "$oid": "6964190ba863a0e82a2914dc"
+    },
+    {
+      "$oid": "6964190ba863a0e82a2914e3"
+    },
+    {
+      "$oid": "69641910a863a0e82a291506"
+    },
+    {
+      "$oid": "69641910a863a0e82a29150d"
+    },
+    {
+      "$oid": "69641914a863a0e82a291522"
+    },
+    {
+      "$oid": "69641915a863a0e82a291529"
+    },
+    {
+      "$oid": "69641916a863a0e82a291530"
+    },
+    {
+      "$oid": "69641919a863a0e82a29154e"
+    },
+    {
+      "$oid": "6964191aa863a0e82a291555"
+    },
+    {
+      "$oid": "6964191ea863a0e82a291574"
+    },
+    {
+      "$oid": "6964191fa863a0e82a29157b"
+    },
+    {
+      "$oid": "69641922a863a0e82a2915a5"
+    },
+    {
+      "$oid": "69641923a863a0e82a2915ac"
+    },
+    {
+      "$oid": "69641924a863a0e82a2915b3"
+    },
+    {
+      "$oid": "69641926a863a0e82a2915c7"
+    },
+    {
+      "$oid": "69641927a863a0e82a2915ce"
+    },
+    {
+      "$oid": "69641928a863a0e82a2915dc"
+    },
+    {
+      "$oid": "69641929a863a0e82a2915e3"
+    },
+    {
+      "$oid": "6964192da863a0e82a2915ff"
+    },
+    {
+      "$oid": "6964192da863a0e82a291606"
+    },
+    {
+      "$oid": "6964192fa863a0e82a291619"
+    },
+    {
+      "$oid": "69641930a863a0e82a291620"
+    },
+    {
+      "$oid": "69641931a863a0e82a291627"
+    },
+    {
+      "$oid": "69641933a863a0e82a291637"
+    },
+    {
+      "$oid": "69641935a863a0e82a29164e"
+    },
+    {
+      "$oid": "69641937a863a0e82a29165c"
+    },
+    {
+      "$oid": "69641938a863a0e82a291663"
+    },
+    {
+      "$oid": "6964193aa863a0e82a291671"
+    },
+    {
+      "$oid": "6964193ba863a0e82a291678"
+    },
+    {
+      "$oid": "6964193da863a0e82a291689"
+    },
+    {
+      "$oid": "6964193da863a0e82a291690"
+    },
+    {
+      "$oid": "6964193fa863a0e82a29169e"
+    },
+    {
+      "$oid": "69641940a863a0e82a2916a5"
+    },
+    {
+      "$oid": "69641942a863a0e82a2916b6"
+    },
+    {
+      "$oid": "69641946a863a0e82a2916ce"
+    },
+    {
+      "$oid": "69641947a863a0e82a2916dc"
+    },
+    {
+      "$oid": "69641948a863a0e82a2916e3"
+    },
+    {
+      "$oid": "6964194aa863a0e82a2916f1"
+    },
+    {
+      "$oid": "6964194ba863a0e82a2916f8"
+    },
+    {
+      "$oid": "6964194ca863a0e82a291706"
+    },
+    {
+      "$oid": "6964194da863a0e82a29170d"
+    },
+    {
+      "$oid": "6964194fa863a0e82a29171b"
+    },
+    {
+      "$oid": "6964194fa863a0e82a291722"
+    },
+    {
+      "$oid": "69641952a863a0e82a291733"
+    },
+    {
+      "$oid": "69641954a863a0e82a291744"
+    },
+    {
+      "$oid": "69641956a863a0e82a291755"
+    },
+    {
+      "$oid": "69641959a863a0e82a29176d"
+    },
+    {
+      "$oid": "6964195aa863a0e82a291774"
+    },
+    {
+      "$oid": "6964195ca863a0e82a291785"
+    },
+    {
+      "$oid": "6964195ca863a0e82a29178c"
+    },
+    {
+      "$oid": "6964195fa863a0e82a2917a1"
+    },
+    {
+      "$oid": "69641960a863a0e82a2917a8"
+    },
+    {
+      "$oid": "69641962a863a0e82a2917b6"
+    },
+    {
+      "$oid": "69641962a863a0e82a2917bd"
+    },
+    {
+      "$oid": "69641966a863a0e82a2917d8"
+    },
+    {
+      "$oid": "69641967a863a0e82a2917df"
+    },
+    {
+      "$oid": "6964196fa863a0e82a291813"
+    },
+    {
+      "$oid": "69641985a863a0e82a2918be"
+    },
+    {
+      "$oid": "69641a21a863a0e82a291ce2"
+    },
+    {
+      "$oid": "69641a4ea863a0e82a291e31"
+    },
+    {
+      "$oid": "69641a59a863a0e82a291e80"
+    },
+    {
+      "$oid": "69641a96a863a0e82a292016"
+    },
+    {
+      "$oid": "69641a9aa863a0e82a292034"
+    },
+    {
+      "$oid": "69641acca863a0e82a2921ad"
+    },
+    {
+      "$oid": "69641ad3a863a0e82a2921e9"
+    },
+    {
+      "$oid": "69641adba863a0e82a29221d"
+    },
+    {
+      "$oid": "69641ae0a863a0e82a292249"
+    },
+    {
+      "$oid": "69641ae7a863a0e82a29227d"
+    },
+    {
+      "$oid": "69641aeca863a0e82a29229c"
+    },
+    {
+      "$oid": "69641c01a863a0e82a2929bf"
+    },
+    {
+      "$oid": "69641c1ea863a0e82a292a6a"
+    },
+    {
+      "$oid": "69641c1ea863a0e82a292a71"
+    },
+    {
+      "$oid": "6964218b888f8216c84873de"
+    },
+    {
+      "$oid": "6964218c888f8216c84873e5"
+    },
+    {
+      "$oid": "6964218d888f8216c84873ec"
+    },
+    {
+      "$oid": "6964218f888f8216c8487401"
+    },
+    {
+      "$oid": "69642193888f8216c8487424"
+    },
+    {
+      "$oid": "696421ac888f8216c84874dd"
+    },
+    {
+      "$oid": "696421b6888f8216c8487521"
+    },
+    {
+      "$oid": "696421b8888f8216c848752f"
+    },
+    {
+      "$oid": "696421be888f8216c848755b"
+    },
+    {
+      "$oid": "696421be888f8216c8487562"
+    },
+    {
+      "$oid": "696421bf888f8216c8487569"
+    },
+    {
+      "$oid": "696421c5888f8216c8487599"
+    },
+    {
+      "$oid": "696421c6888f8216c84875a3"
+    },
+    {
+      "$oid": "696421c7888f8216c84875aa"
+    },
+    {
+      "$oid": "696421c9888f8216c84875b8"
+    },
+    {
+      "$oid": "696421cb888f8216c84875c9"
+    },
+    {
+      "$oid": "696421cc888f8216c84875d0"
+    },
+    {
+      "$oid": "696421cc888f8216c84875d7"
+    },
+    {
+      "$oid": "696421d2888f8216c84875fd"
+    },
+    {
+      "$oid": "696421d3888f8216c8487604"
+    },
+    {
+      "$oid": "696421d3888f8216c848760b"
+    },
+    {
+      "$oid": "696421da888f8216c8487630"
+    },
+    {
+      "$oid": "696421de888f8216c848764f"
+    },
+    {
+      "$oid": "696421df888f8216c8487656"
+    },
+    {
+      "$oid": "696421e3888f8216c848767c"
+    },
+    {
+      "$oid": "696421e4888f8216c8487683"
+    },
+    {
+      "$oid": "696421e5888f8216c848768a"
+    },
+    {
+      "$oid": "696421e7888f8216c848769f"
+    },
+    {
+      "$oid": "696421e8888f8216c84876a6"
+    },
+    {
+      "$oid": "696421e9888f8216c84876ad"
+    },
+    {
+      "$oid": "696421eb888f8216c84876be"
+    },
+    {
+      "$oid": "696421ec888f8216c84876c8"
+    },
+    {
+      "$oid": "696421ed888f8216c84876cf"
+    },
+    {
+      "$oid": "696421ef888f8216c84876e3"
+    },
+    {
+      "$oid": "696421f0888f8216c84876ea"
+    },
+    {
+      "$oid": "696421f3888f8216c8487702"
+    },
+    {
+      "$oid": "696421f3888f8216c8487709"
+    },
+    {
+      "$oid": "696421f8888f8216c848772c"
+    },
+    {
+      "$oid": "696421f8888f8216c8487733"
+    },
+    {
+      "$oid": "696421fc888f8216c8487748"
+    },
+    {
+      "$oid": "696421fd888f8216c848774f"
+    },
+    {
+      "$oid": "696421fe888f8216c8487756"
+    },
+    {
+      "$oid": "69642201888f8216c8487774"
+    },
+    {
+      "$oid": "69642202888f8216c848777b"
+    },
+    {
+      "$oid": "69642206888f8216c848779a"
+    },
+    {
+      "$oid": "69642207888f8216c84877a1"
+    },
+    {
+      "$oid": "6964220a888f8216c84877bd"
+    },
+    {
+      "$oid": "6964220b888f8216c84877c4"
+    },
+    {
+      "$oid": "6964220b888f8216c84877cb"
+    },
+    {
+      "$oid": "6964220e888f8216c84877df"
+    },
+    {
+      "$oid": "6964220f888f8216c84877e6"
+    },
+    {
+      "$oid": "69642210888f8216c84877f4"
+    },
+    {
+      "$oid": "69642211888f8216c84877fb"
+    },
+    {
+      "$oid": "69642214888f8216c8487817"
+    },
+    {
+      "$oid": "69642215888f8216c848781e"
+    },
+    {
+      "$oid": "69642217888f8216c8487831"
+    },
+    {
+      "$oid": "69642218888f8216c8487838"
+    },
+    {
+      "$oid": "69642219888f8216c848783f"
+    },
+    {
+      "$oid": "6964221b888f8216c848784f"
+    },
+    {
+      "$oid": "6964221d888f8216c8487866"
+    },
+    {
+      "$oid": "6964221f888f8216c8487874"
+    },
+    {
+      "$oid": "69642220888f8216c848787b"
+    },
+    {
+      "$oid": "69642222888f8216c8487889"
+    },
+    {
+      "$oid": "69642223888f8216c8487890"
+    },
+    {
+      "$oid": "69642225888f8216c84878a1"
+    },
+    {
+      "$oid": "69642226888f8216c84878a8"
+    },
+    {
+      "$oid": "69642227888f8216c84878b6"
+    },
+    {
+      "$oid": "69642228888f8216c84878bd"
+    },
+    {
+      "$oid": "6964222a888f8216c84878ce"
+    },
+    {
+      "$oid": "6964222e888f8216c84878e6"
+    },
+    {
+      "$oid": "69642230888f8216c84878f4"
+    },
+    {
+      "$oid": "69642231888f8216c84878fb"
+    },
+    {
+      "$oid": "69642232888f8216c8487909"
+    },
+    {
+      "$oid": "69642233888f8216c8487910"
+    },
+    {
+      "$oid": "69642235888f8216c848791e"
+    },
+    {
+      "$oid": "69642236888f8216c8487925"
+    },
+    {
+      "$oid": "69642237888f8216c8487933"
+    },
+    {
+      "$oid": "69642238888f8216c848793a"
+    },
+    {
+      "$oid": "6964223a888f8216c848794b"
+    },
+    {
+      "$oid": "6964223c888f8216c848795c"
+    },
+    {
+      "$oid": "6964223e888f8216c848796d"
+    },
+    {
+      "$oid": "69642241888f8216c8487985"
+    },
+    {
+      "$oid": "69642242888f8216c848798c"
+    },
+    {
+      "$oid": "69642244888f8216c848799d"
+    },
+    {
+      "$oid": "69642245888f8216c84879a4"
+    },
+    {
+      "$oid": "69642248888f8216c84879b9"
+    },
+    {
+      "$oid": "69642248888f8216c84879c0"
+    },
+    {
+      "$oid": "6964224a888f8216c84879ce"
+    },
+    {
+      "$oid": "6964224b888f8216c84879d5"
+    },
+    {
+      "$oid": "6964224f888f8216c84879f0"
+    },
+    {
+      "$oid": "69642250888f8216c84879f7"
+    },
+    {
+      "$oid": "69642257888f8216c8487a2b"
+    },
+    {
+      "$oid": "6964226e888f8216c8487ac8"
+    },
+    {
+      "$oid": "6964230c888f8216c8487efb"
+    },
+    {
+      "$oid": "69642337888f8216c848803c"
+    },
+    {
+      "$oid": "69642342888f8216c848808b"
+    },
+    {
+      "$oid": "6964237f888f8216c8488235"
+    },
+    {
+      "$oid": "69642383888f8216c8488253"
+    },
+    {
+      "$oid": "696423b8888f8216c84883cc"
+    },
+    {
+      "$oid": "696423bf888f8216c8488408"
+    },
+    {
+      "$oid": "696423c9888f8216c848843c"
+    },
+    {
+      "$oid": "696423ce888f8216c8488468"
+    },
+    {
+      "$oid": "696423d5888f8216c848849c"
+    },
+    {
+      "$oid": "696423da888f8216c84884bb"
+    },
+    {
+      "$oid": "696424f0888f8216c8488bc2"
+    },
+    {
+      "$oid": "6964250a888f8216c8488c6d"
+    },
+    {
+      "$oid": "6964250b888f8216c8488c74"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 732,
+  "metadata": {
+    "id": 732,
+    "nombre": "700_REEL_SHORT_CDDUJDF",
+    "descripcion": "Presupuesto por servicio de produccion para REELSHORT serie ficcion CDDUJDF. 59eps 1min duracion.",
+    "responsableId": 20,
+    "clienteId": 12,
+    "fechaInicio": "2025-09-08T00:00:00.000Z",
+    "fechaFin": "2026-01-08T00:00:00.000Z",
+    "fechaAlta": "2025-09-17T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 29
+  },
+  "createdAt": {
+    "$date": "2025-09-17T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:24:56.444Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8fb0"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "702_POWWOW_CDI2",
+  "description": "servicio de postproducción para 360POWWOW para su proyecto CDI - SEASON 2. | 40 EPS - Fecha aire 5/enero 2026. Se contempla un crew de 1 coordinador de post, 2 editores y 1 gráfico por 12 semanas. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 17/11/2025, fin de proyecto: 02/04/2026. Excedido este período, este presupuesto incurrirá en extras. FZEROCORP ACLARACIONES FORMA DE PAGO #SIMPLE #MEDIBLE #TRANSPARENTE",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-11-17T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2026-02-02T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640eadeac3e71e00bc5a52"
+    },
+    {
+      "$oid": "69640f3ceac3e71e00bc5e58"
+    },
+    {
+      "$oid": "69640f9eeac3e71e00bc6109"
+    },
+    {
+      "$oid": "69641032eac3e71e00bc6569"
+    },
+    {
+      "$oid": "69641038eac3e71e00bc659b"
+    },
+    {
+      "$oid": "69641050eac3e71e00bc6660"
+    },
+    {
+      "$oid": "69641071eac3e71e00bc6752"
+    },
+    {
+      "$oid": "6964192da863a0e82a291606"
+    },
+    {
+      "$oid": "696419b9a863a0e82a291a16"
+    },
+    {
+      "$oid": "69641a1da863a0e82a291cc7"
+    },
+    {
+      "$oid": "69641abda863a0e82a29212e"
+    },
+    {
+      "$oid": "69641ac3a863a0e82a292160"
+    },
+    {
+      "$oid": "69641adba863a0e82a29221d"
+    },
+    {
+      "$oid": "69641afda863a0e82a29230f"
+    },
+    {
+      "$oid": "69642215888f8216c848781e"
+    },
+    {
+      "$oid": "696422a2888f8216c8487c2f"
+    },
+    {
+      "$oid": "69642308888f8216c8487ee0"
+    },
+    {
+      "$oid": "696423a7888f8216c848834d"
+    },
+    {
+      "$oid": "696423ae888f8216c848837f"
+    },
+    {
+      "$oid": "696423c9888f8216c848843c"
+    },
+    {
+      "$oid": "696423ec888f8216c848852e"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 733,
+  "metadata": {
+    "id": 733,
+    "nombre": "702_POWWOW_CDI2",
+    "descripcion": "servicio de postproducción para 360POWWOW para su proyecto CDI - SEASON 2. | 40 EPS - Fecha aire 5/enero 2026. Se contempla un crew de 1 coordinador de post, 2 editores y 1 gráfico por 12 semanas. Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 17/11/2025, fin de proyecto: 02/04/2026. Excedido este período, este presupuesto incurrirá en extras. FZEROCORP ACLARACIONES FORMA DE PAGO #SIMPLE #MEDIBLE #TRANSPARENTE",
+    "responsableId": 20,
+    "clienteId": 1,
+    "fechaInicio": "2025-11-17T00:00:00.000Z",
+    "fechaFin": "2026-02-02T00:00:00.000Z",
+    "fechaAlta": "2025-11-14T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 30
+  },
+  "createdAt": {
+    "$date": "2025-11-14T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:23:00.562Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef495be848a048e8fb3"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "703_TELECOM_JSA_PROD_POST",
+  "description": "servicio de produccion para TELECOM ARGENTINA S.A. - FLOW - serie JUAN SE ALQUILA (7eps - 30min). PRE SOFT (2weeks) - PREPRO (4 weeks) - RODAJE (6 weeks) - WRAP (2 weeks) - POST & FINAL DELIVERY (15 weeks). Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 02/01/2026, fin de proyecto: 31/07/2026. Excedido este período, este presupuesto incurrirá en extras. (Presupuesto segun partitarias SAT - Septiembre 2025) FZERO SRL ACLARACIONES FORMA DE PAGO CUOTA 1: 40% (ANTICIPO) - CUOTA 2: 40% (PRE PRODUCCION) - CUOTA 3: 20% (ENTRAGA FINAL)",
+  "status": "active",
+  "startDate": {
+    "$date": "2025-12-01T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2026-07-31T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640e5ceac3e71e00bc57cd"
+    },
+    {
+      "$oid": "69640e72eac3e71e00bc5872"
+    },
+    {
+      "$oid": "69640e81eac3e71e00bc58f2"
+    },
+    {
+      "$oid": "69640ea4eac3e71e00bc59ff"
+    },
+    {
+      "$oid": "69640eb1eac3e71e00bc5a73"
+    },
+    {
+      "$oid": "69640edbeac3e71e00bc5bc7"
+    },
+    {
+      "$oid": "696418dea863a0e82a291373"
+    },
+    {
+      "$oid": "696418f4a863a0e82a291418"
+    },
+    {
+      "$oid": "69641903a863a0e82a291498"
+    },
+    {
+      "$oid": "69641924a863a0e82a2915b3"
+    },
+    {
+      "$oid": "69641931a863a0e82a291627"
+    },
+    {
+      "$oid": "6964195ba863a0e82a29177b"
+    },
+    {
+      "$oid": "696421c5888f8216c8487599"
+    },
+    {
+      "$oid": "696421dc888f8216c848763e"
+    },
+    {
+      "$oid": "696421eb888f8216c84876be"
+    },
+    {
+      "$oid": "6964220b888f8216c84877cb"
+    },
+    {
+      "$oid": "69642219888f8216c848783f"
+    },
+    {
+      "$oid": "69642243888f8216c8487993"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 734,
+  "metadata": {
+    "id": 734,
+    "nombre": "703_TELECOM_JSA_PROD_POST",
+    "descripcion": "servicio de produccion para TELECOM ARGENTINA S.A. - FLOW - serie JUAN SE ALQUILA (7eps - 30min). PRE SOFT (2weeks) - PREPRO (4 weeks) - RODAJE (6 weeks) - WRAP (2 weeks) - POST & FINAL DELIVERY (15 weeks). Jornadas de 7hs de lunes a viernes, no incluye feriados. Inicio de proyecto: 02/01/2026, fin de proyecto: 31/07/2026. Excedido este período, este presupuesto incurrirá en extras. (Presupuesto segun partitarias SAT - Septiembre 2025) FZERO SRL ACLARACIONES FORMA DE PAGO CUOTA 1: 40% (ANTICIPO) - CUOTA 2: 40% (PRE PRODUCCION) - CUOTA 3: 20% (ENTRAGA FINAL) ",
+    "responsableId": 20,
+    "clienteId": 13,
+    "fechaInicio": "2025-12-01T00:00:00.000Z",
+    "fechaFin": "2026-07-31T00:00:00.000Z",
+    "fechaAlta": "2025-11-28T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 31
+  },
+  "createdAt": {
+    "$date": "2025-11-28T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:19:52.900Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "695d5ef595be848a048e8fb6"
+  },
+  "tenantId": {
+    "$oid": "696e0afdee864e3d5ceec539"
+  },
+  "name": "705_TOB_NOVELA_GRAFICA",
+  "description": null,
+  "status": "active",
+  "startDate": {
+    "$date": "2025-12-04T00:00:00.000Z"
+  },
+  "endDate": {
+    "$date": "2026-04-30T00:00:00.000Z"
+  },
+  "objectives": [],
+  "createdBy": "External Import",
+  "assignedUsers": [
+    {
+      "$oid": "69640ea0eac3e71e00bc59dc"
+    },
+    {
+      "$oid": "6964191fa863a0e82a291582"
+    },
+    {
+      "$oid": "69642207888f8216c84877a8"
+    }
+  ],
+  "favorite": false,
+  "vacationConfig": {
+    "useGlobalConfig": true,
+    "permiteFraccionadas": true
+  },
+  "externalId": 735,
+  "metadata": {
+    "id": 735,
+    "nombre": "705_TOB_NOVELA_GRAFICA ",
+    "descripcion": null,
+    "responsableId": 17,
+    "clienteId": 1,
+    "fechaInicio": "2025-12-04T00:00:00.000Z",
+    "fechaFin": "2026-04-30T00:00:00.000Z",
+    "fechaAlta": "2025-12-05T00:00:00.000Z",
+    "sedeId": 3,
+    "activo": true,
+    "centroCostoId": 32
+  },
+  "createdAt": {
+    "$date": "2025-12-05T00:00:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-13T22:19:21.417Z"
+  },
+  "__v": 0
+}]

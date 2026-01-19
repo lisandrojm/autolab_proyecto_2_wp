@@ -188,6 +188,7 @@ export const LevelsPage: React.FC = () => {
   return (
     <PageLayout
       title="Niveles"
+      itemCount={filteredLevels.length}
       subtitle="Gestiona los niveles de experiencia de la organización"
       faIcon={{ icon: faUserGraduate }}
       infoModal={{

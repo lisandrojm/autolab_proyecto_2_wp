@@ -46,9 +46,29 @@ const createClientSchema = z.object({
           currency: z.enum(["EUR", "USD", "GBP", "MXN", "ARS"]).default("EUR"),
         }),
         isActive: z.boolean().default(true),
-      })
+      }),
     )
     .default([]),
+  externalId: z.string().optional(),
+  cuit: z.string().optional(),
+  brief: z
+    .object({
+      objectives: z.array(z.string()).optional(),
+      targetAudience: z.string().optional(),
+      budget: z.number().optional(),
+      timeline: z.string().optional(),
+      preferences: z.string().optional(),
+    })
+    .optional(),
+  brandKit: z
+    .object({
+      logos: z.array(z.any()).optional(),
+      documents: z.array(z.any()).optional(),
+      colors: z.array(z.string()).optional(),
+      fonts: z.array(z.string()).optional(),
+      guidelines: z.string().optional(),
+    })
+    .optional(),
 });
 
 // ✅ GET /clients

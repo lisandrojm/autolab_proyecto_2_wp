@@ -666,6 +666,7 @@ export const VacationsPage: React.FC = () => {
   return (
     <PageLayout
       title="Vacaciones"
+      itemCount={filteredVacations.length}
       subtitle="Gestión de solicitudes de vacaciones del personal"
       faIcon={{ icon: faCalendar }}
       infoModal={{

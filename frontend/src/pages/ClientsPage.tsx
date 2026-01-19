@@ -258,6 +258,7 @@ export const ClientsPage: React.FC = () => {
   return (
     <PageLayout
       title="Clientes"
+      itemCount={filteredClients.length}
       faIcon={{ icon: faUsers }}
       infoModal={{
         isOpen: openInfo,

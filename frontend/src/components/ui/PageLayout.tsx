@@ -94,6 +94,7 @@ interface PageLayoutProps {
   postSearchAndFilters?: React.ReactNode;
   modal?: ControlledModalProps;
   viewModal?: ControlledModalProps;
+  itemCount?: number;
 }
 
 const BADGE_CLASSES: Record<BadgeVariant, string> = {
@@ -104,7 +105,7 @@ const BADGE_CLASSES: Record<BadgeVariant, string> = {
   info: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
 };
 
-export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal }) => {
+export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, badgeSecondary, badgeTertiary, badgeState, infoModal, showInfoIcon = false, shouldShowInfo, children, headerActions, headerBack, onBack, avatar, faIcon, faIconSecondary, clientMiniAvatar, preSearchContent, preSearchTitle, preSearchActions, searchAndFilters, postFaIconSecondary, postSearchTitle, postSearchActions, postSearchAndFilters, modal, viewModal, itemCount }) => {
   const shouldShowInfoButton = shouldShowInfo ?? (!!infoModal || showInfoIcon || !!subtitle);
 
   const renderBack = () => {
@@ -189,13 +190,18 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="flex justify-start gap-2 min-w-0">
                         <div className="flex gap-2 items-center justify-center min-w-0">
-                          {/* ⬇️ título con ellipsis */}
                           <h2
                             className="truncate text-2xl sm:text-3xl font-bold dark:text-gray-100"
                             title={title} // opcional: tooltip con el título completo
                           >
                             {title}
                           </h2>
+                          {/* ⬇️ título con ellipsis */}
+                          {itemCount !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-700 dark:text-gray-300 text-sm">({itemCount})</span>
+                            </div>
+                          )}
                           {badgeState && <span className={`px-2.5 py-0.5 rounded text-xs font-medium ${BADGE_CLASSES[badgeState.variant ?? "default"]}`}>{badgeState.text}</span>}
                         </div>
                         {shouldShowInfoButton && (

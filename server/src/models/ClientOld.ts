@@ -45,42 +45,9 @@ export interface IClient extends Document {
     };
     isActive: boolean;
   }[];
-  brief?: {
-    objectives: string[];
-    targetAudience?: string;
-    budget?: number;
-    timeline?: string;
-    preferences?: string;
-  };
 
   assignedUsers: Types.ObjectId[];
   usuarios?: { userId: Types.ObjectId; permiso: "ver" | "editar" }[];
-
-  brandKit?: {
-    logos?: {
-      _id?: Types.ObjectId;
-      url: string;
-      name?: string;
-      fileName?: string;
-      uploadedAt?: Date;
-      size?: number;
-    }[];
-    documents?: {
-      _id?: Types.ObjectId;
-      url: string;
-      name?: string;
-      fileName?: string;
-      fileType?: string;
-      uploadedAt?: Date;
-      size?: number;
-    }[];
-    colors?: string[];
-    fonts?: string[];
-    guidelines?: string;
-  };
-  // Externals
-  externalId?: string;
-  cuit?: string;
 }
 
 const clientSchema = new Schema<IClient>(
@@ -88,10 +55,6 @@ const clientSchema = new Schema<IClient>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     slug: { type: String, index: true },
     ownerUserId: { type: Schema.Types.ObjectId, ref: "User" },
-
-    // External ID for syncing
-    externalId: { type: String, index: true },
-    cuit: { type: String, trim: true },
 
     name: { type: String, required: true, trim: true },
 
@@ -123,14 +86,6 @@ const clientSchema = new Schema<IClient>(
     ],
     proyectos: [{ type: Schema.Types.ObjectId, ref: "Project", index: true }],
 
-    brief: {
-      objectives: [String],
-      targetAudience: String,
-      budget: Number,
-      timeline: String,
-      preferences: String,
-    },
-
     costCenters: [
       {
         name: String,
@@ -160,33 +115,8 @@ const clientSchema = new Schema<IClient>(
     ],
 
     favorite: { type: Boolean, default: false, index: true },
-
-    brandKit: {
-      logos: [
-        {
-          url: String,
-          name: String,
-          fileName: String,
-          uploadedAt: { type: Date, default: Date.now },
-          size: Number,
-        },
-      ],
-      documents: [
-        {
-          url: String,
-          name: String,
-          fileName: String,
-          fileType: String,
-          uploadedAt: { type: Date, default: Date.now },
-          size: Number,
-        },
-      ],
-      colors: [String],
-      fonts: [String],
-      guidelines: String,
-    },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 // único por tenant + email

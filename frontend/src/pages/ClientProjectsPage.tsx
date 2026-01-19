@@ -265,6 +265,7 @@ export const ClientProjectsPage: React.FC = () => {
   return (
     <PageLayout
       title={client?.name ? `Proyectos` : "Cliente"}
+      itemCount={visibleProjects.length}
       faIcon={{ icon: faBriefcase }}
       clientMiniAvatar={{
         src: getImageUrl(displayLogo),

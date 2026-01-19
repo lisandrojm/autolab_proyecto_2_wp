@@ -286,6 +286,7 @@ export const ProjectTeamPage: React.FC = () => {
   return (
     <PageLayout
       title="Gestionar Equipo"
+      itemCount={teamMembers.length}
       subtitle="Agrega o quita miembros del equipo"
       onBack={() => navigate(`/projects/${project._id}`)}
       faIcon={{ icon: faUsers }}

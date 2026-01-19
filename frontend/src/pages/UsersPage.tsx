@@ -391,6 +391,7 @@ export const UsersPage: React.FC = () => {
   return (
     <PageLayout
       title="Usuarios"
+      itemCount={users.length}
       subtitle="Gestiona usuarios y sus roles"
       faIcon={{ icon: faUser }}
       infoModal={{
