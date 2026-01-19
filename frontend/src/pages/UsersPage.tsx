@@ -1026,7 +1026,7 @@ export const UsersPage: React.FC = () => {
         {/* Indicador sutil de búsqueda en curso (no bloquea) */}
         {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Buscando…</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 mx-0.5 lg:mx-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-0.5 lg:mx-0">
           {users.map((user) => (
             <Card
               key={user._id}
