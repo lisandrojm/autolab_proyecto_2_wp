@@ -10,7 +10,7 @@ import { Modal } from "../components/ui/Modal";
 import { ActivityReport as BaseActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { activityReportsAPI } from "../api/activityReports";
-import { activityLogTypesAPI, ActivityLogType } from "../api/activityLogTypes";
+import { activityLogTypesAPI, RequestConfig } from "../api/activityLogTypes";
 import { usersAPI, User } from "../api/users";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -154,7 +154,7 @@ export const ManageActivityLogsPage: React.FC = () => {
   const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
   const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments">("attendance");
   const [reports, setReports] = useState<ActivityReport[]>([]);
-  const [logTypes, setLogTypes] = useState<ActivityLogType[]>([]);
+  const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -4,7 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGripVertical, faToggleOn, faToggleOff, faPenToSquare, faTrash, faUsers, faGlobe } from "@fortawesome/free-solid-svg-icons";
 
-export interface ActivityType {
+export interface RequestConfig {
   id: string;
   order: number;
   type: string;
@@ -15,14 +15,14 @@ export interface ActivityType {
 }
 
 interface SortableRowProps {
-  item: ActivityType;
+  item: RequestConfig;
   index: number;
   isReorderMode: boolean;
   allProjects: { _id: string; name: string }[];
-  onEdit: (item: ActivityType) => void;
+  onEdit: (item: RequestConfig) => void;
   onDelete: (id: string) => void;
-  onToggleActive: (item: ActivityType) => void;
-  onToggleReplacement: (item: ActivityType) => void;
+  onToggleActive: (item: RequestConfig) => void;
+  onToggleReplacement: (item: RequestConfig) => void;
   onStartReorder: () => void;
 }
 

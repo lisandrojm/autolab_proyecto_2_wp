@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { PageLayout } from "../components/ui/PageLayout";
 import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
-import { SortableActivityTypeRow, ActivityType } from "../components/activity_logs_config/SortableActivityTypeRow";
+import { SortableActivityTypeRow, RequestConfig as RequestConfigType } from "../components/activity_logs_config/SortableActivityTypeRow";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
@@ -41,9 +41,9 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
   const [savingFrequency, setSavingFrequency] = useState(false);
 
   // ABM State
-  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
+  const [activityTypes, setActivityTypes] = useState<RequestConfigType[]>([]);
   const [isAbmModalOpen, setIsAbmModalOpen] = useState(false);
-  const [currentType, setCurrentType] = useState<Partial<ActivityType>>({});
+  const [currentType, setCurrentType] = useState<Partial<RequestConfigType>>({});
   const [openTypesInfo, setOpenTypesInfo] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
 
@@ -63,7 +63,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
   const fetchTypes = async () => {
     try {
       const data = await activityLogTypesAPI.getAll();
-      const mapped: ActivityType[] = data.map((d: any) => ({
+      const mapped: RequestConfigType[] = data.map((d: any) => ({
         id: d._id,
         order: d.order,
         type: d.name,
@@ -122,7 +122,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
     setIsAbmModalOpen(true);
   };
 
-  const openEditModal = (item: ActivityType) => {
+  const openEditModal = (item: RequestConfigType) => {
     setCurrentType({ ...item, allowedProjectIds: item.allowedProjectIds || [] });
     setIsAbmModalOpen(true);
   };
@@ -170,7 +170,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
     }
   };
 
-  const handleToggleActive = async (item: ActivityType) => {
+  const handleToggleActive = async (item: RequestConfigType) => {
     try {
       const newStatus = item.status === "Activa" ? "Inactiva" : "Activa";
       setActivityTypes((prev) => prev.map((p) => (p.id === item.id ? { ...p, status: newStatus } : p)));
@@ -180,7 +180,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
     }
   };
 
-  const handleToggleReplacement = async (item: ActivityType) => {
+  const handleToggleReplacement = async (item: RequestConfigType) => {
     try {
       const newVal = !item.requiresReplacement;
       setActivityTypes((prev) => prev.map((p) => (p.id === item.id ? { ...p, requiresReplacement: newVal } : p)));
@@ -190,7 +190,7 @@ export const ManageActivityLogsConfigPage: React.FC = () => {
     }
   };
 
-  const handleToggleProjectForType = async (item: ActivityType) => {
+  const handleToggleProjectForType = async (item: RequestConfigType) => {
     if (!modalSelectedProject) return;
     if (item.visibility === "all") {
       sweetAlert.info("Tipo Global", "Los tipos globales están habilitados en todos los proyectos automáticamente.");

@@ -19,7 +19,7 @@ import { Vacation } from "../models/Vacation.js";
 
 import { VacationCounter } from "../models/VacationCounter.js";
 import { VacationOverlap } from "../models/VacationOverlap.js";
-import { RequestType } from "../models/RequestType.js";
+import { RequestConfig } from "../models/RequestConfig.js";
 import { Types } from "mongoose";
 
 /* ----------------------------- helpers ----------------------------- */
@@ -339,23 +339,23 @@ async function ensureUser(params: {
 }
 
 async function ensureActivityLogTypes(tenantId: Types.ObjectId) {
-  console.log("📋 Ensuring default Activity Log Types...");
+  console.log("📋 Ensuring default Request Configurations...");
   const defaults = ["Cambios de Turno", "Compensatorios", "Enfermedad", "Vacaciones", "Sin Goce de Sueldo", "Horas Extras y Feriados", "Otros Presentes"];
 
   let currentOrder = 1;
   for (const name of defaults) {
-    const exists = await RequestType.findOne({ tenantId, name });
+    const exists = await RequestConfig.findOne({ tenantId, name });
     if (!exists) {
-      await RequestType.create({
+      await RequestConfig.create({
         tenantId,
         name,
         requiresReplacement: false,
         isActive: true,
         order: currentOrder,
       });
-      console.log(`✅ Created RequestType: ${name}`);
+      console.log(`✅ Created RequestConfig: ${name}`);
     } else {
-      console.log(`✔️ RequestType exists: ${name}`);
+      console.log(`✔️ RequestConfig exists: ${name}`);
     }
     currentOrder++;
   }

@@ -1,6 +1,6 @@
 import axiosClient from "./axiosConfig";
 
-export interface ActivityLogType {
+export interface RequestConfig {
   _id: string; // Mongoose ID
   tenantId: string;
   name: string;
@@ -13,25 +13,25 @@ export interface ActivityLogType {
 
 export const activityLogTypesAPI = {
   getAll: async () => {
-    const response = await axiosClient.get<ActivityLogType[]>("/activity-log-types");
+    const response = await axiosClient.get<RequestConfig[]>("/request-config");
     return response.data;
   },
 
-  create: async (data: Partial<ActivityLogType>) => {
-    const response = await axiosClient.post<ActivityLogType>("/activity-log-types", data);
+  create: async (data: Partial<RequestConfig>) => {
+    const response = await axiosClient.post<RequestConfig>("/request-config", data);
     return response.data;
   },
 
-  update: async (id: string, data: Partial<ActivityLogType>) => {
-    const response = await axiosClient.put<ActivityLogType>(`/activity-log-types/${id}`, data);
+  update: async (id: string, data: Partial<RequestConfig>) => {
+    const response = await axiosClient.put<RequestConfig>(`/request-config/${id}`, data);
     return response.data;
   },
 
   delete: async (id: string) => {
-    await axiosClient.delete(`/activity-log-types/${id}`);
+    await axiosClient.delete(`/request-config/${id}`);
   },
 
   reorder: async (items: { id: string; order: number }[]) => {
-    await axiosClient.patch("/activity-log-types/reorder", { items });
+    await axiosClient.patch("/request-config/reorder", { items });
   },
 };

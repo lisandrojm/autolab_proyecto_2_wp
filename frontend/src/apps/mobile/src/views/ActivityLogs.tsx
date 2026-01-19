@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isFuture, isToday, isBefore, isAfter, getDate, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { activityLogTypesAPI, ActivityLogType } from "../../../../api/activityLogTypes";
+import { activityLogTypesAPI, RequestConfig } from "../../../../api/activityLogTypes";
 
 import { activityReportsAPI, ActivityReport } from "../../../../api/activityReports";
 import { usersAPI } from "../../../../api/users";
@@ -225,7 +225,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [selectedAdditionalStaff, setSelectedAdditionalStaff] = useState<string[]>([]);
   const [additionalStaffSearchTerm, setAdditionalStaffSearchTerm] = useState("");
 
-  const [logTypes, setLogTypes] = useState<ActivityLogType[]>([]);
+  const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [reports, setReports] = useState<ActivityReport[]>([]);
@@ -255,7 +255,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           role: u.role,
           roles: u.roles,
           positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
-        }))
+        })),
       );
     } catch (e) {
       console.error("Error loading users", e);
@@ -449,7 +449,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     return employees.filter((e) => !e.projectIds || !e.projectIds.includes(selectedProjectId));
   }, [employees, selectedProjectId]);
 
-  const addRecordInternal = (employee: EmployeeOption, type: ActivityLogType, replacementId?: string, overtimeHours?: number, notes?: string) => {
+  const addRecordInternal = (employee: EmployeeOption, type: RequestConfig, replacementId?: string, overtimeHours?: number, notes?: string) => {
     const replacement = employees.find((e) => e.id === replacementId);
 
     const newRecord: LocalAttendanceRecord = {

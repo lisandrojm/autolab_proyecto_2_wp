@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from "mongoose";
 
-export interface IRequestType extends Document {
+export interface IRequestConfig extends Document {
   tenantId: Types.ObjectId;
   name: string;
   order: number;
@@ -12,7 +12,7 @@ export interface IRequestType extends Document {
   updatedAt: Date;
 }
 
-const requestTypeSchema = new Schema<IRequestType>(
+const requestConfigSchema = new Schema<IRequestConfig>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true },
@@ -26,10 +26,10 @@ const requestTypeSchema = new Schema<IRequestType>(
     },
     allowedProjectIds: [{ type: Schema.Types.ObjectId, ref: "Project", default: [] }],
   },
-  { timestamps: true, collection: "requests_types" },
+  { timestamps: true, collection: "requests_configs" },
 );
 
 // Compound index to ensure uniqueness of name per tenant
-requestTypeSchema.index({ tenantId: 1, name: 1 }, { unique: true });
+requestConfigSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 
-export const RequestType = model<IRequestType>("RequestType", requestTypeSchema);
+export const RequestConfig = model<IRequestConfig>("RequestConfig", requestConfigSchema);

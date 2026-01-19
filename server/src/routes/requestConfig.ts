@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { RequestType } from "../models/RequestType.js";
+import { RequestConfig } from "../models/RequestConfig.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
@@ -11,7 +11,7 @@ router.use(requireTenant, authenticateToken);
 router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     // Return all types, sorted by order
-    const types = await RequestType.find({ tenantId: req.tenantObjectId }).sort({ order: 1 });
+    const types = await RequestConfig.find({ tenantId: req.tenantObjectId }).sort({ order: 1 });
     res.json(types);
   } catch (error) {
     console.error("Get activity log types error:", error);
@@ -30,11 +30,11 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Determine order if not provided: max order + 1
     let newOrder = order;
     if (newOrder === undefined) {
-      const lastItem = await RequestType.findOne({ tenantId: req.tenantObjectId }).sort({ order: -1 });
+      const lastItem = await RequestConfig.findOne({ tenantId: req.tenantObjectId }).sort({ order: -1 });
       newOrder = (lastItem?.order || 0) + 1;
     }
 
-    const newType = new RequestType({
+    const newConfig = new RequestConfig({
       tenantId: req.tenantObjectId,
       name,
       requiresReplacement: !!requiresReplacement,
@@ -44,13 +44,13 @@ router.post("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       allowedProjectIds: req.body.allowedProjectIds || [],
     });
 
-    await newType.save();
-    res.status(201).json(newType);
+    await newConfig.save();
+    res.status(201).json(newConfig);
   } catch (error: any) {
     if (error.code === 11000) {
-      return res.status(409).json({ error: "A type with this name already exists" });
+      return res.status(409).json({ error: "A configuration with this name already exists" });
     }
-    console.error("Create activity log type error:", error);
+    console.error("Create activity log config error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -72,16 +72,16 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     if (req.body.visibility !== undefined) updateData.visibility = req.body.visibility;
     if (req.body.allowedProjectIds !== undefined) updateData.allowedProjectIds = req.body.allowedProjectIds;
 
-    const updatedType = await RequestType.findOneAndUpdate({ _id: id, tenantId: req.tenantObjectId }, updateData, { new: true });
+    const updatedConfig = await RequestConfig.findOneAndUpdate({ _id: id, tenantId: req.tenantObjectId }, updateData, { new: true });
 
-    if (!updatedType) return res.status(404).json({ error: "Activity log type not found" });
+    if (!updatedConfig) return res.status(404).json({ error: "Activity log configuration not found" });
 
-    res.json(updatedType);
+    res.json(updatedConfig);
   } catch (error: any) {
     if (error.code === 11000) {
-      return res.status(409).json({ error: "A type with this name already exists" });
+      return res.status(409).json({ error: "A configuration with this name already exists" });
     }
-    console.error("Update activity log type error:", error);
+    console.error("Update activity log config error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -90,11 +90,11 @@ router.put("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
 router.delete("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { id } = req.params;
-    const deleted = await RequestType.findOneAndDelete({ _id: id, tenantId: req.tenantObjectId });
-    if (!deleted) return res.status(404).json({ error: "Activity log type not found" });
+    const deleted = await RequestConfig.findOneAndDelete({ _id: id, tenantId: req.tenantObjectId });
+    if (!deleted) return res.status(404).json({ error: "Activity log configuration not found" });
     res.json({ message: "Deleted successfully" });
   } catch (error) {
-    console.error("Delete activity log type error:", error);
+    console.error("Delete activity log config error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -114,12 +114,12 @@ router.patch("/reorder", async (req: AuthenticatedRequest & TenantRequest, res) 
       },
     }));
 
-    await RequestType.bulkWrite(ops);
+    await RequestConfig.bulkWrite(ops);
     res.json({ message: "Order updated successfully" });
   } catch (error) {
-    console.error("Reorder activity log types error:", error);
+    console.error("Reorder activity log configs error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-export { router as RequestTypeRoutes };
+export { router as RequestConfigRoutes };

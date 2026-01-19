@@ -52,7 +52,7 @@ import { pdfTemplatePreviewRoutes } from "./routes/pdfPreview.js";
 import { vacationConfigRoutes } from "./routes/vacationConfig.js";
 import { vacationsRoutes } from "./routes/vacations.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
-import { RequestTypeRoutes } from "./routes/activityLogTypes.js";
+import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -164,7 +164,7 @@ app.use("/api/v1/pdf-preview", pdfTemplatePreviewRoutes);
 app.use("/api/v1/vacation-config", vacationConfigRoutes);
 app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
-app.use("/api/v1/activity-log-types", RequestTypeRoutes);
+app.use("/api/v1/request-config", RequestConfigRoutes);
 app.use("/api/v1/activity-reports", RequestRoutes);
 
 // ───────────────── 404 + errores (al final) ─────────────────
