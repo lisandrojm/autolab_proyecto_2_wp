@@ -23,10 +23,6 @@ import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
-import { PlatformUsagePage } from "./pages/PlatformUsagePage";
-import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
-import { PlatformDashboardPage } from "./pages/PlatformDashboardPage";
-
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
 import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPage";
 import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
@@ -44,7 +40,7 @@ const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 const DashboardRouter: React.FC = () => {
   const { user } = useAuthStore();
   if (!user) return null;
-  if (user.tenantSlug === "superadmin") return <PlatformDashboardPage />;
+  if (user.tenantSlug === "superadmin") return <TenantsPage />;
   // Para cualquier otro rol, ir a Users
   return <UsersPage />;
 };
@@ -232,22 +228,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <TenantsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/platform/usage"
-                element={
-                  <ProtectedRoute>
-                    <PlatformUsagePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/platform/settings"
-                element={
-                  <ProtectedRoute>
-                    <PlatformSettingsPage />
                   </ProtectedRoute>
                 }
               />

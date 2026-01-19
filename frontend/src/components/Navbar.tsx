@@ -153,7 +153,7 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: "/dashboard", icon: faHouse, label: "Dashboard", scope: "global" }, { path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients }, { path: "/platform/usage", icon: faChartLine, label: "Planes y Uso", scope: "global" }, { path: "/platform/settings", icon: faCog, label: "Configuración Global", scope: "global" });
+      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
     } else {
       if (hasPermission("admin_roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles });
       if (hasPermission("admin_areas:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas });
@@ -258,7 +258,7 @@ export const MobileNavbar: React.FC = () => {
 
     const managementItems = adminItems.filter((item) => ["/projects"].includes(item.path));
 
-    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/dashboard", "/tenants", "/clients", "/platform/usage", "/platform/settings"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
+    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
     const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config"].includes(item.path));
 
