@@ -295,7 +295,7 @@ export const ProjectTeamPage: React.FC = () => {
         src: client?.logo,
       }}
       badge={{ text: project.name, variant: "default" }}
-      badgeSecondary={{ text: `${teamMembers.length} Miembros`, variant: "default" }}
+      badgeSecondary={{ text: "Equipo", variant: "default" }}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
