@@ -23,9 +23,6 @@ import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
-import { ClientDashboardPage } from "./pages/ClientDashboardPage";
-import { ClientProfilePage } from "./pages/ClientProfilePage";
-
 import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
 import { PlatformDashboardPage } from "./pages/PlatformDashboardPage";
@@ -48,8 +45,8 @@ const DashboardRouter: React.FC = () => {
   const { user } = useAuthStore();
   if (!user) return null;
   if (user.tenantSlug === "superadmin") return <PlatformDashboardPage />;
-  if (["admin", "manager"].includes(user.primaryRole || "")) return <UsersPage />;
-  return <ClientDashboardPage />;
+  // Para cualquier otro rol, ir a Users
+  return <UsersPage />;
 };
 
 // --- Wrapper para rutas de cliente con Outlet ---
@@ -184,24 +181,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <DashboardRouter />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Client Routes */}
-              <Route
-                path="/client/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <ClientDashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/client/gestion"
-                element={
-                  <ProtectedRoute>
-                    <ClientProfilePage />
                   </ProtectedRoute>
                 }
               />
