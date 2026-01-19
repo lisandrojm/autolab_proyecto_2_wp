@@ -25,7 +25,7 @@ const DAYS_OF_WEEK = [
   { id: 6, label: "Sábado", short: "S" },
 ];
 
-export const ManageActivityLogsConfigPage: React.FC = () => {
+export const RequestsConfigPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"general" | "types" | "project">("general");
   const [selectedProject, setSelectedProject] = useState<any>(null);

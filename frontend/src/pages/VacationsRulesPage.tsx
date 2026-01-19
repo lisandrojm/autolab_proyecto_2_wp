@@ -13,7 +13,7 @@ import { UserVacationConfigTab } from "../components/vacations/UserVacationConfi
 
 const HELP_KEY = "vacationsRules" as const;
 
-export function ManageVacationsRulesPage() {
+export function VacationsRulesPage() {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
   const [openInfo, setOpenInfo] = useState(false);

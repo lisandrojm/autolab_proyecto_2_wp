@@ -123,7 +123,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
 
 const HELP_KEY = "orderTypes"; // Consider changing help key if needed, or keep for compatibility if help content is shared
 
-export const ManageOrderTypesPage: React.FC = () => {
+export const OrderTypesPage: React.FC = () => {
   const navigate = useNavigate();
   const [orderTypes, setOrderTypes] = useState<OrderConfig[]>([]);
   const [pdfTemplates, setPdfTemplates] = useState<Pdf[]>([]);

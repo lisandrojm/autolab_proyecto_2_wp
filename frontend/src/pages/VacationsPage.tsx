@@ -34,7 +34,7 @@ interface VacationRequestMock {
 
 // Mock vacation data removed - now using API
 
-export const ManageVacationsPage: React.FC = () => {
+export const VacationsPage: React.FC = () => {
   const navigate = useNavigate();
   const helpEntry = getHelp(HELP_KEY);
 

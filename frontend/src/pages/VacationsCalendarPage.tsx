@@ -36,7 +36,7 @@ const STATUS_LABELS = {
   cancelled: "Cancelada",
 };
 
-export const ManageVacationsCalendarPage: React.FC = () => {
+export const VacationsCalendarPage: React.FC = () => {
   const navigate = useNavigate();
   const timelineRef = useRef<HTMLDivElement>(null);
   const timelineInstanceRef = useRef<Timeline | null>(null);

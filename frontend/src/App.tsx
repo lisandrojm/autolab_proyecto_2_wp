@@ -1,6 +1,6 @@
 // apps/web/src/App.tsx
 import { useEffect, lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { useAuthStore } from "./stores/authStore";
 import { useThemeStore } from "./stores/themeStore";
 import { LoginPage } from "./pages/LoginPage";
@@ -9,9 +9,9 @@ import { RegisterClientPage } from "./pages/RegisterClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
 import { RolesPage } from "./pages/RolesPage";
-import { PositionsPage } from "./pages/ManagePositionsPage";
-import { LevelsPage } from "./pages/ManageLevelsPage";
-import { ManageAreasPage } from "./pages/ManageAreasPage";
+import { PositionsPage } from "./pages/PositionsPage";
+import { LevelsPage } from "./pages/LevelsPage";
+import { AreasPage } from "./pages/AreasPage";
 import { UsersPage } from "./pages/UsersPage";
 import { TenantsPage } from "./pages/TenantsPage";
 import { ClientDetailPage } from "./pages/ClientDetailPage";
@@ -23,16 +23,15 @@ import { MobileNavbar } from "./components/Navbar";
 import { ServerStatusCard } from "./components/ServerStatusCard";
 import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
-import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
-import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPage";
-import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
+import { RequestsPage } from "./pages/RequestsPage";
+import { RequestsConfigPage } from "./pages/RequestsConfigPage";
 
-import { ManageOrdersPage } from "./pages/ManageOrdersPage";
-import { ManageOrderTypesPage } from "./pages/ManageOrderTypesPage";
-import { ManageVacationsPage } from "./pages/ManageVacationsPage";
-import { ManageVacationsRulesPage } from "./pages/ManageVacationsRulesPage";
-import { ManageVacationsCalendarPage } from "./pages/ManageVacationsCalendarPage";
-import { PdfTemplatesPage } from "./pages/PdfTemplates/PdfTemplatesPage";
+import { OrdersPage } from "./pages/OrdersPage";
+import { OrderTypesPage } from "./pages/OrderTypesPage";
+import { VacationsPage } from "./pages/VacationsPage";
+import { VacationsRulesPage } from "./pages/VacationsRulesPage";
+import { VacationsCalendarPage } from "./pages/VacationsCalendarPage";
+import { PdfTemplatesPage } from "./pages/PdfTemplatesPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 
@@ -259,7 +258,7 @@ function App() {
                 path="/areas"
                 element={
                   <ProtectedRoute>
-                    <ManageAreasPage />
+                    <AreasPage />
                   </ProtectedRoute>
                 }
               />
@@ -277,7 +276,7 @@ function App() {
                 path="/requests"
                 element={
                   <ProtectedRoute>
-                    <ManageActivityLogsPage />
+                    <RequestsPage />
                   </ProtectedRoute>
                 }
               />
@@ -285,15 +284,7 @@ function App() {
                 path="/requests/config"
                 element={
                   <ProtectedRoute>
-                    <ManageActivityLogsConfigPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/requests/create"
-                element={
-                  <ProtectedRoute>
-                    <CreateActivityReportPage />
+                    <RequestsConfigPage />
                   </ProtectedRoute>
                 }
               />
@@ -301,7 +292,7 @@ function App() {
                 path="/orders"
                 element={
                   <ProtectedRoute>
-                    <ManageOrdersPage />
+                    <OrdersPage />
                   </ProtectedRoute>
                 }
               />
@@ -309,7 +300,7 @@ function App() {
                 path="/order-types"
                 element={
                   <ProtectedRoute>
-                    <ManageOrderTypesPage />
+                    <OrderTypesPage />
                   </ProtectedRoute>
                 }
               />
@@ -317,7 +308,7 @@ function App() {
                 path="/vacations"
                 element={
                   <ProtectedRoute>
-                    <ManageVacationsPage />
+                    <VacationsPage />
                   </ProtectedRoute>
                 }
               />
@@ -325,7 +316,7 @@ function App() {
                 path="/vacations/calendar"
                 element={
                   <ProtectedRoute>
-                    <ManageVacationsCalendarPage />
+                    <VacationsCalendarPage />
                   </ProtectedRoute>
                 }
               />
@@ -333,7 +324,7 @@ function App() {
                 path="/vacations-rules"
                 element={
                   <ProtectedRoute>
-                    <ManageVacationsRulesPage />
+                    <VacationsRulesPage />
                   </ProtectedRoute>
                 }
               />

@@ -18,7 +18,7 @@ interface AreaFormData {
   description: string;
 }
 
-export const ManageAreasPage: React.FC = () => {
+export const AreasPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
 

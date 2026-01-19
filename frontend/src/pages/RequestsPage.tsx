@@ -129,7 +129,7 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 
-export const ManageActivityLogsPage: React.FC = () => {
+export const RequestsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");

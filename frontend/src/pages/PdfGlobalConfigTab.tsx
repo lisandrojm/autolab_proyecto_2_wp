@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { pdfConfigAPI, PdfConfig } from "../../api/pdfConfig";
-import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
+import { pdfConfigAPI, PdfConfig } from "../api/pdfConfig";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faBuilding, faSignature, faImage, faEye, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
-import { pdfPreviewAPI } from "../../api/pdfPreview";
+import { pdfPreviewAPI } from "../api/pdfPreview";
 
-import { clientAssetsAPI } from "../../api/clientAssets";
-import { useAuthStore } from "../../stores/authStore";
+import { clientAssetsAPI } from "../api/clientAssets";
+import { useAuthStore } from "../stores/authStore";
 
 export function PdfGlobalConfigTab() {
   const [loading, setLoading] = useState(true);
@@ -163,13 +163,6 @@ export function PdfGlobalConfigTab() {
       </h3>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* ... form content ... */}
-        {/* I am only replacing the footer at the end, wait, replace_file_content needs contiguous block */}
-        {/* The user instruction implies replacing the footer. But I also need to add handlePreview. */}
-        {/* I will split this into two calls or try to match a larger block if needed. */}
-        {/* The footer is far down. `getImageUrl` is further up. */}
-        {/* I will enable multiple replacements. */}
-
         {/* Basic Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">

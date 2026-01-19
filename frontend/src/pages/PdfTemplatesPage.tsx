@@ -1,21 +1,21 @@
 import { useState, useEffect } from "react";
-import { PageLayout } from "../../components/ui/PageLayout";
-import { Card } from "../../components/ui/Card";
-import { SearchAndFilters } from "../../components/ui/SearchAndFilters";
-import { EmptyState } from "../../components/ui/EmptyState";
-import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
+import { PageLayout } from "../components/ui/PageLayout";
+import { Card } from "../components/ui/Card";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
+import { EmptyState } from "../components/ui/EmptyState";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrash, faFileContract, faCheckCircle, faTimesCircle, faEye, faList } from "@fortawesome/free-solid-svg-icons";
 
-import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode } from "../../api/pdf";
-import { pdfPreviewAPI } from "../../api/pdfPreview";
+import { pdfsAPI, Pdf, PdfInput, codeOptions, variablesByCode } from "../api/pdf";
+import { pdfPreviewAPI } from "../api/pdfPreview";
 
 import Swal from "sweetalert2";
-import { getHelp, hasHelp } from "../../data/help/helpContent";
-import { Modal } from "../../components/ui/Modal";
+import { getHelp, hasHelp } from "../data/help/helpContent";
+import { Modal } from "../components/ui/Modal";
 import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab";
-import { PdfAssignmentStatus } from "./PdfAssignmentStatus"; // Import added
+import { PdfAssignmentStatus } from "./PdfAssignmentStatus";
 
 const HELP_KEY = "pdfTemplates" as const;
 

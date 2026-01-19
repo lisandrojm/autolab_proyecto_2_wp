@@ -16,7 +16,7 @@ import { getFormattedOrderNumber } from "../utils/orderHelpers";
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
-export const ManageOrdersPage: React.FC = () => {
+export const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
 
   // 🔥 DECLARAR LA CLAVE
