@@ -32,7 +32,7 @@ const PdfConfigSchema = new Schema<IPdfConfig>(
   },
   {
     timestamps: true,
-    collection: "pdf_config",
+    collection: "pdf_configs",
   },
 );
 
