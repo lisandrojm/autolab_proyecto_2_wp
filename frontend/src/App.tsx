@@ -29,6 +29,7 @@ import { ClientProfilePage } from "./pages/ClientProfilePage";
 
 import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
+import { PlatformDashboardPage } from "./pages/PlatformDashboardPage";
 
 import { ProfilePage } from "./pages/ProfilePage";
 import { DailyReportPage } from "./pages/DailyReportPage";
@@ -59,7 +60,7 @@ const AppMobile = lazy(() => import("./apps/mobile/src/App"));
 const DashboardRouter: React.FC = () => {
   const { user } = useAuthStore();
   if (!user) return null;
-  if (user.tenantSlug === "superadmin") return <Navigate to="/tenants" replace />;
+  if (user.tenantSlug === "superadmin") return <PlatformDashboardPage />;
   if (["admin", "manager"].includes(user.primaryRole || "")) return <UsersPage />;
   return <ClientDashboardPage />;
 };
