@@ -17,8 +17,6 @@ import { Level } from "../models/Level.js";
 import { VacationConfig } from "../models/VacationConfig.js";
 import { Vacation } from "../models/Vacation.js";
 
-import { VacationCounter } from "../models/VacationCounter.js";
-import { VacationOverlap } from "../models/VacationOverlap.js";
 import { RequestConfig } from "../models/RequestConfig.js";
 import { Types } from "mongoose";
 
@@ -504,8 +502,7 @@ export async function seedOnStart() {
       await Vacation.deleteMany({ tenantId, userId: { $in: targetUserIds } });
     }
 
-    console.log("🧹 Cleaning vacation counters for fresh seed...");
-    await VacationCounter.deleteMany({ tenantId });
+    console.log("🧹 Note: VacationCounter is now embedded in Vacation model.");
 
     // ---- ROLES ----
     // ---- ROLES ----
@@ -776,18 +773,27 @@ export async function seedOnStart() {
       areaMap[name] = area._id as Types.ObjectId;
     }
 
-    // ---- VACATION OVERLAP RULES ----
+    // ---- VACATION OVERLAP RULES (now embedded in VacationConfig) ----
     console.log("🛡️ Seeding Vacation Overlap Rules...");
     const overlapRuleAreas = ["Editores"];
+    let vacConfig = await VacationConfig.findOne({ tenantId });
+    if (!vacConfig) {
+      vacConfig = await VacationConfig.create({
+        tenantId,
+        permiteArrastre: false,
+        permiteFraccionadas: true,
+        requiereFirma: true,
+        overlaps: [],
+      });
+    }
     for (const name of overlapRuleAreas) {
       const areaId = areaMap[name];
-      let rule = await VacationOverlap.findOne({ tenantId, areaId });
-
+      if (!areaId) continue;
+      const existingOverlap = vacConfig.overlaps.find((o) => o.areaId.toString() === areaId.toString());
       const limit = 1;
 
-      if (!rule) {
-        rule = await VacationOverlap.create({
-          tenantId,
+      if (!existingOverlap) {
+        vacConfig.overlaps.push({
           areaId,
           maxSimultaneousUsers: limit,
           description: `Regla de superposición para ${name}`,
@@ -795,16 +801,15 @@ export async function seedOnStart() {
         });
         console.log(`✅ Created Overlap Rule for ${name}: Max ${limit} users`);
       } else {
-        // Ensure limit is updated for testing if needed
-        if (rule.maxSimultaneousUsers !== limit) {
-          rule.maxSimultaneousUsers = limit;
-          await rule.save();
+        if (existingOverlap.maxSimultaneousUsers !== limit) {
+          existingOverlap.maxSimultaneousUsers = limit;
           console.log(`♻️ Updated Overlap Rule for ${name}: Max set to ${limit}`);
         } else {
           console.log(`✔️ Overlap Rule exists for ${name}`);
         }
       }
     }
+    await vacConfig.save();
 
     // ---- USUARIOS BASE ----
     const adminUser = await ensureUser({

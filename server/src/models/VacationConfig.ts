@@ -1,7 +1,31 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types, Model } from "mongoose";
 
-interface IVacationConfig extends Document {
-  tenantId: mongoose.Types.ObjectId;
+// ─────────────────────────────────────────────────────────────────────────────
+// Embedded Overlap Schema (for vacation overlap rules per area)
+// ─────────────────────────────────────────────────────────────────────────────
+export interface IEmbeddedOverlap {
+  _id?: Types.ObjectId;
+  areaId: Types.ObjectId;
+  maxSimultaneousUsers: number;
+  description?: string;
+  isActive: boolean;
+}
+
+const EmbeddedOverlapSchema = new Schema<IEmbeddedOverlap>(
+  {
+    areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
+    maxSimultaneousUsers: { type: Number, required: true, min: 1 },
+    description: { type: String },
+    isActive: { type: Boolean, default: true },
+  },
+  { _id: true },
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VacationConfig Interface
+// ─────────────────────────────────────────────────────────────────────────────
+export interface IVacationConfig extends Document {
+  tenantId: Types.ObjectId;
   diasBeneficio?: number;
   maxDiasGozados?: number;
   permiteArrastre: boolean;
@@ -15,10 +39,25 @@ interface IVacationConfig extends Document {
   diasCorridos: boolean;
   requiereFirma: boolean;
   pdfId?: string;
+
+  // Embedded overlaps
+  overlaps: IEmbeddedOverlap[];
+
+  // Counter for vacation number generation
+  vacationSequence: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
+interface IVacationConfigModel extends Model<IVacationConfig> {
+  getOrCreateDefault(tenantId: Types.ObjectId): Promise<IVacationConfig>;
+  getNextVacationSequence(tenantId: Types.ObjectId): Promise<number>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VacationConfig Schema
+// ─────────────────────────────────────────────────────────────────────────────
 const VacationConfigSchema = new Schema<IVacationConfig>(
   {
     tenantId: {
@@ -89,14 +128,27 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
       type: String,
       required: false,
     },
+
+    // Embedded overlaps array
+    overlaps: {
+      type: [EmbeddedOverlapSchema],
+      default: [],
+    },
+
+    // Counter for vacation number generation
+    vacationSequence: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,
-    collection: "vacation_config",
+    collection: "vacations_configs",
   },
 );
 
-VacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: mongoose.Types.ObjectId) {
+VacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: Types.ObjectId) {
   let config = await this.findOne({ tenantId });
 
   if (!config) {
@@ -105,10 +157,17 @@ VacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: mong
       permiteArrastre: false,
       permiteFraccionadas: true,
       requiereFirma: true,
+      overlaps: [],
+      vacationSequence: 0,
     });
   }
 
   return config;
 };
 
-export const VacationConfig = mongoose.model<IVacationConfig>("VacationConfig", VacationConfigSchema);
+VacationConfigSchema.statics.getNextVacationSequence = async function (tenantId: Types.ObjectId): Promise<number> {
+  const config = await this.findOneAndUpdate({ tenantId }, { $inc: { vacationSequence: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true });
+  return config.vacationSequence;
+};
+
+export const VacationConfig = mongoose.model<IVacationConfig, IVacationConfigModel>("VacationConfig", VacationConfigSchema);

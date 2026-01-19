@@ -8,7 +8,6 @@ import { Pdf } from "../models/Pdf.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { generateVacationPDF } from "../utils/pdfGenerator.js";
 import { User } from "../models/User.js";
-import { VacationOverlap } from "../models/VacationOverlap.js";
 import { UserProfile } from "../models/UserProfile.js";
 import { Level } from "../models/Level.js";
 import { Position } from "../models/Position.js";
@@ -44,11 +43,9 @@ router.get("/availability", async (req, res) => {
       return res.json([]); // No area, no restrictions
     }
 
-    const overlapRule = await VacationOverlap.findOne({
-      tenantId,
-      areaId: userAreaId,
-      isActive: true,
-    });
+    // Get overlap rule from embedded overlaps in VacationConfig
+    const vacConfig = await VacationConfig.findOne({ tenantId });
+    const overlapRule = vacConfig?.overlaps.find((o) => o.areaId.toString() === userAreaId.toString() && o.isActive);
 
     // If no rule exists, no dates are blocked by overlap
     if (!overlapRule) {
@@ -240,11 +237,9 @@ router.post("/", async (req, res) => {
     }
 
     if (userAreaId) {
-      const overlapRule = await VacationOverlap.findOne({
-        tenantId,
-        areaId: userAreaId,
-        isActive: true,
-      });
+      // Get overlap rule from embedded overlaps in VacationConfig
+      const vacConfigForOverlap = await VacationConfig.findOne({ tenantId });
+      const overlapRule = vacConfigForOverlap?.overlaps.find((o) => o.areaId.toString() === userAreaId.toString() && o.isActive);
 
       if (overlapRule) {
         // Safe check for area name

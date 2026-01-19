@@ -1,6 +1,9 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
-import { VacationCounter } from "./VacationCounter.js";
+import { VacationConfig } from "./VacationConfig.js";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Vacation Rules Interface
+// ─────────────────────────────────────────────────────────────────────────────
 interface AntiguedadTramo {
   desde: number;
   hasta: number;
@@ -25,6 +28,9 @@ interface VacationRules {
   pdfId?: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Vacation Interface
+// ─────────────────────────────────────────────────────────────────────────────
 export interface IVacation extends Document {
   tenantId: Types.ObjectId;
   userId: Types.ObjectId;
@@ -60,6 +66,9 @@ export interface IVacation extends Document {
   updatedAt: Date;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Vacation Schema
+// ─────────────────────────────────────────────────────────────────────────────
 const vacationSchema = new Schema<IVacation>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
@@ -154,12 +163,13 @@ vacationSchema.pre("validate", async function (next) {
 
     const prefix = tenant.slug.toUpperCase().slice(0, 3);
 
-    let sequence = await VacationCounter.getNextSequence(this.tenantId);
+    // Use VacationConfig.getNextVacationSequence instead of separate counter
+    let sequence = await VacationConfig.getNextVacationSequence(this.tenantId);
     let paddedNumber = sequence.toString().padStart(6, "0");
     let candidateNumber = `${prefix}-VAC-${paddedNumber}`;
 
     while (await mongoose.model("Vacation").exists({ tenantId: this.tenantId, vacationNumber: candidateNumber })) {
-      sequence = await VacationCounter.getNextSequence(this.tenantId);
+      sequence = await VacationConfig.getNextVacationSequence(this.tenantId);
       paddedNumber = sequence.toString().padStart(6, "0");
       candidateNumber = `${prefix}-VAC-${paddedNumber}`;
     }
