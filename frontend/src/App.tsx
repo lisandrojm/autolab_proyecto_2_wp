@@ -8,7 +8,6 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { RegisterClientPage } from "./pages/RegisterClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
-import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { RolesPage } from "./pages/RolesPage";
 import { PositionsPage } from "./pages/ManagePositionsPage";
 import { LevelsPage } from "./pages/ManageLevelsPage";
@@ -31,27 +30,15 @@ import { PlatformUsagePage } from "./pages/PlatformUsagePage";
 import { PlatformSettingsPage } from "./pages/PlatformSettingsPage";
 import { PlatformDashboardPage } from "./pages/PlatformDashboardPage";
 
-import { ProfilePage } from "./pages/ProfilePage";
-import { DailyReportPage } from "./pages/DailyReportPage";
-
-import { DocumentsPage } from "./pages/DocumentsPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
-
-import { EmployeesAdminPage } from "./pages/EmployeesAdminPage";
-
 import { ManageActivityLogsPage } from "./pages/ManageActivityLogsPage";
 import { ManageActivityLogsConfigPage } from "./pages/ManageActivityLogsConfigPage";
 import { CreateActivityReportPage } from "./pages/CreateActivityReportPage";
 
-import { ManageUserProfilesPage } from "./pages/ManageUserProfilesPage";
-import { ManageOrderDocumentsPage } from "./pages/ManageOrderDocumentsPage";
 import { ManageOrdersPage } from "./pages/ManageOrdersPage";
 import { ManageOrderTypesPage } from "./pages/ManageOrderTypesPage";
 import { ManageVacationsPage } from "./pages/ManageVacationsPage";
 import { ManageVacationsRulesPage } from "./pages/ManageVacationsRulesPage";
 import { ManageVacationsCalendarPage } from "./pages/ManageVacationsCalendarPage";
-import { RequestsListPage } from "./pages/Requests/RequestsListPage";
-import { RequestDetailPage } from "./pages/Requests/RequestDetailPage";
 import { PdfTemplatesPage } from "./pages/PdfTemplates/PdfTemplatesPage";
 
 const AppMobile = lazy(() => import("./apps/mobile/src/App"));
@@ -262,14 +249,6 @@ function App() {
               />
 
               <Route
-                path="/analytics"
-                element={
-                  <ProtectedRoute>
-                    <AnalyticsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/tenants"
                 element={
                   <ProtectedRoute>
@@ -334,75 +313,6 @@ function App() {
                 }
               />
 
-              {/* Personnel Module Routes */}
-
-              <Route
-                path="/admin/personal/perfil"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/novedades/reporte-diario"
-                element={
-                  <ProtectedRoute>
-                    <DailyReportPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/admin/pedidos/ausencias"
-                element={
-                  <ProtectedRoute>
-                    <RequestsListPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/requests"
-                element={
-                  <ProtectedRoute>
-                    <RequestsListPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/requests/:id"
-                element={
-                  <ProtectedRoute>
-                    <RequestDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/personal/documentos"
-                element={
-                  <ProtectedRoute>
-                    <DocumentsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/personal/notificaciones"
-                element={
-                  <ProtectedRoute>
-                    <NotificationsPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/admin/administracion/empleados"
-                element={
-                  <ProtectedRoute>
-                    <EmployeesAdminPage />
-                  </ProtectedRoute>
-                }
-              />
-
               {/* HR Management Routes */}
               <Route
                 path="/requests"
@@ -425,22 +335,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CreateActivityReportPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/employee-profiles"
-                element={
-                  <ProtectedRoute>
-                    <ManageUserProfilesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents"
-                element={
-                  <ProtectedRoute>
-                    <ManageOrderDocumentsPage />
                   </ProtectedRoute>
                 }
               />
