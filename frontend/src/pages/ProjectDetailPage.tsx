@@ -594,7 +594,7 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
 
                 {/* Estadísticas / Fechas */}
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="border-r border-gray-200 dark:border-gray-700">
                       <div className="text-xl font-bold text-gray-900 dark:text-white">{assignedUsers.length}</div>
