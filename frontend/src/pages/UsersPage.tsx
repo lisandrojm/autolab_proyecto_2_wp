@@ -14,7 +14,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -62,7 +62,7 @@ export const UsersPage: React.FC = () => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(50);
+  const [limit] = useState(25);
 
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
@@ -405,6 +405,10 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  // Memoizar mapas para búsquedas O(1) en el renderizado de cards
+  const projectMap = React.useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
+  const clientMap = React.useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
+
   if (initialLoading) return <LoadingSpinner message="Cargando usuarios..." />;
 
   return (
@@ -569,6 +573,46 @@ export const UsersPage: React.FC = () => {
                   Nivel
                 </label>
                 {typeof viewUser.levelId === "object" && viewUser.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.levelId.name}</span> : <span className="text-xs text-gray-500">Sin nivel</span>}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              {/* Sede */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
+                  Sede
+                </label>
+                {viewUser.externalInfo?.sedes && viewUser.externalInfo.sedes.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {viewUser.externalInfo.sedes.map((sede, idx) => (
+                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
+                        {sede}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">Sin sede</span>
+                )}
+              </div>
+
+              {/* Rol Frame */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" />
+                  Rol Frame
+                </label>
+                {viewUser.externalInfo?.rolFrames && viewUser.externalInfo.rolFrames.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {viewUser.externalInfo.rolFrames.map((rf, idx) => (
+                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 w-fit">
+                        {rf}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">Sin rol frame</span>
+                )}
               </div>
             </div>
 
@@ -1026,7 +1070,7 @@ export const UsersPage: React.FC = () => {
         {/* Indicador sutil de búsqueda en curso (no bloquea) */}
         {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Buscando…</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mx-0.5 lg:mx-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
           {users.map((user) => (
             <Card
               key={user._id}
@@ -1150,6 +1194,46 @@ export const UsersPage: React.FC = () => {
                 </div>
               </div>
 
+              <div className="flex flex-wrap gap-3 mt-3">
+                {/* Sede */}
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faBuilding} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                    Sede
+                  </label>
+                  {user.externalInfo?.sedes && user.externalInfo.sedes.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {user.externalInfo.sedes.map((sede, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
+                          {sede}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500 dark:text-gray-500">Sin sede</span>
+                  )}
+                </div>
+
+                {/* Rol Frame */}
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faIdCard} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                    Rol Frame
+                  </label>
+                  {user.externalInfo?.rolFrames && user.externalInfo.rolFrames.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {user.externalInfo.rolFrames.map((rf, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                          {rf}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500 dark:text-gray-500">Sin rol frame</span>
+                  )}
+                </div>
+              </div>
+
               {/* Proyectos */}
               <div className="mt-3">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
@@ -1159,7 +1243,8 @@ export const UsersPage: React.FC = () => {
                 {user.projectIds && user.projectIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {user.projectIds.map((project: any) => {
-                      const fullProject = allProjects.find((p) => p._id === (project._id || project));
+                      const pId = project._id || project;
+                      const fullProject = projectMap.get(pId);
                       const pName = project.name || fullProject?.name;
 
                       let clientName = "";
@@ -1167,7 +1252,7 @@ export const UsersPage: React.FC = () => {
                         if (typeof fullProject.clientId === "object" && (fullProject.clientId as any).name) {
                           clientName = (fullProject.clientId as any).name;
                         } else if (typeof fullProject.clientId === "string") {
-                          const c = allClients.find((client) => client._id === fullProject.clientId);
+                          const c = clientMap.get(fullProject.clientId);
                           if (c) clientName = c.name;
                         }
                       }

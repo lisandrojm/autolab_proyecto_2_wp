@@ -5,6 +5,7 @@ import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight, faSearch, faUsers, faXmark, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { LoadingSpinner } from "./ui/LoadingSpinner";
 
 export const ClientSelector: React.FC = () => {
   const { selectedClient, setSelectedClient, clearSelectedClient } = useClientContextStore();
@@ -133,10 +134,7 @@ export const ClientSelector: React.FC = () => {
           {/* Client List */}
           <div className="max-h-60 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center">
-                <div className="animate-spin rounded h-6 w-6 border-b-2 border-primary-600 mx-auto mb-2"></div>
-                <span className="text-sm text-gray-500">Cargando...</span>
-              </div>
+              <LoadingSpinner size="sm" message="Cargando..." />
             ) : filteredClients.length === 0 ? (
               <div className="p-4 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{searchTerm ? "No se encontraron clientes" : "No hay clientes disponibles"}</p>

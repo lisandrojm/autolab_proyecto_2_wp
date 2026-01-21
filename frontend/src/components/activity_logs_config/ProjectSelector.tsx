@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faChevronRight, faBriefcase, faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../stores/authStore";
 import { clientsAPI } from "../../api/clients";
+import { LoadingSpinner } from "../ui/LoadingSpinner";
 
 interface Client {
   _id: string;
@@ -107,7 +108,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onSelectProjec
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {loading ? (
-          <div className="p-4 text-center text-gray-500 text-xs">Cargando...</div>
+          <LoadingSpinner size="sm" message="Cargando..." />
         ) : filteredProjects.length > 0 ? (
           filteredProjects.map((project) => (
             <button key={project._id} onClick={() => onSelectProject(project)} className={`w-full text-left px-3 py-2.5 rounded text-sm transition-all flex items-center justify-between group ${selectedProjectId === project._id ? "bg-white dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 text-blue-600 dark:text-blue-400 font-medium" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200"}`}>

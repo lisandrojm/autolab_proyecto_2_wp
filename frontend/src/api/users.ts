@@ -68,6 +68,10 @@ export interface User {
   };
   createdAt: string;
   updatedAt: string;
+  externalInfo?: {
+    sedes: string[];
+    rolFrames: string[];
+  };
 }
 
 export interface UsersListResponse {
@@ -192,6 +196,7 @@ function normalizeUser(raw: any): User {
       : undefined,
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: String(raw?.updatedAt ?? ""),
+    externalInfo: raw?.externalInfo,
   };
 }
 
@@ -217,7 +222,7 @@ class UsersAPI {
       email?: string;
       isActive?: boolean;
       areaId?: string;
-    } = {}
+    } = {},
   ): Promise<UsersListResponse> {
     const searchParams = new URLSearchParams();
 
@@ -270,7 +275,7 @@ class UsersAPI {
       extraVacationDays?: number;
       clientIds?: string[];
       projectIds?: string[];
-    }
+    },
   ): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}`, data, { headers: this.getHeaders() });
     const user = normalizeUser(updated);

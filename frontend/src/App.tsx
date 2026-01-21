@@ -9,10 +9,13 @@ import { RegisterClientPage } from "./pages/RegisterClientPage";
 import { ClientsPage } from "./pages/ClientsPage";
 
 import { RolesPage } from "./pages/RolesPage";
+import { RolesFramePage } from "./pages/RolesFramePage";
 import { PositionsPage } from "./pages/PositionsPage";
 import { LevelsPage } from "./pages/LevelsPage";
 import { AreasPage } from "./pages/AreasPage";
 import { UsersPage } from "./pages/UsersPage";
+import { ProjectsPage } from "./pages/ProjectsPage";
+import { SedesPage } from "./pages/SedesPage";
 import { TenantsPage } from "./pages/TenantsPage";
 import { ClientDetailPage } from "./pages/ClientDetailPage";
 import { ClientProjectsPage } from "./pages/ClientProjectsPage";
@@ -214,6 +217,22 @@ function App() {
                 }
               />
               <Route
+                path="/admin/projects"
+                element={
+                  <ProtectedRoute>
+                    <ProjectsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/sedes"
+                element={
+                  <ProtectedRoute>
+                    <SedesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/projects/:projectId/team"
                 element={
                   <ProtectedRoute>
@@ -235,6 +254,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RolesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/roles-frame"
+                element={
+                  <ProtectedRoute>
+                    <RolesFramePage />
                   </ProtectedRoute>
                 }
               />

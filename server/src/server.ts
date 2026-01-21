@@ -35,6 +35,8 @@ import platformRoutes from "./routes/platform.js";
 import { vercelRoutes } from "./routes/vercel.js";
 import { envRoutes } from "./routes/env.js";
 import { profileRoutes } from "./routes/profile.js";
+import { infoRoutes } from "./routes/info.js";
+import { roleFrameRoutes } from "./routes/roleFrames.js";
 
 import { orderRoutes } from "./routes/orders.js";
 import { orderConfigRoutes } from "./routes/orderConfig.js";
@@ -146,6 +148,8 @@ app.use("/api/v1", envRoutes);
 
 // ───────────────── HR Module Routes ─────────────────
 app.use("/api/v1/profile", profileRoutes);
+app.use("/api/v1/info", infoRoutes);
+app.use("/api/v1/role-frames", roleFrameRoutes);
 
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/order-config", orderConfigRoutes);

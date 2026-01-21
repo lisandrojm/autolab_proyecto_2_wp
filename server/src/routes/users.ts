@@ -5,6 +5,27 @@ import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
+import { Info } from "../models/Info.js";
+import { RoleFrame } from "../models/RoleFrame.js";
+import UserProject from "../models/UserProject.js"; // This registers the model
+import { Position } from "../models/Position.js";
+import { Level } from "../models/Level.js";
+import { Area } from "../models/Area.js";
+import { Client } from "../models/Client.js";
+
+// Side-effect imports to be extra sure they are registered
+import "../models/User.js";
+import "../models/Role.js";
+import "../models/Project.js";
+import "../models/Tenant.js";
+import "../models/Info.js";
+import "../models/RoleFrame.js";
+import "../models/UserProject.js";
+import "../models/Position.js";
+import "../models/Level.js";
+import "../models/Area.js";
+import "../models/Client.js";
+
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
@@ -133,13 +154,48 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description").populate("tenantId", "name slug").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)), User.countDocuments(filter)]);
+    // Debug model names if needed
+    // console.log("Registered models:", mongoose.modelNames());
 
-    // Enhance users with tenant info if needed (manually or via population if schema supports)
-    // For now returning as is. Frontend uses tenantId or User interface has tenant?: TenantRef.
+    const query = User.find(filter).select("-password").populate({ path: "roles", select: "name description permissions", model: Role }).populate({ path: "clientIds", select: "name", model: Client }).populate({ path: "projectIds", select: "name", model: Project }).populate({ path: "positionId", select: "name description", model: Position }).populate({ path: "levelId", select: "name description", model: Level }).populate({ path: "areaId", select: "name description", model: Area }).populate({ path: "tenantId", select: "name slug", model: Tenant }).populate({ path: "metadata.projects", model: UserProject }).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean();
+
+    const [users, total] = await Promise.all([query.exec(), User.countDocuments(filter).exec()]);
+
+    // Fast enrichment using populated data
+    const enrichedUsers = users.map((userObj: any) => {
+      const userSedeNames = new Set<string>();
+      const userRolFrameNames = new Set<string>();
+
+      if (userObj.metadata?.projects && Array.isArray(userObj.metadata.projects)) {
+        userObj.metadata.projects.forEach((up: any) => {
+          // Si no se pudo popular o es nulo, ignorar
+          if (!up || typeof up !== "object") return;
+
+          // Priority 1: Top level names
+          if (up.nombre_sede) userSedeNames.add(up.nombre_sede);
+          if (up.nombre_rol_frame) userRolFrameNames.add(up.nombre_rol_frame);
+
+          // Priority 2: From contracts
+          if (Array.isArray(up.contracts)) {
+            up.contracts.forEach((c: any) => {
+              if (c.nombre_sede) userSedeNames.add(c.nombre_sede);
+              if (c.nombre_rol_frame) userRolFrameNames.add(c.nombre_rol_frame);
+            });
+          }
+        });
+      }
+
+      return {
+        ...userObj,
+        externalInfo: {
+          sedes: Array.from(userSedeNames),
+          rolFrames: Array.from(userRolFrameNames),
+        },
+      };
+    });
 
     res.json({
-      users,
+      users: enrichedUsers,
       pagination: {
         page: Number(page),
         limit: Number(limit),
