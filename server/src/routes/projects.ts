@@ -3,6 +3,8 @@ import { z } from "zod";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { User } from "../models/User.js";
+import { Info } from "../models/Info.js";
+import UserProject from "../models/UserProject.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
@@ -80,6 +82,33 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
 
     const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").lean(), Project.countDocuments(filter)]);
 
+    // 2. Resolver clientes para proyectos que no tienen clientId pero sí metadata.clienteId
+    const projectsToResolve = projects.filter((p) => !p.clientId && p.metadata?.clienteId);
+    if (projectsToResolve.length > 0) {
+      const externalIds = [...new Set(projectsToResolve.map((p) => String(p.metadata!.clienteId)))];
+      const clients = await Client.find({
+        tenantId: req.tenantObjectId,
+        externalId: { $in: externalIds },
+      })
+        .select("name externalId")
+        .lean();
+
+      const clientMap = new Map();
+      clients.forEach((c) => clientMap.set(String(c.externalId), c));
+
+      projects.forEach((p) => {
+        if (!p.clientId && p.metadata?.clienteId) {
+          const client = clientMap.get(String(p.metadata.clienteId));
+          if (client) {
+            (p as any).clientId = {
+              _id: client._id,
+              name: client.name,
+            };
+          }
+        }
+      });
+    }
+
     console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
 
     res.json({
@@ -112,8 +141,36 @@ router.get("/miniprojects", requireTenant, authenticateToken, async (req: Authen
       _id: { $in: idList },
       tenantId: req.tenantObjectId,
     })
-      .select("name status clientId")
-      .populate("clientId", "name");
+      .select("name status clientId metadata")
+      .populate("clientId", "name")
+      .lean();
+
+    // Resolver clientes por metadata si es necesario
+    const projectsWithMetadata = projects.filter((p) => !p.clientId && p.metadata?.clienteId);
+    if (projectsWithMetadata.length > 0) {
+      const externalIds = [...new Set(projectsWithMetadata.map((p) => String(p.metadata!.clienteId)))];
+      const clients = await Client.find({
+        tenantId: req.tenantObjectId,
+        externalId: { $in: externalIds },
+      })
+        .select("name externalId")
+        .lean();
+
+      const clientMap = new Map();
+      clients.forEach((c) => clientMap.set(String(c.externalId), c));
+
+      projects.forEach((p) => {
+        if (!p.clientId && p.metadata?.clienteId) {
+          const client = clientMap.get(String(p.metadata.clienteId));
+          if (client) {
+            (p as any).clientId = {
+              _id: client._id,
+              name: client.name,
+            };
+          }
+        }
+      });
+    }
 
     res.json(projects);
   } catch (error) {
@@ -168,10 +225,29 @@ router.get(
         return res.status(400).json({ error: "clientId inválido" });
       }
 
+      // 1. Obtener el cliente para conocer su externalId
+      const client = await Client.findOne({
+        _id: clientObjectId,
+        tenantId: req.tenantObjectId,
+      });
+
+      if (!client) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+
+      const externalId = client.externalId;
+      const externalIdNum = externalId ? Number(externalId) : null;
+
       const filter: any = {
-        clientId: clientObjectId,
         tenantId: req.tenantObjectId,
       };
+
+      // Si tiene externalId, buscamos por _id O por externalId en metadata
+      if (externalIdNum !== null && !isNaN(externalIdNum)) {
+        filter.$or = [{ clientId: clientObjectId }, { "metadata.clienteId": externalIdNum }];
+      } else {
+        filter.clientId = clientObjectId;
+      }
 
       if (q) {
         filter.name = { $regex: q, $options: "i" };
@@ -185,11 +261,11 @@ router.get(
         filter.assignedUsers = new Types.ObjectId(req.user!.userId);
       }
 
-      console.log(`[PROJECTS] List for client ${clientId}, tenant ${req.tenantId}, isAdmin=${isAdmin}`);
+      console.log(`[PROJECTS] List for client ${clientId} (externalId: ${externalId}), tenant ${req.tenantId}, isAdmin=${isAdmin}`);
 
       const skip = (page - 1) * limit;
 
-      const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit), Project.countDocuments(filter)]);
+      const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").lean(), Project.countDocuments(filter)]);
 
       res.json({
         projects,
@@ -282,11 +358,64 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
       filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email");
+    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email").lean();
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });
       return;
+    }
+
+    // --- Resolución de Metadata ---
+    if (project.metadata) {
+      const { responsableId, clienteId, sedeId, centroCostoId } = project.metadata;
+      const resolutions: any = {};
+
+      if (responsableId) {
+        const user = await User.findOne({ "metadata.id": responsableId }).select("firstName lastName email").lean();
+        if (user) resolutions.responsable = user;
+      }
+
+      if (clienteId) {
+        const client = await Client.findOne({
+          tenantId: req.tenantObjectId,
+          $or: [{ externalId: String(clienteId) }, { "metadata.clienteId": clienteId }],
+        })
+          .select("name email externalId")
+          .lean();
+        if (client) resolutions.cliente = client;
+      }
+
+      if (sedeId) {
+        const sede = await Info.findOne({
+          type: "sede",
+          "data.id": sedeId,
+        }).lean();
+        if (sede) resolutions.sede = sede;
+      }
+
+      if (centroCostoId) {
+        const cc = await Info.findOne({
+          type: "centro-costo",
+          "data.id": centroCostoId,
+        }).lean();
+        if (cc) resolutions.centroCosto = cc;
+      }
+
+      (project as any).metadataResolutions = resolutions;
+
+      // Fallback para clientId si no existe en el nivel superior
+      if (!project.clientId && resolutions.cliente) {
+        (project as any).clientId = resolutions.cliente;
+      }
+
+      // Contar personas desde la colección users_&_projects
+      const externalProjId = project.metadata.id || project.externalId;
+      if (externalProjId) {
+        const userCount = await UserProject.countDocuments({
+          externalProjectId: externalProjId,
+        });
+        (project as any).metadataUserCount = userCount;
+      }
     }
 
     res.json(project);

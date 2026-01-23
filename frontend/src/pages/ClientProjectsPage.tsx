@@ -552,14 +552,22 @@ export const ClientProjectsPage: React.FC = () => {
               header={{
                 title: `Proyecto | ${project.name}`,
                 subtitle: project.description,
-                icon: faBriefcase,
+                avatar: {
+                  src: client?.logo, // assuming client object has logo, otherwise fallback
+                  fallback: (client?.name || "C").charAt(0).toUpperCase(),
+                  alt: client?.name,
+                },
                 badges: [
                   {
                     text: project.status === "active" ? "Activo" : project.status === "on_hold" ? "En Espera" : project.status === "completed" ? "Completado" : "Archivado",
                     variant: project.status === "active" ? "green" : project.status === "on_hold" ? "warning" : project.status === "completed" ? "info" : "default",
                   },
+                  {
+                    text: client?.name || "Cliente",
+                    variant: "cyan",
+                  },
                 ],
-                badgesPosition: "header-right",
+                badgesPosition: "top",
               }}
               footer={{
                 leftContent: (

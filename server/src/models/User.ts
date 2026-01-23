@@ -227,8 +227,12 @@ userSchema.virtual("vacationDays").get(function (this: IUser) {
 });
 
 userSchema.index({ email: 1, tenantId: 1 }, { unique: true });
+userSchema.index({ tenantId: 1, createdAt: -1 });
+userSchema.index({ tenantId: 1, isActive: 1, createdAt: -1 });
+userSchema.index({ tenantId: 1, areaId: 1, createdAt: -1 });
 userSchema.index({ tenantId: 1, clientIds: 1 });
 userSchema.index({ tenantId: 1, projectIds: 1 });
+userSchema.index({ areaId: 1 });
 
 userSchema.pre("save", async function (this: IUser, next) {
   if (!this.isModified("password")) return next();

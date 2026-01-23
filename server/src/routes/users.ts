@@ -152,12 +152,39 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       filter.isActive = isActive === "true";
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
+    const limitNum = Math.min(Number(limit), 100) || 25;
+    const skip = (Number(page) - 1) * limitNum;
 
     // Debug model names if needed
     // console.log("Registered models:", mongoose.modelNames());
 
-    const query = User.find(filter).select("-password").populate({ path: "roles", select: "name description permissions", model: Role }).populate({ path: "clientIds", select: "name", model: Client }).populate({ path: "projectIds", select: "name", model: Project }).populate({ path: "positionId", select: "name description", model: Position }).populate({ path: "levelId", select: "name description", model: Level }).populate({ path: "areaId", select: "name description", model: Area }).populate({ path: "tenantId", select: "name slug", model: Tenant }).populate({ path: "metadata.projects", model: UserProject }).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean();
+    const query = User.find(filter)
+      .select("-password")
+      .populate({ path: "roles", select: "name", model: Role })
+      .populate({
+        path: "projectIds",
+        select: "name clientId",
+        model: Project,
+        populate: {
+          path: "clientId",
+          select: "name",
+          model: Client,
+        },
+      })
+      .populate({ path: "clientIds", select: "name", model: Client })
+      .populate({ path: "positionId", select: "name", model: Position })
+      .populate({ path: "levelId", select: "name", model: Level })
+      .populate({ path: "areaId", select: "name", model: Area })
+      .populate({ path: "tenantId", select: "name", model: Tenant })
+      .populate({
+        path: "metadata.projects",
+        model: UserProject,
+        select: "nombre_rol_frame contracts.nombre_sede contracts.nombre_rol_frame",
+      })
+      .sort({ _id: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
 
     const [users, total] = await Promise.all([query.exec(), User.countDocuments(filter).exec()]);
 
@@ -167,22 +194,22 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       const userRolFrameNames = new Set<string>();
 
       if (userObj.metadata?.projects && Array.isArray(userObj.metadata.projects)) {
-        userObj.metadata.projects.forEach((up: any) => {
-          // Si no se pudo popular o es nulo, ignorar
-          if (!up || typeof up !== "object") return;
+        for (const up of userObj.metadata.projects) {
+          if (!up || typeof up !== "object") continue;
 
-          // Priority 1: Top level names
-          if (up.nombre_sede) userSedeNames.add(up.nombre_sede);
+          // Priority 1: Top level names (Fastest)
           if (up.nombre_rol_frame) userRolFrameNames.add(up.nombre_rol_frame);
+          if (up.nombre_sede) userSedeNames.add(up.nombre_sede);
 
-          // Priority 2: From contracts
+          // Priority 2: From contracts (Only if needed or to ensure we have all history)
+          // We limit this to avoid heavy processing if contracts is large
           if (Array.isArray(up.contracts)) {
-            up.contracts.forEach((c: any) => {
+            for (const c of up.contracts) {
               if (c.nombre_sede) userSedeNames.add(c.nombre_sede);
               if (c.nombre_rol_frame) userRolFrameNames.add(c.nombre_rol_frame);
-            });
+            }
           }
-        });
+        }
       }
 
       return {

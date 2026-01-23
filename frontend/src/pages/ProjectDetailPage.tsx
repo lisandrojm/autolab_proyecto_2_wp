@@ -218,7 +218,12 @@ export const ProjectDetailPage: React.FC = () => {
       case "editProject":
         return "Editar Proyecto";
       case "viewProjectInfo":
-        return `Detalles del Proyecto | ${project.name}`;
+        return (
+          <div className="flex items-center">
+            <span>Detalles del Proyecto | {project.name}</span>
+            {project.status === "active" && <span className="ml-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800">Activo</span>}
+          </div>
+        );
       case "viewProjectTeam":
         return `Equipo del Proyecto | ${project.name}`;
       default:
@@ -593,20 +598,55 @@ export const ProjectDetailPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Estadísticas / Fechas */}
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="border-r border-gray-200 dark:border-gray-700">
-                      <div className="text-xl font-bold text-gray-900 dark:text-white">{assignedUsers.length}</div>
-                      <div className="text-xs text-gray-500">Personas</div>
+                {/* Información Principal Integrada (antes Sistema Externo) */}
+                {(project.metadata || project.metadataResolutions) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    {/* Cliente */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Cliente</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.cliente?.name || project.metadata?.nombre || "—"}</span>
                     </div>
-                    <div className="border-r border-gray-200 dark:border-gray-700">
-                      <div className="text-sm font-bold text-gray-900 dark:text-white pt-1">{project.startDate ? new Date(project.startDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
-                      <div className="text-xs text-gray-500 mt-1">Inicio</div>
+
+                    {/* Responsable */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Responsable de Proyecto</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.responsable ? `${project.metadataResolutions.responsable.firstName} ${project.metadataResolutions.responsable.lastName || ""}` : project.metadata?.responsableId ? `ID: ${project.metadata.responsableId}` : "—"}</span>
+                    </div>
+
+                    {/* Sede */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede / Ubicación</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.sede?.name || project.metadataResolutions?.sede?.data?.nombre || (project.metadata?.sedeId ? `ID: ${project.metadata.sedeId}` : "—")}</span>
+                    </div>
+
+                    {/* Centro de Costo */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Centro de Costo</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadataResolutions?.centroCosto?.name || project.metadataResolutions?.centroCosto?.data?.nombre || (project.metadata?.centroCostoId ? `ID: ${project.metadata.centroCostoId}` : "—")}</span>
+                    </div>
+
+                    {/* Otros datos */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fecha Alta</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadata?.fechaAlta ? new Date(project.metadata.fechaAlta).toLocaleDateString() : "—"}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Estadísticas / Fechas (Ahora al final) */}
+                <div className="bg-gray-100 dark:bg-gray-800/80 rounded-lg p-5 border border-gray-200 dark:border-gray-700 mt-2">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="border-r border-gray-200 dark:border-gray-600">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{project.metadataUserCount ?? assignedUsers.length}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personas</div>
+                    </div>
+                    <div className="border-r border-gray-200 dark:border-gray-600">
+                      <div className="text-sm font-bold text-gray-900 dark:text-white pt-2 leading-none">{project.startDate ? new Date(project.startDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 px-1">Fecha de Inicio</div>
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-gray-900 dark:text-white pt-1">{project.endDate ? new Date(project.endDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
-                      <div className="text-xs text-gray-500 mt-1">Fin</div>
+                      <div className="text-sm font-bold text-gray-900 dark:text-white pt-2 leading-none">{project.endDate ? new Date(project.endDate.split("T")[0] + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 px-1">Fecha Fin</div>
                     </div>
                   </div>
                 </div>

@@ -31,6 +31,10 @@ export interface User {
   projectIds?: {
     _id: string;
     name: string;
+    clientId?: {
+      _id: string;
+      name: string;
+    };
   }[];
   /** ← ahora viaja como OBJETO (no tenantId string) */
   tenant?: TenantRef;
@@ -175,6 +179,13 @@ function normalizeUser(raw: any): User {
       ? raw.projectIds.map((p: any) => ({
           _id: String(p?._id ?? p?.id ?? ""),
           name: String(p?.name ?? ""),
+          clientId:
+            typeof p?.clientId === "object"
+              ? {
+                  _id: String(p.clientId._id),
+                  name: String(p.clientId.name ?? ""),
+                }
+              : undefined,
         }))
       : undefined,
     tenant: normalizeTenant(raw),

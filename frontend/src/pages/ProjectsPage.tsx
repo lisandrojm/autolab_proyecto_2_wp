@@ -79,14 +79,22 @@ export const ProjectsPage: React.FC = () => {
                 header={{
                   title: project.name,
                   subtitle: project.description,
-                  icon: faBriefcase,
+                  avatar: {
+                    src: typeof project.clientId === "object" ? (project.clientId as any).logo : undefined,
+                    fallback: (typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name || "?").charAt(0).toUpperCase(),
+                    alt: typeof project.clientId === "object" ? project.clientId.name : undefined,
+                  },
                   badges: [
                     {
                       text: project.status === "active" ? "Activo" : project.status === "on_hold" ? "En Espera" : project.status === "completed" ? "Completado" : "Archivado",
                       variant: project.status === "active" ? "green" : project.status === "on_hold" ? "warning" : project.status === "completed" ? "info" : "default",
                     },
+                    {
+                      text: typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name || "Cliente Desconocido",
+                      variant: "cyan",
+                    },
                   ],
-                  badgesPosition: "header-right",
+                  badgesPosition: "top",
                 }}
                 footer={{
                   leftContent: <div className="text-xs text-gray-500 dark:text-gray-500">Creado: {new Date(project.createdAt).toLocaleDateString()}</div>,

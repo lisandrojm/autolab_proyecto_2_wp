@@ -160,7 +160,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
   const renderBadges = () => {
     if (!header?.badges?.length) return null;
     return (
-      <div className="flex flex-wrap gap-2 w-full justify-between">
+      <div className="flex flex-wrap gap-2 w-full">
         {header.badges.map((badge, index) => (
           <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium shadow-sm ${badge.className || getBadgeClasses(badge.variant)}`}>
             {badge.icon && <FontAwesomeIcon icon={badge.icon} className="h-3 w-3" />}

@@ -78,6 +78,14 @@ export interface Project {
     endTime?: string;
   }[];
   workSchedule?: WorkSchedule;
+  metadata?: any;
+  metadataResolutions?: {
+    responsable?: any;
+    cliente?: any;
+    sede?: any;
+    centroCosto?: any;
+  };
+  metadataUserCount?: number;
 }
 
 export interface ProjectsListResponse {
@@ -126,6 +134,8 @@ function normalizeProject(raw: any): Project {
     activityLogConfig: raw?.activityLogConfig,
     workSchedule: raw?.workSchedule,
     teamConfig: raw?.teamConfig,
+    metadata: raw?.metadata,
+    metadataResolutions: raw?.metadataResolutions,
   };
 }
 
@@ -239,7 +249,7 @@ class ProjectsAPI {
       objectives?: string[];
       targetAudience?: string;
       workSchedule?: WorkSchedule;
-    }
+    },
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {
       headers: this.getHeaders(),
@@ -276,7 +286,7 @@ class ProjectsAPI {
         allowsAdditionalStaff?: boolean;
       };
       workSchedule?: WorkSchedule;
-    }
+    },
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {
       headers: this.getHeaders(),
@@ -296,14 +306,14 @@ class ProjectsAPI {
       useProjectSchedule?: boolean;
       startTime?: string;
       endTime?: string;
-    }[]
+    }[],
   ): Promise<Project> {
     const resp = await axios.patch(
       `/projects/${projectId}/team-config`,
       { config },
       {
         headers: this.getHeaders(),
-      }
+      },
     );
     return normalizeProject(resp.data);
   }
