@@ -14,7 +14,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -65,6 +65,8 @@ export const UsersPage: React.FC = () => {
   const [limit] = useState(25);
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+  const [showSeniorityDetail, setShowSeniorityDetail] = useState(false);
 
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
@@ -539,8 +541,8 @@ export const UsersPage: React.FC = () => {
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
-        title: viewUser ? (viewUser.firstName || viewUser.lastName ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim() : viewUser.email.split("@")[0]) : "Usuario",
-        subtitle: viewUser?.email,
+        title: "Detalle de Usuario",
+        subtitle: undefined,
         size: "md",
         actions: [
           ...(canManage
@@ -578,7 +580,6 @@ export const UsersPage: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{viewUser.firstName || viewUser.lastName ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim() : viewUser.email.split("@")[0]}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{viewUser.email}</p>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewUser.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
@@ -676,31 +677,11 @@ export const UsersPage: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              {/* Fecha de ingreso */}
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faCalendar} className="h-3 w-3 text-gray-400" />
-                  Ingreso
-                </label>
-                {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <span className="text-xs text-gray-500">—</span>}
-              </div>
-
-              {/* Antigüedad */}
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faHourglassHalf} className="h-3 w-3 text-gray-400" />
-                  Antigüedad
-                </label>
-                {viewUser.seniorityAtEndOfYear !== undefined ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.seniorityAtEndOfYear} años</span> : <span className="text-xs text-gray-500">—</span>}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
               {/* Proyectos asignados */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" />
-                  Proyectos
+                  Proyecto/s Actual/es
                 </label>
                 {viewUser.projectIds && viewUser.projectIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
@@ -721,9 +702,9 @@ export const UsersPage: React.FC = () => {
                       }
 
                       return (
-                        <span key={projectId} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                        <span key={projectId} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 shadow-sm">
                           {displayName}
-                          {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
+                          {clientName && <span className="ml-1 text-[10px] opacity-90 font-normal">({clientName})</span>}
                         </span>
                       );
                     })}
@@ -731,6 +712,140 @@ export const UsersPage: React.FC = () => {
                 ) : (
                   <span className="text-xs text-gray-500">Sin proyectos asignados</span>
                 )}
+              </div>
+            </div>
+
+            {/* Employment Info */}
+            <div className="space-y-4">
+              {/* Fecha de ingreso */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faCalendar} className="h-3 w-3 text-gray-400" />
+                  Ingreso
+                </label>
+                {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <span className="text-xs text-gray-500">—</span>}
+              </div>
+
+              {/* Antigüedad Total */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faHourglassHalf} className="h-3 w-3 text-gray-400" />
+                  Antigüedad Total
+                </label>
+                {(() => {
+                  const totalDays = (viewUser.metadata?.projects || []).reduce(
+                    (acc, p) =>
+                      acc +
+                      (p.contracts || []).reduce((cAcc, c) => {
+                        const start = new Date(c.fecha_alta_contrato);
+                        const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+                        return cAcc + Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                      }, 0),
+                    0,
+                  );
+
+                  if (totalDays === 0) return <span className="text-xs text-gray-500">—</span>;
+
+                  // Calcular años, meses y días
+                  const years = Math.floor(totalDays / 365);
+                  const remainingAfterYears = totalDays % 365;
+                  const months = Math.floor(remainingAfterYears / 30);
+                  const remainingDays = remainingAfterYears % 30;
+
+                  const parts = [];
+                  if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
+                  if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+                  if (remainingDays > 0) parts.push(`${remainingDays} ${remainingDays === 1 ? "día" : "días"}`);
+
+                  const formattedSeniority = parts.length === 0 ? "0 días" : parts.length === 1 ? parts[0] : parts.length === 2 ? `${parts[0]} y ${parts[1]}` : `${parts[0]}, ${parts[1]} y ${parts[2]}`;
+
+                  return (
+                    <div className="flex flex-col gap-1">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 w-fit shadow-sm">{formattedSeniority}</span>
+                      <span className="text-[10px] text-gray-400 ml-1">({totalDays} días en total)</span>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Historial y Antigüedad Unificados */}
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <button onClick={() => setIsHistoryExpanded(!isHistoryExpanded)} className="flex items-center justify-between w-full text-xs font-medium text-gray-500 dark:text-gray-400 group hover:text-gray-800 dark:hover:text-gray-200 transition-colors" aria-expanded={isHistoryExpanded}>
+                <div className="flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                  Historial y Antigüedad Detallada
+                </div>
+                <FontAwesomeIcon icon={isHistoryExpanded ? faChevronUp : faChevronDown} className={`h-3 w-3 transition-transform duration-300`} />
+              </button>
+
+              <div className={`mt-3 overflow-hidden transition-all duration-300 ease-in-out ${isHistoryExpanded ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"}`}>
+                {(() => {
+                  const allRecords = (viewUser.metadata?.projects || []).flatMap((p) =>
+                    (p.contracts || []).map((c) => {
+                      const start = new Date(c.fecha_alta_contrato);
+                      const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+                      const days = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+                      return {
+                        ...c,
+                        projectName: p.nombre_proyecto || c.nombre_proyecto,
+                        days,
+                      };
+                    }),
+                  );
+
+                  if (allRecords.length === 0) {
+                    return <span className="text-xs text-gray-500 italic block mt-2">No hay registros disponibles.</span>;
+                  }
+
+                  // Sort by start date (descending)
+                  allRecords.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
+
+                  return (
+                    <div className="mt-2 overflow-x-auto overflow-y-auto max-h-[400px] custom-scrollbar border border-gray-100 dark:border-gray-800 rounded-lg">
+                      <table className="w-full text-left border-collapse min-w-[700px]">
+                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Proyecto / Contrato</th>
+                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
+                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Periodo</th>
+                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">Días</th>
+                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
+                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {allRecords.map((record, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
+                              <td className="px-3 py-2.5">
+                                <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
+                                <div className="text-[9px] text-gray-400 mt-0.5">{record.nombre_contrato}</div>
+                              </td>
+                              <td className="px-3 py-2.5 text-[10px] text-gray-600 dark:text-gray-400">
+                                <div className="font-medium">{record.nombre_sede}</div>
+                                <div className="text-[9px] opacity-70">{record.nombre_rol_frame}</div>
+                              </td>
+                              <td className="px-3 py-2.5 text-[10px] text-gray-500 dark:text-gray-500">
+                                <div>{new Date(record.fecha_alta_contrato).toLocaleDateString()}</div>
+                                <div className="text-[9px]">{record.fecha_baja_contrato ? new Date(record.fecha_baja_contrato).toLocaleDateString() : "Presente"}</div>
+                              </td>
+                              <td className="px-3 py-2.5 text-center">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{record.days}</span>
+                              </td>
+                              <td className="px-3 py-2.5 text-right">
+                                <div className="text-[10px] font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
+                                {record.cantidad_jornadas_laborales && <div className="text-[9px] text-gray-400">{record.cantidad_jornadas_laborales} jor.</div>}
+                              </td>
+                              <td className="px-3 py-2.5 text-right">
+                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${record.nombre_estado_empleado === "DISPONIBLE" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{record.nombre_estado_empleado}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

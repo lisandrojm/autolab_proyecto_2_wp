@@ -179,7 +179,6 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       .populate({
         path: "metadata.projects",
         model: UserProject,
-        select: "nombre_rol_frame contracts.nombre_sede contracts.nombre_rol_frame",
       })
       .sort({ _id: -1 })
       .skip(skip)

@@ -5,7 +5,7 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
 import { triggerVercelRedeploy, isDeployButtonVisible } from "../utils/vercelDeploy";
@@ -166,6 +166,7 @@ export const MobileNavbar: React.FC = () => {
       if (hasPermission("admin_clients:view")) base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
       if (hasPermission("admin_clients:view")) base.push({ path: "/admin/projects", icon: faBriefcase, label: "Proyectos", scope: "global", count: adminCounts.projects });
       if (hasPermission("admin_clients:view")) base.push({ path: "/admin/sedes", icon: faBuilding, label: "Sedes", scope: "global" });
+      if (hasPermission("admin_clients:view")) base.push({ path: "/admin/contracts", icon: faFileContract, label: "Contratos", scope: "global" });
       if (hasPermission("admin_activity_logs:view")) base.push({ path: "/requests", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
       if (hasPermission("admin_orders:view")) base.push({ path: "/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("admin_vacations:view")) base.push({ path: "/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
@@ -261,7 +262,7 @@ export const MobileNavbar: React.FC = () => {
 
     const managementItems = adminItems.filter((item) => ["/projects"].includes(item.path));
 
-    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
+    const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
     const configItems = adminItems.filter((item) => ["/order-types", "/pdfs", "/vacations-rules", "/requests/config"].includes(item.path));
 

@@ -11,6 +11,26 @@ export interface TenantRef {
 }
 
 /* ---------- Tipos dominio ---------- */
+export interface Contract {
+  fecha_alta_contrato: string;
+  fecha_baja_contrato: string;
+  nombre_proyecto: string;
+  nombre_sede: string;
+  nombre_rol_frame: string;
+  nombre_contrato: string;
+  sueldo_mano: number;
+  observaciones?: string;
+  sueldo_jornada?: number;
+  cantidad_jornadas_laborales?: number;
+}
+
+export interface UserProjectMetadata {
+  _id: string;
+  nombre_proyecto: string;
+  nombre_rol_frame: string;
+  contracts: Contract[];
+}
+
 export interface User {
   _id: string;
   email: string;
@@ -75,6 +95,9 @@ export interface User {
   externalInfo?: {
     sedes: string[];
     rolFrames: string[];
+  };
+  metadata?: {
+    projects?: UserProjectMetadata[];
   };
 }
 
@@ -208,6 +231,7 @@ function normalizeUser(raw: any): User {
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: String(raw?.updatedAt ?? ""),
     externalInfo: raw?.externalInfo,
+    metadata: raw?.metadata,
   };
 }
 

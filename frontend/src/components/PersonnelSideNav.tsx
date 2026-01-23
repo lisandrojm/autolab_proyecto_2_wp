@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faIdCard, faUser, faUsers, faFileLines, faCalendar, faBell, faClockRotateLeft, faCalendarCheck, faClipboardList, faListCheck, faUserGear, faCheckCircle, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faIdCard, faUser, faUsers, faFileLines, faCalendar, faBell, faClockRotateLeft, faCalendarCheck, faClipboardList, faListCheck, faUserGear, faCheckCircle, faChevronDown, faChevronRight, faFileContract } from "@fortawesome/free-solid-svg-icons";
 
 interface MenuItem {
   path?: string;
@@ -111,6 +111,7 @@ export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = fa
 
   const adminItems: MenuItem[] = [
     { path: "/admin/administracion/empleados", label: "Gestión de Empleados", icon: faUserGear },
+    { path: "/admin/contracts", label: "Historial de Contratos", icon: faFileContract },
     {
       label: "Aprobaciones",
       icon: faCheckCircle,
