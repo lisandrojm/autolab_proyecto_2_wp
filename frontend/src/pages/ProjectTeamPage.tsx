@@ -104,10 +104,19 @@ export const ProjectTeamPage: React.FC = () => {
 
   const displayedClientName = client?.name || clientName || "Cliente";
 
+  // Unificamos los IDs de usuarios asignados (cruce entre la lista del proyecto y los metadatos de los usuarios)
   const assignedUserIds = useMemo(() => {
-    if (!project || !project.assignedUsers) return [];
-    return (project.assignedUsers as any[]).map((u) => (typeof u === "string" ? u : u._id));
-  }, [project]);
+    if (!project || !projectId) return [];
+
+    // 1. Usuarios explícitamente asignados en el objeto Proyecto
+    const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === "string" ? u : u._id));
+
+    // 2. Usuarios que tienen este proyecto en sus metadatos (projectIds o metadata.projects)
+    const fromUsers = allUsers.filter((u) => u.projectIds?.some((p) => p._id === projectId) || u.metadata?.projects?.some((p) => p._id === projectId)).map((u) => u._id);
+
+    // Retornamos un set único de IDs
+    return Array.from(new Set([...fromProject, ...fromUsers]));
+  }, [project, projectId, allUsers]);
 
   // Filtered Users (candidates to add)
   const filteredCandidates = useMemo(() => {
@@ -139,9 +148,8 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Current Team Members
   const teamMembers = useMemo(() => {
-    if (!project) return [];
     return assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
-  }, [project, assignedUserIds, allUsers]);
+  }, [assignedUserIds, allUsers]);
 
   // Check Is Coordinator Helper
   const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
