@@ -788,7 +788,7 @@ export const VacationsPage: React.FC = () => {
                             )}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
+                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-gray-300 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
                               <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                             </button>
                           </td>

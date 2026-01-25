@@ -144,7 +144,7 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
                         <button type="button" onClick={handleSavePlatform} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors" title="Guardar">
                           <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                         </button>
-                        <button type="button" onClick={handleCancelAdd} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Cancelar">
+                        <button type="button" onClick={handleCancelAdd} className="p-2 text-red-600 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Cancelar">
                           <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
                         </button>
                       </div>
@@ -162,7 +162,7 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
                         <button type="button" onClick={() => handleEditPlatform(platform)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors text-xs font-medium whitespace-nowrap" title="Editar">
                           Editar
                         </button>
-                        <button type="button" onClick={() => handleRemovePlatform(platform)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Eliminar">
+                        <button type="button" onClick={() => handleRemovePlatform(platform)} className="p-2 text-red-600 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
                           <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                         </button>
                       </div>
@@ -210,7 +210,7 @@ export const SocialMediaInput: React.FC<SocialMediaInputProps> = ({ value, onCha
               <button type="button" onClick={handleSavePlatform} className="p-2 h-10 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors" title="Guardar">
                 <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
               </button>
-              <button type="button" onClick={handleCancelAdd} className="p-2 h-10 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Cancelar">
+              <button type="button" onClick={handleCancelAdd} className="p-2 h-10 text-red-600 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Cancelar">
                 <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
               </button>
             </div>

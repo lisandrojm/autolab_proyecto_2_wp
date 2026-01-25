@@ -6,7 +6,7 @@ import { projectsAPI, Project } from "../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faPlus, faEdit, faTrash, faBriefcase, faBuilding } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBriefcase, faBuilding, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { Card } from "../components/ui/Card";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -31,7 +31,20 @@ export const ClientProjectsPage: React.FC = () => {
   const [startDate, setStartDate] = useState(""); // YYYY-MM-DD
   const [endDate, setEndDate] = useState(""); // YYYY-MM-DD
   const [page, setPage] = useState(1);
+
   const [totalPages, setTotalPages] = useState(1);
+
+  // View Mode
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsLg(window.innerWidth >= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const effectiveViewMode = !isLg ? "cards" : viewMode;
 
   // modal unificado
   const [showModal, setShowModal] = useState(false);
@@ -301,6 +314,16 @@ export const ClientProjectsPage: React.FC = () => {
             onStartDateChange: setStartDate,
             onEndDateChange: setEndDate,
           }}
+          extraActions={
+            <div className="flex items-center gap-2 hidden lg:flex">
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de Tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de Tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          }
         />
       }
       modal={
@@ -539,11 +562,86 @@ export const ClientProjectsPage: React.FC = () => {
       }
     >
       {/* Projects Grid */}
+      {/* Projects Content: Table or Grid */}
       {loading ? (
         <LoadingSpinner message="Cargando proyectos..." />
+      ) : effectiveViewMode === "table" ? (
+        <div className="mt-6 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm">
+          <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+            <thead>
+              <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Proyecto</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Responsable</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fechas</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+              {visibleProjects.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                    No se encontraron proyectos
+                  </td>
+                </tr>
+              ) : (
+                visibleProjects.map((p) => (
+                  <tr key={p._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors group">
+                    <td className="py-4 px-6 font-medium text-gray-900 dark:text-gray-100 cursor-pointer" onClick={() => navigate(`/projects/${p._id}`)}>
+                      {p.name}
+                    </td>
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">{(p.metadataResolutions?.sede?.name || p.metadataResolutions?.sede?.data?.nombre) ?? "—"}</td>
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
+                      {p.metadataResolutions?.responsable ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[9px] font-bold">{(p.metadataResolutions.responsable.firstName || "U").charAt(0).toUpperCase()}</div>
+                          <span>{p.metadataResolutions.responsable.firstName}</span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${p.status === "active" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : p.status === "on_hold" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : p.status === "completed" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{p.status === "active" ? "Activo" : p.status === "on_hold" ? "En Espera" : p.status === "completed" ? "Completado" : "Archivado"}</span>
+                    </td>
+                    <td className="py-4 px-6 text-xs text-gray-500 dark:text-gray-400">
+                      <div>{p.startDate ? new Date(p.startDate).toLocaleDateString() : "—"}</div>
+                      <div className="text-[10px] text-gray-400">a {p.endDate ? new Date(p.endDate).toLocaleDateString() : "—"}</div>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(p);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-primary-600 rounded transition-colors"
+                          title="Editar"
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProject(p._id);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
+                          title="Eliminar"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6 mt-4mt-2">
-          {/* Tarjetas de proyecto (filtradas localmente por fecha si corresponde) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+          {/* Tarjetas de proyecto */}
           {visibleProjects.map((project) => (
             <Card
               key={project._id}
@@ -553,7 +651,7 @@ export const ClientProjectsPage: React.FC = () => {
                 title: `Proyecto | ${project.name}`,
                 subtitle: project.description,
                 avatar: {
-                  src: client?.logo, // assuming client object has logo, otherwise fallback
+                  src: client?.logo,
                   fallback: (client?.name || "C").charAt(0).toUpperCase(),
                   alt: client?.name,
                 },

@@ -21,7 +21,7 @@ export const DynamicFieldArray: React.FC<DynamicFieldArrayProps> = ({ label, fie
           <div key={field.id || index} className="flex items-center space-x-2">
             {renderField(field, index)}
             {fields.length > minFields && (
-              <button type="button" onClick={() => onRemove(index)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
+              <button type="button" onClick={() => onRemove(index)} className="p-2 text-red-600 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors">
                 <FontAwesomeIcon icon={faMinus} className="h-4 w-4" />
               </button>
             )}

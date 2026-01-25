@@ -110,7 +110,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
       case "warning":
         return "hover:bg-yellow-50 dark:hover:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400";
       case "danger":
-        return "hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400";
+        return "hover:text-gray-800 dark:hover:text-gray-300 text-red-600 dark:text-red-400";
       default:
         return "hover:text-gray-800 dark:hover:text-gray-300 text-gray-600 dark:text-gray-400";
     }

@@ -28,7 +28,9 @@ interface SearchAndFiltersProps {
   searchPlaceholder?: string;
   filters?: FilterProps[];
   dateFilter?: DateRangeFilter;
+
   className?: string;
+  extraActions?: React.ReactNode;
 }
 
 const FilterSelect: React.FC<FilterProps> = ({ value, onChange, options, placeholder }) => {
@@ -54,7 +56,7 @@ const FilterSelect: React.FC<FilterProps> = ({ value, onChange, options, placeho
   );
 };
 
-export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, className = "" }) => {
+export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, className = "", extraActions }) => {
   const [showDateModal, setShowDateModal] = useState(false);
 
   const hasActiveFilters = dateFilter && (dateFilter.startDate || dateFilter.endDate);
@@ -121,6 +123,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 {hasActiveFilters && <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary-500 rounded"></span>}
               </button>
             )}
+            {extraActions && <div className="flex items-center ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">{extraActions}</div>}
           </div>
         </div>
 

@@ -22,10 +22,13 @@ export interface Contract {
   observaciones?: string;
   sueldo_jornada?: number;
   cantidad_jornadas_laborales?: number;
+  hora_inicio?: string;
+  hora_fin?: string;
 }
 
 export interface UserProjectMetadata {
   _id: string;
+  projectId?: string | { _id: string; name?: string };
   nombre_proyecto: string;
   nombre_rol_frame: string;
   contracts: Contract[];

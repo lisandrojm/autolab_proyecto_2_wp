@@ -53,6 +53,7 @@ export const UsersPage: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
   const [totalUsers, setTotalUsers] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   // búsqueda/filters (server-side)
   const [searchTerm, setSearchTerm] = useState("");
@@ -216,11 +217,13 @@ export const UsersPage: React.FC = () => {
         setUsers(response.users);
         setTotalUsers(response.pagination.total);
         setTotalPages(response.pagination.pages);
+        setHasLoaded(true);
         console.log("📋 Usuarios cargados:", response.users.length, "de un total de:", response.pagination.total);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
       sweetAlert.error("Error", "No se pudieron cargar los usuarios");
+      setHasLoaded(true);
     } finally {
       if (!silent) setIsFetching(false);
     }
@@ -463,6 +466,27 @@ export const UsersPage: React.FC = () => {
     }
   };
 
+  const getActiveSedes = (user: User): string[] => {
+    const activeSedes = new Set<string>();
+    if (user.metadata?.projects) {
+      user.metadata.projects.forEach((p: any) => {
+        if (p.contracts) {
+          p.contracts.forEach((c: any) => {
+            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+            const isActive = !endDate || endDate >= new Date();
+            if (isActive && c.nombre_sede) {
+              activeSedes.add(c.nombre_sede);
+            }
+          });
+        }
+      });
+    }
+    if (activeSedes.size === 0 && user.externalInfo?.sedes) {
+      return user.externalInfo.sedes;
+    }
+    return Array.from(activeSedes);
+  };
+
   // Memoizar mapas para búsquedas O(1) en el renderizado de cards
   const projectMap = React.useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
   const clientMap = React.useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
@@ -641,17 +665,51 @@ export const UsersPage: React.FC = () => {
                   <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
                   Sede
                 </label>
-                {viewUser.externalInfo?.sedes && viewUser.externalInfo.sedes.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {viewUser.externalInfo.sedes.map((sede, idx) => (
-                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
-                        {sede}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-500">Sin sede</span>
-                )}
+                {(() => {
+                  const activeSedes = new Set<string>();
+                  if (viewUser.metadata?.projects) {
+                    viewUser.metadata.projects.forEach((p: any) => {
+                      if (p.contracts) {
+                        p.contracts.forEach((c: any) => {
+                          const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                          const isActive = !endDate || endDate >= new Date();
+
+                          if (isActive && c.nombre_sede) {
+                            activeSedes.add(c.nombre_sede);
+                          }
+                        });
+                      }
+                    });
+                  }
+
+                  const sedesList = Array.from(activeSedes);
+
+                  if (sedesList.length > 0) {
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {sedesList.map((sede, idx) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
+                            {sede}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  if (viewUser.externalInfo?.sedes && viewUser.externalInfo.sedes.length > 0) {
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {viewUser.externalInfo.sedes.map((sede, idx) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
+                            {sede}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  return <span className="text-xs text-gray-500">Sin sede</span>;
+                })()}
               </div>
 
               {/* Rol Frame */}
@@ -1233,7 +1291,7 @@ export const UsersPage: React.FC = () => {
       }}
     >
       {/* Loading state */}
-      {initialLoading ? (
+      {initialLoading || !hasLoaded ? (
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando usuarios..." />
         </div>
@@ -1288,7 +1346,7 @@ export const UsersPage: React.FC = () => {
                           variant: user.isActive ? "green" : "destructive",
                         },
                       ],
-                      badgesPosition: "header-right",
+                      badgesPosition: "top",
                     }}
                     footer={
                       canManage
@@ -1388,17 +1446,20 @@ export const UsersPage: React.FC = () => {
                           <FontAwesomeIcon icon={faBuilding} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
                           Sede
                         </label>
-                        {user.externalInfo?.sedes && user.externalInfo.sedes.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {user.externalInfo.sedes.map((sede, idx) => (
-                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
-                                {sede}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin sede</span>
-                        )}
+                        {(() => {
+                          const sedes = getActiveSedes(user);
+                          return sedes.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {sedes.map((sede, idx) => (
+                                <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
+                                  {sede}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500 dark:text-gray-500">Sin sede</span>
+                          );
+                        })()}
                       </div>
 
                       {/* Rol Frame */}
@@ -1468,9 +1529,9 @@ export const UsersPage: React.FC = () => {
                   <thead>
                     <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Usuario</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Area</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Cargo</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden lg:table-cell">Sede</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Roles</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell text-center">Contratos</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Proyectos</th>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden lg:table-cell">Rol frame</th>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
                       <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
@@ -1489,13 +1550,33 @@ export const UsersPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell">
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{typeof user.areaId === "object" ? user.areaId?.name : "—"}</span>
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {user.roles?.map((role) => (
+                              <span key={role._id} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                                {role.name}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 hidden md:table-cell text-center">
+                          <span className="text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell">
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{typeof user.positionId === "object" ? user.positionId?.name : "—"}</span>
-                        </td>
-                        <td className="py-4 px-6 hidden lg:table-cell">
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{user.externalInfo?.sedes?.[0] || "—"}</span>
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {user.projectIds && user.projectIds.length > 0 ? (
+                              user.projectIds.map((p: any) => {
+                                const pId = typeof p === "string" ? p : p._id;
+                                const pName = typeof p !== "string" && p.name ? p.name : allProjects.find((proj) => proj._id === pId)?.name || "P";
+                                return (
+                                  <span key={pId} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 truncate max-w-full">
+                                    {pName}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-6 hidden lg:table-cell">
                           <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{user.externalInfo?.rolFrames?.[0] || "—"}</span>
@@ -1505,49 +1586,17 @@ export const UsersPage: React.FC = () => {
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-1 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openView(user);
-                              }}
-                              className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                              title="Ver detalles"
-                            >
-                              <FontAwesomeIcon icon={faEye} />
-                            </button>
                             {canManage && (
-                              <>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEdit(user);
-                                  }}
-                                  className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                                  title="Editar"
-                                >
-                                  <FontAwesomeIcon icon={faEdit} />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openPassword(user._id);
-                                  }}
-                                  className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                                  title="Cambiar contraseña"
-                                >
-                                  <FontAwesomeIcon icon={faKey} />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(user);
-                                  }}
-                                  className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                                  title="Eliminar"
-                                >
-                                  <FontAwesomeIcon icon={faTrash} />
-                                </button>
-                              </>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(user);
+                                }}
+                                className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-gray-300 hover:text-gray-800 dark:hover:text-gray-300 rounded"
+                                title="Eliminar"
+                              >
+                                <FontAwesomeIcon icon={faTrash} />
+                              </button>
                             )}
                           </div>
                         </td>

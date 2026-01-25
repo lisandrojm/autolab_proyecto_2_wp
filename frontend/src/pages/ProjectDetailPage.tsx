@@ -280,10 +280,12 @@ export const ProjectDetailPage: React.FC = () => {
     return [{ label: "Listo", onClick: closeModal, variant: "primary" as const }];
   };
 
+  const sedeName = project?.metadataResolutions?.sede?.name || project?.metadataResolutions?.sede?.data?.nombre || null;
+
   return (
     <PageLayout
       title={`Proyecto | ${project.name}`}
-      badge={{ text: "Proyecto", variant: "default" }}
+      badge={sedeName ? { text: sedeName, variant: "default" } : undefined}
       faIcon={{ icon: faBriefcase }}
       clientMiniAvatar={{
         src: undefined,
@@ -520,7 +522,7 @@ export const ProjectDetailPage: React.FC = () => {
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{project.description || "Sin descripción proporcionada."}</p>
                 </div>
 
-                {/* Horario de Trabajo */}
+                {/* Horario de Trabajo - OCULTO
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <FontAwesomeIcon icon={faClock} className="text-blue-500 h-4 w-4" />
@@ -597,6 +599,7 @@ export const ProjectDetailPage: React.FC = () => {
                     <p className="text-sm text-gray-500">Horario no configurado</p>
                   )}
                 </div>
+                */}
 
                 {/* Información Principal Integrada (antes Sistema Externo) */}
                 {(project.metadata || project.metadataResolutions) && (
@@ -718,18 +721,7 @@ export const ProjectDetailPage: React.FC = () => {
           footer={{
             leftContent: <span className="text-xs text-gray-500 dark:text-gray-400">Creado: {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : "—"}</span>,
           }}
-        >
-          {/* Sede dentro del cuerpo de la card */}
-          {project.metadataResolutions?.sede && (
-            <div className="flex flex-col mb-3">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" />
-                Sede
-              </label>
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
-            </div>
-          )}
-        </Card>
+        ></Card>
         {/* Card 2: Personas Asignadas */}
         <Card
           onClick={openManageTeam}

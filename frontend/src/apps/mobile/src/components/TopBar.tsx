@@ -75,7 +75,7 @@ export default function TopBar({ title, hasNotifications = false, onNotification
           <button onClick={toggleTheme} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Cambiar tema">
             <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} className="w-5 h-5" />
           </button>
-          <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label="Cerrar sesión">
+          <button onClick={handleLogout} className="flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-red-600 dark:text-red-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" aria-label="Cerrar sesión">
             <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           </button>
           <button onClick={onNotificationClick} className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Notificaciones">

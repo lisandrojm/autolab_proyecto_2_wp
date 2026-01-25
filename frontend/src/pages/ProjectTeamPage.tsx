@@ -10,11 +10,12 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { InfoModal } from "../components/ui/InfoModal";
 import { Modal } from "../components/ui/Modal";
+import { Card } from "../components/ui/Card";
 
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock, faGrip, faTable, faPlus, faEdit, faBuilding, faIdCard, faUser } from "@fortawesome/free-solid-svg-icons";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -37,7 +38,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState(""); // For Disponibles
+  const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
   const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
   const [editingScheduleUser, setEditingScheduleUser] = useState<User | null>(null);
   const [userScheduleData, setUserScheduleData] = useState({
@@ -45,6 +46,19 @@ export const ProjectTeamPage: React.FC = () => {
     startTime: "09:00",
     endTime: "18:00",
   });
+
+  // UI States
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsLg(window.innerWidth >= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const effectiveViewMode = isLg ? viewMode : "cards";
 
   /* ------------------------------ Fetchers ------------------------------- */
 
@@ -99,6 +113,12 @@ export const ProjectTeamPage: React.FC = () => {
       return project.clientId.name;
     }
     return "";
+    return "";
+  }, [project]);
+
+  const sedeName = useMemo(() => {
+    if (!project) return null;
+    return (project as any).metadataResolutions?.sede?.name || (project as any).metadataResolutions?.sede?.data?.nombre || null;
   }, [project]);
 
   const [client, setClient] = useState<any>(null);
@@ -316,7 +336,7 @@ export const ProjectTeamPage: React.FC = () => {
           : undefined
       }
       badge={project ? { text: project.name, variant: "default" } : undefined}
-      badgeSecondary={{ text: "Equipo", variant: "default" }}
+      badgeSecondary={sedeName ? { text: sedeName, variant: "default" } : undefined}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -324,6 +344,12 @@ export const ProjectTeamPage: React.FC = () => {
         title: helpEntry?.title || "Información",
         content: helpEntry?.content,
       }}
+      headerActions={
+        <button onClick={() => setShowAddModal(true)} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
+          <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+          <span className="hidden sm:inline">Agregar Miembro</span>
+        </button>
+      }
     >
       {/* Loading state */}
       {loading ? (
@@ -333,187 +359,222 @@ export const ProjectTeamPage: React.FC = () => {
       ) : project ? (
         <>
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Candidates Column */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Disponibles ({filteredCandidates.length})</h3>
+            {/* Current Team Section - Full Width */}
+            <div className="space-y-4">
+              <div className="flex gap-4 items-center justify-between">
+                <div className="relative w-full">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <FontAwesomeIcon icon={faSearch} />
+                  </span>
+                  <input type="text" className="input-field pl-10 h-10" placeholder="Buscar en equipo actual..." value={searchTermTeam} onChange={(e) => setSearchTermTeam(e.target.value)} />
                 </div>
 
-                {/* Search input - only for Disponibles */}
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
-                  </div>
-                  <input type="text" placeholder="Buscar por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-y-auto p-2 custom-scrollbar">
-                  {filteredCandidates.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                      <FontAwesomeIcon icon={faFilter} className="h-8 w-8 mb-2 opacity-20" />
-                      <p className="text-sm">No se encontraron usuarios</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredCandidates.map((user) => {
-                        const isCoordinator = checkIsCoordinator(user);
-
-                        return (
-                          <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              <div className="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
-                                <p className="text-xs text-gray-500 truncate">{user.email}</p>
-
-                                {/* Roles Badges */}
-                                <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
-                                  {user.roles?.map((role) => (
-                                    <span key={role._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium ${role.name.toLowerCase().includes("coordinador") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"}`}>
-                                      {role.name}
-                                    </span>
-                                  ))}
-                                  {isCoordinator && !user.roles?.some((r) => r.name.toLowerCase().includes("coordinador")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
-                                </div>
-
-                                <div className="flex flex-wrap gap-1">
-                                  {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
-                                  {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
-                                  {user.levelId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.levelId === "object" ? user.levelId.name : "Nivel"}</span>}
-                                  {(user as any).externalInfo?.rolFrames?.map((rf: string, idx: number) => (
-                                    <span key={idx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                      {rf}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            <button onClick={() => handleAddUser(user._id)} className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors" title="Agregar al equipo">
-                              <FontAwesomeIcon icon={faUserPlus} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                <div className="items-center gap-2 shrink-0 hidden sm:flex">
+                  <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+                    <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+                    <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Current Team Column */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                    Equipo Actual | {project.name} ({teamMembers.length})
-                  </h3>
-                </div>
+              {(() => {
+                const coordinators = teamMembers.filter(checkIsCoordinator);
+                const members = teamMembers.filter((u) => !checkIsCoordinator(u));
 
-                {/* Search input - only for Equipo Actual */}
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
-                  </div>
-                  <input type="text" placeholder="Buscar por nombre o email..." className="input-field pl-10 w-full" value={searchTermTeam} onChange={(e) => setSearchTermTeam(e.target.value)} />
-                </div>
+                // Render function for Table Row
+                const renderUserRow = (user: User, isCoord: boolean) => {
+                  const userConfig = teamConfig.find((c) => c.userId === user._id);
+                  const isNotifier = userConfig ? userConfig.isNotifier : false;
 
-                {(() => {
-                  const coordinators = teamMembers.filter(checkIsCoordinator);
-                  const members = teamMembers.filter((u) => !checkIsCoordinator(u));
+                  // Metadata extraction
+                  const projectMeta = user.metadata?.projects?.find((p) => {
+                    const pId = p.projectId;
+                    const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+                    if (idToCheck === projectId) return true;
+                    if (project && p.nombre_proyecto && p.nombre_proyecto.toLowerCase().trim() === project.name.toLowerCase().trim()) return true;
+                    return false;
+                  });
+                  const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
 
-                  const renderUserCard = (user: User, isCoord: boolean) => {
-                    const userConfig = teamConfig.find((c) => c.userId === user._id);
-                    const isNotifier = userConfig ? userConfig.isNotifier : false;
+                  const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+                  const contrato = activeContract?.nombre_contrato || "-";
+                  const horario = activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-";
 
-                    return (
-                      <div key={user._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/20 rounded border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900/30 transition-colors group">
-                        <div className="flex items-center gap-3 overflow-hidden flex-1">
-                          <div className="w-10 h-10 rounded bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
-                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  return (
+                    <tr key={user._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-xs shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white text-sm">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</div>
+                            <div className="text-xs text-gray-500">{user.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{rolFrame}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${user.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.isActive ? "ACTIVO" : "INACTIVO"}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{horario}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {isCoord && (
+                            <button onClick={() => handleToggleNotifier(user._id)} title={isNotifier ? "Recibe notificaciones" : "Activar notificaciones"} className={`p-1.5 rounded transition-all ${isNotifier ? "text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" : "text-gray-300 dark:text-gray-600 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
+                              <FontAwesomeIcon icon={faBell} className="h-3.5 w-3.5" />
+                            </button>
+                          )}
 
-                            {/* Roles Badges */}
-                            <div className="flex flex-wrap gap-1 mt-1.5 mb-1">
-                              {user.roles?.map((role) => (
-                                <span key={role._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium ${role.name.toLowerCase().includes("coordinador") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"}`}>
-                                  {role.name}
+                          <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-gray-300 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Retirar del equipo">
+                            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                };
+
+                const renderUserCard = (user: User, isCoord: boolean) => {
+                  const userConfig = teamConfig.find((c) => c.userId === user._id);
+                  const isNotifier = userConfig ? userConfig.isNotifier : false;
+
+                  // Metadata extraction
+                  const projectMeta = user.metadata?.projects?.find((p) => {
+                    const pId = p.projectId;
+                    const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+                    if (idToCheck === projectId) return true;
+                    if (project && p.nombre_proyecto && p.nombre_proyecto.toLowerCase().trim() === project.name.toLowerCase().trim()) return true;
+                    return false;
+                  });
+                  const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "Sin rol frame");
+                  const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+                  const sede = activeContract?.nombre_sede || user.externalInfo?.sedes?.[0] || "Sin sede";
+
+                  return (
+                    <Card
+                      key={user._id}
+                      className="h-full"
+                      header={{
+                        title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email,
+                        subtitle: user.email,
+                        icon: faUser,
+                        avatar: { fallback: user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase() },
+                        badges: [{ text: user.isActive ? "Activo" : "Inactivo", variant: user.isActive ? "green" : "destructive" }],
+                        badgesPosition: "top",
+                        actions: isCoord
+                          ? [
+                              {
+                                icon: faBell,
+                                title: isNotifier ? "Es notificador" : "Hacer notificador",
+                                onClick: () => handleToggleNotifier(user._id),
+                                variant: isNotifier ? "warning" : "default",
+                              },
+                            ]
+                          : undefined,
+                      }}
+                      footer={{
+                        actions: [
+                          {
+                            icon: faEdit,
+                            title: "Editar Horario",
+                            onClick: () => handleOpenScheduleModal(user),
+                          },
+                          {
+                            icon: faTrash,
+                            title: "Retirar del equipo",
+                            onClick: () => handleRemoveUser(user._id),
+                          },
+                        ],
+                      }}
+                    >
+                      <div className="flex flex-col gap-3">
+                        {/* Roles */}
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                            <FontAwesomeIcon icon={faUsers} className="h-3 w-3" /> Rol/es
+                          </label>
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles && user.roles.length > 0 ? (
+                              user.roles.map((r) => (
+                                <span key={r._id} className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-medium border border-blue-200 dark:border-blue-800">
+                                  {r.name}
                                 </span>
-                              ))}
-                              {isCoord && !user.roles?.some((r) => r.name.toLowerCase().includes("coordinador")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
-                            </div>
-
-                            <div className="flex flex-wrap gap-1">
-                              {user.areaId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.areaId === "object" ? user.areaId.name : "Area"}</span>}
-                              {user.positionId && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{typeof user.positionId === "object" ? user.positionId.name : "Cargo"}</span>}
-                              {(user as any).externalInfo?.rolFrames?.map((rf: string, idx: number) => (
-                                <span key={idx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                  {rf}
-                                </span>
-                              ))}
-                            </div>
-
-                            {/* Individual Schedule Display */}
-                            {userConfig && userConfig.useProjectSchedule === false && userConfig.startTime && (
-                              <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-full w-fit">
-                                <FontAwesomeIcon icon={faClock} className="text-[9px]" />
-                                <span>
-                                  Horario: {userConfig.startTime} - {userConfig.endTime}
-                                </span>
-                              </div>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400">Sin roles</span>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          {isCoord && (
-                            <button onClick={() => handleToggleNotifier(user._id)} title={isNotifier ? "Recibe notificaciones" : "Activar notificaciones"} className={`p-2 rounded transition-all ${isNotifier ? "text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" : "text-gray-300 dark:text-gray-600 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
-                              <FontAwesomeIcon icon={faBell} />
-                            </button>
-                          )}
-                          <button onClick={() => handleOpenScheduleModal(user)} className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors" title="Configurar horario">
-                            <FontAwesomeIcon icon={faClock} />
-                          </button>
-                          <button onClick={() => handleRemoveUser(user._id)} className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Retirar del equipo">
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  };
-
-                  return (
-                    <div className="bg-white dark:bg-blue-900/20 rounded-xl shadow-sm border border-blue-200 dark:border-blue-700 overflow-hidden p-4 custom-scrollbar">
-                      {teamMembers.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                          <FontAwesomeIcon icon={faUsers} className="h-8 w-8 mb-2 opacity-20" />
-                          <p className="text-sm">Aún no hay miembros en el equipo</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-6">
-                          {/* Coordinators Section */}
-                          {coordinators.length > 0 && (
-                            <div>
-                              <div className="flex items-center gap-2 mb-3 border-b border-indigo-100 dark:border-indigo-800 pb-1">
-                                <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Coordinadores</h4>
-                                <button onClick={() => setShowNotifInfo(true)} className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors focus:outline-none" title="Información sobre notificaciones">
-                                  <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                              <div className="space-y-2">{coordinators.map((u) => renderUserCard(u, true))}</div>
-                            </div>
-                          )}
-
-                          {/* Members Section */}
-                          <div>
-                            {coordinators.length > 0 && <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-100 dark:border-gray-700 pb-1">Colaboradores</h4>}
-                            <div className="space-y-2">{members.map((u) => renderUserCard(u, false))}</div>
+                        <div className="flex flex-wrap gap-4">
+                          {/* Rol Frame */}
+                          <div className="flex flex-col">
+                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                              <FontAwesomeIcon icon={faIdCard} className="h-3 w-3" /> Rol Frame
+                            </label>
+                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{rolFrame}</span>
                           </div>
                         </div>
-                      )}
-                    </div>
+
+                        {/* Schedule if exists */}
+                        {userConfig && userConfig.useProjectSchedule === false && userConfig.startTime && (
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 mt-1">
+                            <FontAwesomeIcon icon={faClock} /> {userConfig.startTime} - {userConfig.endTime}
+                          </div>
+                        )}
+                      </div>
+                    </Card>
                   );
-                })()}
-              </div>
+                };
+
+                return (
+                  <div className="bg-transparent">
+                    {teamMembers.length === 0 ? (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
+                        <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
+                        <p className="text-base font-medium">Aún no hay miembros en el equipo</p>
+                        <p className="text-sm mt-1">Usa el botón "Agregar Miembro" para comenzar.</p>
+                        <button onClick={() => setShowAddModal(true)} className="mt-4 btn-primary px-4 py-2 text-sm flex items-center gap-2">
+                          <FontAwesomeIcon icon={faPlus} />
+                          Agregar Miembro
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {effectiveViewMode === "table" ? (
+                          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    <th className="px-4 py-3 font-semibold">Usuario</th>
+                                    <th className="px-4 py-3 font-semibold">Rol Frame</th>
+                                    <th className="px-4 py-3 font-semibold">Estado</th>
+                                    <th className="px-4 py-3 font-semibold">Contrato</th>
+                                    <th className="px-4 py-3 font-semibold">Horario</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {coordinators.map((u) => renderUserRow(u, true))}
+                                  {members.map((u) => renderUserRow(u, false))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {coordinators.map((u) => renderUserCard(u, true))}
+                            {members.map((u) => renderUserCard(u, false))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -595,6 +656,57 @@ export const ProjectTeamPage: React.FC = () => {
                 </button>
                 <button onClick={handleSaveUserSchedule} className="flex-1 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all active:scale-95">
                   Guardar Horario
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Add Members Modal */}
+          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Diponibles para asignar (${filteredCandidates.length})`} size="lg">
+            <div className="space-y-4 max-h-[70vh] flex flex-col">
+              <div className="relative shrink-0">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
+                </div>
+                <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-100 dark:border-gray-700 rounded-lg">
+                {filteredCandidates.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-gray-500">
+                    <FontAwesomeIcon icon={faFilter} className="h-8 w-8 mb-2 opacity-20" />
+                    <p className="text-sm">No se encontraron usuarios disponibles</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {filteredCandidates.map((user) => {
+                      const isCoordinator = checkIsCoordinator(user);
+                      return (
+                        <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs text-gray-500">{user.email}</span>
+                                {isCoordinator && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <button onClick={() => handleAddUser(user._id)} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2 group-hover:bg-primary-50 group-hover:text-primary-700 group-hover:border-primary-200 dark:group-hover:bg-primary-900/20 dark:group-hover:text-primary-400 dark:group-hover:border-primary-800">
+                            <FontAwesomeIcon icon={faPlus} />
+                            Agregar
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="shrink-0 pt-2 flex justify-end">
+                <button onClick={() => setShowAddModal(false)} className="btn-ghost">
+                  Cerrar
                 </button>
               </div>
             </div>
