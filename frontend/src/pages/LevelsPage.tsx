@@ -183,8 +183,6 @@ export const LevelsPage: React.FC = () => {
     return matchesSearch && matchesDate;
   });
 
-  if (loading) return <LoadingSpinner message="Cargando niveles..." />;
-
   return (
     <PageLayout
       title="Niveles"
@@ -428,104 +426,113 @@ export const LevelsPage: React.FC = () => {
         ),
       }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-        {filteredLevels.map((level) => (
-          <Card
-            key={level._id}
-            onClick={() => openView(level)}
-            className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-            header={{
-              title: level.name,
-              subtitle: level.description,
-              icon: level.type === "general" ? faGlobe : faUserGraduate,
-              badges: [
-                ...(level.type === "general" ? [{ text: "General", variant: "blue" as const }] : []),
-                ...(level.tenant && level.tenant.name
-                  ? [
-                      {
-                        text: level.tenant.name,
-                        variant: "default" as const,
-                        className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                      },
-                    ]
-                  : []),
-              ],
-            }}
-            footer={
-              canManage
-                ? {
-                    leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{level.createdAt ? new Date(level.createdAt).toLocaleDateString() : ""}</span>,
-                    actions: [
-                      {
-                        icon: faEdit,
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          openEdit(level);
-                        },
-                        title: "Editar",
-                        variant: "default",
-                      },
-                      {
-                        icon: faTrash,
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          handleDelete(level);
-                        },
-                        title: "Eliminar",
-                        variant: "default",
-                      },
-                    ],
-                  }
-                : undefined
-            }
-          >
-            {/* 🚀 NUEVO BLOQUE INTERNO — Igual a Usuarios */}
-            {level.type === "position-specific" && (
-              <div className="mb-3">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                  Cargo
-                </label>
-
-                {typeof level.positionId === "object" && level.positionId?.name ? (
-                  <div className="flex flex-wrap gap-1">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{level.positionId.name}</span>
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>
-                )}
-              </div>
-            )}
-          </Card>
-        ))}
-        {canManage && (
-          <Card
-            variant="create"
-            onClick={openCreate}
-            header={{
-              title: "Nuevo Nivel",
-              subtitle: "Crear un nuevo nivel de experiencia",
-              icon: faUserGraduate,
-            }}
-          />
-        )}
-      </div>
-
-      {filteredLevels.length === 0 && (
-        <EmptyState
-          icon={faShieldHalved}
-          title={startDate || endDate ? "No hay niveles en este rango de fechas" : "No hay niveles"}
-          description={startDate || endDate ? `No se encontraron niveles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer nivel para comenzar."}
-          action={
-            canManage
-              ? {
-                  label: "Nuevo Nivel",
-                  onClick: openCreate,
-                  icon: faPlus,
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando niveles..." />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+            {filteredLevels.map((level) => (
+              <Card
+                key={level._id}
+                onClick={() => openView(level)}
+                className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                header={{
+                  title: level.name,
+                  subtitle: level.description,
+                  icon: level.type === "general" ? faGlobe : faUserGraduate,
+                  badges: [
+                    ...(level.type === "general" ? [{ text: "General", variant: "blue" as const }] : []),
+                    ...(level.tenant && level.tenant.name
+                      ? [
+                          {
+                            text: level.tenant.name,
+                            variant: "default" as const,
+                            className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                          },
+                        ]
+                      : []),
+                  ],
+                }}
+                footer={
+                  canManage
+                    ? {
+                        leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{level.createdAt ? new Date(level.createdAt).toLocaleDateString() : ""}</span>,
+                        actions: [
+                          {
+                            icon: faEdit,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              openEdit(level);
+                            },
+                            title: "Editar",
+                            variant: "default",
+                          },
+                          {
+                            icon: faTrash,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              handleDelete(level);
+                            },
+                            title: "Eliminar",
+                            variant: "default",
+                          },
+                        ],
+                      }
+                    : undefined
                 }
-              : undefined
-          }
-        />
+              >
+                {/* 🚀 NUEVO BLOQUE INTERNO — Igual a Usuarios */}
+                {level.type === "position-specific" && (
+                  <div className="mb-3">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                      <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                      Cargo
+                    </label>
+
+                    {typeof level.positionId === "object" && level.positionId?.name ? (
+                      <div className="flex flex-wrap gap-1">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{level.positionId.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>
+                    )}
+                  </div>
+                )}
+              </Card>
+            ))}
+            {canManage && (
+              <Card
+                variant="create"
+                onClick={openCreate}
+                header={{
+                  title: "Nuevo Nivel",
+                  subtitle: "Crear un nuevo nivel de experiencia",
+                  icon: faUserGraduate,
+                }}
+              />
+            )}
+          </div>
+
+          {!loading && filteredLevels.length === 0 && (
+            <EmptyState
+              icon={faShieldHalved}
+              title={startDate || endDate ? "No hay niveles en este rango de fechas" : "No hay niveles"}
+              description={startDate || endDate ? `No se encontraron niveles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer nivel para comenzar."}
+              action={
+                canManage
+                  ? {
+                      label: "Nuevo Nivel",
+                      onClick: openCreate,
+                      icon: faPlus,
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </>
       )}
     </PageLayout>
   );

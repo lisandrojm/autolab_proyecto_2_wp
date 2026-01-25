@@ -6,7 +6,7 @@ import { projectsAPI, Project } from "../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faPlus, faEdit, faTrash, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBriefcase, faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { Card } from "../components/ui/Card";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -597,11 +597,16 @@ export const ClientProjectsPage: React.FC = () => {
                 ],
               }}
             >
-              <div className="space-y-2">
-                {/* <div className="text-xs text-gray-500 dark:text-gray-500">
-         INFO VISIBLE
-      </div> */}
-              </div>
+              {/* Sede dentro del cuerpo de la card */}
+              {project.metadataResolutions?.sede && (
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
+                    Sede
+                  </label>
+                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
+                </div>
+              )}
             </Card>
           ))}
           {/* Nueva tarjeta de creación */}

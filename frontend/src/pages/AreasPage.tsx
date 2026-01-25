@@ -146,8 +146,6 @@ export const AreasPage: React.FC = () => {
     return matchesSearch && matchesDate;
   });
 
-  if (loading) return <LoadingSpinner message="Cargando áreas..." />;
-
   return (
     <PageLayout
       title="Áreas"
@@ -273,86 +271,95 @@ export const AreasPage: React.FC = () => {
         ),
       }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-        {filteredAreas.map((area) => {
-          return (
-            <Card
-              key={area._id}
-              onClick={() => openView(area)}
-              className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-              header={{
-                title: area.name,
-                subtitle: area.description,
-                icon: faLayerGroup,
-                badges:
-                  area.tenant && area.tenant.name
-                    ? [
-                        {
-                          text: area.tenant.name,
-                          variant: "default" as const,
-                          className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                        },
-                      ]
-                    : [],
-              }}
-              footer={
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando áreas..." />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+            {filteredAreas.map((area) => {
+              return (
+                <Card
+                  key={area._id}
+                  onClick={() => openView(area)}
+                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                  header={{
+                    title: area.name,
+                    subtitle: area.description,
+                    icon: faLayerGroup,
+                    badges:
+                      area.tenant && area.tenant.name
+                        ? [
+                            {
+                              text: area.tenant.name,
+                              variant: "default" as const,
+                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                            },
+                          ]
+                        : [],
+                  }}
+                  footer={
+                    canManage
+                      ? {
+                          leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ""}</span>,
+                          actions: [
+                            {
+                              icon: faEdit,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                openEdit(area);
+                              },
+                              title: "Editar",
+                              variant: "default",
+                            },
+                            {
+                              icon: faTrash,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleDelete(area);
+                              },
+                              title: "Eliminar",
+                              variant: "default",
+                            },
+                          ],
+                        }
+                      : undefined
+                  }
+                />
+              );
+            })}
+            {canManage && (
+              <Card
+                variant="create"
+                onClick={openCreate}
+                header={{
+                  title: "Nueva Área",
+                  subtitle: "Crear una nueva área para la organización",
+                  icon: faLayerGroup,
+                }}
+              />
+            )}
+          </div>
+
+          {!loading && filteredAreas.length === 0 && (
+            <EmptyState
+              icon={faShieldHalved}
+              title={startDate || endDate ? "No hay áreas en este rango de fechas" : "No hay áreas"}
+              description={startDate || endDate ? `No se encontraron áreas ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primera área para comenzar."}
+              action={
                 canManage
                   ? {
-                      leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ""}</span>,
-                      actions: [
-                        {
-                          icon: faEdit,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            openEdit(area);
-                          },
-                          title: "Editar",
-                          variant: "default",
-                        },
-                        {
-                          icon: faTrash,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            handleDelete(area);
-                          },
-                          title: "Eliminar",
-                          variant: "default",
-                        },
-                      ],
+                      label: "Nueva Área",
+                      onClick: openCreate,
+                      icon: faPlus,
                     }
                   : undefined
               }
             />
-          );
-        })}
-        {canManage && (
-          <Card
-            variant="create"
-            onClick={openCreate}
-            header={{
-              title: "Nueva Área",
-              subtitle: "Crear una nueva área para la organización",
-              icon: faLayerGroup,
-            }}
-          />
-        )}
-      </div>
-
-      {filteredAreas.length === 0 && (
-        <EmptyState
-          icon={faShieldHalved}
-          title={startDate || endDate ? "No hay áreas en este rango de fechas" : "No hay áreas"}
-          description={startDate || endDate ? `No se encontraron áreas ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primera área para comenzar."}
-          action={
-            canManage
-              ? {
-                  label: "Nueva Área",
-                  onClick: openCreate,
-                  icon: faPlus,
-                }
-              : undefined
-          }
-        />
+          )}
+        </>
       )}
     </PageLayout>
   );

@@ -152,7 +152,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       filter.isActive = isActive === "true";
     }
 
-    const limitNum = Math.min(Number(limit), 100) || 25;
+    const limitNum = Number(limit) || 50;
     const skip = (Number(page) - 1) * limitNum;
 
     // Debug model names if needed

@@ -154,8 +154,6 @@ export const PositionsPage: React.FC = () => {
     return matchesSearch && matchesDate;
   });
 
-  if (loading) return <LoadingSpinner message="Cargando cargos..." />;
-
   return (
     <PageLayout
       title="Cargos"
@@ -355,105 +353,114 @@ export const PositionsPage: React.FC = () => {
         ),
       }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-        {filteredPositions.map((position) => {
-          const specificLevels = position.levels ? position.levels.filter((level) => level.type !== "general") : [];
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando cargos..." />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+            {filteredPositions.map((position) => {
+              const specificLevels = position.levels ? position.levels.filter((level) => level.type !== "general") : [];
 
-          return (
-            <Card
-              key={position._id}
-              onClick={() => openView(position)}
-              className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-              header={{
-                title: position.name,
-                subtitle: position.description,
-                icon: faUserTie,
-                badges:
-                  position.tenant && position.tenant.name
-                    ? [
-                        {
-                          text: position.tenant.name,
-                          variant: "default" as const,
-                          className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                        },
-                      ]
-                    : [],
-              }}
-              footer={
+              return (
+                <Card
+                  key={position._id}
+                  onClick={() => openView(position)}
+                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                  header={{
+                    title: position.name,
+                    subtitle: position.description,
+                    icon: faUserTie,
+                    badges:
+                      position.tenant && position.tenant.name
+                        ? [
+                            {
+                              text: position.tenant.name,
+                              variant: "default" as const,
+                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                            },
+                          ]
+                        : [],
+                  }}
+                  footer={
+                    canManage
+                      ? {
+                          leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : ""}</span>,
+                          actions: [
+                            {
+                              icon: faEdit,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                openEdit(position);
+                              },
+                              title: "Editar",
+                              variant: "default",
+                            },
+                            {
+                              icon: faTrash,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleDelete(position);
+                              },
+                              title: "Eliminar",
+                              variant: "default",
+                            },
+                          ],
+                        }
+                      : undefined
+                  }
+                >
+                  {specificLevels.length > 0 && (
+                    <div className="mt-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 tracking-wide mb-1">
+                        <FontAwesomeIcon icon={faUserGraduate} className="text-blue-400 dark:text-blue-300 mb-2" />
+                        <span>Niveles específicos</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {specificLevels.map((level) => (
+                          <span key={level._id} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-blue-500/20 text-xs text-blue-100">
+                            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 text-blue-200" />
+                            <span className="font-medium">{level.name}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+            {canManage && (
+              <Card
+                variant="create"
+                onClick={openCreate}
+                header={{
+                  title: "Nuevo Cargo",
+                  subtitle: "Crear un nuevo cargo para la organización",
+                  icon: faUserTie,
+                }}
+              />
+            )}
+          </div>
+
+          {!loading && filteredPositions.length === 0 && (
+            <EmptyState
+              icon={faShieldHalved}
+              title={startDate || endDate ? "No hay cargos en este rango de fechas" : "No hay cargos"}
+              description={startDate || endDate ? `No se encontraron cargos ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer cargo para comenzar."}
+              action={
                 canManage
                   ? {
-                      leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{position.createdAt ? new Date(position.createdAt).toLocaleDateString() : ""}</span>,
-                      actions: [
-                        {
-                          icon: faEdit,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            openEdit(position);
-                          },
-                          title: "Editar",
-                          variant: "default",
-                        },
-                        {
-                          icon: faTrash,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            handleDelete(position);
-                          },
-                          title: "Eliminar",
-                          variant: "default",
-                        },
-                      ],
+                      label: "Nuevo Cargo",
+                      onClick: openCreate,
+                      icon: faPlus,
                     }
                   : undefined
               }
-            >
-              {specificLevels.length > 0 && (
-                <div className="mt-3">
-                  <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 tracking-wide mb-1">
-                    <FontAwesomeIcon icon={faUserGraduate} className="text-blue-400 dark:text-blue-300 mb-2" />
-                    <span>Niveles específicos</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {specificLevels.map((level) => (
-                      <span key={level._id} className="inline-flex items-center gap-2 px-3 py-1 rounded bg-blue-500/20 text-xs text-blue-100">
-                        <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 text-blue-200" />
-                        <span className="font-medium">{level.name}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          );
-        })}
-        {canManage && (
-          <Card
-            variant="create"
-            onClick={openCreate}
-            header={{
-              title: "Nuevo Cargo",
-              subtitle: "Crear un nuevo cargo para la organización",
-              icon: faUserTie,
-            }}
-          />
-        )}
-      </div>
-
-      {filteredPositions.length === 0 && (
-        <EmptyState
-          icon={faShieldHalved}
-          title={startDate || endDate ? "No hay cargos en este rango de fechas" : "No hay cargos"}
-          description={startDate || endDate ? `No se encontraron cargos ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer cargo para comenzar."}
-          action={
-            canManage
-              ? {
-                  label: "Nuevo Cargo",
-                  onClick: openCreate,
-                  icon: faPlus,
-                }
-              : undefined
-          }
-        />
+            />
+          )}
+        </>
       )}
     </PageLayout>
   );

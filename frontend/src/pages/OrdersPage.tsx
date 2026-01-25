@@ -10,6 +10,7 @@ import { ImageModal } from "../components/ui/ImageModal";
 import { Modal } from "../components/ui/Modal";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { mapOrderStatusToStatusType, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../utils/statusHelpers";
 import { getFormattedOrderNumber } from "../utils/orderHelpers";
 
@@ -761,41 +762,42 @@ export const OrdersPage: React.FC = () => {
           </button>
         </div>
       }
+      searchAndFilters={
+        <div className="flex gap-4 items-center justify-between">
+          <div className="flex-1 relative">
+            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input type="text" placeholder="Buscar pedidos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+          </div>
+          <div className="relative">
+            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+              <option value="all">Todos los estados</option>
+              <option value="pending">Pendientes</option>
+              <option value="pre_approved">Preaprobados</option>
+              <option value="approved">Aprobados</option>
+              <option value="rejected">Rechazados</option>
+              <option value="delivered">Entregados</option>
+              <option value="cancelled">Cancelados</option>
+            </select>
+          </div>
+          {isXXL && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      }
     >
       <div className="space-y-6">
         <div>
-          <div className="mb-6 flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Buscar pedidos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
-            </div>
-            <div className="relative">
-              <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                <option value="all">Todos los estados</option>
-                <option value="pending">Pendientes</option>
-                <option value="pre_approved">Preaprobados</option>
-                <option value="approved">Aprobados</option>
-                <option value="rejected">Rechazados</option>
-                <option value="delivered">Entregados</option>
-                <option value="cancelled">Cancelados</option>
-              </select>
-            </div>
-            {isXXL && (
-              <div className="flex items-center gap-2 ">
-                <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-                  <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-                </button>
-                <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
-                  <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
           {loading ? (
             <div className="flex justify-center items-center py-12">
-              <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-blue-600" />
+              <LoadingSpinner message="Cargando pedidos..." />
             </div>
           ) : (
             <>

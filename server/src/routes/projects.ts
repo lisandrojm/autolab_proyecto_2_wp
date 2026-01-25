@@ -109,6 +109,37 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
       });
     }
 
+    // 3. BULK METADATA RESOLUTION (Sedes)
+    // Recolectar IDs de sedes
+    const sedeIds = new Set<string>();
+    projects.forEach((p) => {
+      if (p.metadata?.sedeId) {
+        sedeIds.add(String(p.metadata.sedeId));
+      }
+    });
+
+    if (sedeIds.size > 0) {
+      // Convertir a números ya que data.id es Number en el modelo Info
+      const sedeIdsArray = Array.from(sedeIds).map((id) => Number(id));
+      const sedes = await Info.find({
+        type: "sede",
+        "data.id": { $in: sedeIdsArray },
+      }).lean();
+
+      const sedeMap = new Map();
+      sedes.forEach((s) => sedeMap.set(String(s.data.id), s));
+
+      projects.forEach((p) => {
+        if (p.metadata?.sedeId) {
+          const sede = sedeMap.get(String(p.metadata.sedeId));
+          if (sede) {
+            if (!(p as any).metadataResolutions) (p as any).metadataResolutions = {};
+            (p as any).metadataResolutions.sede = sede;
+          }
+        }
+      });
+    }
+
     console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
 
     res.json({
@@ -192,10 +223,31 @@ router.get("/clients/:clientId/projects/count", requireTenant, authenticateToken
       return res.status(400).json({ error: "clientId inválido" });
     }
 
-    const count = await Project.countDocuments({
-      clientId: clientObjectId,
+    // Get the client to find its externalId
+    const client = await Client.findOne({
+      _id: clientObjectId,
       tenantId: req.tenantObjectId,
     });
+
+    if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    const externalId = client.externalId;
+    const externalIdNum = externalId ? Number(externalId) : null;
+
+    // Build filter to search by clientId OR by metadata.clienteId (using externalId)
+    const filter: any = {
+      tenantId: req.tenantObjectId,
+    };
+
+    if (externalIdNum !== null && !isNaN(externalIdNum)) {
+      filter.$or = [{ clientId: clientObjectId }, { "metadata.clienteId": externalIdNum }];
+    } else {
+      filter.clientId = clientObjectId;
+    }
+
+    const count = await Project.countDocuments(filter);
 
     res.json({ count });
   } catch (error) {
@@ -266,6 +318,36 @@ router.get(
       const skip = (page - 1) * limit;
 
       const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").lean(), Project.countDocuments(filter)]);
+
+      // Bulk Sede Resolution
+      const sedeIds = new Set<string>();
+      projects.forEach((p) => {
+        if (p.metadata?.sedeId) {
+          sedeIds.add(String(p.metadata.sedeId));
+        }
+      });
+
+      if (sedeIds.size > 0) {
+        // Convertir a números ya que data.id es Number en el modelo Info
+        const sedeIdsArray = Array.from(sedeIds).map((id) => Number(id));
+        const sedes = await Info.find({
+          type: "sede",
+          "data.id": { $in: sedeIdsArray },
+        }).lean();
+
+        const sedeMap = new Map();
+        sedes.forEach((s) => sedeMap.set(String(s.data.id), s));
+
+        projects.forEach((p) => {
+          if (p.metadata?.sedeId) {
+            const sede = sedeMap.get(String(p.metadata.sedeId));
+            if (sede) {
+              if (!(p as any).metadataResolutions) (p as any).metadataResolutions = {};
+              (p as any).metadataResolutions.sede = sede;
+            }
+          }
+        });
+      }
 
       res.json({
         projects,
@@ -518,5 +600,66 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
 });
 
 // Route removed as teamConfig is no longer supported in the model
+
+// POST /projects/:projectId/cleanup-team - Remove orphaned user IDs from assignedUsers
+router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await Project.findOne({
+      _id: projectId,
+      tenantId: req.tenantObjectId,
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const originalCount = project.assignedUsers?.length || 0;
+
+    if (originalCount === 0) {
+      return res.json({
+        message: "No users to clean up",
+        removedCount: 0,
+        newCount: 0,
+      });
+    }
+
+    // Find which assigned user IDs actually exist in the database
+    const existingUsers = await User.find({
+      _id: { $in: project.assignedUsers },
+      tenantId: req.tenantObjectId,
+    }).select("_id");
+
+    const existingIds = new Set(existingUsers.map((u) => u._id.toString()));
+    const validAssignedUsers = project.assignedUsers.filter((id) => existingIds.has(id.toString()));
+
+    const removedCount = originalCount - validAssignedUsers.length;
+
+    if (removedCount === 0) {
+      return res.json({
+        message: "All assigned users are valid",
+        removedCount: 0,
+        newCount: originalCount,
+      });
+    }
+
+    // Update the project with only valid user IDs
+    await Project.findByIdAndUpdate(projectId, {
+      assignedUsers: validAssignedUsers,
+    });
+
+    console.log(`[CLEANUP] Project ${projectId}: removed ${removedCount} orphaned user IDs (${originalCount} -> ${validAssignedUsers.length})`);
+
+    res.json({
+      message: `Cleaned up ${removedCount} orphaned user IDs`,
+      removedCount,
+      newCount: validAssignedUsers.length,
+    });
+  } catch (error) {
+    console.error("Cleanup team error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export { router as projectRoutes };

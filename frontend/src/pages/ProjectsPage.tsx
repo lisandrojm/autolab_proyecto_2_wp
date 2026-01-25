@@ -7,8 +7,10 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+import { getHelp, hasHelp } from "../data/help/helpContent";
 
 export const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,8 +19,12 @@ export const ProjectsPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openInfo, setOpenInfo] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  const HELP_KEY = "projects";
+  const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,7 +66,22 @@ export const ProjectsPage: React.FC = () => {
   };
 
   return (
-    <PageLayout title="Proyectos" subtitle="Todos los proyectos del sistema" itemCount={filteredProjects.length} faIcon={{ icon: faBriefcase }} searchAndFilters={<SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o cliente..." />}>
+    <PageLayout
+      title="Proyectos"
+      subtitle="Todos los proyectos del sistema"
+      itemCount={filteredProjects.length}
+      faIcon={{ icon: faBriefcase }}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry?.title || "Ayuda",
+        size: helpEntry?.size as any,
+        content: helpEntry?.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      searchAndFilters={<SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o cliente..." />}
+    >
       {loading ? (
         <LoadingSpinner message="Cargando proyectos..." />
       ) : filteredProjects.length === 0 ? (
@@ -81,7 +102,7 @@ export const ProjectsPage: React.FC = () => {
                   subtitle: project.description,
                   avatar: {
                     src: typeof project.clientId === "object" ? (project.clientId as any).logo : undefined,
-                    fallback: (typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name || "?").charAt(0).toUpperCase(),
+                    fallback: ((typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || "?").charAt(0).toUpperCase(),
                     alt: typeof project.clientId === "object" ? project.clientId.name : undefined,
                   },
                   badges: [
@@ -90,7 +111,7 @@ export const ProjectsPage: React.FC = () => {
                       variant: project.status === "active" ? "green" : project.status === "on_hold" ? "warning" : project.status === "completed" ? "info" : "default",
                     },
                     {
-                      text: typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name || "Cliente Desconocido",
+                      text: (typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || "Cliente Desconocido",
                       variant: "cyan",
                     },
                   ],
@@ -99,7 +120,18 @@ export const ProjectsPage: React.FC = () => {
                 footer={{
                   leftContent: <div className="text-xs text-gray-500 dark:text-gray-500">Creado: {new Date(project.createdAt).toLocaleDateString()}</div>,
                 }}
-              />
+              >
+                {/* Sede dentro del cuerpo de la card */}
+                {project.metadataResolutions?.sede && (
+                  <div className="flex flex-col">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                      <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
+                      Sede
+                    </label>
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
+                  </div>
+                )}
+              </Card>
             );
           })}
         </div>

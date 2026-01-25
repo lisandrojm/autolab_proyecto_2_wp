@@ -1,6 +1,6 @@
 import React from "react";
 
-export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam";
+export type HelpKey = "clients" | "dashboard" | "tasks" | "posts" | "analytics" | "users" | "roles" | "tenants" | "clientDetail" | "clientProjects" | "campaignDetail" | "postDetail" | "clientContextInfo" | "clientContextBrandKit" | "clientContextCampaigns" | "clientContextPosts" | "clientContextUsers" | "clientDashboard" | "platform_dashboard" | "orders" | "clientContextOrders" | "orderCategories" | "positions" | "levels" | "pdfTemplates" | "vacations" | "vacationsRules" | "activityLogs" | "projectTeam" | "projects" | "sedes" | "contracts";
 
 export type HelpEntry = {
   title: string;
@@ -172,6 +172,18 @@ const helpResources = {
       "projectTeam.title": "Gestión de Equipo",
       "projectTeam.description": "Administra los miembros asignados al proyecto.",
       "projectTeam.items": ["**Usuarios Disponibles**: Lista de candidatos para agregar.", "**Filtros**: Busca por área, cargo o palabra clave.", "**Equipo Actual**: Miembros activos en el proyecto.", "**Acciones**: Agrega o elimina usuarios con un clic."],
+
+      "projects.title": "Gestión de Proyectos",
+      "projects.description": "Administración de todos los proyectos activos en el sistema.",
+      "projects.items": ["**Proyectos**: Espacios de trabajo dedicados a un cliente específico.", "**Información**: Cada proyecto muestra su cliente, descripción y estado actual (Activo, En Espera, Completado, Archivado).", "**Búsqueda**: Encuentra proyectos rápidamente por nombre o cliente.", "**Navegación**: Haz clic en cualquier tarjeta para ver el detalle completo del proyecto."],
+
+      "sedes.title": "Gestión de Sedes",
+      "sedes.description": "Listado de ubicaciones físicas y sedes operativas.",
+      "sedes.items": ["**Sedes**: Ubicaciones donde se llevan a cabo las actividades.", "**Identificación**: Cada sede tiene un ID Interno y un ID Externo para integración.", "**Información**: Visualiza el nombre, tipo y códigos de identificación de cada lugar.", "**Búsqueda**: Filtra por nombre o ID externo para encontrar una ubicación específica."],
+
+      "contracts.title": "Gestión de Contratos",
+      "contracts.description": "Historial completo de contrataciones y vinculaciones laborales.",
+      "contracts.items": ["**Registros**: Detalle de cada contrato asociado a un usuario y proyecto.", "**Datos clave**: Incluye fechas de alta/baja, duración en días, sueldo y rol desempeñado.", "**Estado**: Visualiza si el contrato está vigente o finalizado.", "**Sede y Rol**: Ubicación y función específica que desempeña el usuario.", "**Filtros**: Busca por nombre de usuario, proyecto o contrato.", "**Vistas**: Alterna entre vista de tabla (detalle) y tarjetas (resumen)."],
     },
     // Agregar dentro de helpResources.es.help
 
@@ -298,6 +310,11 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   clientContextPosts: { title: "Publicaciones del Cliente", size: "sm", content: buildHelpContent("clientContextPosts") },
   clientContextUsers: { title: "Usuarios del Cliente", size: "sm", content: buildHelpContent("clientContextUsers") },
   clientDashboard: { title: "Dashboard Cliente", size: "sm", content: buildHelpContent("clientDashboard") },
+
+  // Nuevas entradas para Proyectos, Sedes y Contratos
+  projects: { title: "Gestión de Proyectos", size: "sm", content: buildHelpContent("projects") },
+  sedes: { title: "Gestión de Sedes", size: "sm", content: buildHelpContent("sedes") },
+  contracts: { title: "Gestión de Contratos", size: "sm", content: buildHelpContent("contracts") },
 
   //
   // FINAL — CORRECTO

@@ -249,8 +249,6 @@ export const ClientsPage: React.FC = () => {
     });
   }, [clients, searchTerm, filterStatus, startDate, endDate]);
 
-  if (loading) return <LoadingSpinner message="Cargando clientes..." />;
-
   const modalTitle = modalMode === "clone" ? "Clonar Cliente" : modalMode === "edit" ? "Editar Cliente" : "Nuevo Cliente";
   const modalPrimary = modalMode === "clone" ? "Clonar" : modalMode === "edit" ? "Actualizar" : "Crear";
   const modalSubtitle = modalMode === "clone" ? "Completa los datos requeridos para la clonación" : "Datos básicos del cliente";
@@ -365,90 +363,99 @@ export const ClientsPage: React.FC = () => {
         ),
       }}
     >
-      {/* Grid de clientes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-        {filteredClients.map((client) => (
-          <Card
-            key={client._id}
-            onClick={() => navigate(`/clients/${client._id}`)}
-            header={{
-              title: client.name,
-              subtitle: client.company || "",
-              icon: faUsers,
-              avatar: {
-                src: client.attachments?.find((a: any) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url,
-                fallback: client.name?.charAt(0)?.toUpperCase?.() || "?",
-                alt: `${client.name} logo`,
-              },
-              badges:
-                client.tenant && client.tenant.name
-                  ? [
-                      {
-                        text: client.tenant.name,
-                        variant: "default" as const,
-                        className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                      },
-                    ]
-                  : [],
-              /*               badges: [],
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando clientes..." />
+        </div>
+      ) : (
+        <>
+          {/* Grid de clientes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            {filteredClients.map((client) => (
+              <Card
+                key={client._id}
+                onClick={() => navigate(`/clients/${client._id}`)}
+                header={{
+                  title: client.name,
+                  subtitle: client.company || "",
+                  icon: faUsers,
+                  avatar: {
+                    src: client.attachments?.find((a: any) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url,
+                    fallback: client.name?.charAt(0)?.toUpperCase?.() || "?",
+                    alt: `${client.name} logo`,
+                  },
+                  badges:
+                    client.tenant && client.tenant.name
+                      ? [
+                          {
+                            text: client.tenant.name,
+                            variant: "default" as const,
+                            className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                          },
+                        ]
+                      : [],
+                  /*               badges: [],
               favorite: !!client.favorite,
               onToggleFavorite: () => toggleFavorite(client._id, !!client.favorite), */
-            }}
-            className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-            footer={{
-              leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</span>,
-              actions: canManage
-                ? [
-                    {
-                      icon: faClone,
-                      onClick: (e) => {
-                        e.stopPropagation();
-                        openClone(client);
-                      },
-                      title: "Clonar cliente",
-                      variant: "default" as const,
-                    },
-                    {
-                      icon: faTrash,
-                      onClick: (e) => {
-                        e.stopPropagation();
-                        handleDeleteClient(client);
-                      },
-                      title: "Eliminar cliente",
-                      variant: "default" as const,
-                    },
-                  ]
-                : [],
-            }}
-          />
-        ))}
-        {canManage && (
-          <Card
-            variant="create"
-            onClick={openCreate}
-            header={{
-              title: "Nuevo Cliente",
-              subtitle: "Crear un nuevo cliente en el sistema",
-              icon: faUsers,
-            }}
-          />
-        )}
-      </div>
+                }}
+                className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                footer={{
+                  leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</span>,
+                  actions: canManage
+                    ? [
+                        {
+                          icon: faClone,
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            openClone(client);
+                          },
+                          title: "Clonar cliente",
+                          variant: "default" as const,
+                        },
+                        {
+                          icon: faTrash,
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handleDeleteClient(client);
+                          },
+                          title: "Eliminar cliente",
+                          variant: "default" as const,
+                        },
+                      ]
+                    : [],
+                }}
+              />
+            ))}
+            {canManage && (
+              <Card
+                variant="create"
+                onClick={openCreate}
+                header={{
+                  title: "Nuevo Cliente",
+                  subtitle: "Crear un nuevo cliente en el sistema",
+                  icon: faUsers,
+                }}
+              />
+            )}
+          </div>
 
-      {filteredClients.length === 0 && (
-        <EmptyState
-          icon={faUsers}
-          title={startDate || endDate ? "No hay clientes en este rango de fechas" : "No hay clientes"}
-          description={startDate || endDate ? `No se encontraron clientes ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer cliente para comenzar."}
-          action={
-            canManage
-              ? {
-                  label: "Nuevo Cliente",
-                  onClick: openCreate,
-                }
-              : undefined
-          }
-        />
+          {!loading && filteredClients.length === 0 && (
+            <EmptyState
+              icon={faUsers}
+              title={startDate || endDate ? "No hay clientes en este rango de fechas" : "No hay clientes"}
+              description={startDate || endDate ? `No se encontraron clientes ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer cliente para comenzar."}
+              action={
+                canManage
+                  ? {
+                      label: "Nuevo Cliente",
+                      onClick: openCreate,
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </>
       )}
     </PageLayout>
   );

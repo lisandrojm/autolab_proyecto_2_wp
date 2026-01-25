@@ -241,8 +241,20 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
 // GET /auth/demo-users - Obtener lista de usuarios de todos los tenants (público)
 router.get("/demo-users", async (req, res) => {
   try {
-    // Traer usuarios de todos los tenants
-    const users = await User.find({ isActive: true }).select("email firstName lastName role isActive tenantId areaId").populate("roles", "name description").populate("tenantId", "name slug").populate("areaId", "name").sort({ "tenantId.name": 1, email: 1 }).limit(200);
+    // Definir los emails de los usuarios seed que queremos mostrar
+    const seedEmails = ["superadmin@example.com", env.SEED_ADMIN_EMAIL, "user@example.com", "colaborador@mobile.com", "coordinador@mobile.com"];
+
+    // Traer usuarios de todos los tenants filtering by seed emails
+    const users = await User.find({
+      isActive: true,
+      email: { $in: seedEmails },
+    })
+      .select("email firstName lastName role isActive tenantId areaId")
+      .populate("roles", "name description")
+      .populate("tenantId", "name slug")
+      .populate("areaId", "name")
+      .sort({ "tenantId.name": 1, email: 1 })
+      .limit(200);
 
     const demoUsers = users.map((user) => {
       const tenant = user.tenantId as any;

@@ -637,7 +637,7 @@ export const ProjectDetailPage: React.FC = () => {
                 <div className="bg-gray-100 dark:bg-gray-800/80 rounded-lg p-5 border border-gray-200 dark:border-gray-700 mt-2">
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="border-r border-gray-200 dark:border-gray-600">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{project.metadataUserCount ?? assignedUsers.length}</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{assignedUsers.length}</div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Personas</div>
                     </div>
                     <div className="border-r border-gray-200 dark:border-gray-600">
@@ -691,27 +691,44 @@ export const ProjectDetailPage: React.FC = () => {
             setModalMode("viewProjectInfo");
             setShowModal(true);
           }}
-          className="cursor-pointer hover:border-primary-300 transition-colors"
+          className="cursor-pointer hover:scale-105 hover:shadow-lg transition-all duration-200"
           header={{
-            title: "Información del Proyecto",
-            subtitle: "Objetivos y detalles estratégicos",
-            icon: faInfoCircle,
+            title: `Información del Proyecto`,
+            subtitle: project.description || "Sin descripción",
+            avatar: {
+              fallback: project.name?.charAt(0)?.toUpperCase() || "P",
+              alt: project.name,
+            },
+            badges: [
+              {
+                text: project.status === "active" ? "Activo" : project.status === "on_hold" ? "En Espera" : project.status === "completed" ? "Completado" : "Archivado",
+                variant: project.status === "active" ? "green" : project.status === "on_hold" ? "warning" : project.status === "completed" ? "info" : "default",
+              },
+              ...(client?.name
+                ? [
+                    {
+                      text: client.name,
+                      variant: "cyan" as const,
+                    },
+                  ]
+                : []),
+            ],
+            badgesPosition: "top",
           }}
           footer={{
-            leftContent: (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}
-              </span>
-            ),
+            leftContent: <span className="text-xs text-gray-500 dark:text-gray-400">Creado: {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : "—"}</span>,
           }}
         >
-          <div className="space-y-6">
-            <div>
-              <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Descripción</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-3">{project.description || "Sin descripción proporcionada."}</p>
+          {/* Sede dentro del cuerpo de la card */}
+          {project.metadataResolutions?.sede && (
+            <div className="flex flex-col mb-3">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" />
+                Sede
+              </label>
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
             </div>
-            {/* Reduced content for preview */}
-          </div>
+          )}
         </Card>
         {/* Card 2: Personas Asignadas */}
         <Card

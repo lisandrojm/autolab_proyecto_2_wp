@@ -7,6 +7,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, isVacationInFinalState } from "../utils/statusHelpers";
@@ -691,76 +692,78 @@ export const VacationsPage: React.FC = () => {
           </button>
         </div>
       }
+      searchAndFilters={
+        <div className="flex gap-4 items-center justify-between">
+          <div className="flex-1 relative">
+            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+          </div>
+
+          <div className="relative">
+            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+              <option value="all">Todos los estados</option>
+              <option value="pending">Pendientes</option>
+              <option value="approved">Aprobadas</option>
+              <option value="rejected">Rechazadas</option>
+              <option value="cancelled">Canceladas</option>
+            </select>
+          </div>
+          {isXXL && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      }
     >
       <div className="space-y-6">
         <div>
-          <div className="mb-6 flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
-            </div>
-
-            <div className="relative">
-              <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                <option value="all">Todos los estados</option>
-                <option value="pending">Pendientes</option>
-                <option value="approved">Aprobadas</option>
-                <option value="rejected">Rechazadas</option>
-                <option value="cancelled">Canceladas</option>
-              </select>
-            </div>
-            {isXXL && (
-              <div className="flex items-center gap-2 ">
-                <button onClick={() => setViewMode("cards")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
-                  <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-                </button>
-                <button onClick={() => setViewMode("table")} className={`px-4 py-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
-                  <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
           {loading ? (
             <div className="flex justify-center items-center py-12">
-              <FontAwesomeIcon icon={faSpinner} spin className="text-4xl text-blue-600" />
+              <LoadingSpinner message="Cargando vacaciones..." />
             </div>
-          ) : viewMode === "cards" ? (
-            renderCardsView()
           ) : (
             <>
-              <div className="overflow-x-auto rounded border dark:border-slate-800">
-                <table className="w-full dark:bg-slate-800/80 table-auto">
-                  <thead>
-                    <tr>
-                      <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
-                      {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
-                    </tr>
-                  </thead>
+              {viewMode === "cards" ? (
+                renderCardsView()
+              ) : (
+                <div className="overflow-x-auto rounded border dark:border-slate-800">
+                  <table className="w-full dark:bg-slate-800/80 table-auto">
+                    <thead>
+                      <tr>
+                        <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
+                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                      </tr>
+                    </thead>
 
-                  <tbody>
-                    {filteredVacations.map((vacation) => (
-                      <tr
-                        key={vacation.id}
-                        className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                        onClick={() => {
-                          setSelectedVacation(vacation);
-                          setShowDetailModal(true);
-                        }}
-                      >
-                        <td className="py-3 px-4">
-                          <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }) : "-"}</td>
-                        {/*                         <td className="py-3 px-4">
+                    <tbody>
+                      {filteredVacations.map((vacation) => (
+                        <tr
+                          key={vacation.id}
+                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                          onClick={() => {
+                            setSelectedVacation(vacation);
+                            setShowDetailModal(true);
+                          }}
+                        >
+                          <td className="py-3 px-4">
+                            <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }) : "-"}</td>
+                          {/*                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-2">
                             {vacation.reglas.map((regla, index) => (
                               <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">
@@ -769,33 +772,34 @@ export const VacationsPage: React.FC = () => {
                             ))}
                           </div>
                         </td> */}
-                        <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
-                        <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(vacation.solicitante)}</td>
-                        <td className="py-3 px-4">
-                          <StatusBadge type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />
-                        </td>
-                        <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
-                          {vacation.startDate && vacation.endDate ? (
-                            <>
-                              {formatDateShort(vacation.startDate)} - {formatDateShort(vacation.endDate)}
-                            </>
-                          ) : (
-                            <span className="text-gray-400 dark:text-gray-500">-</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(vacation.solicitante)}</td>
+                          <td className="py-3 px-4">
+                            <StatusBadge type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />
+                          </td>
+                          <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
+                            {vacation.startDate && vacation.endDate ? (
+                              <>
+                                {formatDateShort(vacation.startDate)} - {formatDateShort(vacation.endDate)}
+                              </>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
+                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-              {filteredVacations.length === 0 && (
+              {!loading && filteredVacations.length === 0 && (
                 <div className="text-center py-12">
                   <FontAwesomeIcon icon={faCalendar} className="h-16 w-16 text-gray-400 mb-4" />
                   <p className="text-gray-600 dark:text-gray-400">{searchTerm || statusFilter !== "all" ? "No se encontraron solicitudes con los filtros aplicados" : "No hay solicitudes de vacaciones registradas"}</p>

@@ -467,8 +467,6 @@ export const UsersPage: React.FC = () => {
   const projectMap = React.useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
   const clientMap = React.useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
 
-  if (initialLoading) return <LoadingSpinner message="Cargando usuarios..." />;
-
   return (
     <PageLayout
       title="Usuarios"
@@ -1234,383 +1232,392 @@ export const UsersPage: React.FC = () => {
           ),
       }}
     >
-      {/* Contenedor de lista */}
-      <div className="relative">
-        {/* Overlay de carga cuando se pagina o busca */}
-        {isFetching && (
-          <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
-            <LoadingSpinner message="Actualizando lista..." />
-          </div>
-        )}
+      {/* Loading state */}
+      {initialLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando usuarios..." />
+        </div>
+      ) : (
+        <>
+          {/* Contenedor de lista */}
+          <div className="relative">
+            {/* Overlay de carga cuando se pagina o busca */}
+            {isFetching && (
+              <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
+                <LoadingSpinner message="Actualizando lista..." />
+              </div>
+            )}
 
-        {users.length === 0 && !isFetching ? (
-          <EmptyState
-            icon={faUser}
-            title="No se encontraron usuarios"
-            description="Intenta ajustar tus filtros de búsqueda."
-            action={{
-              label: "Limpiar filtros",
-              onClick: () => {
-                setSearchTerm("");
-                setStartDate("");
-                setEndDate("");
-              },
-            }}
-          />
-        ) : viewMode === "cards" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-            {users.map((user) => (
-              <Card
-                key={user._id}
-                onClick={() => openView(user)}
-                className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-                header={{
-                  title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0],
-                  subtitle: user.email,
-                  icon: faUser,
-                  badges: [
-                    ...(user.tenant && user.tenant.name
-                      ? [
-                          {
-                            text: user.tenant.name,
-                            variant: "default" as const,
-                            className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                          },
-                        ]
-                      : []),
-                    {
-                      text: user.isActive ? "Activo" : "Inactivo",
-                      variant: user.isActive ? "green" : "destructive",
-                    },
-                  ],
-                  badgesPosition: "header-right",
-                }}
-                footer={
-                  canManage
-                    ? {
-                        actions: [
-                          {
-                            icon: faEdit,
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              openEdit(user);
-                            },
-                            title: "Editar",
-                            variant: "default",
-                          },
-                          {
-                            icon: faKey,
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              openPassword(user._id);
-                            },
-                            title: "Cambiar contraseña",
-                            variant: "default",
-                          },
-                          {
-                            icon: faTrash,
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              handleDelete(user);
-                            },
-                            title: "Eliminar",
-                            variant: "default",
-                          },
-                        ],
-                      }
-                    : undefined
-                }
-              >
-                {/* Roles */}
-                <div className="mb-3">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faUserShield} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                    Rol/es
-                  </label>
-                  {user.roles.length === 0 ? (
-                    <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
-                  ) : (
-                    <div className="flex flex-wrap gap-1">
-                      {user.roles.slice(0, 3).map((role) => (
-                        <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">
-                          {role.name}
-                        </span>
-                      ))}
-                      {user.roles.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{user.roles.length - 3} más</span>}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  {/* Área */}
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Área
-                    </label>
-                    {typeof user.areaId === "object" && user.areaId?.name ? (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-500">Sin área asignada</span>
-                    )}
-                  </div>
-
-                  {/* Cargo - Separado e independiente */}
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Cargo
-                    </label>
-                    {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>}
-                  </div>
-
-                  {/* Nivel - Separado e independiente */}
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Nivel
-                    </label>
-                    {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-3 mt-3">
-                  {/* Sede */}
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faBuilding} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Sede
-                    </label>
-                    {user.externalInfo?.sedes && user.externalInfo.sedes.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {user.externalInfo.sedes.map((sede, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
-                            {sede}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-500">Sin sede</span>
-                    )}
-                  </div>
-
-                  {/* Rol Frame */}
-                  <div className="flex flex-col">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faIdCard} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Rol Frame
-                    </label>
-                    {user.externalInfo?.rolFrames && user.externalInfo.rolFrames.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {user.externalInfo.rolFrames.map((rf, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
-                            {rf}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-500">Sin rol frame</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Proyectos */}
-                <div className="mt-3">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                    Proyectos
-                  </label>
-                  {user.projectIds && user.projectIds.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {user.projectIds.map((p: any) => {
-                        const pName = p.name;
-                        const clientName = p.clientId?.name;
-
-                        if (!pName) return null;
-
-                        return (
-                          <span key={p._id || p} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                            {pName}
-                            {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos asignados</span>
-                  )}
-                </div>
-              </Card>
-            ))}
-            {canManage && (
-              <Card
-                variant="create"
-                onClick={openCreate}
-                header={{
-                  title: "Nuevo Usuario",
-                  subtitle: "Crear un nuevo usuario del sistema",
-                  icon: faUser,
+            {users.length === 0 && !isFetching ? (
+              <EmptyState
+                icon={faUser}
+                title="No se encontraron usuarios"
+                description="Intenta ajustar tus filtros de búsqueda."
+                action={{
+                  label: "Limpiar filtros",
+                  onClick: () => {
+                    setSearchTerm("");
+                    setStartDate("");
+                    setEndDate("");
+                  },
                 }}
               />
-            )}
-          </div>
-        ) : (
-          /* Vista de Tabla */
-          <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
-                  <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Usuario</th>
-                  <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Area</th>
-                  <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Cargo</th>
-                  <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden lg:table-cell">Sede</th>
-                  <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden lg:table-cell">Rol frame</th>
-                  <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
-                  <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+            ) : viewMode === "cards" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
                 {users.map((user) => (
-                  <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors group cursor-pointer" onClick={() => openView(user)}>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500">{user.email}</p>
+                  <Card
+                    key={user._id}
+                    onClick={() => openView(user)}
+                    className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                    header={{
+                      title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0],
+                      subtitle: user.email,
+                      icon: faUser,
+                      badges: [
+                        ...(user.tenant && user.tenant.name
+                          ? [
+                              {
+                                text: user.tenant.name,
+                                variant: "default" as const,
+                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                              },
+                            ]
+                          : []),
+                        {
+                          text: user.isActive ? "Activo" : "Inactivo",
+                          variant: user.isActive ? "green" : "destructive",
+                        },
+                      ],
+                      badgesPosition: "header-right",
+                    }}
+                    footer={
+                      canManage
+                        ? {
+                            actions: [
+                              {
+                                icon: faEdit,
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  openEdit(user);
+                                },
+                                title: "Editar",
+                                variant: "default",
+                              },
+                              {
+                                icon: faKey,
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  openPassword(user._id);
+                                },
+                                title: "Cambiar contraseña",
+                                variant: "default",
+                              },
+                              {
+                                icon: faTrash,
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  handleDelete(user);
+                                },
+                                title: "Eliminar",
+                                variant: "default",
+                              },
+                            ],
+                          }
+                        : undefined
+                    }
+                  >
+                    {/* Roles */}
+                    <div className="mb-3">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                        <FontAwesomeIcon icon={faUserShield} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                        Rol/es
+                      </label>
+                      {user.roles.length === 0 ? (
+                        <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.slice(0, 3).map((role) => (
+                            <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">
+                              {role.name}
+                            </span>
+                          ))}
+                          {user.roles.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{user.roles.length - 3} más</span>}
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 hidden md:table-cell">
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{typeof user.areaId === "object" ? user.areaId?.name : "—"}</span>
-                    </td>
-                    <td className="py-4 px-6 hidden md:table-cell">
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{typeof user.positionId === "object" ? user.positionId?.name : "—"}</span>
-                    </td>
-                    <td className="py-4 px-6 hidden lg:table-cell">
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{user.externalInfo?.sedes?.[0] || "—"}</span>
-                    </td>
-                    <td className="py-4 px-6 hidden lg:table-cell">
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{user.externalInfo?.rolFrames?.[0] || "—"}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${user.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{user.isActive ? "Activo" : "Inactivo"}</span>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex justify-end gap-1 transition-opacity">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openView(user);
-                          }}
-                          className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                          title="Ver detalles"
-                        >
-                          <FontAwesomeIcon icon={faEye} />
-                        </button>
-                        {canManage && (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEdit(user);
-                              }}
-                              className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                              title="Editar"
-                            >
-                              <FontAwesomeIcon icon={faEdit} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openPassword(user._id);
-                              }}
-                              className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                              title="Cambiar contraseña"
-                            >
-                              <FontAwesomeIcon icon={faKey} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(user);
-                              }}
-                              className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
-                              title="Eliminar"
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                            </button>
-                          </>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      {/* Área */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Área
+                        </label>
+                        {typeof user.areaId === "object" && user.areaId?.name ? (
+                          <div className="flex flex-wrap gap-1">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin área asignada</span>
                         )}
                       </div>
-                    </td>
-                  </tr>
+
+                      {/* Cargo - Separado e independiente */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Cargo
+                        </label>
+                        {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>}
+                      </div>
+
+                      {/* Nivel - Separado e independiente */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Nivel
+                        </label>
+                        {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 mt-3">
+                      {/* Sede */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faBuilding} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Sede
+                        </label>
+                        {user.externalInfo?.sedes && user.externalInfo.sedes.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {user.externalInfo.sedes.map((sede, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
+                                {sede}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin sede</span>
+                        )}
+                      </div>
+
+                      {/* Rol Frame */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faIdCard} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Rol Frame
+                        </label>
+                        {user.externalInfo?.rolFrames && user.externalInfo.rolFrames.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {user.externalInfo.rolFrames.map((rf, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                                {rf}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin rol frame</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Proyectos */}
+                    <div className="mt-3">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                        <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                        Proyectos
+                      </label>
+                      {user.projectIds && user.projectIds.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {user.projectIds.map((p: any) => {
+                            const pName = p.name;
+                            const clientName = p.clientId?.name;
+
+                            if (!pName) return null;
+
+                            return (
+                              <span key={p._id || p} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                                {pName}
+                                {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos asignados</span>
+                      )}
+                    </div>
+                  </Card>
                 ))}
-              </tbody>
-            </table>
+                {canManage && (
+                  <Card
+                    variant="create"
+                    onClick={openCreate}
+                    header={{
+                      title: "Nuevo Usuario",
+                      subtitle: "Crear un nuevo usuario del sistema",
+                      icon: faUser,
+                    }}
+                  />
+                )}
+              </div>
+            ) : (
+              /* Vista de Tabla */
+              <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Usuario</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Area</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Cargo</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden lg:table-cell">Sede</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden lg:table-cell">Rol frame</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                    {users.map((user) => (
+                      <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors group cursor-pointer" onClick={() => openView(user)}>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500">{user.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 hidden md:table-cell">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{typeof user.areaId === "object" ? user.areaId?.name : "—"}</span>
+                        </td>
+                        <td className="py-4 px-6 hidden md:table-cell">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{typeof user.positionId === "object" ? user.positionId?.name : "—"}</span>
+                        </td>
+                        <td className="py-4 px-6 hidden lg:table-cell">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{user.externalInfo?.sedes?.[0] || "—"}</span>
+                        </td>
+                        <td className="py-4 px-6 hidden lg:table-cell">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{user.externalInfo?.rolFrames?.[0] || "—"}</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${user.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{user.isActive ? "Activo" : "Inactivo"}</span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex justify-end gap-1 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openView(user);
+                              }}
+                              className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
+                              title="Ver detalles"
+                            >
+                              <FontAwesomeIcon icon={faEye} />
+                            </button>
+                            {canManage && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEdit(user);
+                                  }}
+                                  className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
+                                  title="Editar"
+                                >
+                                  <FontAwesomeIcon icon={faEdit} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openPassword(user._id);
+                                  }}
+                                  className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
+                                  title="Cambiar contraseña"
+                                >
+                                  <FontAwesomeIcon icon={faKey} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(user);
+                                  }}
+                                  className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded"
+                                  title="Eliminar"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-6 pb-8 gap-4">
-          <div className="flex-1 flex justify-between sm:hidden w-full">
-            <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-              Anterior
-            </button>
-            <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-              Siguiente
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between w-full">
-            <div>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                Mostrando <span className="font-semibold text-primary-600 dark:text-primary-400">{users.length}</span> usuarios (
-                <span className="font-semibold text-primary-600 dark:text-primary-400">
-                  {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, totalUsers)}
-                </span>
-                ) de <span className="font-semibold text-primary-600 dark:text-primary-400">{totalUsers}</span>
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                  <span className="sr-only">Anterior</span>
-                  <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-6 pb-8 gap-4">
+              <div className="flex-1 flex justify-between sm:hidden w-full">
+                <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                  Anterior
                 </button>
-
-                {/* Page Numbers */}
-                {Array.from({ length: totalPages }).map((_, i) => {
-                  const pageNum = i + 1;
-                  // Only show first, last, and pages around current
-                  if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)) {
-                    return (
-                      <button key={pageNum} onClick={() => setCurrentPage(pageNum)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold transition-all ${currentPage === pageNum ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
-                        {pageNum}
-                      </button>
-                    );
-                  }
-                  if ((pageNum === 2 && currentPage > 4) || (pageNum === totalPages - 1 && currentPage < totalPages - 3)) {
-                    return (
-                      <span key={`dots-${pageNum}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        ...
-                      </span>
-                    );
-                  }
-                  return null;
-                })}
-
-                <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                  <span className="sr-only">Siguiente</span>
-                  <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+                <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                  Siguiente
                 </button>
-              </nav>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between w-full">
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Mostrando <span className="font-semibold text-primary-600 dark:text-primary-400">{users.length}</span> usuarios (
+                    <span className="font-semibold text-primary-600 dark:text-primary-400">
+                      {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, totalUsers)}
+                    </span>
+                    ) de <span className="font-semibold text-primary-600 dark:text-primary-400">{totalUsers}</span>
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                      <span className="sr-only">Anterior</span>
+                      <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+                    </button>
+
+                    {/* Page Numbers */}
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const pageNum = i + 1;
+                      // Only show first, last, and pages around current
+                      if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)) {
+                        return (
+                          <button key={pageNum} onClick={() => setCurrentPage(pageNum)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold transition-all ${currentPage === pageNum ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
+                            {pageNum}
+                          </button>
+                        );
+                      }
+                      if ((pageNum === 2 && currentPage > 4) || (pageNum === totalPages - 1 && currentPage < totalPages - 3)) {
+                        return (
+                          <span key={`dots-${pageNum}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+
+                    <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                      <span className="sr-only">Siguiente</span>
+                      <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+                    </button>
+                  </nav>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </PageLayout>
   );

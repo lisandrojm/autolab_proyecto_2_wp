@@ -129,9 +129,7 @@ export const ClientDetailPage: React.FC = () => {
     );
   }
 
-  if (loading) return <LoadingSpinner message="Cargando cliente..." />;
-
-  if (!client) {
+  if (!loading && !client) {
     return (
       <EmptyState
         icon={faUsers}
@@ -147,14 +145,18 @@ export const ClientDetailPage: React.FC = () => {
 
   return (
     <PageLayout
-      title={client.name}
-      subtitle={`${client.company || client.email} • ${getClientStatusLabel(client.status)}`}
+      title={client?.name || "Cargando..."}
+      subtitle={client ? `${client.company || client.email} • ${getClientStatusLabel(client.status)}` : ""}
       faIcon={{ icon: faUsers }}
-      clientMiniAvatar={{
-        alt: `${client.name} logo`,
-        fallback: client.name?.charAt(0)?.toUpperCase() || "?",
-        label: client.name,
-      }}
+      clientMiniAvatar={
+        client
+          ? {
+              alt: `${client.name} logo`,
+              fallback: client.name?.charAt(0)?.toUpperCase() || "?",
+              label: client.name,
+            }
+          : undefined
+      }
       onBack={() => navigate("/clients")}
       infoModal={{
         isOpen: openInfo,
@@ -224,28 +226,28 @@ export const ClientDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-1">
             <div className="sm:col-span-2">
               <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Nombre</span>
-              <div className="text-base font-medium text-gray-900 dark:text-white">{client.name}</div>
+              <div className="text-base font-medium text-gray-900 dark:text-white">{client?.name}</div>
             </div>
             <div>
               <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Email</span>
-              <div className="text-sm text-gray-900 dark:text-white">{client.email}</div>
+              <div className="text-sm text-gray-900 dark:text-white">{client?.email}</div>
             </div>
             <div>
               <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Teléfono</span>
-              <div className="text-sm text-gray-900 dark:text-white">{client.phone || "—"}</div>
+              <div className="text-sm text-gray-900 dark:text-white">{client?.phone || "—"}</div>
             </div>
             <div>
               <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Empresa</span>
-              <div className="text-sm text-gray-900 dark:text-white">{client.company || "—"}</div>
+              <div className="text-sm text-gray-900 dark:text-white">{client?.company || "—"}</div>
             </div>
             <div>
               <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Industria</span>
-              <div className="text-sm text-gray-900 dark:text-white">{client.industry || "—"}</div>
+              <div className="text-sm text-gray-900 dark:text-white">{client?.industry || "—"}</div>
             </div>
             <div className="sm:col-span-2">
               <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Sitio web</span>
               <div className="text-sm text-primary-600 dark:text-primary-400">
-                {client.website ? (
+                {client?.website ? (
                   <a href={client.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
                     {client.website}
                   </a>
@@ -258,73 +260,82 @@ export const ClientDetailPage: React.FC = () => {
         ),
       }}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Información */}
-        <Card
-          header={{
-            title: "Información General",
-            icon: faUsers,
-            badges: [],
-          }}
-          footer={{
-            leftContent: (
-              <div className="space-y-1">
-                <div className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</div>
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando cliente..." />
+        </div>
+      ) : (
+        client && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Información */}
+            <Card
+              header={{
+                title: "Información General",
+                icon: faUsers,
+                badges: [],
+              }}
+              footer={{
+                leftContent: (
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</div>
+                  </div>
+                ),
+                actions: [
+                  {
+                    icon: faEdit,
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      setIsEditing(true);
+                      setOpenEdit(true);
+                    },
+                    title: "Editar Información",
+                    variant: "default",
+                  },
+                ],
+              }}
+              onClick={() => {
+                setIsEditing(false);
+                setOpenEdit(true);
+              }}
+              className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            >
+              <div className="space-y-4">
+                <div className="text-sm">
+                  <span className="text-gray-500 dark:text-gray-400 block mb-1">Email de contacto:</span>
+                  <div className="font-medium text-gray-900 dark:text-white">{client.email}</div>
+                </div>
+                {client.phone && (
+                  <div className="text-sm">
+                    <span className="text-gray-500 dark:text-gray-400 block mb-1">Teléfono:</span>
+                    <div className="font-medium text-gray-900 dark:text-white">{client.phone}</div>
+                  </div>
+                )}
               </div>
-            ),
-            actions: [
-              {
-                icon: faEdit,
-                onClick: (e) => {
-                  e.stopPropagation();
-                  setIsEditing(true);
-                  setOpenEdit(true);
-                },
-                title: "Editar Información",
-                variant: "default",
-              },
-            ],
-          }}
-          onClick={() => {
-            setIsEditing(false);
-            setOpenEdit(true);
-          }}
-          className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
-        >
-          <div className="space-y-4">
-            <div className="text-sm">
-              <span className="text-gray-500 dark:text-gray-400 block mb-1">Email de contacto:</span>
-              <div className="font-medium text-gray-900 dark:text-white">{client.email}</div>
-            </div>
-            {client.phone && (
-              <div className="text-sm">
-                <span className="text-gray-500 dark:text-gray-400 block mb-1">Teléfono:</span>
-                <div className="font-medium text-gray-900 dark:text-white">{client.phone}</div>
-              </div>
-            )}
-          </div>
-        </Card>
+            </Card>
 
-        {/* Proyectos */}
-        <Card
-          header={{
-            title: "Proyectos",
-            subtitle: "Gestión de proyectos",
-            icon: faBriefcase,
-          }}
-          footer={{
-            leftContent: (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {projectsCount} proyecto{projectsCount !== 1 ? "s" : ""} activo{projectsCount !== 1 ? "s" : ""}
-              </span>
-            ),
-          }}
-          onClick={() => navigate(`/clients/${clientId}/projects`)}
-          className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
-        >
-          {/* Body content removed as requested */}
-        </Card>
-      </div>
+            {/* Proyectos */}
+            <Card
+              header={{
+                title: "Proyectos",
+                subtitle: "Gestión de proyectos",
+                icon: faBriefcase,
+              }}
+              footer={{
+                leftContent: (
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {projectsCount} proyecto{projectsCount !== 1 ? "s" : ""} activo{projectsCount !== 1 ? "s" : ""}
+                  </span>
+                ),
+              }}
+              onClick={() => navigate(`/clients/${clientId}/projects`)}
+              className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            >
+              {/* Body content removed as requested */}
+            </Card>
+          </div>
+        )
+      )}
     </PageLayout>
   );
 };

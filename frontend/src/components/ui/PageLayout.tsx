@@ -227,7 +227,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
             {preSearchActions && <div>{preSearchActions}</div>}
           </div>
 
-          {searchAndFilters && <div className="py-4 mb-6">{searchAndFilters}</div>}
+          {searchAndFilters && <div className="pb-4 pt-2 mb-6">{searchAndFilters}</div>}
 
           {children}
 

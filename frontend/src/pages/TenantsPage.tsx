@@ -282,8 +282,6 @@ export const TenantsPage: React.FC = () => {
     }
   };
 
-  if (initialLoading) return <LoadingSpinner message="Cargando tenants..." />;
-
   return (
     <PageLayout
       title="Tenants"
@@ -663,122 +661,131 @@ export const TenantsPage: React.FC = () => {
         ),
       }}
     >
-      {/* Grid de tenants */}
-      <div className="relative">
-        {/* Indicador sutil de búsqueda en curso (no bloquea) */}
-        {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Buscando…</div>}
+      {/* Loading state */}
+      {initialLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando tenants..." />
+        </div>
+      ) : (
+        <>
+          {/* Grid de tenants */}
+          <div className="relative">
+            {/* Indicador sutil de búsqueda en curso (no bloquea) */}
+            {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Buscando…</div>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-          {tenants.map((tenant) => (
-            <Card
-              key={tenant._id}
-              onClick={() => openView(tenant)}
-              className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-              header={{
-                title: tenant.name,
-                subtitle: tenant.slug,
-                icon: faBuilding,
-                badges: [],
-              }}
-              footer={
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+              {tenants.map((tenant) => (
+                <Card
+                  key={tenant._id}
+                  onClick={() => openView(tenant)}
+                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                  header={{
+                    title: tenant.name,
+                    subtitle: tenant.slug,
+                    icon: faBuilding,
+                    badges: [],
+                  }}
+                  footer={
+                    canManage
+                      ? {
+                          leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{tenant.usage.users.current} usuarios</span>,
+                          actions: (tenant as any).isSystem
+                            ? [
+                                {
+                                  icon: faLock,
+                                  onClick: (e) => {
+                                    e.stopPropagation();
+                                    sweetAlert.info("Tenant Protegido", "Este tenant del sistema no puede ser editado ni eliminado");
+                                  },
+                                  title: "Protegido",
+                                  variant: "default",
+                                },
+                              ]
+                            : [
+                                {
+                                  icon: faEdit,
+                                  onClick: (e) => {
+                                    e.stopPropagation();
+                                    openEdit(tenant);
+                                  },
+                                  title: "Editar",
+                                  variant: "default",
+                                },
+                                {
+                                  icon: faTrash,
+                                  onClick: (e) => {
+                                    e.stopPropagation();
+                                    handleDelete(tenant);
+                                  },
+                                  title: "Eliminar",
+                                  variant: "default",
+                                },
+                              ],
+                        }
+                      : undefined
+                  }
+                >
+                  {/* Contenido de la card */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Empresa</label>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{tenant.company.legalName}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Contacto</label>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {tenant.contact.firstName} {tenant.contact.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">{tenant.contact.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Uso</label>
+                      <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
+                        <span>
+                          {tenant.usage.users.current}/{tenant.usage.users.limit} users
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {tenant.usage.clients.current}/{tenant.usage.clients.limit} clients
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              {canManage && (
+                <Card
+                  variant="create"
+                  onClick={openCreate}
+                  header={{
+                    title: "Nuevo Tenant",
+                    subtitle: "Crear un nuevo tenant en la plataforma",
+                    icon: faBuilding,
+                  }}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Empty state */}
+          {!initialLoading && tenants.length === 0 && !isFetching && (
+            <EmptyState
+              icon={faBuilding}
+              title={startDate || endDate ? "No hay tenants en este rango de fechas" : "No hay tenants"}
+              description={startDate || endDate ? `No se encontraron tenants ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer tenant para comenzar."}
+              action={
                 canManage
                   ? {
-                      leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{tenant.usage.users.current} usuarios</span>,
-                      actions: (tenant as any).isSystem
-                        ? [
-                            {
-                              icon: faLock,
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                sweetAlert.info("Tenant Protegido", "Este tenant del sistema no puede ser editado ni eliminado");
-                              },
-                              title: "Protegido",
-                              variant: "default",
-                            },
-                          ]
-                        : [
-                            {
-                              icon: faEdit,
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                openEdit(tenant);
-                              },
-                              title: "Editar",
-                              variant: "default",
-                            },
-                            {
-                              icon: faTrash,
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                handleDelete(tenant);
-                              },
-                              title: "Eliminar",
-                              variant: "default",
-                            },
-                          ],
+                      label: "Nuevo Tenant",
+                      onClick: openCreate,
+                      icon: faPlus,
                     }
                   : undefined
               }
-            >
-              {/* Contenido de la card */}
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Empresa</label>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{tenant.company.legalName}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Contacto</label>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    {tenant.contact.firstName} {tenant.contact.lastName}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">{tenant.contact.email}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Uso</label>
-                  <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
-                    <span>
-                      {tenant.usage.users.current}/{tenant.usage.users.limit} users
-                    </span>
-                    <span>•</span>
-                    <span>
-                      {tenant.usage.clients.current}/{tenant.usage.clients.limit} clients
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-
-          {canManage && (
-            <Card
-              variant="create"
-              onClick={openCreate}
-              header={{
-                title: "Nuevo Tenant",
-                subtitle: "Crear un nuevo tenant en la plataforma",
-                icon: faBuilding,
-              }}
             />
           )}
-        </div>
-      </div>
-
-      {/* Empty state */}
-      {tenants.length === 0 && !isFetching && (
-        <EmptyState
-          icon={faBuilding}
-          title={startDate || endDate ? "No hay tenants en este rango de fechas" : "No hay tenants"}
-          description={startDate || endDate ? `No se encontraron tenants ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer tenant para comenzar."}
-          action={
-            canManage
-              ? {
-                  label: "Nuevo Tenant",
-                  onClick: openCreate,
-                  icon: faPlus,
-                }
-              : undefined
-          }
-        />
+        </>
       )}
     </PageLayout>
   );

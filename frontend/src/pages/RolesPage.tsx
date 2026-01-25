@@ -339,8 +339,6 @@ export const RolesPage: React.FC = () => {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  if (loading) return <LoadingSpinner message="Cargando roles..." />;
-
   return (
     <PageLayout
       title="Roles"
@@ -611,119 +609,128 @@ export const RolesPage: React.FC = () => {
         ),
       }}
     >
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-        {filteredRoles.map((role) => {
-          const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando roles..." />
+        </div>
+      ) : (
+        <>
+          {/* Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+            {filteredRoles.map((role) => {
+              const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
 
-          return (
-            <Card
-              key={role._id}
-              onClick={() => openView(role)}
-              className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-              header={{
-                title: role.name,
-                subtitle: role.description,
-                icon: faUserShield,
-                // Badge SIEMPRE visible en las cards
-                badges: [
-                  ...(role.isDefault
-                    ? [
-                        {
-                          text: "Por defecto",
-                          variant: "success" as const,
-                        },
-                      ]
-                    : []),
-                  ...(role.permissions.some((p) => p.startsWith("tenants:"))
-                    ? [
-                        {
-                          text: "SuperAdmin",
-                          variant: "warning" as const,
-                        },
-                      ]
-                    : []),
-                  ...(role.tenant && role.tenant.name
-                    ? [
-                        {
-                          text: role.tenant.name,
-                          variant: "default" as const,
-                          className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                        },
-                      ]
-                    : []),
-                ],
-              }}
-              footer={{
-                leftContent: isSuperAdminRole ? <span className="text-xs text-gray-500 dark:text-gray-500">Acceso total al sistema</span> : <span className="text-xs text-gray-500 dark:text-gray-500">{role.permissions.length} permisos</span>,
-                actions: isSuperAdminRole
-                  ? [
-                      {
-                        icon: faLock,
-                        onClick: (e) => {
-                          e.stopPropagation();
-                        },
-                        title: "Rol protegido",
-                        variant: "default",
-                        disabled: true,
-                      },
-                    ]
-                  : [
-                      {
-                        icon: faEdit,
-                        onClick: (e) => {
-                          e.stopPropagation();
-                          openEdit(role);
-                        },
-                        title: "Editar",
-                        variant: "default",
-                      },
-                      ...(hasPermission("admin_roles:view")
+              return (
+                <Card
+                  key={role._id}
+                  onClick={() => openView(role)}
+                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                  header={{
+                    title: role.name,
+                    subtitle: role.description,
+                    icon: faUserShield,
+                    // Badge SIEMPRE visible en las cards
+                    badges: [
+                      ...(role.isDefault
                         ? [
                             {
-                              icon: faTrash,
-                              onClick: (e: React.MouseEvent) => {
-                                e.stopPropagation();
-                                handleDelete(role);
-                              },
-                              title: "Eliminar",
+                              text: "Por defecto",
+                              variant: "success" as const,
+                            },
+                          ]
+                        : []),
+                      ...(role.permissions.some((p) => p.startsWith("tenants:"))
+                        ? [
+                            {
+                              text: "SuperAdmin",
+                              variant: "warning" as const,
+                            },
+                          ]
+                        : []),
+                      ...(role.tenant && role.tenant.name
+                        ? [
+                            {
+                              text: role.tenant.name,
                               variant: "default" as const,
+                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
                             },
                           ]
                         : []),
                     ],
-              }}
-            ></Card>
-          );
-        })}
-        {canManage && (
-          <Card
-            variant="create"
-            onClick={openCreate}
-            header={{
-              title: "Nuevo Rol",
-              subtitle: "Crear un nuevo rol con permisos personalizados",
-              icon: faUserShield,
-            }}
-          />
-        )}
-      </div>
+                  }}
+                  footer={{
+                    leftContent: isSuperAdminRole ? <span className="text-xs text-gray-500 dark:text-gray-500">Acceso total al sistema</span> : <span className="text-xs text-gray-500 dark:text-gray-500">{role.permissions.length} permisos</span>,
+                    actions: isSuperAdminRole
+                      ? [
+                          {
+                            icon: faLock,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                            },
+                            title: "Rol protegido",
+                            variant: "default",
+                            disabled: true,
+                          },
+                        ]
+                      : [
+                          {
+                            icon: faEdit,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              openEdit(role);
+                            },
+                            title: "Editar",
+                            variant: "default",
+                          },
+                          ...(hasPermission("admin_roles:view")
+                            ? [
+                                {
+                                  icon: faTrash,
+                                  onClick: (e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    handleDelete(role);
+                                  },
+                                  title: "Eliminar",
+                                  variant: "default" as const,
+                                },
+                              ]
+                            : []),
+                        ],
+                  }}
+                ></Card>
+              );
+            })}
+            {canManage && (
+              <Card
+                variant="create"
+                onClick={openCreate}
+                header={{
+                  title: "Nuevo Rol",
+                  subtitle: "Crear un nuevo rol con permisos personalizados",
+                  icon: faUserShield,
+                }}
+              />
+            )}
+          </div>
 
-      {filteredRoles.length === 0 && (
-        <EmptyState
-          icon={faShieldHalved}
-          title={startDate || endDate ? "No hay roles en este rango de fechas" : "No hay roles"}
-          description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer rol para comenzar a gestionar permisos."}
-          action={
-            hasPermission("admin_roles:view")
-              ? {
-                  label: "Nuevo Rol",
-                  onClick: openCreate,
-                  icon: faPlus,
-                }
-              : undefined
-          }
-        />
+          {!loading && filteredRoles.length === 0 && (
+            <EmptyState
+              icon={faShieldHalved}
+              title={startDate || endDate ? "No hay roles en este rango de fechas" : "No hay roles"}
+              description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer rol para comenzar a gestionar permisos."}
+              action={
+                hasPermission("admin_roles:view")
+                  ? {
+                      label: "Nuevo Rol",
+                      onClick: openCreate,
+                      icon: faPlus,
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </>
       )}
 
       {/* Modal de información sobre permisos */}

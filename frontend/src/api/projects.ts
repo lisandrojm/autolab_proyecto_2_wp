@@ -343,6 +343,17 @@ class ProjectsAPI {
     emitProjectsChanged("delete", projectId);
   }
 
+  async cleanupTeam(projectId: string): Promise<{ message: string; removedCount: number; newCount: number }> {
+    const resp = await axios.post(
+      `/projects/${projectId}/cleanup-team`,
+      {},
+      {
+        headers: this.getHeaders(),
+      },
+    );
+    return resp.data;
+  }
+
   async getClient(clientId: string): Promise<Client> {
     const resp = await axios.get(`/clients/${clientId}`, {
       headers: this.getHeaders(),

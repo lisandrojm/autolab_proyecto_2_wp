@@ -10,6 +10,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faBuilding, faUser, faBriefcase, faCalendar, faClock, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faCircleInfo, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
 interface ContractRecord {
   id: string; // unique internal id for list rendering
   userId: string;
@@ -34,6 +36,8 @@ export const ContractsPage: React.FC = () => {
   const [allContracts, setAllContracts] = useState<ContractRecord[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [openInfo, setOpenInfo] = useState(false);
 
   // Filtering & Pagination
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,6 +46,21 @@ export const ContractsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">(() => {
     return (localStorage.getItem("contractsViewMode") as "table" | "cards") || "table";
   });
+
+  const HELP_KEY = "contracts";
+  const helpEntry = getHelp(HELP_KEY);
+
+  // Detect lg breakpoint (1024px)
+  const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsLg(window.innerWidth >= 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Effective view mode: force cards when screen is smaller than lg
+  const effectiveViewMode = isLg ? viewMode : "cards";
 
   const requestIdRef = useRef(0);
 
@@ -109,10 +128,12 @@ export const ContractsPage: React.FC = () => {
         extracted.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
 
         setAllContracts(extracted);
+        setHasLoaded(true);
       }
     } catch (error) {
       console.error("Error fetching contracts:", error);
       sweetAlert.error("Error", "No se pudieron cargar los contratos");
+      setHasLoaded(true); // También marcamos como cargado en caso de error
     } finally {
       setIsFetching(false);
     }
@@ -136,92 +157,95 @@ export const ContractsPage: React.FC = () => {
     localStorage.setItem("contractsViewMode", mode);
   };
 
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <LoadingSpinner message="Cargando historial de contratos..." />
-      </div>
-    );
-  }
-
   return (
     <PageLayout
-      title="Historial de Contratos"
+      title="Contratos"
       subtitle="Visualiza y gestiona todos los registros de contratación de los usuarios."
       faIcon={{ icon: faFileContract }}
       itemCount={filteredContracts.length}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry?.title || "Ayuda",
+        size: helpEntry?.size as any,
+        content: helpEntry?.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
       searchAndFilters={
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="relative w-full md:w-96">
+        <div className="flex gap-4 items-center justify-between">
+          <div className="relative w-full">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
               <FontAwesomeIcon icon={faSearch} />
             </span>
             <input type="text" className="input-field pl-10 h-10" placeholder="Buscar por usuario, proyecto o contrato..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
 
-          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
-            <button onClick={() => toggleViewMode("table")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === "table" ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-              <FontAwesomeIcon icon={faTable} className="mr-1.5" />
-              Tabla
+          <div className="items-center gap-2 shrink-0 hidden lg:flex">
+            <button onClick={() => toggleViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+              <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
             </button>
-            <button onClick={() => toggleViewMode("cards")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === "cards" ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-              <FontAwesomeIcon icon={faGrip} className="mr-1.5" />
-              Tarjetas
+            <button onClick={() => toggleViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+              <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
             </button>
           </div>
         </div>
       }
     >
-      {filteredContracts.length === 0 ? (
+      {initialLoading || isFetching || !hasLoaded ? (
+        <div className="flex items-center justify-center py-20">
+          <LoadingSpinner message={initialLoading ? "Cargando historial de contratos..." : "Cargando contratos..."} />
+        </div>
+      ) : filteredContracts.length === 0 ? (
         <EmptyState title="No se encontraron contratos" description={searchTerm ? "Intenta con otros términos de búsqueda." : "No hay registros de contratos en el sistema."} icon={faFileContract} />
-      ) : viewMode === "table" ? (
+      ) : effectiveViewMode === "table" ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar max-h-[700px]">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Proyecto / Contrato</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
-                  <th className="px-4 py-3 text-[10px) font-bold text-gray-500 uppercase tracking-wider">Periodo</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">Días</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Estado</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto / Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Periodo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Días</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {paginatedContracts.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs uppercase">{record.userName.charAt(0)}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-sm uppercase">{record.userName.charAt(0)}</div>
                         <div className="min-w-0">
-                          <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</div>
-                          <div className="text-[9px] text-gray-400 truncate">{record.userEmail}</div>
+                          <div className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</div>
+                          <div className="text-xs text-gray-400 truncate">{record.userEmail}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
-                      <div className="text-[9px] text-gray-400 mt-0.5">{record.nombre_contrato}</div>
+                      <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{record.nombre_contrato}</div>
                     </td>
-                    <td className="px-4 py-3 text-[10px] text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       <div className="font-medium">{record.nombre_sede}</div>
-                      <div className="text-[9px] opacity-70">{record.nombre_rol_frame}</div>
+                      <div className="text-xs opacity-70">{record.nombre_rol_frame}</div>
                     </td>
-                    <td className="px-4 py-3 text-[10px] text-gray-500 dark:text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
                       <div>{new Date(record.fecha_alta_contrato).toLocaleDateString()}</div>
-                      <div className="text-[9px]">{record.fecha_baja_contrato ? new Date(record.fecha_baja_contrato).toLocaleDateString() : "Presente"}</div>
+                      <div className="text-xs">{record.fecha_baja_contrato ? new Date(record.fecha_baja_contrato).toLocaleDateString() : "Presente"}</div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{record.days}</span>
+                      <span className="text-sm font-bold px-2.5 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{record.days}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="text-[10px] font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
-                      {record.cantidad_jornadas_laborales && <div className="text-[9px] text-gray-400">{record.cantidad_jornadas_laborales} jor.</div>}
+                      <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
+                      {record.cantidad_jornadas_laborales && <div className="text-xs text-gray-400">{record.cantidad_jornadas_laborales} jor.</div>}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${record.nombre_estado_empleado === "DISPONIBLE" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{record.nombre_estado_empleado}</span>
+                      <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-tight ${record.nombre_estado_empleado === "DISPONIBLE" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{record.nombre_estado_empleado}</span>
                     </td>
                   </tr>
                 ))}

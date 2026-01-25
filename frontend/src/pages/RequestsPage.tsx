@@ -7,6 +7,7 @@ import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlas
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { ActivityReport as BaseActivityReport, AttendanceRecord, AttendanceStatus } from "../types/activityTypes";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { activityReportsAPI } from "../api/request";
@@ -607,17 +608,11 @@ export const RequestsPage: React.FC = () => {
           </button>
         </div>
       }
-    >
-      <div className="space-y-6">
-        {/* Filters - Styled like ManageVacationsPage */}
-        <div className="mb-6 flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+      searchAndFilters={
+        <div className="flex gap-4 items-center justify-between flex-wrap">
+          <div className="relative w-full lg:flex-1">
             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar solicitudes..." // Matching text from request/image
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            />
+            <input type="text" placeholder="Buscar solicitudes..." className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
           </div>
 
           <div className="relative">
@@ -641,18 +636,24 @@ export const RequestsPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="hidden min-[1200px]:flex items-center gap-2">
-            <button onClick={() => setListLayout("cards")} className={`px-4 py-1.5 rounded-md transition-all ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
+          <div className="hidden min-[1200px]:flex items-center gap-2 shrink-0">
+            <button onClick={() => setListLayout("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
               <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
             </button>
-            <button onClick={() => setListLayout("table")} className={`px-4 py-1.5 rounded-md transition-all ${listLayout === "table" ? "bg-blue-500 text-white shadow-sm" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border dark:border-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
+            <button onClick={() => setListLayout("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla" aria-label="Vista de tabla">
               <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
             </button>
           </div>
         </div>
-
+      }
+    >
+      <div className="space-y-6">
         {/* List Content */}
-        {listLayout === "cards" ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <LoadingSpinner message="Cargando novedades..." />
+          </div>
+        ) : listLayout === "cards" ? (
           renderCardsView()
         ) : (
           <div className="overflow-x-auto rounded border dark:border-slate-800">
@@ -730,15 +731,15 @@ export const RequestsPage: React.FC = () => {
                     </td>
                   </tr>
                 ))}
-                {!loading && reports.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="py-8 text-center text-gray-500">
-                      No se encontraron reportes para los filtros seleccionados.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && reports.length === 0 && (
+          <div className="text-center py-12">
+            <FontAwesomeIcon icon={faFileText} className="h-16 w-16 text-gray-400 mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">No hay novedades registradas</p>
           </div>
         )}
       </div>

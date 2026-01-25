@@ -8,11 +8,17 @@ import { faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Modal } from "../components/ui/Modal";
 
+import { getHelp, hasHelp } from "../data/help/helpContent";
+
 export const SedesPage: React.FC = () => {
   const [sedes, setSedes] = useState<InfoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSede, setSelectedSede] = useState<InfoItem | null>(null);
+  const [openInfo, setOpenInfo] = useState(false);
+
+  const HELP_KEY = "sedes";
+  const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
     const fetchSedes = async () => {
@@ -36,7 +42,22 @@ export const SedesPage: React.FC = () => {
   }, [sedes, searchTerm]);
 
   return (
-    <PageLayout title="Sedes" subtitle="Listado de todas las sedes del sistema" itemCount={filteredSedes.length} faIcon={{ icon: faBuilding }} searchAndFilters={<SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o ID externo..." />}>
+    <PageLayout
+      title="Sedes"
+      subtitle="Listado de todas las sedes del sistema"
+      itemCount={filteredSedes.length}
+      faIcon={{ icon: faBuilding }}
+      infoModal={{
+        isOpen: openInfo,
+        onOpen: () => setOpenInfo(true),
+        onClose: () => setOpenInfo(false),
+        title: helpEntry?.title || "Ayuda",
+        size: helpEntry?.size as any,
+        content: helpEntry?.content,
+      }}
+      shouldShowInfo={hasHelp(HELP_KEY)}
+      searchAndFilters={<SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar por nombre o ID externo..." />}
+    >
       {loading ? (
         <LoadingSpinner message="Cargando sedes..." />
       ) : filteredSedes.length === 0 ? (

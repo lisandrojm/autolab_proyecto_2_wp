@@ -206,8 +206,6 @@ export function PdfTemplatesPage() {
     );
   };
 
-  if (loading) return <LoadingSpinner message="Cargando plantillas..." />;
-
   return (
     <PageLayout
       title="Plantillas PDF"
@@ -271,7 +269,12 @@ export function PdfTemplatesPage() {
         </div>
       }
     >
-      {activeTab === "global" ? (
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando plantillas..." />
+        </div>
+      ) : activeTab === "global" ? (
         <PdfGlobalConfigTab />
       ) : (
         <>
