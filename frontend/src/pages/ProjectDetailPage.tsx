@@ -11,7 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faUsers, faInfoCircle, faBriefcase, faFileLines, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faUsers, faBriefcase, faFileLines, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 const HELP_KEY = "clientProjects" as const;
@@ -75,6 +75,12 @@ export const ProjectDetailPage: React.FC = () => {
     objectives: [""],
     targetAudience: "",
     workSchedule: defaultWorkSchedule,
+    vacationConfig: {
+      useGlobalConfig: true,
+      permiteFraccionadas: true,
+      minDiasFraccion: 7,
+      diasCorridos: false,
+    },
   });
 
   /* ------------------------------ Fetchers ------------------------------- */
@@ -107,6 +113,12 @@ export const ProjectDetailPage: React.FC = () => {
           weekdays: { ...defaultWorkSchedule.weekdays, ...data.workSchedule?.weekdays },
           weekend: { ...defaultWorkSchedule.weekend, ...data.workSchedule?.weekend },
           days: { ...defaultWorkSchedule.days, ...data.workSchedule?.days },
+        },
+        vacationConfig: {
+          useGlobalConfig: data.vacationConfig?.useGlobalConfig ?? true,
+          permiteFraccionadas: data.vacationConfig?.permiteFraccionadas ?? true,
+          minDiasFraccion: data.vacationConfig?.minDiasFraccion ?? 7,
+          diasCorridos: data.vacationConfig?.diasCorridos ?? false,
         },
       });
 
@@ -459,7 +471,7 @@ export const ProjectDetailPage: React.FC = () => {
                         const dayLabels: Record<string, string> = { monday: "Lunes", tuesday: "Martes", wednesday: "Miércoles", thursday: "Jueves", friday: "Viernes", saturday: "Sábado", sunday: "Domingo" };
                         const dayData = projectForm.workSchedule.days[day];
                         return (
-                          <div key={day} className="bg-gray-50 dark:bg-gray-800 p-2 rounded flex items-center gap-2">
+                          <div key={day} className="flex items-center gap-2">
                             <span className="text-xs font-medium w-20">{dayLabels[day]}</span>
                             <button
                               type="button"
@@ -492,6 +504,94 @@ export const ProjectDetailPage: React.FC = () => {
                   )}
                 </div>
 
+                {/* Reglas de Vacaciones */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                    <FontAwesomeIcon icon={faUmbrellaBeach} className="text-orange-500" />
+                    Reglas de Vacaciones
+                  </label>
+
+                  <div className="space-y-4 bg-orange-50/30 dark:bg-orange-950/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Usar Configuración Global</span>
+                        <span className="text-xs text-gray-500">Si se desactiva, se aplicarán las reglas específicas de este proyecto.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProjectForm((p) => ({
+                            ...p,
+                            vacationConfig: { ...p.vacationConfig, useGlobalConfig: !p.vacationConfig.useGlobalConfig },
+                          }))
+                        }
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${projectForm.vacationConfig.useGlobalConfig ? "bg-orange-500" : "bg-gray-200 dark:bg-gray-700"}`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${projectForm.vacationConfig.useGlobalConfig ? "translate-x-5" : "translate-x-0"}`} />
+                      </button>
+                    </div>
+
+                    {!projectForm.vacationConfig.useGlobalConfig && (
+                      <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-orange-100 dark:border-orange-900/50">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Permitir Fraccionamiento</span>
+                            <span className="text-xs text-gray-500">Permite solicitar periodos menores al total anual.</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProjectForm((p) => ({
+                                ...p,
+                                vacationConfig: { ...p.vacationConfig, permiteFraccionadas: !p.vacationConfig.permiteFraccionadas },
+                              }))
+                            }
+                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${projectForm.vacationConfig.permiteFraccionadas ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"}`}
+                          >
+                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${projectForm.vacationConfig.permiteFraccionadas ? "translate-x-5" : "translate-x-0"}`} />
+                          </button>
+                        </div>
+
+                        {projectForm.vacationConfig.permiteFraccionadas && (
+                          <div className="flex flex-col gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-orange-100 dark:border-orange-900/50">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Días Mínimos por Periodo</label>
+                            <input
+                              type="number"
+                              min="1"
+                              className="input-field"
+                              value={projectForm.vacationConfig.minDiasFraccion}
+                              onChange={(e) =>
+                                setProjectForm((p) => ({
+                                  ...p,
+                                  vacationConfig: { ...p.vacationConfig, minDiasFraccion: parseInt(e.target.value) || 1 },
+                                }))
+                              }
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-orange-100 dark:border-orange-900/50">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Cálculo por Días Corridos</span>
+                            <span className="text-xs text-gray-500">Si se activa, incluye sábados y domingos en la cuenta.</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProjectForm((p) => ({
+                                ...p,
+                                vacationConfig: { ...p.vacationConfig, diasCorridos: !p.vacationConfig.diasCorridos },
+                              }))
+                            }
+                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${projectForm.vacationConfig.diasCorridos ? "bg-purple-500" : "bg-gray-200 dark:bg-gray-700"}`}
+                          >
+                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${projectForm.vacationConfig.diasCorridos ? "translate-x-5" : "translate-x-0"}`} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 {/* Estado - al final */}
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                   <div>

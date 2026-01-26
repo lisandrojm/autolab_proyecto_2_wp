@@ -9,7 +9,7 @@ interface InfoModalControlledProps {
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
-  title: string;
+  title: string | React.ReactNode;
   subtitle?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   actions?: InfoModalAction[];
@@ -19,7 +19,7 @@ interface InfoModalControlledProps {
 interface ControlledModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: string | React.ReactNode;
   subtitle?: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   actions?: InfoModalAction[];

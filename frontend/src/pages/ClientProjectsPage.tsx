@@ -616,7 +616,7 @@ export const ClientProjectsPage: React.FC = () => {
                             e.stopPropagation();
                             handleOpenEdit(p);
                           }}
-                          className="p-1.5 text-gray-400 hover:text-primary-600 rounded transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
                           title="Editar"
                         >
                           <FontAwesomeIcon icon={faEdit} />
@@ -626,7 +626,7 @@ export const ClientProjectsPage: React.FC = () => {
                             e.stopPropagation();
                             handleDeleteProject(p._id);
                           }}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
                           title="Eliminar"
                         >
                           <FontAwesomeIcon icon={faTrash} />

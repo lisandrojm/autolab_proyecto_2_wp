@@ -15,7 +15,8 @@ import { Card } from "../components/ui/Card";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock, faGrip, faTable, faPlus, faEdit, faBuilding, faIdCard, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock, faGrip, faTable, faPlus, faEdit, faBuilding, faIdCard, faUser, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
+import { vacationsAPI, VacationRequest } from "../api/vacations";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -36,6 +37,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
+  const [vacations, setVacations] = useState<VacationRequest[]>([]);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
@@ -51,6 +53,18 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
+
+  // Persistence for view mode
+  useEffect(() => {
+    const saved = localStorage.getItem("projectTeamViewMode");
+    if (saved === "table" || saved === "cards") {
+      setViewMode(saved as "table" | "cards");
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("projectTeamViewMode", viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     const handleResize = () => setIsLg(window.innerWidth >= 1024);
@@ -68,9 +82,10 @@ export const ProjectTeamPage: React.FC = () => {
     const init = async () => {
       try {
         setLoading(true);
-        const [projectData, usersData] = await Promise.all([
+        const [projectData, usersData, vacationsData] = await Promise.all([
           projectsAPI.getProject(projectId),
           usersAPI.list({ limit: 10000 }), // Get all users (no limit)
+          vacationsAPI.getAll(),
         ]);
 
         // Auto-cleanup orphaned user IDs from assignedUsers
@@ -93,6 +108,7 @@ export const ProjectTeamPage: React.FC = () => {
         }
 
         setAllUsers(usersData.users);
+        setVacations(vacationsData);
       } catch (error) {
         console.error("Error loading data:", error);
         sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
@@ -112,7 +128,6 @@ export const ProjectTeamPage: React.FC = () => {
     if (typeof project.clientId === "object" && project.clientId?.name) {
       return project.clientId.name;
     }
-    return "";
     return "";
   }, [project]);
 
@@ -183,6 +198,24 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Check Is Coordinator Helper
   const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
+
+  const getUserVacationStatus = (userId: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return vacations.find((v) => {
+      if (v.userId !== userId) return false;
+      const isFinal = v.status === "delivered" || v.signatureStatus === "signed" || (v.status === "approved" && v.signatureStatus === "not_required");
+      if (!isFinal) return false;
+
+      const start = new Date(v.startDate);
+      const end = new Date(v.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+
+      return today >= start && today <= end;
+    });
+  };
 
   /* --------------------------- Notifications Logic ------------------------- */
 
@@ -408,7 +441,15 @@ export const ProjectTeamPage: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-xs shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-white text-sm">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium text-gray-900 dark:text-white text-sm">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</div>
+                              {getUserVacationStatus(user._id) && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 animate-pulse">
+                                  <FontAwesomeIcon icon={faUmbrellaBeach} className="mr-1" />
+                                  DE VACACIONES
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-gray-500">{user.email}</div>
                           </div>
                         </div>
@@ -427,7 +468,7 @@ export const ProjectTeamPage: React.FC = () => {
                             </button>
                           )}
 
-                          <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-gray-300 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Retirar del equipo">
+                          <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 rounded transition-colors" title="Retirar del equipo">
                             <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -461,7 +502,18 @@ export const ProjectTeamPage: React.FC = () => {
                         subtitle: user.email,
                         icon: faUser,
                         avatar: { fallback: user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase() },
-                        badges: [{ text: user.isActive ? "Activo" : "Inactivo", variant: user.isActive ? "green" : "destructive" }],
+                        badges: [
+                          { text: user.isActive ? "Activo" : "Inactivo", variant: user.isActive ? "green" : "destructive" },
+                          ...(getUserVacationStatus(user._id)
+                            ? [
+                                {
+                                  text: "DE VACACIONES",
+                                  variant: "warning" as const,
+                                  icon: faUmbrellaBeach,
+                                },
+                              ]
+                            : []),
+                        ],
                         badgesPosition: "top",
                         actions: isCoord
                           ? [
