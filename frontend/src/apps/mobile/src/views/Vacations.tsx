@@ -16,6 +16,8 @@ import {
   faBriefcase,
   faUserTie,
   faRulerCombined,
+  faIdCard,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useVacations } from "../hooks/useVacations";
@@ -28,7 +30,7 @@ import { mapVacationStatusToStatusTypeForMobile, mapVacationSignatureStateToStat
 import VacationDetailModal from "../components/VacationDetailModal";
 import { VacationRequest } from "../../../../api/vacations";
 import { InfoModal } from "../../../../components/ui/InfoModal";
-import { calculateLCTVacationDays } from "../../../../utils/vacationLCT";
+import { calculateLCTVacationDays, calculateLCTDaysFromSeniority } from "../../../../utils/vacationLCT";
 import { vacationConfigAPI, VacationConfig } from "../../../../api/vacationConfig";
 
 // Helper to parse date string as local date (ignoring time/timezone)
@@ -112,11 +114,23 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   }, [endDate]);
 
   // Calculate available days consistent with display
-  // Calculate available days consistent with display
+  const totalSeniorityDays = useMemo(() => {
+    return (profile?.metadata?.projects || []).reduce(
+      (acc: number, p: any) =>
+        acc +
+        (p.contracts || []).reduce((cAcc: number, c: any) => {
+          const start = new Date(c.fecha_alta_contrato);
+          const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+          return cAcc + Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        }, 0),
+      0,
+    );
+  }, [profile]);
+  const lctDays = totalSeniorityDays > 0 ? calculateLCTDaysFromSeniority(totalSeniorityDays) : profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) : 0;
   const carryOver = profile?.carryOverVacationDays || 0;
   const isArrastreEnabled = globalConfig?.permiteArrastre ?? false;
-  const calculatedTotal = profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) + (isArrastreEnabled ? carryOver : 0) : availableDays?.total || 0;
-  const calculatedAvailable = profile?.hireDate ? calculatedTotal - (availableDays?.used || 0) - (availableDays?.pending || 0) : availableDays?.available || 0;
+  const calculatedTotal = lctDays + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) + (isArrastreEnabled ? carryOver : 0);
+  const calculatedAvailable = calculatedTotal - (availableDays?.used || 0) - (availableDays?.pending || 0);
 
   const hasNoDays = calculatedAvailable <= 0;
 
@@ -302,8 +316,30 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   };
 
   const calculateAntiguedad = () => {
-    if (!profile?.hireDate) return 0;
-    return differenceInYears(new Date(), parseISO(profile.hireDate));
+    if (totalSeniorityDays === 0) {
+      if (!profile?.hireDate) return "0 días";
+      const hireDate = parseISO(profile.hireDate);
+      const years = differenceInYears(new Date(), hireDate);
+      const months = Math.floor((differenceInDays(new Date(), hireDate) % 365) / 30);
+
+      const parts = [];
+      if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+
+      return parts.length > 0 ? parts.join(", ") : "0 días";
+    }
+
+    const years = Math.floor(totalSeniorityDays / 365);
+    const remainingAfterYears = totalSeniorityDays % 365;
+    const months = Math.floor(remainingAfterYears / 30);
+    const days = remainingAfterYears % 30;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
+    if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+
+    return parts.length > 0 ? parts.join(", ") : "0 días";
   };
 
   // Calendar Helpers (omitted for brevity)
@@ -523,31 +559,84 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               </div>
 
               {/* METADATOS: Antigüedad y Área (Separados de las métricas de días) */}
-              <div className="text-xs text-slate-500 dark:text-slate-400 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 mb-1">
-                {/* Antigüedad */}
-                <div className="flex items-center gap-1">
-                  <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold">Antigüedad:</span> {calculateAntiguedad()} Años
+              <div className="text-xs text-slate-500 dark:text-slate-400 grid grid-cols-1 gap-y-1 mb-1">
+                {/* Ingreso y Antigüedad */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <div className="flex items-center gap-1">
+                    <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
+                    <span className="font-semibold">Ingreso:</span> {profile?.hireDate ? format(parseISO(profile.hireDate), "dd/MM/yyyy") : "—"}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
+                    <span className="font-semibold">Antigüedad Total:</span> {calculateAntiguedad()}
+                  </div>
                 </div>
-                {/* Cargo */}
-                <div className="flex items-center gap-1">
-                  <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
-                </div>
-                {/* Área / Miembros */}
+
+                {/* Sede, Rol Frame, Contrato, Horario y Fechas */}
+                {((profile?.externalInfo?.sedes?.length ?? 0) > 0 || (profile?.externalInfo?.rolFrames?.length ?? 0) > 0 || (profile?.externalInfo?.contracts?.length ?? 0) > 0 || (profile?.externalInfo?.schedules?.length ?? 0) > 0 || (profile?.externalInfo?.projectDates?.length ?? 0) > 0) && (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {profile?.externalInfo?.sedes && profile.externalInfo.sedes.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
+                          <span className="font-semibold text-amber-600 dark:text-amber-400">Sede:</span> {profile.externalInfo.sedes.join(", ")}
+                        </div>
+                      )}
+                      {profile?.externalInfo?.rolFrames && profile.externalInfo.rolFrames.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <FontAwesomeIcon icon={faIdCard} className="w-3 h-3 text-slate-400" />
+                          <span className="font-semibold text-purple-600 dark:text-purple-400">Rol Frame:</span> {profile.externalInfo.rolFrames.join(", ")}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {profile?.externalInfo?.contracts && profile.externalInfo.contracts.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Contrato:</span> {profile.externalInfo.contracts.join(", ")}
+                        </div>
+                      )}
+                      {profile?.externalInfo?.schedules && profile.externalInfo.schedules.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-slate-400" />
+                          <span className="font-semibold text-sky-600 dark:text-sky-400">Horario:</span> {profile.externalInfo.schedules.join(", ")}
+                        </div>
+                      )}
+                    </div>
+                    {/* Fechas del Proyecto */}
+                    {profile?.externalInfo?.projectDates && profile.externalInfo.projectDates.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
+                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">Fechas:</span> {profile.externalInfo.projectDates.join(", ")}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Proyecto/s Actual/es */}
                 <div className="flex items-start gap-1">
-                  <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold uppercase">Área:</span>
-                  {profile?.areaName || profile?.department || "Sin Área"}
-                  {profile?.areaMembers !== undefined && <span className="ml-1">| {profile.areaMembers} Miembro(s)</span>}
+                  <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold uppercase truncate">Proyecto/s Actual/es:</span>
+                  <span className="truncate">{stats?.project || "Sin proyectos"}</span>
                 </div>
-                {/* Proyecto */}
+
+                {/* Cargo y Área */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <div className="flex items-center gap-1">
+                    <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
+                    <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
+                    <span className="font-semibold uppercase text-[10px]">Área:</span>
+                    {profile?.areaName || profile?.department || "Sin Área"}
+                  </div>
+                </div>
+
+                {/* Reglas */}
                 <div className="flex items-start gap-1">
                   <FontAwesomeIcon icon={faRulerCombined} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold uppercase">Reglas:</span>
-                  {/* Min Days Project/Global */}
-                  {/* Min Days Badge */}
-                  {/* Reglas Badges */}
+                  <span className="font-semibold uppercase text-[10px]">Reglas:</span>
                   {(() => {
                     const effConfig = (stats?.projectVacationConfig as any) ?? globalConfig;
                     const meta = (stats as any)?.vacationRulesMeta;
@@ -560,18 +649,18 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || "Global";
 
                     return (
-                      <div className="flex flex-col items-start gap-1">
+                      <div className="flex flex-wrap items-center gap-1">
                         {fractionalAllowed ? (
-                          <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                          <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                             Min: {minDays} días <span className="opacity-70">({minDaysSource})</span>
                           </span>
                         ) : (
-                          <span className="ml-1 text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
+                          <span className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
                             No Fracc. <span className="opacity-70">({fracSource})</span>
                           </span>
                         )}
 
-                        <span className="ml-1 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                           {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({typeSource})</span>
                         </span>
                       </div>
@@ -623,27 +712,27 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             {/* BALANCE DE DÍAS (Fila única 4 columnas o 2x2 para mobile) - BALANCE Contable y Uso */}
             <div className={`grid grid-cols-2 ${isArrastreEnabled ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-y-4 gap-x-2 text-center`}>
               {/* LCT */}
-              <div>
+              <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                 <p className="text-xs text-slate-400 mb-1">Por Ley (LCT)</p>
-                <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) : "-"}</p>
+                <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{lctDays}</p>
               </div>
 
               {/* Beneficio */}
-              <div>
+              <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                 <p className="text-xs text-slate-400 mb-1">Beneficio</p>
                 <p className="text-lg font-bold text-blue-500">{(globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0)}</p>
               </div>
 
               {/* Arrastre - Solo visible si está habilitado */}
               {isArrastreEnabled && (
-                <div>
+                <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                   <p className="text-xs text-slate-400 mb-1">Arrastre</p>
                   <p className="text-lg font-bold text-gray-500">{carryOver}</p>
                 </div>
               )}
 
               {/* Gozados */}
-              <div>
+              <div className="bg-white dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
                 <p className="text-xs text-slate-400 mb-1">Gozados</p>
                 <p className="text-lg font-bold">{availableDays?.used || 0}</p>
               </div>

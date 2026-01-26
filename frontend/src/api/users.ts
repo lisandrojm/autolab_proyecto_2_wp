@@ -101,6 +101,7 @@ export interface User {
   };
   metadata?: {
     projects?: UserProjectMetadata[];
+    documento?: string;
   };
 }
 

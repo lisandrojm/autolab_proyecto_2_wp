@@ -37,7 +37,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Fetch user first to get details for profile creation if needed
     let user;
     try {
-      user = await User.findById(userId);
+      user = await User.findById(userId).populate("metadata.projects");
     } catch (e) {
       console.error(`Error fetching user ${userId}:`, e);
     }
@@ -126,7 +126,50 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Explicitly send projectIds for frontend selectors
     const projectIds = user?.projectIds?.map((id) => id.toString()) || [];
 
-    res.json({ ...profile, areaName, areaMembers, positionName, roleNames, extraVacationDays, carryOverVacationDays, projectIds });
+    // ENRICHMENT LOGIC: Extract Sede and Rol Frame names from populated metadata.projects
+    const userSedeNames = new Set<string>();
+    const userRolFrameNames = new Set<string>();
+    const userContractNames = new Set<string>();
+    const userSchedules = new Set<string>();
+    const userProjectDates = new Set<string>();
+
+    if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
+      for (const up of user.metadata.projects) {
+        if (!up || typeof up !== "object") continue;
+
+        // Priority 1: Top level names
+        if (up.nombre_rol_frame) userRolFrameNames.add(up.nombre_rol_frame);
+        if (up.nombre_sede) userSedeNames.add(up.nombre_sede);
+
+        // Priority 2: From contracts
+        if (Array.isArray(up.contracts)) {
+          for (const c of up.contracts) {
+            if (c.nombre_sede) userSedeNames.add(c.nombre_sede);
+            if (c.nombre_rol_frame) userRolFrameNames.add(c.nombre_rol_frame);
+            if (c.nombre_contrato) userContractNames.add(c.nombre_contrato);
+            if (c.hora_inicio && c.hora_fin) {
+              userSchedules.add(`${c.hora_inicio} - ${c.hora_fin}`);
+            }
+            if (c.fecha_alta_contrato) {
+              const start = c.fecha_alta_contrato; // Assuming "YYYY-MM-DD" or similar
+              const end = c.fecha_baja_contrato || "Actualidad";
+              userProjectDates.add(`${start} - ${end}`);
+            }
+          }
+        }
+      }
+    }
+
+    const externalInfo = {
+      sedes: Array.from(userSedeNames),
+      rolFrames: Array.from(userRolFrameNames),
+      contracts: Array.from(userContractNames),
+      schedules: Array.from(userSchedules),
+      projectDates: Array.from(userProjectDates),
+    };
+    const metadata = user?.metadata || { projects: [] };
+
+    res.json({ ...profile, areaName, areaMembers, positionName, roleNames, extraVacationDays, carryOverVacationDays, projectIds, externalInfo, metadata });
   } catch (error) {
     console.error("Get profile error:", error);
     if (error instanceof Error) {

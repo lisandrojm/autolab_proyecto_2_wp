@@ -52,3 +52,24 @@ export const calculateLCTVacationDays = (hireDate: Date | string, targetDate: Da
 
   return 14; // Fallback default
 };
+
+/**
+ * Calcula los días de vacaciones correspondientes por Ley de Contrato de Trabajo (LCT) Argentina basándose en la antigüedad total en días.
+ * @param totalDays Cantidad total de días de antigüedad
+ * @returns Número de días de vacaciones correspondientes por ley
+ */
+export const calculateLCTDaysFromSeniority = (totalDays: number): number => {
+  if (totalDays < 180) {
+    // Menos de 6 meses (aprox 180 días)
+    return Math.floor(totalDays / 20);
+  }
+
+  const years = totalDays / 365;
+
+  if (years < 5) return 14;
+  if (years >= 5 && years < 10) return 21;
+  if (years >= 10 && years < 20) return 28;
+  if (years >= 20) return 35;
+
+  return 14;
+};

@@ -33,6 +33,16 @@ export interface ProfileData {
     carryOverDays: number;
   };
   isActive: boolean;
+  externalInfo?: {
+    sedes: string[];
+    rolFrames: string[];
+    contracts: string[];
+    schedules: string[];
+    projectDates: string[];
+  };
+  metadata?: {
+    projects?: any[];
+  };
   createdAt: string;
   updatedAt: string;
 }

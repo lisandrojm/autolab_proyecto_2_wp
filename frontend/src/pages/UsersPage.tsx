@@ -782,6 +782,26 @@ export const UsersPage: React.FC = () => {
                 {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <span className="text-xs text-gray-500">—</span>}
               </div>
 
+              {/* Email */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faUser} className="h-3 w-3 text-gray-400" />
+                  Email
+                </label>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{viewUser.email}</span>
+              </div>
+
+              {/* Documento */}
+              {viewUser.metadata?.documento && (
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" />
+                    Documento
+                  </label>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{viewUser.metadata.documento}</span>
+                </div>
+              )}
+
               {/* Antigüedad Total */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
