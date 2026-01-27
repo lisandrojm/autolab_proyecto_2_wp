@@ -7,7 +7,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { faBriefcase, faBuilding, faTable, faGrip, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faBuilding, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -132,46 +132,53 @@ export const ProjectsPage: React.FC = () => {
         </div>
       ) : viewMode === "cards" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-          {filteredProjects.map((project) => (
-            <Card
-              key={project._id}
-              onClick={() => handleProjectClick(project)}
-              className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
-              header={{
-                title: project.name,
-                subtitle: project.description,
-                avatar: {
-                  src: typeof project.clientId === "object" ? (project.clientId as any).logo : undefined,
-                  fallback: ((typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || "?").charAt(0).toUpperCase(),
-                  alt: typeof project.clientId === "object" ? project.clientId.name : undefined,
-                },
-                badges: [
-                  {
-                    text: project.status === "active" ? "Activo" : project.status === "on_hold" ? "En Espera" : project.status === "completed" ? "Completado" : "Archivado",
-                    variant: project.status === "active" ? "green" : project.status === "on_hold" ? "warning" : project.status === "completed" ? "info" : "default",
-                  },
-                  {
-                    text: (typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || "Cliente Desconocido",
-                    variant: "cyan",
-                  },
-                ],
-                badgesPosition: "top",
-              }}
-              footer={{
-                leftContent: <div className="text-xs text-gray-500 dark:text-gray-500">Creado: {new Date(project.createdAt).toLocaleDateString()}</div>,
-              }}
-            >
-              {project.metadataResolutions?.sede && (
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
-                    Sede
-                  </label>
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
-                </div>
-              )}
-            </Card>
-          ))}
+          {filteredProjects.map((project) => {
+            const logoUrl = typeof project.clientId === "object" ? (project.clientId as any).logo : undefined;
+            return (
+              <Card
+                key={project._id}
+                onClick={() => handleProjectClick(project)}
+                className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                header={{
+                  title: project.name,
+                  subtitle: project.description,
+                  icon: faBriefcase,
+                  avatar: logoUrl
+                    ? {
+                        src: logoUrl,
+                        fallback: "?",
+                        alt: typeof project.clientId === "object" ? project.clientId.name : undefined,
+                      }
+                    : undefined,
+                  iconClassName: "text-primary-600 dark:text-primary-400",
+                  badges: [
+                    {
+                      text: project.status === "active" ? "Activo" : project.status === "on_hold" ? "En Espera" : project.status === "completed" ? "Completado" : "Archivado",
+                      variant: project.status === "active" ? "green" : project.status === "on_hold" ? "warning" : project.status === "completed" ? "info" : "default",
+                    },
+                    {
+                      text: (typeof project.clientId === "object" ? project.clientId.name : clientMap.get(project.clientId as string)?.name) || "Cliente Desconocido",
+                      variant: "cyan",
+                    },
+                  ],
+                  badgesPosition: "top",
+                }}
+                footer={{
+                  leftContent: <div className="text-xs text-gray-500 dark:text-gray-500">Creado: {new Date(project.createdAt).toLocaleDateString()}</div>,
+                }}
+              >
+                {project.metadataResolutions?.sede && (
+                  <div className="flex flex-col">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                      <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
+                      Sede
+                    </label>
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <div className="mt-6 overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
@@ -208,9 +215,14 @@ export const ProjectsPage: React.FC = () => {
                   return (
                     <tr key={project._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => handleProjectClick(project)}>
                       <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{project.name}</span>
-                          <span className="text-xs text-gray-500 truncate max-w-[200px]">{project.description || "Sin descripción"}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center shrink-0">
+                            <FontAwesomeIcon icon={faBriefcase} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{project.name}</span>
+                            <span className="text-xs text-gray-500 truncate max-w-[200px]">{project.description || "Sin descripción"}</span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -223,11 +235,7 @@ export const ProjectsPage: React.FC = () => {
                         <span className="text-sm text-gray-600 dark:text-gray-400">{sedeName}</span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-500">{new Date(project.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Ver detalles">
-                          <FontAwesomeIcon icon={faEye} />
-                        </button>
-                      </td>
+                      <td className="px-6 py-4 text-right">{/* Actions column */}</td>
                     </tr>
                   );
                 })}

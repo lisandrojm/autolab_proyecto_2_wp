@@ -7,7 +7,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faBuilding, faUser, faBriefcase, faCalendar, faClock, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faCircleInfo, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faSearch, faClock } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -218,7 +218,9 @@ export const ContractsPage: React.FC = () => {
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-sm uppercase">{record.userName.charAt(0)}</div>
+                        <div className="flex items-center justify-center shrink-0">
+                          <FontAwesomeIcon icon={faFileContract} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
                         <div className="min-w-0">
                           <div className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{record.userName}</div>
                           <div className="text-xs text-gray-400 truncate">{record.userEmail}</div>
@@ -227,7 +229,10 @@ export const ContractsPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{record.nombre_contrato}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-400">
+                        <FontAwesomeIcon icon={faFileContract} className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                        <span>{record.nombre_contrato}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       <div className="font-medium">{record.nombre_sede}</div>
@@ -260,7 +265,9 @@ export const ContractsPage: React.FC = () => {
               <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700/50">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-lg uppercase shadow-sm">{record.userName.charAt(0)}</div>
+                    <div className="flex items-center justify-center shrink-0">
+                      <FontAwesomeIcon icon={faFileContract} className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    </div>
                     <div>
                       <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{record.userName}</h3>
                       <p className="text-[10px] text-gray-500">{record.userEmail}</p>
@@ -282,7 +289,7 @@ export const ContractsPage: React.FC = () => {
                   <div>
                     <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Contrato</label>
                     <div className="flex items-center gap-1.5">
-                      <FontAwesomeIcon icon={faFileContract} className="text-gray-400 text-[10px]" />
+                      <FontAwesomeIcon icon={faFileContract} className="text-blue-600 dark:text-blue-400 text-[10px]" />
                       <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{record.nombre_contrato}</span>
                     </div>
                   </div>

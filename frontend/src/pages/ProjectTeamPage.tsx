@@ -439,8 +439,10 @@ export const ProjectTeamPage: React.FC = () => {
                     <tr key={user._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-xs shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
-                          <div>
+                          <div className="flex items-center justify-center shrink-0">
+                            <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <div className="font-medium text-gray-900 dark:text-white text-sm">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</div>
                               {getUserVacationStatus(user._id) && (
@@ -452,6 +454,22 @@ export const ProjectTeamPage: React.FC = () => {
                             </div>
                             <div className="text-xs text-gray-500">{user.email}</div>
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles && user.roles.length > 0 ? (
+                            user.roles.map((r) => {
+                              const isCoord = r.name.toLowerCase().includes("coordinador");
+                              return (
+                                <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"}`}>
+                                  {r.name}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-xs text-gray-400">Sin roles</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{rolFrame}</td>
@@ -501,7 +519,7 @@ export const ProjectTeamPage: React.FC = () => {
                         title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email,
                         subtitle: user.email,
                         icon: faUser,
-                        avatar: { fallback: user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase() },
+                        iconClassName: "text-blue-600",
                         badges: [
                           { text: user.isActive ? "Activo" : "Inactivo", variant: user.isActive ? "green" : "destructive" },
                           ...(getUserVacationStatus(user._id)
@@ -549,11 +567,14 @@ export const ProjectTeamPage: React.FC = () => {
                           </label>
                           <div className="flex flex-wrap gap-1">
                             {user.roles && user.roles.length > 0 ? (
-                              user.roles.map((r) => (
-                                <span key={r._id} className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-medium border border-blue-200 dark:border-blue-800">
-                                  {r.name}
-                                </span>
-                              ))
+                              user.roles.map((r) => {
+                                const isCoord = r.name.toLowerCase().includes("coordinador");
+                                return (
+                                  <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"}`}>
+                                    {r.name}
+                                  </span>
+                                );
+                              })
                             ) : (
                               <span className="text-xs text-gray-400">Sin roles</span>
                             )}
@@ -602,6 +623,7 @@ export const ProjectTeamPage: React.FC = () => {
                                 <thead>
                                   <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     <th className="px-4 py-3 font-semibold">Usuario</th>
+                                    <th className="px-4 py-3 font-semibold">Rol/es</th>
                                     <th className="px-4 py-3 font-semibold">Rol Frame</th>
                                     <th className="px-4 py-3 font-semibold">Estado</th>
                                     <th className="px-4 py-3 font-semibold">Contrato</th>
@@ -736,12 +758,22 @@ export const ProjectTeamPage: React.FC = () => {
                       return (
                         <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                           <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 font-bold shrink-0">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                            <div className="flex items-center justify-center shrink-0">
+                              <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-xs text-gray-500">{user.email}</span>
                                 {isCoordinator && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
+                                {user.roles?.map((r: any) => {
+                                  const isCoord = r.name.toLowerCase().includes("coordinador");
+                                  return (
+                                    <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] ${isCoord ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-800"}`}>
+                                      {r.name}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>

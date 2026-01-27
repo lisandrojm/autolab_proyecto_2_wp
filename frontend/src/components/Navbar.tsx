@@ -218,12 +218,15 @@ export const MobileNavbar: React.FC = () => {
   const RoleChips: React.FC<{ className?: string }> = ({ className = "text-[9px]" }) =>
     userRoleNames.length ? (
       <div className="flex flex-wrap gap-1">
-        {userRoleNames.map((label) => (
-          <div key={label} className={`flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded ${className} text-xs bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300`}>
-            <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 mr-1.5" />
-            {label}
-          </div>
-        ))}
+        {userRoleNames.map((label) => {
+          const isCoord = label.toLowerCase().includes("coordinador");
+          return (
+            <div key={label} className={`flex text-transform: capitalize font-semibold items-center justify-center px-3 py-1 rounded ${className} text-xs ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : "bg-primary-100 text-primary-800 dark:bg-blue-900/30 dark:text-primary-300"}`}>
+              <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 mr-1.5" />
+              {label}
+            </div>
+          );
+        })}
       </div>
     ) : (
       <div className="mt-2">

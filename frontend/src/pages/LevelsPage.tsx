@@ -9,7 +9,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserTie, faUserGraduate, faEdit, faTrash, faPlus, faShieldHalved, faGlobe, faUserGear } from "@fortawesome/free-solid-svg-icons";
+import { faUserTie, faUserGraduate, faEdit, faTrash, faPlus, faShieldHalved, faGlobe, faUserGear, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -45,6 +45,36 @@ export const LevelsPage: React.FC = () => {
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLevel, setViewLevel] = useState<Level | null>(null);
+
+  // View Mode Logic
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) {
+        setViewMode("cards");
+      }
+    };
+
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("levelsViewMode");
+      if (saved === "table" || saved === "cards") {
+        setViewMode(saved as "table" | "cards");
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isLarge) {
+      localStorage.setItem("levelsViewMode", viewMode);
+    }
+  }, [viewMode, isLarge]);
 
   const [openInfo, setOpenInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
@@ -216,17 +246,31 @@ export const LevelsPage: React.FC = () => {
         </div>
       }
       searchAndFilters={
-        <SearchAndFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar niveles..."
-          dateFilter={{
-            startDate,
-            endDate,
-            onStartDateChange: setStartDate,
-            onEndDateChange: setEndDate,
-          }}
-        />
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="flex-1 w-full">
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar niveles..."
+              dateFilter={{
+                startDate,
+                endDate,
+                onStartDateChange: setStartDate,
+                onEndDateChange: setEndDate,
+              }}
+            />
+          </div>
+          {isLarge && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       }
       viewModal={{
         isOpen: viewOpen,
@@ -433,88 +477,161 @@ export const LevelsPage: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-            {filteredLevels.map((level) => (
-              <Card
-                key={level._id}
-                onClick={() => openView(level)}
-                className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-                header={{
-                  title: level.name,
-                  subtitle: level.description,
-                  icon: level.type === "general" ? faGlobe : faUserGraduate,
-                  badges: [
-                    ...(level.type === "general" ? [{ text: "General", variant: "blue" as const }] : []),
-                    ...(level.tenant && level.tenant.name
-                      ? [
-                          {
-                            text: level.tenant.name,
-                            variant: "default" as const,
-                            className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                          },
-                        ]
-                      : []),
-                  ],
-                }}
-                footer={
-                  canManage
-                    ? {
-                        leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{level.createdAt ? new Date(level.createdAt).toLocaleDateString() : ""}</span>,
-                        actions: [
-                          {
-                            icon: faEdit,
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              openEdit(level);
+          {viewMode === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+              {filteredLevels.map((level) => (
+                <Card
+                  key={level._id}
+                  onClick={() => openView(level)}
+                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                  header={{
+                    title: level.name,
+                    subtitle: level.description,
+                    icon: level.type === "general" ? faGlobe : faUserGraduate,
+                    badges: [
+                      ...(level.type === "general" ? [{ text: "General", variant: "blue" as const }] : []),
+                      ...(level.tenant && level.tenant.name
+                        ? [
+                            {
+                              text: level.tenant.name,
+                              variant: "default" as const,
+                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
                             },
-                            title: "Editar",
-                            variant: "default",
-                          },
-                          {
-                            icon: faTrash,
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              handleDelete(level);
+                          ]
+                        : []),
+                    ],
+                  }}
+                  footer={
+                    canManage
+                      ? {
+                          leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{level.createdAt ? new Date(level.createdAt).toLocaleDateString() : ""}</span>,
+                          actions: [
+                            {
+                              icon: faEdit,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                openEdit(level);
+                              },
+                              title: "Editar",
+                              variant: "default",
                             },
-                            title: "Eliminar",
-                            variant: "default",
-                          },
-                        ],
-                      }
-                    : undefined
-                }
-              >
-                {/* 🚀 NUEVO BLOQUE INTERNO — Igual a Usuarios */}
-                {level.type === "position-specific" && (
-                  <div className="mb-3">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                      Cargo
-                    </label>
+                            {
+                              icon: faTrash,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleDelete(level);
+                              },
+                              title: "Eliminar",
+                              variant: "default",
+                            },
+                          ],
+                        }
+                      : undefined
+                  }
+                >
+                  {/* 🚀 NUEVO BLOQUE INTERNO — Igual a Usuarios */}
+                  {level.type === "position-specific" && (
+                    <div className="mb-3">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                        <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                        Cargo
+                      </label>
 
-                    {typeof level.positionId === "object" && level.positionId?.name ? (
-                      <div className="flex flex-wrap gap-1">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{level.positionId.name}</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>
-                    )}
-                  </div>
-                )}
-              </Card>
-            ))}
-            {canManage && (
-              <Card
-                variant="create"
-                onClick={openCreate}
-                header={{
-                  title: "Nuevo Nivel",
-                  subtitle: "Crear un nuevo nivel de experiencia",
-                  icon: faUserGraduate,
-                }}
-              />
-            )}
-          </div>
+                      {typeof level.positionId === "object" && level.positionId?.name ? (
+                        <div className="flex flex-wrap gap-1">
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{level.positionId.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              ))}
+              {canManage && (
+                <Card
+                  variant="create"
+                  onClick={openCreate}
+                  header={{
+                    title: "Nuevo Nivel",
+                    subtitle: "Crear un nuevo nivel de experiencia",
+                    icon: faUserGraduate,
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cargo</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                      {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                    {filteredLevels.map((level) => (
+                      <tr key={level._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(level)}>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{level.name}</span>
+                            {level.tenant && level.tenant.name && <span className="text-[10px] text-gray-500">{level.tenant.name}</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {level.type === "general" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-xs font-medium text-blue-700 dark:text-blue-300">
+                              <FontAwesomeIcon icon={faGlobe} className="h-3 w-3" />
+                              General
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-purple-50 dark:bg-purple-900/20 text-xs font-medium text-purple-700 dark:text-purple-300">
+                              <FontAwesomeIcon icon={faUserTie} className="h-3 w-3" />
+                              Específico
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">{level.type === "position-specific" && typeof level.positionId === "object" && level.positionId?.name ? <span className="text-sm text-gray-700 dark:text-gray-300">{level.positionId.name}</span> : <span className="text-xs text-gray-400">—</span>}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{level.description || "—"}</span>
+                        </td>
+                        {canManage && (
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(level);
+                                }}
+                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                title="Editar"
+                              >
+                                <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(level);
+                                }}
+                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                title="Eliminar"
+                              >
+                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {!loading && filteredLevels.length === 0 && (
             <EmptyState

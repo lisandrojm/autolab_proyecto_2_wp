@@ -27,7 +27,7 @@ const getClientIdFromProject = (p: any): string | undefined => {
   return undefined;
 };
 
-type ModalMode = "editProject" | "assignUser" | "manageTeam" | "viewProjectInfo" | "viewProjectTeam" | null;
+type ModalMode = "editProject" | "assignUser" | "manageTeam" | "viewProjectInfo" | null;
 
 /* -------------------------------- Component -------------------------------- */
 
@@ -236,8 +236,6 @@ export const ProjectDetailPage: React.FC = () => {
             {project.status === "active" && <span className="ml-3 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800">Activo</span>}
           </div>
         );
-      case "viewProjectTeam":
-        return `Equipo del Proyecto | ${project.name}`;
       default:
         return "Información";
     }
@@ -249,8 +247,6 @@ export const ProjectDetailPage: React.FC = () => {
         return "Actualiza los datos del proyecto";
       case "viewProjectInfo":
         return "Información completa y opciones";
-      case "viewProjectTeam":
-        return "Miembros asignados actualmente";
       default:
         return "";
     }
@@ -279,14 +275,8 @@ export const ProjectDetailPage: React.FC = () => {
     if (modalMode === "viewProjectInfo") {
       return [
         { label: "Editar", onClick: () => setModalMode("editProject"), variant: "primary" as const },
-        { label: "Equipo del Proyecto", onClick: () => setModalMode("viewProjectTeam"), variant: "secondary" as const },
+        { label: "Gestionar Equipo", onClick: openManageTeam, variant: "secondary" as const },
         { label: "Cerrar", onClick: closeModal, variant: "ghost" as const },
-      ];
-    }
-    if (modalMode === "viewProjectTeam") {
-      return [
-        { label: "Gestionar Equipo", onClick: openManageTeam, variant: "primary" as const },
-        { label: "Volver", onClick: () => setModalMode("viewProjectInfo"), variant: "ghost" as const },
       ];
     }
     return [{ label: "Listo", onClick: closeModal, variant: "primary" as const }];
@@ -753,34 +743,6 @@ export const ProjectDetailPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {modalMode === "viewProjectTeam" && (
-              <div className="space-y-4">
-                {assignedUsers.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No hay miembros asignados.</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {assignedUsers.map((u: any, idx: number) => {
-                      const name = typeof u === "object" ? (u.firstName ? `${u.firstName} ${u.lastName || ""}` : u.email) : "Usuario"; // Fallback if just ID
-                      const email = typeof u === "object" ? u.email : u; // Fallback if just ID
-                      const initial = name.charAt(0).toUpperCase();
-
-                      return (
-                        <div key={idx} className="flex items-center gap-3 py-3">
-                          <div className="w-8 h-8 rounded bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-xs">{initial}</div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{name}</p>
-                            <p className="text-xs text-gray-500">{email}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
           </div>

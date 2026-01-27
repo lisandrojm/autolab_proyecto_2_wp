@@ -372,61 +372,67 @@ export const ClientsPage: React.FC = () => {
         <>
           {/* Grid de clientes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {filteredClients.map((client) => (
-              <Card
-                key={client._id}
-                onClick={() => navigate(`/clients/${client._id}`)}
-                header={{
-                  title: client.name,
-                  subtitle: client.company || "",
-                  icon: faUsers,
-                  avatar: {
-                    src: client.attachments?.find((a: any) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url,
-                    fallback: client.name?.charAt(0)?.toUpperCase?.() || "?",
-                    alt: `${client.name} logo`,
-                  },
-                  badges:
-                    client.tenant && client.tenant.name
+            {filteredClients.map((client) => {
+              const logoUrl = client.attachments?.find((a: any) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url;
+              return (
+                <Card
+                  key={client._id}
+                  onClick={() => navigate(`/clients/${client._id}`)}
+                  header={{
+                    title: client.name,
+                    subtitle: client.company || "",
+                    icon: faUsers,
+                    avatar: logoUrl
+                      ? {
+                          src: logoUrl,
+                          fallback: "?",
+                          alt: `${client.name} logo`,
+                        }
+                      : undefined,
+                    iconClassName: "text-primary-600 dark:text-primary-400",
+                    badges:
+                      client.tenant && client.tenant.name
+                        ? [
+                            {
+                              text: client.tenant.name,
+                              variant: "default" as const,
+                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                            },
+                          ]
+                        : [],
+                    /*               badges: [],
+              favorite: !!client.favorite,
+              onToggleFavorite: () => toggleFavorite(client._id, !!client.favorite), */
+                  }}
+                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                  footer={{
+                    leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</span>,
+                    actions: canManage
                       ? [
                           {
-                            text: client.tenant.name,
+                            icon: faClone,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              openClone(client);
+                            },
+                            title: "Clonar cliente",
                             variant: "default" as const,
-                            className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                          },
+                          {
+                            icon: faTrash,
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              handleDeleteClient(client);
+                            },
+                            title: "Eliminar cliente",
+                            variant: "default" as const,
                           },
                         ]
                       : [],
-                  /*               badges: [],
-              favorite: !!client.favorite,
-              onToggleFavorite: () => toggleFavorite(client._id, !!client.favorite), */
-                }}
-                className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-                footer={{
-                  leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : "—"}</span>,
-                  actions: canManage
-                    ? [
-                        {
-                          icon: faClone,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            openClone(client);
-                          },
-                          title: "Clonar cliente",
-                          variant: "default" as const,
-                        },
-                        {
-                          icon: faTrash,
-                          onClick: (e) => {
-                            e.stopPropagation();
-                            handleDeleteClient(client);
-                          },
-                          title: "Eliminar cliente",
-                          variant: "default" as const,
-                        },
-                      ]
-                    : [],
-                }}
-              />
-            ))}
+                  }}
+                />
+              );
+            })}
             {canManage && (
               <Card
                 variant="create"

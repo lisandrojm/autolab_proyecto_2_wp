@@ -9,7 +9,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -130,6 +130,36 @@ export const RolesPage: React.FC = () => {
   // Modal de solo lectura (ver detalle)
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRole, setViewRole] = useState<Role | null>(null);
+
+  // View Mode Logic
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) {
+        setViewMode("cards");
+      }
+    };
+
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("rolesViewMode");
+      if (saved === "table" || saved === "cards") {
+        setViewMode(saved as "table" | "cards");
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isLarge) {
+      localStorage.setItem("rolesViewMode", viewMode);
+    }
+  }, [viewMode, isLarge]);
 
   const canManage = hasPermission("admin_roles:view") || user?.primaryRole?.toLowerCase() === "admin" || user?.primaryRole?.toLowerCase() === "superadmin";
   const isSuperAdmin = user?.primaryRole === "superadmin";
@@ -376,28 +406,31 @@ export const RolesPage: React.FC = () => {
         </div>
       }
       searchAndFilters={
-        <SearchAndFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar roles..."
-          /*  filters={[
-            {
-              value: filterStatus,
-              onChange: (v) => setFilterStatus(v as "all" | "default" | "custom"),
-              options: [
-                { value: "all", label: "Todos" },
-                { value: "default", label: "Por defecto" },
-                { value: "custom", label: "Personalizado" },
-              ],
-            },
-          ]} */
-          dateFilter={{
-            startDate,
-            endDate,
-            onStartDateChange: setStartDate,
-            onEndDateChange: setEndDate,
-          }}
-        />
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="flex-1 w-full">
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar roles..."
+              dateFilter={{
+                startDate,
+                endDate,
+                onStartDateChange: setStartDate,
+                onEndDateChange: setEndDate,
+              }}
+            />
+          </div>
+          {isLarge && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       }
       // Modal VER (solo lectura)
       viewModal={{
@@ -617,102 +650,181 @@ export const RolesPage: React.FC = () => {
       ) : (
         <>
           {/* Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-            {filteredRoles.map((role) => {
-              const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
+          {viewMode === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+              {filteredRoles.map((role) => {
+                const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
 
-              return (
-                <Card
-                  key={role._id}
-                  onClick={() => openView(role)}
-                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-                  header={{
-                    title: role.name,
-                    subtitle: role.description,
-                    icon: faUserShield,
-                    // Badge SIEMPRE visible en las cards
-                    badges: [
-                      ...(role.isDefault
+                return (
+                  <Card
+                    key={role._id}
+                    onClick={() => openView(role)}
+                    className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                    header={{
+                      title: role.name,
+                      subtitle: role.description,
+                      icon: faUserShield,
+                      // Badge SIEMPRE visible en las cards
+                      badges: [
+                        ...(role.isDefault
+                          ? [
+                              {
+                                text: "Por defecto",
+                                variant: "success" as const,
+                              },
+                            ]
+                          : []),
+                        ...(role.permissions.some((p) => p.startsWith("tenants:"))
+                          ? [
+                              {
+                                text: "SuperAdmin",
+                                variant: "warning" as const,
+                              },
+                            ]
+                          : []),
+                        ...(role.tenant && role.tenant.name
+                          ? [
+                              {
+                                text: role.tenant.name,
+                                variant: "default" as const,
+                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                              },
+                            ]
+                          : []),
+                      ],
+                    }}
+                    footer={{
+                      leftContent: isSuperAdminRole ? <span className="text-xs text-gray-500 dark:text-gray-500">Acceso total al sistema</span> : <span className="text-xs text-gray-500 dark:text-gray-500">{role.permissions.length} permisos</span>,
+                      actions: isSuperAdminRole
                         ? [
                             {
-                              text: "Por defecto",
-                              variant: "success" as const,
+                              icon: faLock,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                              },
+                              title: "Rol protegido",
+                              variant: "default",
+                              disabled: true,
                             },
                           ]
-                        : []),
-                      ...(role.permissions.some((p) => p.startsWith("tenants:"))
-                        ? [
+                        : [
                             {
-                              text: "SuperAdmin",
-                              variant: "warning" as const,
+                              icon: faEdit,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                openEdit(role);
+                              },
+                              title: "Editar",
+                              variant: "default",
                             },
-                          ]
-                        : []),
-                      ...(role.tenant && role.tenant.name
-                        ? [
-                            {
-                              text: role.tenant.name,
-                              variant: "default" as const,
-                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                            },
-                          ]
-                        : []),
-                    ],
-                  }}
-                  footer={{
-                    leftContent: isSuperAdminRole ? <span className="text-xs text-gray-500 dark:text-gray-500">Acceso total al sistema</span> : <span className="text-xs text-gray-500 dark:text-gray-500">{role.permissions.length} permisos</span>,
-                    actions: isSuperAdminRole
-                      ? [
-                          {
-                            icon: faLock,
-                            onClick: (e) => {
-                              e.stopPropagation();
-                            },
-                            title: "Rol protegido",
-                            variant: "default",
-                            disabled: true,
-                          },
-                        ]
-                      : [
-                          {
-                            icon: faEdit,
-                            onClick: (e) => {
-                              e.stopPropagation();
-                              openEdit(role);
-                            },
-                            title: "Editar",
-                            variant: "default",
-                          },
-                          ...(hasPermission("admin_roles:view")
-                            ? [
-                                {
-                                  icon: faTrash,
-                                  onClick: (e: React.MouseEvent) => {
-                                    e.stopPropagation();
-                                    handleDelete(role);
+                            ...(hasPermission("admin_roles:view")
+                              ? [
+                                  {
+                                    icon: faTrash,
+                                    onClick: (e: React.MouseEvent) => {
+                                      e.stopPropagation();
+                                      handleDelete(role);
+                                    },
+                                    title: "Eliminar",
+                                    variant: "default" as const,
                                   },
-                                  title: "Eliminar",
-                                  variant: "default" as const,
-                                },
-                              ]
-                            : []),
-                        ],
+                                ]
+                              : []),
+                          ],
+                    }}
+                  ></Card>
+                );
+              })}
+              {canManage && (
+                <Card
+                  variant="create"
+                  onClick={openCreate}
+                  header={{
+                    title: "Nuevo Rol",
+                    subtitle: "Crear un nuevo rol con permisos personalizados",
+                    icon: faUserShield,
                   }}
-                ></Card>
-              );
-            })}
-            {canManage && (
-              <Card
-                variant="create"
-                onClick={openCreate}
-                header={{
-                  title: "Nuevo Rol",
-                  subtitle: "Crear un nuevo rol con permisos personalizados",
-                  icon: faUserShield,
-                }}
-              />
-            )}
-          </div>
+                />
+              )}
+            </div>
+          ) : (
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Permisos</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tenant</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                    {filteredRoles.map((role) => {
+                      const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
+                      // const isActionDisabled = isSuperAdminRole && !isSuperAdmin; // Removed unsed var
+                      return (
+                        <tr key={role._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(role)}>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                {role.name}
+                                {role.isDefault && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">Default</span>}
+                                {role.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">SA</span>}
+                              </span>
+                              {role.description && <span className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</span>}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {isSuperAdminRole ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                                <FontAwesomeIcon icon={faShieldHalved} className="h-3 w-3" />
+                                Total
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-600 dark:text-gray-400">{role.permissions.length} permisos</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">{role.tenant && role.tenant.name ? <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{role.tenant.name}</span> : <span className="text-xs text-gray-400">—</span>}</td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              {!isSuperAdminRole && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEdit(role);
+                                    }}
+                                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                    title="Editar"
+                                  >
+                                    <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                                  </button>
+                                  {hasPermission("admin_roles:view") && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(role);
+                                      }}
+                                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                      title="Eliminar"
+                                    >
+                                      <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                              {isSuperAdminRole && <FontAwesomeIcon icon={faLock} className="text-gray-400 h-4 w-4 mx-2" title="Rol protegido" />}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {!loading && filteredRoles.length === 0 && (
             <EmptyState

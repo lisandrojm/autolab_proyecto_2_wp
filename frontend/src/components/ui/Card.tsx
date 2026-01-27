@@ -43,6 +43,7 @@ interface CardHeaderProps {
   title: string;
   subtitle?: string;
   icon?: IconDefinition;
+  iconClassName?: string;
   avatar?: CardAvatar;
   badges?: CardBadge[];
   badgesPosition?: "top" | "header-right";
@@ -203,9 +204,9 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                 {header.avatar && (
                   <div className="w-10 h-10 flex-shrink-0">
                     {header.avatar.src ? (
-                      <img src={getImageUrl(header.avatar.src)} alt={header.avatar.alt || header.title} className="w-full h-full object-cover rounded border-2 border-gray-200 dark:border-gray-600" />
+                      <img src={getImageUrl(header.avatar.src)} alt={header.avatar.alt || header.title} className="w-full h-full object-cover rounded-full border-2 border-gray-200 dark:border-gray-600" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-bold text-sm">{header.avatar.fallback}</span>
                       </div>
                     )}
@@ -214,7 +215,7 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
 
                 {header.icon && !header.avatar && (
                   <div className="flex-shrink-0">
-                    <FontAwesomeIcon icon={header.icon} className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                    <FontAwesomeIcon icon={header.icon} className={`h-5 w-5 ${header.iconClassName || "text-primary-600 dark:text-primary-400"}`} />
                   </div>
                 )}
 

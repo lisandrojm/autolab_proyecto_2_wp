@@ -49,6 +49,20 @@ const createProjectSchema = z.object({
     .nullable(),
   externalId: z.number().optional(),
   metadata: z.any().optional(),
+  workSchedule: z.any().optional(),
+});
+
+const updateTeamConfigSchema = z.object({
+  config: z.array(
+    z.object({
+      userId: z.string(),
+      isNotifier: z.boolean(),
+      canRegister: z.boolean(),
+      useProjectSchedule: z.boolean().optional(),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+    }),
+  ),
 });
 
 // GET /projects
@@ -599,7 +613,27 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
   }
 });
 
-// Route removed as teamConfig is no longer supported in the model
+// PATCH /projects/:projectId/team-config
+router.patch("/projects/:projectId/team-config", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId } = req.params;
+    const { config } = updateTeamConfigSchema.parse(req.body);
+
+    const project = await Project.findOneAndUpdate({ _id: projectId, tenantId: req.tenantObjectId }, { teamConfig: config }, { new: true, runValidators: true });
+
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    res.json(project);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid data", details: error.errors });
+    }
+    console.error("Update team config error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // POST /projects/:projectId/cleanup-team - Remove orphaned user IDs from assignedUsers
 router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {

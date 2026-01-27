@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 
 // const HELP_KEY = "areas" as const; // TODO: Add help content if needed
@@ -38,6 +38,36 @@ export const AreasPage: React.FC = () => {
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewArea, setViewArea] = useState<Area | null>(null);
+
+  // View Mode Logic
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isNowLarge = window.innerWidth >= 1024;
+      setIsLarge(isNowLarge);
+      if (!isNowLarge) {
+        setViewMode("cards");
+      }
+    };
+
+    if (window.innerWidth >= 1024) {
+      const saved = localStorage.getItem("areasViewMode");
+      if (saved === "table" || saved === "cards") {
+        setViewMode(saved as "table" | "cards");
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isLarge) {
+      localStorage.setItem("areasViewMode", viewMode);
+    }
+  }, [viewMode, isLarge]);
 
   // const [openInfo, setOpenInfo] = useState(false);
   // const helpEntry = getHelp(HELP_KEY);
@@ -175,17 +205,31 @@ export const AreasPage: React.FC = () => {
         </div>
       }
       searchAndFilters={
-        <SearchAndFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Buscar áreas..."
-          dateFilter={{
-            startDate,
-            endDate,
-            onStartDateChange: setStartDate,
-            onEndDateChange: setEndDate,
-          }}
-        />
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+          <div className="flex-1 w-full">
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Buscar áreas..."
+              dateFilter={{
+                startDate,
+                endDate,
+                onStartDateChange: setStartDate,
+                onEndDateChange: setEndDate,
+              }}
+            />
+          </div>
+          {isLarge && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       }
       viewModal={{
         isOpen: viewOpen,
@@ -278,70 +322,136 @@ export const AreasPage: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-            {filteredAreas.map((area) => {
-              return (
+          {viewMode === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+              {filteredAreas.map((area) => {
+                return (
+                  <Card
+                    key={area._id}
+                    onClick={() => openView(area)}
+                    className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                    header={{
+                      title: area.name,
+                      subtitle: area.description,
+                      icon: faLayerGroup,
+                      badges:
+                        area.tenant && area.tenant.name
+                          ? [
+                              {
+                                text: area.tenant.name,
+                                variant: "default" as const,
+                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+                              },
+                            ]
+                          : [],
+                    }}
+                    footer={
+                      canManage
+                        ? {
+                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ""}</span>,
+                            actions: [
+                              {
+                                icon: faEdit,
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  openEdit(area);
+                                },
+                                title: "Editar",
+                                variant: "default",
+                              },
+                              {
+                                icon: faTrash,
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  handleDelete(area);
+                                },
+                                title: "Eliminar",
+                                variant: "default",
+                              },
+                            ],
+                          }
+                        : undefined
+                    }
+                  />
+                );
+              })}
+              {canManage && (
                 <Card
-                  key={area._id}
-                  onClick={() => openView(area)}
-                  className="hover:scale-105 hover:shadow-lg transition-all duration-200"
+                  variant="create"
+                  onClick={openCreate}
                   header={{
-                    title: area.name,
-                    subtitle: area.description,
+                    title: "Nueva Área",
+                    subtitle: "Crear una nueva área para la organización",
                     icon: faLayerGroup,
-                    badges:
-                      area.tenant && area.tenant.name
-                        ? [
-                            {
-                              text: area.tenant.name,
-                              variant: "default" as const,
-                              className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                            },
-                          ]
-                        : [],
                   }}
-                  footer={
-                    canManage
-                      ? {
-                          leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ""}</span>,
-                          actions: [
-                            {
-                              icon: faEdit,
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                openEdit(area);
-                              },
-                              title: "Editar",
-                              variant: "default",
-                            },
-                            {
-                              icon: faTrash,
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                handleDelete(area);
-                              },
-                              title: "Eliminar",
-                              variant: "default",
-                            },
-                          ],
-                        }
-                      : undefined
-                  }
                 />
-              );
-            })}
-            {canManage && (
-              <Card
-                variant="create"
-                onClick={openCreate}
-                header={{
-                  title: "Nueva Área",
-                  subtitle: "Crear una nueva área para la organización",
-                  icon: faLayerGroup,
-                }}
-              />
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
+                      {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                    {filteredAreas.map((area) => (
+                      <tr key={area._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(area)}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center shrink-0">
+                              <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
+                              {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{area.description || "—"}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : "—"}</span>
+                        </td>
+                        {canManage && (
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(area);
+                                }}
+                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                title="Editar"
+                              >
+                                <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(area);
+                                }}
+                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                title="Eliminar"
+                              >
+                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {!loading && filteredAreas.length === 0 && (
             <EmptyState

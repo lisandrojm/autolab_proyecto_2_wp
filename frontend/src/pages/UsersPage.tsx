@@ -620,11 +620,14 @@ export const UsersPage: React.FC = () => {
                 <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
               ) : (
                 <div className="flex flex-wrap gap-1">
-                  {viewUser.roles.map((role) => (
-                    <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">
-                      {role.name}
-                    </span>
-                  ))}
+                  {viewUser.roles.map((role) => {
+                    const isCoord = role.name.toLowerCase().includes("coordinador");
+                    return (
+                      <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300"}`}>
+                        {role.name}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1351,6 +1354,7 @@ export const UsersPage: React.FC = () => {
                       title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0],
                       subtitle: user.email,
                       icon: faUser,
+                      iconClassName: "text-blue-600", // Added this line
                       badges: [
                         ...(user.tenant && user.tenant.name
                           ? [
@@ -1414,11 +1418,14 @@ export const UsersPage: React.FC = () => {
                         <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
-                          {user.roles.slice(0, 3).map((role) => (
-                            <span key={role._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">
-                              {role.name}
-                            </span>
-                          ))}
+                          {user.roles.slice(0, 3).map((role) => {
+                            const isCoord = role.name.toLowerCase().includes("coordinador");
+                            return (
+                              <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300"}`}>
+                                {role.name}
+                              </span>
+                            );
+                          })}
                           {user.roles.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{user.roles.length - 3} más</span>}
                         </div>
                       )}
@@ -1562,7 +1569,9 @@ export const UsersPage: React.FC = () => {
                       <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors group cursor-pointer" onClick={() => openView(user)}>
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm">{user.firstName?.charAt(0) || user.email.charAt(0).toUpperCase()}</div>
+                            <div className="flex items-center justify-center shrink-0">
+                              <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
                             <div>
                               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</p>
                               <p className="text-xs text-gray-500 dark:text-gray-500">{user.email}</p>
@@ -1571,11 +1580,14 @@ export const UsersPage: React.FC = () => {
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell">
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {user.roles?.map((role) => (
-                              <span key={role._id} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-                                {role.name}
-                              </span>
-                            ))}
+                            {user.roles?.map((role) => {
+                              const isCoord = role.name.toLowerCase().includes("coordinador");
+                              return (
+                                <span key={role._id} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${isCoord ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-100 dark:border-amber-800" : "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-100 dark:border-blue-800"}`}>
+                                  {role.name}
+                                </span>
+                              );
+                            })}
                           </div>
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell text-center">
