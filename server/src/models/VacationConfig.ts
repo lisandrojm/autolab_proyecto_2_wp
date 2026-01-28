@@ -3,9 +3,15 @@ import mongoose, { Schema, Document, Types, Model } from "mongoose";
 // ─────────────────────────────────────────────────────────────────────────────
 // Embedded Overlap Schema (for vacation overlap rules per area)
 // ─────────────────────────────────────────────────────────────────────────────
+// Embedded Overlap Schema (for vacation overlap rules per area)
+// ─────────────────────────────────────────────────────────────────────────────
 export interface IEmbeddedOverlap {
   _id?: Types.ObjectId;
-  areaId: Types.ObjectId;
+  areaId?: Types.ObjectId;
+  positionId?: Types.ObjectId;
+  levelId?: Types.ObjectId;
+  projectId?: Types.ObjectId;
+  roleFrameId?: Types.ObjectId;
   maxSimultaneousUsers: number;
   description?: string;
   isActive: boolean;
@@ -13,7 +19,11 @@ export interface IEmbeddedOverlap {
 
 const EmbeddedOverlapSchema = new Schema<IEmbeddedOverlap>(
   {
-    areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
+    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
+    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+    roleFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame" },
     maxSimultaneousUsers: { type: Number, required: true, min: 1 },
     description: { type: String },
     isActive: { type: Boolean, default: true },

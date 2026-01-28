@@ -7,13 +7,69 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
 const router = Router();
 
-// Esquema de validación para crear/editar
-const vacationOverlapSchema = z.object({
-  areaId: z.string().min(1, "El área es obligatoria"),
+// Esquema base sin refinamiento extra
+const baseOverlapSchema = z.object({
+  areaId: z.string().optional(),
+  positionId: z.string().optional(),
+  levelId: z.string().optional(),
+  projectId: z.string().optional(),
+  roleFrameId: z.string().optional(),
   maxSimultaneousUsers: z.number().min(1, "Debe ser al menos 1 usuario"),
   description: z.string().optional(),
   isActive: z.boolean().default(true),
 });
+
+const vacationOverlapSchema = baseOverlapSchema;
+
+// Helper para popular datos
+const populateOverlap = async (overlap: any) => {
+  const result: any = {
+    _id: overlap._id,
+    maxSimultaneousUsers: overlap.maxSimultaneousUsers,
+    description: overlap.description,
+    isActive: overlap.isActive,
+  };
+
+  if (overlap.areaId) {
+    try {
+      const Area = mongoose.model("Area");
+      const doc = await Area.findById(overlap.areaId).select("name");
+      result.areaId = doc ? { _id: overlap.areaId, name: doc.name } : { _id: overlap.areaId, name: "Desconocido" };
+    } catch (e) {
+      result.areaId = { _id: overlap.areaId, name: "Error" };
+    }
+  }
+  if (overlap.positionId) {
+    try {
+      const Position = mongoose.model("Position");
+      const doc = await Position.findById(overlap.positionId).select("name");
+      result.positionId = doc ? { _id: overlap.positionId, name: doc.name } : { _id: overlap.positionId, name: "Desconocido" };
+    } catch (e) {}
+  }
+  if (overlap.levelId) {
+    try {
+      const Level = mongoose.model("Level");
+      const doc = await Level.findById(overlap.levelId).select("name");
+      result.levelId = doc ? { _id: overlap.levelId, name: doc.name } : { _id: overlap.levelId, name: "Desconocido" };
+    } catch (e) {}
+  }
+  if (overlap.projectId) {
+    try {
+      const Project = mongoose.model("Project");
+      const doc = await Project.findById(overlap.projectId).select("name");
+      result.projectId = doc ? { _id: overlap.projectId, name: doc.name } : { _id: overlap.projectId, name: "Desconocido" };
+    } catch (e) {}
+  }
+  if (overlap.roleFrameId) {
+    try {
+      const RoleFrame = mongoose.model("RoleFrame");
+      const doc = await RoleFrame.findById(overlap.roleFrameId).select("name");
+      result.roleFrameId = doc ? { _id: overlap.roleFrameId, name: doc.name } : { _id: overlap.roleFrameId, name: "Desconocido" };
+    } catch (e) {}
+  }
+
+  return result;
+};
 
 // GET / - Listar todas las reglas del tenant (embedded in VacationConfig)
 router.get("/", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -24,20 +80,7 @@ router.get("/", requireTenant, authenticateToken, async (req: AuthenticatedReque
       return res.json([]);
     }
 
-    // Populate area names manually
-    const Area = mongoose.model("Area");
-    const overlaps = await Promise.all(
-      config.overlaps.map(async (overlap) => {
-        const area = await Area.findById(overlap.areaId).select("name");
-        return {
-          _id: overlap._id,
-          areaId: area ? { _id: overlap.areaId, name: area.name } : { _id: overlap.areaId, name: "Desconocida" },
-          maxSimultaneousUsers: overlap.maxSimultaneousUsers,
-          description: overlap.description,
-          isActive: overlap.isActive,
-        };
-      }),
-    );
+    const overlaps = await Promise.all(config.overlaps.map((overlap) => populateOverlap(overlap)));
 
     res.json(overlaps);
   } catch (error) {
@@ -63,35 +106,39 @@ router.post("/", requireTenant, authenticateToken, async (req: AuthenticatedRequ
       });
     }
 
-    // Verificar si ya existe regla para esta área
-    const existing = config.overlaps.find((o) => o.areaId.toString() === data.areaId);
+    // Verificar duplicate exact match
+    const existing = config.overlaps.find((o) => {
+      const sameArea = String(o.areaId || "") === String(data.areaId || "");
+      const samePos = String(o.positionId || "") === String(data.positionId || "");
+      const sameLevel = String(o.levelId || "") === String(data.levelId || "");
+      const sameProj = String(o.projectId || "") === String(data.projectId || "");
+      const sameRole = String(o.roleFrameId || "") === String(data.roleFrameId || "");
+      return sameArea && samePos && sameLevel && sameProj && sameRole;
+    });
+
     if (existing) {
-      return res.status(409).json({ error: "Ya existe una regla de solapamiento para esta área." });
+      return res.status(409).json({ error: "Ya existe una regla idéntica con estos criterios." });
     }
 
     // Add new overlap
-    const newOverlap = {
+    const newOverlap: any = {
       _id: new mongoose.Types.ObjectId(),
-      areaId: new mongoose.Types.ObjectId(data.areaId),
       maxSimultaneousUsers: data.maxSimultaneousUsers,
       description: data.description,
       isActive: data.isActive,
     };
 
+    if (data.areaId) newOverlap.areaId = new mongoose.Types.ObjectId(data.areaId);
+    if (data.positionId) newOverlap.positionId = new mongoose.Types.ObjectId(data.positionId);
+    if (data.levelId) newOverlap.levelId = new mongoose.Types.ObjectId(data.levelId);
+    if (data.projectId) newOverlap.projectId = new mongoose.Types.ObjectId(data.projectId);
+    if (data.roleFrameId) newOverlap.roleFrameId = new mongoose.Types.ObjectId(data.roleFrameId);
+
     config.overlaps.push(newOverlap);
     await config.save();
 
-    // Populate area name for response
-    const Area = mongoose.model("Area");
-    const area = await Area.findById(data.areaId).select("name");
-
-    res.status(201).json({
-      _id: newOverlap._id,
-      areaId: area ? { _id: data.areaId, name: area.name } : { _id: data.areaId, name: "Desconocida" },
-      maxSimultaneousUsers: newOverlap.maxSimultaneousUsers,
-      description: newOverlap.description,
-      isActive: newOverlap.isActive,
-    });
+    const response = await populateOverlap(newOverlap);
+    res.status(201).json(response);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Datos inválidos", details: error.errors });
@@ -105,7 +152,11 @@ router.post("/", requireTenant, authenticateToken, async (req: AuthenticatedRequ
 router.put("/:id", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { id } = req.params;
-    const data = vacationOverlapSchema.partial().parse(req.body);
+
+    // We use baseOverlapSchema.partial() because ZodEffects doesn't support .partial()
+    // Validation of "at least one" must be done manually or via full object reconstruction if necessary
+    // Here we assume partial updates are valid as long as individual fields are valid
+    const data = baseOverlapSchema.partial().parse(req.body);
 
     const config = await VacationConfig.findOne({ tenantId: req.tenantObjectId });
 
@@ -118,34 +169,45 @@ router.put("/:id", requireTenant, authenticateToken, async (req: AuthenticatedRe
       return res.status(404).json({ error: "Regla no encontrada" });
     }
 
-    // Verificar si existe otra regla para la misma área
-    if (data.areaId) {
-      const existingOther = config.overlaps.find((o, i) => i !== overlapIndex && o.areaId.toString() === data.areaId);
-      if (existingOther) {
-        return res.status(409).json({ error: "Ya existe una regla de solapamiento para esta área." });
-      }
+    const current = config.overlaps[overlapIndex];
+
+    // Check duplicate if criteria changed
+    // Construct potential new state to check duplicate
+    const nextArea = data.areaId !== undefined ? data.areaId : current.areaId?.toString();
+    const nextPos = data.positionId !== undefined ? data.positionId : current.positionId?.toString();
+    const nextLevel = data.levelId !== undefined ? data.levelId : current.levelId?.toString();
+    const nextProj = data.projectId !== undefined ? data.projectId : current.projectId?.toString();
+    const nextRole = data.roleFrameId !== undefined ? data.roleFrameId : current.roleFrameId?.toString();
+
+    const existingOther = config.overlaps.find((o, i) => {
+      if (i === overlapIndex) return false;
+      const sameArea = String(o.areaId || "") === String(nextArea || "");
+      const samePos = String(o.positionId || "") === String(nextPos || "");
+      const sameLevel = String(o.levelId || "") === String(nextLevel || "");
+      const sameProj = String(o.projectId || "") === String(nextProj || "");
+      const sameRole = String(o.roleFrameId || "") === String(nextRole || "");
+      return sameArea && samePos && sameLevel && sameProj && sameRole;
+    });
+
+    if (existingOther) {
+      return res.status(409).json({ error: "Ya existe otra regla idéntica con estos criterios." });
     }
 
     // Update overlap fields
-    if (data.areaId) config.overlaps[overlapIndex].areaId = new mongoose.Types.ObjectId(data.areaId);
+    if (data.areaId !== undefined) config.overlaps[overlapIndex].areaId = data.areaId ? new mongoose.Types.ObjectId(data.areaId) : undefined;
+    if (data.positionId !== undefined) config.overlaps[overlapIndex].positionId = data.positionId ? new mongoose.Types.ObjectId(data.positionId) : undefined;
+    if (data.levelId !== undefined) config.overlaps[overlapIndex].levelId = data.levelId ? new mongoose.Types.ObjectId(data.levelId) : undefined;
+    if (data.projectId !== undefined) config.overlaps[overlapIndex].projectId = data.projectId ? new mongoose.Types.ObjectId(data.projectId) : undefined;
+    if (data.roleFrameId !== undefined) config.overlaps[overlapIndex].roleFrameId = data.roleFrameId ? new mongoose.Types.ObjectId(data.roleFrameId) : undefined;
+
     if (data.maxSimultaneousUsers !== undefined) config.overlaps[overlapIndex].maxSimultaneousUsers = data.maxSimultaneousUsers;
     if (data.description !== undefined) config.overlaps[overlapIndex].description = data.description;
     if (data.isActive !== undefined) config.overlaps[overlapIndex].isActive = data.isActive;
 
     await config.save();
 
-    // Populate area name for response
-    const Area = mongoose.model("Area");
-    const overlap = config.overlaps[overlapIndex];
-    const area = await Area.findById(overlap.areaId).select("name");
-
-    res.json({
-      _id: overlap._id,
-      areaId: area ? { _id: overlap.areaId, name: area.name } : { _id: overlap.areaId, name: "Desconocida" },
-      maxSimultaneousUsers: overlap.maxSimultaneousUsers,
-      description: overlap.description,
-      isActive: overlap.isActive,
-    });
+    const response = await populateOverlap(config.overlaps[overlapIndex]);
+    res.json(response);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Datos inválidos", details: error.errors });

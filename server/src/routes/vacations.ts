@@ -43,80 +43,180 @@ router.get("/availability", async (req, res) => {
       return res.json([]); // No area, no restrictions
     }
 
-    // Get overlap rule from embedded overlaps in VacationConfig
+    // -------------------------------------------------------------------------
+    // Helper: Check overlap rules
+    // -------------------------------------------------------------------------
     const vacConfig = await VacationConfig.findOne({ tenantId });
-    const overlapRule = vacConfig?.overlaps.find((o) => o.areaId.toString() === userAreaId.toString() && o.isActive);
+    if (!vacConfig) return res.json([]);
 
-    // If no rule exists, no dates are blocked by overlap
-    if (!overlapRule) {
+    // Get RoleFrames to resolve IDs if needed
+    const RoleFrame = (await import("../models/RoleFrame.js")).RoleFrame;
+
+    // Find applicable rules for this user
+    const applicableRules = [];
+
+    // Fallback logic for userAreaId is handled above.
+    // Ensure we use the userAreaId resolved at lines 29-40.
+
+    for (const rule of vacConfig.overlaps) {
+      if (!rule.isActive) continue;
+
+      let matches = true;
+
+      // 1. Area Check
+      if (rule.areaId) {
+        if (!userAreaId || userAreaId.toString() !== rule.areaId.toString()) {
+          matches = false;
+        }
+      }
+
+      // 2. Position Check
+      if (matches && rule.positionId) {
+        if (!user.positionId || user.positionId.toString() !== rule.positionId.toString()) {
+          matches = false;
+        }
+      }
+
+      // 3. Level Check
+      if (matches && rule.levelId) {
+        if (!user.levelId || user.levelId.toString() !== rule.levelId.toString()) {
+          matches = false;
+        }
+      }
+
+      // 4. Project Check
+      if (matches && rule.projectId) {
+        const userProjects = user.projectIds?.map((p) => p.toString()) || [];
+        if (!userProjects.includes(rule.projectId.toString())) {
+          matches = false;
+        }
+      }
+
+      // 5. RoleFrame Check
+      if (matches && rule.roleFrameId) {
+        try {
+          const rf = await RoleFrame.findById(rule.roleFrameId);
+          if (rf) {
+            const userMetaProjects = user.metadata?.projects || [];
+            const hasRole = userMetaProjects.some((p: any) => p.rol_frame_id == rf.externalId || p.rol_frame_id == rf.data?.rol?.id);
+            if (!hasRole) matches = false;
+          } else {
+            matches = false;
+          }
+        } catch (e) {
+          matches = false;
+        }
+      }
+
+      if (matches) {
+        applicableRules.push(rule);
+      }
+    }
+
+    if (applicableRules.length === 0) {
       return res.json([]);
     }
 
-    // Optimización: Search vacations overlapping with next 18 months
+    // Process availability for ALL applicable rules
     const now = new Date();
     const searchStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
     const searchEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 18, 1));
 
-    const usersInArea = await User.find({ areaId: userAreaId, tenantId }).select("_id");
-    const userIdsInArea = usersInArea.map((u) => u._id);
+    // We will aggregate blocked dates.
+    // If a date is blocked by ANY rule, it is blocked.
+    // However, the response format is list of dates with status.
+    const blockedDatesMap = new Map<string, string>(); // date -> status ('pending' takes precedence?)
 
-    // Also include users who might have this area resolved via Profile (if we want to be thorough),
-    // but for now let's assume if we found the area, other users might have it set or we miss them.
-    // Ideally we should find all users where (areaId == userAreaId OR profile.department == area.name).
-    // But that's expensive. Let's stick to areaId for now, assuming if we fix one we fix others or they are set.
-    // Wait, if THIS user didn't have areaId, others might not either.
-    // We should find users by Profile Department too if we want to be correct.
+    for (const rule of applicableRules) {
+      // Find ALL users who match this rule
+      const query: any = { tenantId, isActive: true };
 
-    const areaName = (await Area.findById(userAreaId))?.name;
-    let extraUserIds: any[] = [];
-    if (areaName) {
-      const profilesInDept = await UserProfile.find({ tenantId, department: areaName }).select("userId");
-      extraUserIds = profilesInDept.map((p) => p.userId);
-    }
-
-    const allUserIdsInArea = [...new Set([...userIdsInArea.map((id) => id.toString()), ...extraUserIds.map((id) => id.toString())])];
-
-    const areaVacations = await Vacation.find({
-      tenantId,
-      userId: { $in: allUserIdsInArea }, // All users in area
-      status: { $nin: ["rejected", "cancelled"] },
-      endDate: { $gte: searchStart },
-      startDate: { $lte: searchEnd },
-    }).lean();
-
-    // Calculate daily occupancy
-    const occupancyMap: Record<string, { count: number; hasPending: boolean }> = {};
-
-    for (const v of areaVacations) {
-      let current = new Date(v.startDate < searchStart ? searchStart : v.startDate);
-      const end = new Date(v.endDate > searchEnd ? searchEnd : v.endDate);
-      const isPending = v.status === "pending";
-
-      while (current <= end) {
-        const dateStr = current.toISOString().split("T")[0];
-        if (!occupancyMap[dateStr]) {
-          occupancyMap[dateStr] = { count: 0, hasPending: false };
+      if (rule.areaId) query.areaId = rule.areaId;
+      if (rule.positionId) query.positionId = rule.positionId;
+      if (rule.levelId) query.levelId = rule.levelId;
+      if (rule.projectId) query.projectIds = rule.projectId;
+      // RoleFrame query is complex on metadata, do we optimize?
+      // For now, fetch candidates and filter in JS if roleFrameId is present,
+      // OR try to use mongo query for metadata if possible.
+      // User.metadata.projects is array. 'metadata.projects.rol_frame_id': ...
+      if (rule.roleFrameId) {
+        const rf = await RoleFrame.findById(rule.roleFrameId);
+        if (rf) {
+          // Construct values to query
+          const values = [];
+          if (rf.externalId) values.push(rf.externalId);
+          if (rf.data?.rol?.id) values.push(rf.data.rol.id);
+          if (values.length > 0) {
+            // Cast to match types in DB (string vs number?)
+            // metadata.projects can be mixed or specific. Usually numbers or strings.
+            // Let's use $in with both string and number variants if needed, or regex?
+            // Safer to start with base query and filter in memory if volume allows,
+            // or purely loose mongo query.
+            query["metadata.projects"] = {
+              $elemMatch: { rol_frame_id: { $in: values } },
+            };
+          }
         }
-
-        occupancyMap[dateStr].count++;
-        if (isPending) {
-          occupancyMap[dateStr].hasPending = true;
-        }
-
-        current.setDate(current.getDate() + 1);
       }
+
+      const matchingUsers = await User.find(query).select("_id");
+      const matchingUserIds = matchingUsers.map((u) => u._id);
+
+      // Find vacations for these users
+      const overlappingVacations = await Vacation.find({
+        tenantId,
+        userId: { $in: matchingUserIds },
+        status: { $nin: ["rejected", "cancelled"] },
+        endDate: { $gte: searchStart },
+        startDate: { $lte: searchEnd },
+      }).lean();
+
+      // Count per day
+      const occupancy: Record<string, { count: number; hasPending: boolean }> = {};
+      for (const v of overlappingVacations) {
+        let current = new Date(v.startDate < searchStart ? searchStart : v.startDate);
+        const end = new Date(v.endDate > searchEnd ? searchEnd : v.endDate);
+        const isPending = v.status === "pending";
+
+        while (current <= end) {
+          const dateStr = current.toISOString().split("T")[0];
+          if (!occupancy[dateStr]) occupancy[dateStr] = { count: 0, hasPending: false };
+          occupancy[dateStr].count++;
+          if (isPending) occupancy[dateStr].hasPending = true;
+          current.setDate(current.getDate() + 1);
+        }
+      }
+
+      // Check violations
+      Object.entries(occupancy).forEach(([date, data]) => {
+        if (data.count >= rule.maxSimultaneousUsers) {
+          // Block this date
+          // If already blocked, pending takes precedence? No, approved blocks it "harder" but here status is about the CAUSE of block.
+          // If I am blocked by pending requests, maybe I can request and hope?
+          // But usually we just say "Blocked".
+          // Let's preserve "pending" status if the block is caused by pending vacations?
+          const existing = blockedDatesMap.get(date);
+          const currentStatus = data.hasPending ? "pending" : "approved";
+
+          if (!existing) {
+            blockedDatesMap.set(date, currentStatus);
+          } else {
+            // If existing is approved and current is pending -> approved wins (confirmed block)
+            // If existing is pending and current is approved -> approved wins
+            if (existing === "pending" && currentStatus === "approved") {
+              blockedDatesMap.set(date, "approved");
+            }
+          }
+        }
+      });
     }
 
-    // Filter dates where occupancy >= limit
-    const blockedDates = Object.entries(occupancyMap)
-      .filter(([_, data]) => data.count >= overlapRule.maxSimultaneousUsers)
-      .map(([date, data]) => ({
-        date,
-        status: data.hasPending ? "pending" : "approved",
-      }));
+    const blockedDates = Array.from(blockedDatesMap.entries()).map(([date, status]) => ({
+      date,
+      status,
+    }));
 
-    console.log(`[Availability] User: ${userId}, Area: ${areaName}, Rule Max: ${overlapRule.maxSimultaneousUsers}`);
-    console.log(`[Availability] Found ${areaVacations.length} vacations. Blocked Dates: ${blockedDates.length}`);
+    // console.log(`[Availability] User: ${userId}. Blocked Dates: ${blockedDates.length}`);
 
     res.json(blockedDates);
   } catch (error: any) {
@@ -226,52 +326,91 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Ya tienes una solicitud de vacaciones activa en este rango de fechas." });
     }
 
-    let userAreaId = user.areaId;
-    if (!userAreaId) {
-      if (profile && profile.department) {
+    // New Multi-Criteria Overlap Check
+    const vacConfig = await VacationConfig.findOne({ tenantId });
+    if (vacConfig && vacConfig.overlaps && vacConfig.overlaps.length > 0) {
+      // Determine explicit or fallback area
+      let userAreaId = user.areaId;
+      if (!userAreaId && profile?.department) {
         const area = await Area.findOne({ tenantId, name: profile.department });
-        if (area) {
-          userAreaId = area._id as any;
-        }
+        if (area) userAreaId = area._id as any;
       }
-    }
 
-    if (userAreaId) {
-      // Get overlap rule from embedded overlaps in VacationConfig
-      const vacConfigForOverlap = await VacationConfig.findOne({ tenantId });
-      const overlapRule = vacConfigForOverlap?.overlaps.find((o) => o.areaId.toString() === userAreaId.toString() && o.isActive);
+      const RoleFrame = (await import("../models/RoleFrame.js")).RoleFrame;
 
-      if (overlapRule) {
-        // Safe check for area name
-        let areaName: string | undefined;
-        try {
-          const area = await Area.findById(userAreaId);
-          areaName = area?.name;
-        } catch (err) {
-          console.warn("Could not find area for overlap check", err);
+      // Iterate all active rules
+      for (const rule of vacConfig.overlaps) {
+        if (!rule.isActive) continue;
+
+        let matches = true;
+
+        if (rule.areaId) {
+          if (!userAreaId || userAreaId.toString() !== rule.areaId.toString()) matches = false;
+        }
+        if (matches && rule.positionId) {
+          if (!user.positionId || user.positionId.toString() !== rule.positionId.toString()) matches = false;
+        }
+        if (matches && rule.levelId) {
+          if (!user.levelId || user.levelId.toString() !== rule.levelId.toString()) matches = false;
+        }
+        if (matches && rule.projectId) {
+          const userProjects = user.projectIds?.map((p) => p.toString()) || [];
+          if (!userProjects.includes(rule.projectId.toString())) matches = false;
+        }
+        if (matches && rule.roleFrameId) {
+          try {
+            const rf = await RoleFrame.findById(rule.roleFrameId);
+            if (rf) {
+              const userMetaProjects = user.metadata?.projects || [];
+              const hasRole = userMetaProjects.some((p: any) => p.rol_frame_id == rf.externalId || p.rol_frame_id == rf.data?.rol?.id);
+              if (!hasRole) matches = false;
+            } else {
+              matches = false;
+            }
+          } catch (e) {
+            matches = false;
+          }
         }
 
-        const usersInArea = await User.find({ areaId: userAreaId, tenantId }).select("_id");
-        const userIdsInArea = usersInArea.map((u) => u._id);
+        // If user matches this rule, check occupancy
+        if (matches) {
+          // Build query for OTHER users matching this rule
+          const otherUsersQuery: any = { tenantId, isActive: true, _id: { $ne: userId } };
+          if (rule.areaId) otherUsersQuery.areaId = rule.areaId;
+          if (rule.positionId) otherUsersQuery.positionId = rule.positionId;
+          if (rule.levelId) otherUsersQuery.levelId = rule.levelId;
+          if (rule.projectId) otherUsersQuery.projectIds = rule.projectId;
 
-        let extraUserIds: any[] = [];
-        if (areaName) {
-          const profilesInDept = await UserProfile.find({ tenantId, department: areaName }).select("userId");
-          extraUserIds = profilesInDept.map((p) => p.userId);
-        }
-        const allUserIdsInArea = [...new Set([...userIdsInArea.map((id) => id.toString()), ...extraUserIds.map((id) => id.toString())])];
+          if (rule.roleFrameId) {
+            const rf = await RoleFrame.findById(rule.roleFrameId);
+            if (rf) {
+              const values = [];
+              if (rf.externalId) values.push(rf.externalId);
+              if (rf.data?.rol?.id) values.push(rf.data.rol.id);
+              if (values.length > 0) {
+                otherUsersQuery["metadata.projects"] = {
+                  $elemMatch: { rol_frame_id: { $in: values } },
+                };
+              }
+            }
+          }
 
-        const concurrentUsers = await Vacation.find({
-          tenantId,
-          userId: { $in: allUserIdsInArea, $ne: userId },
-          status: { $nin: ["rejected", "cancelled"] },
-          $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
-        }).distinct("userId");
+          const matchingUsers = await User.find(otherUsersQuery).select("_id");
+          const matchingUserIds = matchingUsers.map((u) => u._id);
 
-        if (concurrentUsers.length >= overlapRule.maxSimultaneousUsers) {
-          return res.status(400).json({
-            error: `No es posible agendar vacaciones. Hay ${concurrentUsers.length} personas de tu área con vacaciones en ese periodo (Límite: ${overlapRule.maxSimultaneousUsers}). Fechas ocupadas: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`,
-          });
+          // Check overlaps for these users in the requested range
+          const concurrentConflictingVacations = await Vacation.find({
+            tenantId,
+            userId: { $in: matchingUserIds },
+            status: { $nin: ["rejected", "cancelled"] },
+            $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }],
+          }).distinct("userId");
+
+          if (concurrentConflictingVacations.length >= rule.maxSimultaneousUsers) {
+            return res.status(400).json({
+              error: `Conflicto de solapamiento. Hay ${concurrentConflictingVacations.length} personas con este perfil (Regla: ${rule.description || "Personalizada"}) de vacaciones en este periodo (Límite: ${rule.maxSimultaneousUsers}).`,
+            });
+          }
         }
       }
     }
