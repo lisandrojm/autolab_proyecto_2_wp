@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faBan, faLayerGroup, faSpinner, faToggleOn, faToggleOff, faUserTie, faGraduationCap, faTriangleExclamation, faProjectDiagram, faIdBadge } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBan, faLayerGroup, faToggleOn, faToggleOff, faUserTie, faGraduationCap, faTriangleExclamation, faProjectDiagram, faIdBadge } from "@fortawesome/free-solid-svg-icons";
 import { vacationOverlapsAPI, VacationOverlap } from "../../api/vacationOverlaps";
 import { areasAPI, Area } from "../../api/areas";
 import { positionsAPI, Position } from "../../api/positions";
@@ -17,21 +17,16 @@ import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
 
 // Schema validación Zod
-const overlapSchema = z
-  .object({
-    areaId: z.string().optional(),
-    positionId: z.string().optional(),
-    levelId: z.string().optional(),
-    projectId: z.string().optional(),
-    roleFrameId: z.string().optional(),
-    maxSimultaneousUsers: z.number().min(1, "Mínimo 1 usuario"),
-    description: z.string().optional(),
-    isActive: z.boolean().default(true),
-  })
-  .refine((data) => data.areaId || data.positionId || data.levelId || data.projectId || data.roleFrameId, {
-    message: "Debes seleccionar al menos un criterio (Área, Cargo, Nivel, Proyecto o Role Frame).",
-    path: ["areaId"], // Highlight area field primarily
-  });
+const overlapSchema = z.object({
+  areaId: z.string().optional(),
+  positionId: z.string().optional(),
+  levelId: z.string().optional(),
+  projectId: z.string().optional(),
+  roleFrameId: z.string().optional(),
+  maxSimultaneousUsers: z.number().min(1, "Mínimo 1 usuario"),
+  description: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
 
 type OverlapFormData = z.infer<typeof overlapSchema>;
 
@@ -58,7 +53,6 @@ export const VacationOverlapRules: React.FC = () => {
     reset,
     watch,
     setValue,
-    control,
     setError,
     formState: { errors },
   } = useForm<OverlapFormData>({
@@ -440,17 +434,6 @@ export const VacationOverlapRules: React.FC = () => {
     }).length;
   };
 
-  const getRuleDescription = (rule: VacationOverlap) => {
-    const parts = [];
-    if (rule.areaId) parts.push(`Área: ${typeof rule.areaId === "object" ? rule.areaId.name : areas.find((a) => a._id === rule.areaId)?.name || "?"}`);
-    if (rule.positionId) parts.push(`Cargo: ${typeof rule.positionId === "object" ? rule.positionId.name : positions.find((p) => p._id === rule.positionId)?.name || "?"}`);
-    if (rule.levelId) parts.push(`Nivel: ${typeof rule.levelId === "object" ? rule.levelId.name : levels.find((l) => l._id === rule.levelId)?.name || "?"}`);
-    if (rule.projectId) parts.push(`Proyecto: ${typeof rule.projectId === "object" ? rule.projectId.name : projects.find((p) => p._id === rule.projectId)?.name || "?"}`);
-    if (rule.roleFrameId) parts.push(`RoleFrame: ${typeof rule.roleFrameId === "object" ? rule.roleFrameId.name : roleFrames.find((r) => r._id === rule.roleFrameId)?.name || "?"}`);
-
-    return parts.join(", ");
-  };
-
   if (loading) return <LoadingSpinner message="Cargando reglas..." />;
 
   return (
@@ -577,7 +560,7 @@ export const VacationOverlapRules: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proyecto</label>
               <select
                 {...register("projectId", {
-                  onChange: (e) => {
+                  onChange: () => {
                     setValue("roleFrameId", "");
                   },
                 })}

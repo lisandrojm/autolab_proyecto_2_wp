@@ -5,6 +5,7 @@ import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
 import { useThemeStore } from "../../../../stores/themeStore";
 import UserHeader from "../components/UserHeader";
+import { useProfile } from "../hooks/useProfile";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -14,6 +15,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const { user, logout } = useAuthStore();
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
   const { theme, toggleTheme } = useThemeStore();
+  const { profile } = useProfile();
 
   // FIX: Check permissions directly to avoid Admin global override
   const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
@@ -98,7 +100,16 @@ export default function Home({ onNavigate }: HomeProps) {
   }
 
   quickActions.push(ordersAction);
-  quickActions.push(vacationsAction);
+
+  // Only show vacations if enabled
+  // We need to check useProfile for vacationsEnabled or pass it down
+  // For now, let's assume we can access it via a hook or just render it if enabled.
+  // Since we are inside the component loop, we can conditionally push.
+
+  if (profile?.vacationsEnabled !== false) {
+    quickActions.push(vacationsAction);
+  }
+
   quickActions.push(legajosAction);
   quickActions.push(recibosAction);
 

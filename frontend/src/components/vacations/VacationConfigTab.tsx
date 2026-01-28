@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faCircleInfo, faSave, faEye, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
@@ -100,11 +101,7 @@ export const VacationConfigTab: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <FontAwesomeIcon icon={faSpinner} className="h-8 w-8 text-blue-600 animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner message="Cargando reglas..." />;
   }
 
   if (!config) {

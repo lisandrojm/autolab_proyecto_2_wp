@@ -1,10 +1,39 @@
 import express from "express";
 import { VacationConfig } from "../models/VacationConfig.js";
+import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
 router.use(authenticateToken);
+
+router.get("/contracts-available", async (req, res) => {
+  try {
+    // Aggregate all unique contract types from UserProject
+    const contracts = await UserProject.aggregate([
+      { $unwind: "$contracts" },
+      {
+        $group: {
+          _id: "$contracts.tipo_contrato_id",
+          name: { $first: "$contracts.nombre_contrato" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          id: "$_id",
+          name: "$name",
+        },
+      },
+      { $sort: { name: 1 } },
+    ]);
+
+    res.json(contracts);
+  } catch (error) {
+    console.error("Error fetching available contracts:", error);
+    res.status(500).json({ error: "Error al obtener contratos disponibles" });
+  }
+});
 
 router.get("/", async (req, res) => {
   try {

@@ -53,6 +53,13 @@ export interface IVacationConfig extends Document {
   // Embedded overlaps
   overlaps: IEmbeddedOverlap[];
 
+  // Contract rules
+  contractRules?: {
+    contractId: number; // or string if IDs are not consistent
+    contractName: string;
+    vacationsEnabled: boolean;
+  }[];
+
   // Counter for vacation number generation
   vacationSequence: number;
 
@@ -142,6 +149,18 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
     // Embedded overlaps array
     overlaps: {
       type: [EmbeddedOverlapSchema],
+      default: [],
+    },
+
+    // Contract rules
+    contractRules: {
+      type: [
+        {
+          contractId: Number,
+          contractName: String,
+          vacationsEnabled: Boolean,
+        },
+      ],
       default: [],
     },
 

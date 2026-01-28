@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
+import { infoAPI } from "../api/info";
 import { PageLayout } from "../components/ui/PageLayout";
-import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
@@ -27,6 +27,7 @@ interface ContractRecord {
   sueldo_mano?: number;
   nombre_estado_empleado: string;
   cantidad_jornadas_laborales?: number;
+  tipo_contrato_id?: number;
 }
 
 export const ContractsPage: React.FC = () => {
@@ -38,6 +39,7 @@ export const ContractsPage: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
+  const [contractTypes, setContractTypes] = useState<Record<number, string>>({});
 
   // Filtering & Pagination
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,7 +70,7 @@ export const ContractsPage: React.FC = () => {
     const fetchAllData = async () => {
       try {
         setInitialLoading(true);
-        await fetchContracts();
+        await Promise.all([fetchContractTypes(), fetchContracts()]);
       } finally {
         setInitialLoading(false);
       }
@@ -81,7 +83,22 @@ export const ContractsPage: React.FC = () => {
       fetchContracts();
     }, 300);
     return () => clearTimeout(h);
-  }, [searchTerm]);
+  }, [searchTerm, contractTypes]); // Refetch if types load late? No, types loaded once. Filter changes refetch not needed for types.
+
+  const fetchContractTypes = async () => {
+    try {
+      const types = await infoAPI.listByType("contrato");
+      const map: Record<number, string> = {};
+      types.forEach((t) => {
+        if (t.data && t.data.id) {
+          map[t.data.id] = t.data.nombre || t.name;
+        }
+      });
+      setContractTypes(map);
+    } catch (error) {
+      console.error("Error fetching contract types:", error);
+    }
+  };
 
   const fetchContracts = async () => {
     try {
@@ -119,6 +136,7 @@ export const ContractsPage: React.FC = () => {
                 sueldo_mano: c.sueldo_mano,
                 nombre_estado_empleado: c.nombre_estado_empleado,
                 cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
+                tipo_contrato_id: c.tipo_contrato_id,
               });
             });
           });
@@ -206,6 +224,7 @@ export const ContractsPage: React.FC = () => {
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Proyecto / Contrato</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Periodo</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Días</th>
@@ -234,6 +253,7 @@ export const ContractsPage: React.FC = () => {
                         <span>{record.nombre_contrato}</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{record.tipo_contrato_id && contractTypes[record.tipo_contrato_id] ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{contractTypes[record.tipo_contrato_id]}</span> : <span className="text-gray-400">-</span>}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       <div className="font-medium">{record.nombre_sede}</div>
                       <div className="text-xs opacity-70">{record.nombre_rol_frame}</div>

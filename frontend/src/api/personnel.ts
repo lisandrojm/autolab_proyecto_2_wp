@@ -17,6 +17,7 @@ export interface ProfileData {
   };
   position?: string;
   positionName?: string;
+  levelName?: string;
   department?: string;
   areaName?: string;
   areaMembers?: number;
@@ -43,6 +44,7 @@ export interface ProfileData {
   metadata?: {
     projects?: any[];
   };
+  vacationsEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

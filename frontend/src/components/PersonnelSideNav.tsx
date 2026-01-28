@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faIdCard, faUser, faUsers, faFileLines, faCalendar, faBell, faClockRotateLeft, faCalendarCheck, faClipboardList, faListCheck, faUserGear, faCheckCircle, faChevronDown, faChevronRight, faFileContract } from "@fortawesome/free-solid-svg-icons";
@@ -90,7 +90,25 @@ const MenuSection: React.FC<MenuSectionProps> = ({ title, items, isAdmin = false
   );
 };
 
+import { personnelAPI } from "../api/personnel";
+
 export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
+  const [vacationsEnabled, setVacationsEnabled] = useState(true);
+
+  useEffect(() => {
+    const checkVacationsStatus = async () => {
+      try {
+        const profile = await personnelAPI.getProfile();
+        if (profile.vacationsEnabled === false) {
+          setVacationsEnabled(false);
+        }
+      } catch (error) {
+        console.error("Error checking vacation status:", error);
+      }
+    };
+    checkVacationsStatus();
+  }, []);
+
   const myAreaItems: MenuItem[] = [
     { path: "/admin/personal/perfil", label: "Mi Perfil", icon: faUser },
     { path: "/admin/personal/equipo", label: "Mi Equipo", icon: faUsers },
@@ -102,10 +120,7 @@ export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = fa
 
   const newsItems: MenuItem[] = [{ path: "/admin/novedades/reporte-diario", label: "Reporte Diario", icon: faCalendarCheck }];
 
-  const requestsItems: MenuItem[] = [
-    { path: "/admin/pedidos/vacaciones", label: "Vacaciones", icon: faCalendar },
-    { path: "/admin/pedidos/pedidos", label: "Pedidos", icon: faClipboardList, badge: "Nuevo", badgeColor: "bg-green-500" },
-  ];
+  const requestsItems: MenuItem[] = [...(vacationsEnabled ? [{ path: "/admin/pedidos/vacaciones", label: "Vacaciones", icon: faCalendar }] : []), { path: "/admin/pedidos/pedidos", label: "Pedidos", icon: faClipboardList, badge: "Nuevo", badgeColor: "bg-green-500" }];
 
   const tasksItems: MenuItem[] = [{ path: "/admin/personal/tareas", label: "Mis Tareas", icon: faListCheck }];
 

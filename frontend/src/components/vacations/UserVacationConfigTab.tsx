@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faFilter, faSpinner, faSave } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../api/users";
@@ -129,7 +130,7 @@ export const UserVacationConfigTab: React.FC = () => {
           if (curr) acc[curr.userId] = curr.newValue;
           return acc;
         },
-        {} as Record<string, number>
+        {} as Record<string, number>,
       );
 
       setUsers((prev) => prev.map((u) => (updatedUsersMap[u._id] !== undefined ? { ...u, extraVacationDays: updatedUsersMap[u._id] } : u)));
@@ -147,11 +148,7 @@ export const UserVacationConfigTab: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <FontAwesomeIcon icon={faSpinner} className="h-8 w-8 text-blue-600 animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner message="Cargando reglas..." />;
   }
 
   return (

@@ -15,6 +15,7 @@ import {
   faCheckCircle,
   faBriefcase,
   faUserTie,
+  faUserGraduate,
   faRulerCombined,
   faIdCard,
   faClock,
@@ -623,13 +624,17 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 {/* Cargo y Área */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <div className="flex items-center gap-1">
+                    <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
+                    <span className="font-semibold uppercase text-[10px]">Área:</span>
+                    {profile?.areaName || profile?.department || "Sin Área"}
+                  </div>
+                  <div className="flex items-center gap-1">
                     <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
                     <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
                   </div>
                   <div className="flex items-center gap-1">
-                    <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
-                    <span className="font-semibold uppercase text-[10px]">Área:</span>
-                    {profile?.areaName || profile?.department || "Sin Área"}
+                    <FontAwesomeIcon icon={faUserGraduate} className="w-3 h-3 text-slate-400" />
+                    <span className="font-semibold">Nivel:</span> {profile?.levelName || "Sin Nivel"}
                   </div>
                 </div>
 

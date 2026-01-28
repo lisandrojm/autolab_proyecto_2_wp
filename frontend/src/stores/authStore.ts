@@ -12,6 +12,7 @@ interface User {
   permissions?: string[];
   tenantId: string;
   tenantSlug?: string;
+  metadata?: any;
 }
 
 interface Tenant {
