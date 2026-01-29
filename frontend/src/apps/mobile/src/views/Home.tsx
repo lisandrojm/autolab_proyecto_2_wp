@@ -7,6 +7,8 @@ import { useThemeStore } from "../../../../stores/themeStore";
 import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 
+import { ProfileData } from "../../../../api/personnel";
+
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
 }
@@ -21,6 +23,21 @@ export default function Home({ onNavigate }: HomeProps) {
   const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
 
   const latestNotification = notifications.find((n) => !n.isRead);
+
+  const hasActiveContract = (p: ProfileData | null): boolean => {
+    if (!p || !p.metadata?.projects) return false;
+    let hasActive = false;
+    p.metadata.projects.forEach((proj: any) => {
+      if (proj.contracts) {
+        proj.contracts.forEach((c: any) => {
+          const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+          const isActive = !endDate || endDate >= new Date();
+          if (isActive) hasActive = true;
+        });
+      }
+    });
+    return hasActive;
+  };
 
   // ⬇️ QUICK ACTIONS — badgeBg y badgeText
   const novedadesAction = {
@@ -99,15 +116,31 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push(novedadesAction);
   }
 
-  quickActions.push(ordersAction);
+  if (hasActiveContract(profile)) {
+    quickActions.push(ordersAction);
+  } else {
+    quickActions.push({
+      ...ordersAction,
+      disabled: true,
+      description: "Sin contrato activo",
+    });
+  }
 
   // Only show vacations if enabled
   // We need to check useProfile for vacationsEnabled or pass it down
   // For now, let's assume we can access it via a hook or just render it if enabled.
   // Since we are inside the component loop, we can conditionally push.
 
-  if (profile?.vacationsEnabled !== false) {
+  if (profile?.vacationsEnabled !== false && hasActiveContract(profile)) {
     quickActions.push(vacationsAction);
+  } else {
+    // Show disabled if no active contract or globally disabled
+    quickActions.push({
+      ...vacationsAction,
+      disabled: true,
+      description: hasActiveContract(profile) ? "Módulo deshabilitado" : "Sin contrato activo",
+      title: hasActiveContract(profile) ? "Vacaciones (Deshabilitado)" : "Vacaciones",
+    });
   }
 
   quickActions.push(legajosAction);

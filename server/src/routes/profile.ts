@@ -311,7 +311,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     // 1. Get User for Vacation Days (calculated virtual) & Hire Date
     const User = (await import("../models/User.js")).User;
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate("metadata.projects");
 
     // 2. Get Profile for other stats (daysWorked) if needed
     const profile = await UserProfile.findOne({
@@ -322,7 +322,68 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const hireDate = profile?.hireDate || user?.hireDate;
     const daysWorked = hireDate ? Math.floor((Date.now() - new Date(hireDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    const annualDays = user?.vacationDays?.totalDays || 14; // Default fallback to 14 (min law)
+    // --- SENIORITY CALCULATION FIX ---
+    // Calculate REAL seniority based on contracts sum, matching Frontend Profile logic
+    let calculatedTotalDays = 0;
+    if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
+      calculatedTotalDays = user.metadata.projects.reduce((acc: number, p: any) => {
+        if (!p || !p.contracts || !Array.isArray(p.contracts)) return acc;
+        return (
+          acc +
+          p.contracts.reduce((cAcc: number, c: any) => {
+            if (!c.fecha_alta_contrato) return cAcc;
+            const start = new Date(c.fecha_alta_contrato);
+            const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+            // Include end day full
+            end.setHours(23, 59, 59, 999);
+            const diffTime = end.getTime() - start.getTime();
+            const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            // In case of single day or starts > ends (shouldn't happen but clamp 0)
+            return cAcc + Math.max(0, days);
+          }, 0)
+        );
+      }, 0);
+    }
+
+    // Determine Law Days based on Calculated Seniority (Projected to End of Year per Law or just current?)
+    // Law usually projects to Dec 31.
+    // Let's project it: calculatedTotalDays is "up to now".
+    // We should add days from NOW to Dec 31 to project entitlement if user continues working.
+    // However, for "Current Availability", usually it's based on "Antigüedad al 31 de Diciembre".
+    // Let's add the remaining days of year to the calculation IF the user is currently active.
+    let projectedTotalDays = calculatedTotalDays;
+    if (user.isActive) {
+      const now = new Date();
+      const endOfCurrentYear = new Date(now.getFullYear(), 11, 31);
+      const daysToYearEnd = Math.max(0, Math.ceil((endOfCurrentYear.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      projectedTotalDays += daysToYearEnd;
+    }
+
+    const seniorityYears = projectedTotalDays / 365;
+
+    let lawDays = 0;
+    if (seniorityYears < 5) {
+      lawDays = 14;
+      // Note: < 6 months logic skipped here as it's edge case and usually 1 day / 20.
+      // If needed: if (projectedTotalDays < 180) lawDays = Math.floor(projectedTotalDays / 20);
+    } else if (seniorityYears < 10) {
+      lawDays = 21;
+    } else if (seniorityYears < 20) {
+      lawDays = 28;
+    } else {
+      lawDays = 35;
+    }
+
+    // Override annualDays with calculated value
+    // If no contracts found (calculatedTotalDays === 0), fallback to User virtual (hireDate based)
+    const baseLawDays = calculatedTotalDays > 0 ? lawDays : user?.vacationDays?.lawDays || 14;
+
+    // Add Extras and CarryOver
+    const extraDays = user?.extraVacationDays || 0;
+    const carryOverDays = user?.carryOverVacationDays || 0;
+    const annualDays = baseLawDays + extraDays + carryOverDays;
+
+    console.log(`Stats for user ${user.email}: Seniority Days (Calc): ${calculatedTotalDays}, Projected: ${projectedTotalDays}, LawDays: ${baseLawDays}, Annual: ${annualDays}`);
 
     // 3. Calculate Used and Pending from Vacation model
     const Vacation = (await import("../models/Vacation.js")).Vacation;

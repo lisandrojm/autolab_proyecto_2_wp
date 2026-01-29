@@ -12,7 +12,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
     { id: "home" as ViewType, icon: faHome, label: "Inicio", disabled: false },
     { id: "calendar" as ViewType, icon: faCalendar, label: "Calendario", disabled: true },
     { id: "documents" as ViewType, icon: faFolderOpen, label: "Documentos", disabled: true },
-    { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: true },
+    { id: "profile" as ViewType, icon: faUser, label: "Perfil", disabled: false },
     { id: "notifications" as ViewType, icon: faBell, label: "Notificaciones", disabled: true, notifications: true },
   ];
 
@@ -36,7 +36,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
                     ${disabled ? "text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60" : isActive ? "text-primary" : "text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary"}`}
                 >
                   <div className="relative">
-                    <FontAwesomeIcon icon={icon} className="w-6 h-6" />
+                    <FontAwesomeIcon icon={icon} className="w-5 h-5" />
 
                     {/* 🔥 Puntito rojo de notificaciones */}
                     {notifications && (
@@ -46,7 +46,7 @@ export default function BottomNav({ currentView, onNavigate }: BottomNavProps) {
                       </span>
                     )}
                   </div>
-                  <span className={`text-xs ${disabled ? "font-medium" : isActive ? "font-bold" : "font-medium group-hover:font-bold"}`}>{label}</span>
+                  {isActive && <span className="text-xs font-bold mt-1">{label}</span>}
                 </button>
               );
             })}

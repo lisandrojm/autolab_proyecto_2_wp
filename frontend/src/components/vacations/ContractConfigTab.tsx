@@ -106,7 +106,7 @@ export const ContractConfigTab: React.FC = () => {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <FontAwesomeIcon icon={faFileContract} className="text-gray-400" />
-            Configuración de Contratos
+            Visibilidad del botón "Vacaciones" por tipo de contrato
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Habilita o deshabilita el módulo de vacaciones según el tipo de contrato del usuario.</p>
         </div>
@@ -116,8 +116,8 @@ export const ContractConfigTab: React.FC = () => {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de Contrato</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de Contrato Activo</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Botón Vacaciones | Estado</th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -132,7 +132,7 @@ export const ContractConfigTab: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button type="button" onClick={() => handleToggle(contract.id)} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${isEnabled ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
                         <FontAwesomeIcon icon={isEnabled ? faToggleOn : faToggleOff} className="mr-2" />
-                        {isEnabled ? "Activa" : "Inactiva"}
+                        {isEnabled ? "Activo" : "Inactiv"}
                       </button>
                     </td>
                   </tr>
@@ -145,6 +145,19 @@ export const ContractConfigTab: React.FC = () => {
                 </td>
               </tr>
             )}
+
+            {/* Fila estática para usuarios sin contrato */}
+            <tr className="bg-gray-50/50 dark:bg-gray-800/30">
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">Sin contrato activo</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-center">
+                <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
+                  <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
+                  Inactivo
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

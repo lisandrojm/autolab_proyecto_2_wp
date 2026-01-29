@@ -487,6 +487,34 @@ export const UsersPage: React.FC = () => {
     return Array.from(activeSedes);
   };
 
+  const getActiveContractType = (user: User): string | null => {
+    let contractType: string | null = null;
+    if (user.metadata?.projects) {
+      user.metadata.projects.forEach((p: any) => {
+        if (p.contracts) {
+          p.contracts.forEach((c: any) => {
+            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+
+            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+
+            const type = c.nombre_contrato || c.tipo_contrato;
+            if (isActive && type) {
+              contractType = type;
+            }
+          });
+        }
+      });
+    }
+
+    // Fallback similar to Profile.tsx
+    if (!contractType && user.externalInfo && (user.externalInfo as any).contracts && (user.externalInfo as any).contracts.length > 0) {
+      contractType = (user.externalInfo as any).contracts[0];
+    }
+
+    return contractType;
+  };
+
   // Memoizar mapas para búsquedas O(1) en el renderizado de cards
   const projectMap = React.useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
   const clientMap = React.useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
@@ -785,13 +813,20 @@ export const UsersPage: React.FC = () => {
                 {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <span className="text-xs text-gray-500">—</span>}
               </div>
 
-              {/* Email */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-gray-400" />
+                  Tipo de Contrato
+                </label>
+                {getActiveContractType(viewUser) ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(viewUser)}</span> : <span className="text-xs text-gray-500">Sin contrato activo</span>}
+              </div>
+
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faUser} className="h-3 w-3 text-gray-400" />
                   Email
                 </label>
-                <span className="text-sm text-gray-700 dark:text-gray-300">{viewUser.email}</span>
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.email}</span>
               </div>
 
               {/* Documento */}
@@ -801,7 +836,7 @@ export const UsersPage: React.FC = () => {
                     <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" />
                     Documento
                   </label>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{viewUser.metadata.documento}</span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.metadata.documento}</span>
                 </div>
               )}
 
@@ -1368,6 +1403,11 @@ export const UsersPage: React.FC = () => {
                         {
                           text: user.isActive ? "Activo" : "Inactivo",
                           variant: user.isActive ? "green" : "destructive",
+                        },
+                        {
+                          text: getActiveContractType(user) || "Sin contrato",
+                          variant: getActiveContractType(user) ? "default" : "default",
+                          icon: faFileContract,
                         },
                       ],
                       badgesPosition: "top",
