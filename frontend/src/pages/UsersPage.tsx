@@ -16,7 +16,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { getImageUrl } from "../utils/imageHelpers";
 
 const HELP_KEY = "users" as const;
 
@@ -40,6 +41,7 @@ type ModalMode = "edit" | "password";
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate();
+  const { clientId } = useParams<{ clientId: string }>();
   const { hasPermission } = useAuthStore();
 
   // data
@@ -54,6 +56,9 @@ export const UsersPage: React.FC = () => {
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
   const [totalUsers, setTotalUsers] = useState(0);
   const [hasLoaded, setHasLoaded] = useState(false);
+
+  // Specific client context
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   // búsqueda/filters (server-side)
   const [searchTerm, setSearchTerm] = useState("");
@@ -187,7 +192,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -202,23 +207,81 @@ export const UsersPage: React.FC = () => {
       if (!silent) setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
+      // If filtering by client, fetch ALL users to filter client-side (backend filter might be unreliable)
+      const isClientFilter = !!clientId;
+      const effectiveLimit = isClientFilter ? 10000 : limit;
+      const effectivePage = isClientFilter ? 1 : page;
+
       const params: any = {
-        page,
-        limit,
+        page: effectivePage,
+        limit: effectiveLimit,
       };
       if (searchTerm) params.email = searchTerm;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
+      if (clientId) params.clientId = clientId;
+
+      // Reset client context if we're not filtering by client anymore (though normally we stay in the route)
+      if (!clientId && selectedClient) setSelectedClient(null);
 
       const response = await usersAPI.list(params);
 
       // Solo aplico si esta respuesta es la más reciente
       if (currentId === requestIdRef.current) {
-        setUsers(response.users);
-        setTotalUsers(response.pagination.total);
-        setTotalPages(response.pagination.pages);
+        let finalUsers = response.users;
+        let finalTotal = response.pagination.total;
+        let finalPages = response.pagination.pages;
+
+        // CLIENT-SIDE FILTERING ENFORCEMENT
+        if (isClientFilter && clientId) {
+          // Create efficient lookup map from allProjects (state) to ensure we can check project->client
+          const localProjMap = new Map(allProjects.map((p: any) => [p._id, p]));
+
+          const filtered = response.users.filter((u) => {
+            // 1. Direct match
+            if (
+              u.clientIds?.some((c: any) => {
+                const cId = typeof c === "string" ? c : c._id;
+                return cId === clientId;
+              })
+            )
+              return true;
+
+            // 2. Project match
+            if (
+              u.projectIds?.some((p: any) => {
+                const pId = typeof p === "string" ? p : p._id;
+                // Look up in global list if available, fallback to user's data
+                const pFull = localProjMap.get(pId);
+                const pData = pFull || p;
+
+                let pClientId = null;
+                if (typeof pData === "object" && pData.clientId) {
+                  pClientId = typeof pData.clientId === "object" ? pData.clientId._id : pData.clientId;
+                }
+                return pClientId === clientId;
+              })
+            )
+              return true;
+
+            return false;
+          });
+
+          finalTotal = filtered.length;
+          // Manual pagination
+          const startIndex = (page - 1) * limit;
+          const endIndex = startIndex + limit;
+          finalUsers = filtered.slice(startIndex, endIndex);
+          finalPages = Math.ceil(finalTotal / limit) || 1;
+
+          console.log(`🔒 Client-Side Filtering applied (with projects lookup). ${response.users.length} -> ${filtered.length} users.`);
+        }
+
+        setUsers(finalUsers);
+        setTotalUsers(finalTotal);
+        setTotalPages(finalPages);
         setHasLoaded(true);
-        console.log("📋 Usuarios cargados:", response.users.length, "de un total de:", response.pagination.total);
+        console.log("📋 Usuarios cargados:", finalUsers.length, "de un total de:", finalTotal);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -228,6 +291,23 @@ export const UsersPage: React.FC = () => {
       if (!silent) setIsFetching(false);
     }
   };
+
+  // Fetch client details if filtering by client
+  useEffect(() => {
+    if (clientId) {
+      const fetchClientDetails = async () => {
+        try {
+          const client = await clientsAPI.get(clientId);
+          setSelectedClient(client);
+        } catch (error) {
+          console.error("Error fetching client details:", error);
+        }
+      };
+      fetchClientDetails();
+    } else {
+      setSelectedClient(null);
+    }
+  }, [clientId]);
 
   const fetchRoles = async () => {
     try {
@@ -521,10 +601,20 @@ export const UsersPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Usuarios"
+      title={selectedClient ? "Usuarios del Cliente" : "Usuarios"}
       itemCount={totalUsers}
-      subtitle="Gestiona usuarios y sus roles"
+      subtitle={selectedClient ? `Gestiona los usuarios de ${selectedClient.name}` : "Gestiona usuarios y sus roles"}
       faIcon={{ icon: faUser }}
+      clientMiniAvatar={
+        selectedClient
+          ? {
+              src: getImageUrl(selectedClient.attachments?.find((a) => a.name?.toLowerCase().includes("logo") || a.fileType?.includes("image"))?.url || selectedClient.brandKit?.logos?.[0]?.url),
+              alt: selectedClient.name ? `${selectedClient.name} logo` : undefined,
+              fallback: selectedClient.name?.charAt(0)?.toUpperCase() || "?",
+              label: selectedClient.name,
+            }
+          : undefined
+      }
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -645,7 +735,7 @@ export const UsersPage: React.FC = () => {
                 Rol/es
               </label>
               {viewUser.roles.length === 0 ? (
-                <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
+                <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>
               ) : (
                 <div className="flex flex-wrap gap-1">
                   {viewUser.roles.map((role) => {
@@ -763,8 +853,59 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-4">
-              {/* Proyectos asignados */}
+            <div className="flex flex-col gap-4">
+              {/* Clientes */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
+                  Cliente/s
+                </label>
+                {(() => {
+                  const clientSet = new Set<string>();
+                  // 1. From direct clientIds
+                  if (viewUser.clientIds && viewUser.clientIds.length > 0) {
+                    viewUser.clientIds.forEach((c) => {
+                      const cId = typeof c === "string" ? c : c._id;
+                      clientSet.add(cId);
+                    });
+                  }
+                  // 2. From projects
+                  if (viewUser.projectIds && viewUser.projectIds.length > 0) {
+                    viewUser.projectIds.forEach((p) => {
+                      const pId = typeof p === "string" ? p : p._id;
+                      const fullProject = allProjects.find((proj) => proj._id === pId);
+                      if (fullProject) {
+                        const cid = typeof fullProject.clientId === "object" ? fullProject.clientId._id : fullProject.clientId;
+                        if (cid) clientSet.add(cid);
+                      }
+                    });
+                  }
+
+                  const uniqueClients = Array.from(clientSet)
+                    .map((cid) => {
+                      // Try to find in allClients/clientMap
+                      // Note: allClients is available in scope
+                      const client = allClients.find((c) => c._id === cid);
+                      return client ? client.name : null;
+                    })
+                    .filter(Boolean);
+
+                  if (uniqueClients.length > 0) {
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {uniqueClients.map((name, idx) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 w-fit border border-cyan-200 dark:border-cyan-800">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  }
+                  return <span className="text-xs text-gray-500">Sin clientes</span>;
+                })()}
+              </div>
+
+              {/* Proyectos */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" />
@@ -797,7 +938,7 @@ export const UsersPage: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <span className="text-xs text-gray-500">Sin proyectos asignados</span>
+                  <span className="text-xs text-gray-500">Sin proyectos</span>
                 )}
               </div>
             </div>
@@ -1450,7 +1591,7 @@ export const UsersPage: React.FC = () => {
                         Rol/es
                       </label>
                       {user.roles.length === 0 ? (
-                        <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles asignados</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {user.roles.slice(0, 3).map((role) => {
@@ -1544,6 +1685,61 @@ export const UsersPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-3 mt-3">
+                      {/* Clientes */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Clientes
+                        </label>
+                        {(() => {
+                          const uniqueClients = new Set<string>();
+
+                          // 1. Direct assignments
+                          if (user.clientIds && user.clientIds.length > 0) {
+                            user.clientIds.forEach((c: any) => {
+                              const cId = typeof c === "string" ? c : c._id;
+                              if (cId) uniqueClients.add(cId);
+                            });
+                          }
+
+                          // 2. Inferred from projects (using projectMap for better data)
+                          if (user.projectIds && user.projectIds.length > 0) {
+                            user.projectIds.forEach((p: any) => {
+                              const pId = typeof p === "string" ? p : p._id;
+                              // Try to get full project from map (likely has populated clientId)
+                              const pFull = projectMap.get(pId) || (typeof p === "object" ? p : null);
+
+                              if (pFull) {
+                                const c = pFull.clientId;
+                                if (c) {
+                                  const cId = typeof c === "object" ? c._id : c;
+                                  if (cId) uniqueClients.add(cId);
+                                }
+                              }
+                            });
+                          }
+
+                          const clientList = Array.from(uniqueClients)
+                            .map((cid) => {
+                              const client = clientMap.get(cid);
+                              return client ? client.name : null;
+                            })
+                            .filter(Boolean);
+
+                          if (clientList.length > 0) {
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {clientList.map((name, idx) => (
+                                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return <span className="text-xs text-gray-500 dark:text-gray-500">Sin clientes</span>;
+                        })()}
+                      </div>
                       {/* Proyectos */}
                       <div className="flex flex-col">
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
@@ -1567,7 +1763,7 @@ export const UsersPage: React.FC = () => {
                             })}
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos asignados</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos</span>
                         )}
                       </div>
                       {/* Tipo de Contrato */}
@@ -1576,7 +1772,7 @@ export const UsersPage: React.FC = () => {
                           <FontAwesomeIcon icon={faFileContract} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
                           Tipo Contrato
                         </label>
-                        {getActiveContractType(user) ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(user)}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin contrato</span>}
+                        {getActiveContractType(user) ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(user)}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin contrato activo</span>}
                       </div>
                     </div>
                   </Card>

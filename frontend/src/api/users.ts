@@ -197,23 +197,41 @@ function normalizeUser(raw: any): User {
         }))
       : [],
     clientIds: Array.isArray(raw?.clientIds)
-      ? raw.clientIds.map((c: any) => ({
-          _id: String(c?._id ?? c?.id ?? ""),
-          name: String(c?.name ?? ""),
-        }))
+      ? raw.clientIds.map((c: any) => {
+          const id = typeof c === "string" ? c : (c?._id ?? c?.id ?? "");
+          const name = typeof c === "object" ? (c?.name ?? "") : "";
+          return {
+            _id: String(id),
+            name: String(name),
+          };
+        })
       : undefined,
     projectIds: Array.isArray(raw?.projectIds)
-      ? raw.projectIds.map((p: any) => ({
-          _id: String(p?._id ?? p?.id ?? ""),
-          name: String(p?.name ?? ""),
-          clientId:
-            typeof p?.clientId === "object"
-              ? {
-                  _id: String(p.clientId._id),
-                  name: String(p.clientId.name ?? ""),
-                }
-              : undefined,
-        }))
+      ? raw.projectIds.map((p: any) => {
+          const id = typeof p === "string" ? p : (p?._id ?? p?.id ?? "");
+          const name = typeof p === "object" ? (p?.name ?? "") : "";
+          let clientIdFormatted = undefined;
+
+          if (typeof p === "object" && p?.clientId) {
+            if (typeof p.clientId === "object") {
+              clientIdFormatted = {
+                _id: String(p.clientId._id ?? p.clientId.id ?? ""),
+                name: String(p.clientId.name ?? ""),
+              };
+            } else if (typeof p.clientId === "string") {
+              clientIdFormatted = {
+                _id: String(p.clientId),
+                name: "",
+              };
+            }
+          }
+
+          return {
+            _id: String(id),
+            name: String(name),
+            clientId: clientIdFormatted,
+          };
+        })
       : undefined,
     tenant: normalizeTenant(raw),
     tenantId: raw?.tenantId ?? undefined,
@@ -261,6 +279,7 @@ class UsersAPI {
       email?: string;
       isActive?: boolean;
       areaId?: string;
+      clientId?: string;
     } = {},
   ): Promise<UsersListResponse> {
     const searchParams = new URLSearchParams();
@@ -270,6 +289,7 @@ class UsersAPI {
     if (params.email) searchParams.append("email", params.email);
     if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
     if (params.areaId) searchParams.append("areaId", params.areaId);
+    if (params.clientId) searchParams.append("clientId", params.clientId);
 
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
 

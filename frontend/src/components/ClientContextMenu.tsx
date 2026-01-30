@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfoCircle, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faInfoCircle, faBriefcase, faUsers } from "@fortawesome/free-solid-svg-icons";
 
 export const ClientContextMenu: React.FC = () => {
   const { selectedClient, setSelectedClient } = useClientContextStore();
@@ -34,6 +34,14 @@ export const ClientContextMenu: React.FC = () => {
       actualPath: `/clients/${selectedClient._id}/projects`,
       icon: faBriefcase,
       label: "Proyectos",
+      permission: "client:view",
+      scope: "cliente" as const,
+    },
+    {
+      path: `/clients/${selectedClient._id}/users`,
+      actualPath: `/clients/${selectedClient._id}/users`,
+      icon: faUsers,
+      label: "Usuarios",
       permission: "client:view",
       scope: "cliente" as const,
     },

@@ -210,6 +210,14 @@ function App() {
                 }
               />
               <Route
+                path="/clients/:clientId/users"
+                element={
+                  <ProtectedRoute>
+                    <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/projects/:projectId"
                 element={
                   <ProtectedRoute>
