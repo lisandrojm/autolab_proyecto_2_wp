@@ -1404,11 +1404,6 @@ export const UsersPage: React.FC = () => {
                           text: user.isActive ? "Activo" : "Inactivo",
                           variant: user.isActive ? "green" : "destructive",
                         },
-                        {
-                          text: getActiveContractType(user) || "Sin contrato",
-                          variant: getActiveContractType(user) ? "default" : "default",
-                          icon: faFileContract,
-                        },
                       ],
                       badgesPosition: "top",
                     }}
@@ -1548,32 +1543,41 @@ export const UsersPage: React.FC = () => {
                         )}
                       </div>
                     </div>
+                    <div className="flex flex-wrap gap-3 mt-3">
+                      {/* Proyectos */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Proyectos
+                        </label>
+                        {user.projectIds && user.projectIds.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {user.projectIds.map((p: any) => {
+                              const pName = p.name;
+                              const clientName = p.clientId?.name;
 
-                    {/* Proyectos */}
-                    <div className="mt-3">
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                        <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                        Proyectos
-                      </label>
-                      {user.projectIds && user.projectIds.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {user.projectIds.map((p: any) => {
-                            const pName = p.name;
-                            const clientName = p.clientId?.name;
+                              if (!pName) return null;
 
-                            if (!pName) return null;
-
-                            return (
-                              <span key={p._id || p} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                                {pName}
-                                {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos asignados</span>
-                      )}
+                              return (
+                                <span key={p._id || p} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
+                                  {pName}
+                                  {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos asignados</span>
+                        )}
+                      </div>
+                      {/* Tipo de Contrato */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faFileContract} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Tipo Contrato
+                        </label>
+                        {getActiveContractType(user) ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(user)}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin contrato</span>}
+                      </div>
                     </div>
                   </Card>
                 ))}
