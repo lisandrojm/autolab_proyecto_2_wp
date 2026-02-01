@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature, faBuilding, faIdCard, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
+import { projectsAPI, Project } from "../api/projects";
+import { clientsAPI, Client } from "../api/clients";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -31,6 +33,15 @@ interface VacationRequestMock {
   requiresSignature?: boolean;
   signatureNotifiedAt?: string;
   pdfPreAprobacionUrl?: string;
+  userProject?: string;
+  userRoleFrame?: string;
+  projectsInfo?: { name: string; role: string }[];
+  userSnapshot?: {
+    sedes: string[];
+    rolFrames: string[];
+    clients: string[];
+    projects: { name: string; clientName?: string }[];
+  };
 }
 
 // Mock vacation data removed - now using API
@@ -55,6 +66,8 @@ export const VacationsPage: React.FC = () => {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -116,7 +129,12 @@ export const VacationsPage: React.FC = () => {
     try {
       setLoading(true);
       setHasLoadedOnce(true);
-      const data = await vacationsAPI.getAll();
+
+      // Load vacations, projects, and clients in parallel
+      const [data, projectsData, clientsData] = await Promise.all([vacationsAPI.getAll(), projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll()]);
+
+      setAllProjects(Array.isArray(projectsData) ? projectsData : (projectsData as any).data || []);
+      setAllClients(Array.isArray(clientsData) ? clientsData : (clientsData as any).data || []);
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
@@ -135,6 +153,10 @@ export const VacationsPage: React.FC = () => {
         requiresSignature: item.requiresSignature || false,
         signatureNotifiedAt: item.signatureNotifiedAt,
         pdfPreAprobacionUrl: item.pdfPreAprobacionUrl,
+        userProject: item.userProject || "-",
+        userRoleFrame: item.userRoleFrame || "-",
+        projectsInfo: item.projectsInfo || [],
+        userSnapshot: item.userSnapshot || { sedes: [], rolFrames: [], clients: [], projects: [] },
       }));
       setMockVacations(transformedRecords);
       calculateStats(transformedRecords);
@@ -741,7 +763,9 @@ export const VacationsPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Role Frame</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
@@ -773,7 +797,54 @@ export const VacationsPage: React.FC = () => {
                           </div>
                         </td> */}
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(vacation.solicitante)}</td>
+                          <td className="py-3 px-4">
+                            {(() => {
+                              // Calculate client from project
+                              const clientNames: string[] = [];
+                              if (vacation.projectsInfo && vacation.projectsInfo.length > 0) {
+                                vacation.projectsInfo.forEach((pInfo) => {
+                                  const fullProject = allProjects.find((proj) => proj.name === pInfo.name);
+                                  if (fullProject && fullProject.clientId) {
+                                    const cid = typeof fullProject.clientId === "object" ? (fullProject.clientId as any)._id : fullProject.clientId;
+                                    const client = allClients.find((c) => c._id === cid);
+                                    if (client && client.name && !clientNames.includes(client.name)) {
+                                      clientNames.push(client.name);
+                                    }
+                                  }
+                                });
+                              }
+                              if (clientNames.length > 0) {
+                                return <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 whitespace-nowrap">{clientNames.join(", ")}</span>;
+                              }
+                              return <span className="text-xs text-gray-500">-</span>;
+                            })()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0 ? (
+                                vacation.userSnapshot.projects.map((p, idx) => (
+                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white shadow-sm">
+                                    {p.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-500">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {vacation.userSnapshot?.rolFrames && vacation.userSnapshot.rolFrames.length > 0 ? (
+                                vacation.userSnapshot.rolFrames.map((rf, idx) => (
+                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                                    {rf}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-500">-</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="py-3 px-4">
                             <StatusBadge type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />
                           </td>
@@ -874,13 +945,120 @@ export const VacationsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div>
-                <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">{getUserInitials(getUserName(selectedVacation.solicitante))}</div>
+                <div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-100 text-lg">{getUserName(selectedVacation.solicitante)}</p>
+                </div>
               </div>
-              <div className="bg-slate-800">
-                <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedVacation.solicitante)}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{getUserPosition(selectedVacation.solicitante)}</p>
+
+              <div className="flex flex-wrap gap-6 pt-2 w-full border-t border-gray-100 dark:border-gray-700/50">
+                {/* Sede */}
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" /> Sede
+                  </span>
+                  {selectedVacation.userSnapshot?.sedes && selectedVacation.userSnapshot.sedes.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {selectedVacation.userSnapshot.sedes.map((s, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">Sin sede</span>
+                  )}
+                </div>
+
+                {/* Rol Frame */}
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" /> Rol Frame
+                  </span>
+                  {selectedVacation.userSnapshot?.rolFrames && selectedVacation.userSnapshot.rolFrames.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {selectedVacation.userSnapshot.rolFrames.map((rf, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                          {rf}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">Sin rol frame</span>
+                  )}
+                </div>
+
+                {/* Cliente/s */}
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" /> Cliente/s
+                  </span>
+                  {(() => {
+                    const clientSet = new Set<string>();
+                    // 1. From userSnapshot clients (if backend provided any)
+                    if (selectedVacation.userSnapshot?.clients && selectedVacation.userSnapshot.clients.length > 0) {
+                      selectedVacation.userSnapshot.clients.forEach((c) => clientSet.add(c));
+                    }
+                    // 2. From projects in userSnapshot - lookup in allProjects to get clientId
+                    if (selectedVacation.userSnapshot?.projects && selectedVacation.userSnapshot.projects.length > 0) {
+                      selectedVacation.userSnapshot.projects.forEach((p) => {
+                        // Find project in allProjects by name
+                        const fullProject = allProjects.find((proj) => proj.name === p.name);
+                        if (fullProject && fullProject.clientId) {
+                          const cid = typeof fullProject.clientId === "object" ? (fullProject.clientId as any)._id : fullProject.clientId;
+                          const client = allClients.find((c) => c._id === cid);
+                          if (client && client.name) clientSet.add(client.name);
+                        }
+                      });
+                    }
+                    // 3. Also check projectsInfo from metadata
+                    if (selectedVacation.projectsInfo && selectedVacation.projectsInfo.length > 0) {
+                      selectedVacation.projectsInfo.forEach((pInfo) => {
+                        const fullProject = allProjects.find((proj) => proj.name === pInfo.name);
+                        if (fullProject && fullProject.clientId) {
+                          const cid = typeof fullProject.clientId === "object" ? (fullProject.clientId as any)._id : fullProject.clientId;
+                          const client = allClients.find((c) => c._id === cid);
+                          if (client && client.name) clientSet.add(client.name);
+                        }
+                      });
+                    }
+
+                    const uniqueClients = Array.from(clientSet);
+                    if (uniqueClients.length > 0) {
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {uniqueClients.map((name, idx) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return <span className="text-xs text-gray-500">Sin clientes</span>;
+                  })()}
+                </div>
+
+                {/* Proyectos */}
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" /> Proyecto/s
+                  </span>
+                  {selectedVacation.userSnapshot?.projects && selectedVacation.userSnapshot.projects.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {selectedVacation.userSnapshot.projects.map((p, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white dark:bg-blue-900 dark:text-blue-300 shadow-sm">
+                          {p.name}
+                          {p.clientName && <span className="ml-1 text-[10px] opacity-90 font-normal">({p.clientName})</span>}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">Sin proyectos</span>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -13,6 +13,8 @@ import { Level } from "../models/Level.js";
 import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
 import { Project } from "../models/Project.js";
+import UserProject from "../models/UserProject.js";
+import { Client } from "../models/Client.js";
 
 const router = express.Router();
 
@@ -281,6 +283,7 @@ router.get("/availability", async (req, res) => {
 });
 
 // GET /api/vacations - Get all vacation requests
+// GET /api/vacations - Get all vacation requests
 router.get("/", async (req, res) => {
   try {
     const tenantId = req.tenantId;
@@ -293,8 +296,140 @@ router.get("/", async (req, res) => {
       query.userId = req.user!.userId;
     }
 
-    const vacations = await Vacation.find(query).sort({ createdAt: -1 });
-    res.json(vacations);
+    const vacations = await Vacation.find(query)
+      .populate({
+        path: "userId",
+        select: "firstName lastName email metadata projectIds clientIds",
+        populate: [
+          { path: "projectIds", populate: { path: "clientId" } },
+          { path: "clientIds" },
+          {
+            path: "metadata.projects",
+            model: UserProject,
+            populate: {
+              path: "projectId",
+              populate: { path: "clientId" },
+            },
+          },
+        ],
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const mappedVacations = vacations.map((v: any) => {
+      const userObj = v.userId;
+      let projectsInfo: { name: string; role: string }[] = [];
+      let userProject = "-";
+      let userRoleFrame = "-";
+
+      // Snapshot data structure
+      const userSnapshot = {
+        sedes: new Set<string>(),
+        rolFrames: new Set<string>(),
+        clients: new Set<string>(),
+        projects: [] as { name: string; clientName?: string }[],
+      };
+
+      // Helper to avoid duplicates in projects list
+      const addProjectSnapshot = (name: string, clientName: string = "") => {
+        if (name && !userSnapshot.projects.some((p) => p.name === name)) {
+          userSnapshot.projects.push({ name, clientName });
+        }
+      };
+
+      if (userObj) {
+        // DEBUG: Inspect populated data
+        console.log(`[Vacations Debug] Processing user ${userObj._id}`);
+        if (userObj.projectIds && userObj.projectIds.length > 0) {
+          console.log("[Vacations Debug] ProjectIds sample:", JSON.stringify(userObj.projectIds[0], null, 2));
+        } else {
+          console.log("[Vacations Debug] No projectIds found");
+        }
+        if (userObj.metadata?.projects && userObj.metadata.projects.length > 0) {
+          console.log("[Vacations Debug] Metadata Projects sample:", JSON.stringify(userObj.metadata.projects[0], null, 2));
+        }
+
+        // 1. Metadata extraction (Sedes, Rol Frames, Legacy ProjectsInfo, Deep Linked Clients)
+        if (userObj.metadata && Array.isArray(userObj.metadata.projects)) {
+          projectsInfo = userObj.metadata.projects.map((p: any) => ({
+            name: p.nombre_proyecto || "-",
+            role: p.nombre_rol_frame || "-",
+          }));
+
+          userObj.metadata.projects.forEach((p: any) => {
+            // Check contracts for Sedes and RolFrames
+            if (Array.isArray(p.contracts)) {
+              p.contracts.forEach((c: any) => {
+                const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                const isActive = !endDate || endDate >= new Date();
+
+                if (isActive) {
+                  if (c.nombre_sede) userSnapshot.sedes.add(c.nombre_sede);
+                  const rf = c.nombre_rol_frame || p.nombre_rol_frame;
+                  if (rf) userSnapshot.rolFrames.add(rf);
+                }
+              });
+            }
+            // Fallback for role frame
+            if (p.nombre_rol_frame) userSnapshot.rolFrames.add(p.nombre_rol_frame);
+
+            // Extract Client and Project from deep link (UserProject -> Project -> Client)
+            if (p.projectId) {
+              const internalProj = p.projectId;
+              let clientName = "";
+              if (internalProj.clientId && internalProj.clientId.name) {
+                clientName = internalProj.clientId.name;
+                userSnapshot.clients.add(clientName);
+              }
+              if (internalProj.name) {
+                addProjectSnapshot(internalProj.name, clientName);
+              }
+            }
+          });
+        }
+
+        // 2. Internal Data extraction (Clients, Projects from user.projectIds)
+        if (Array.isArray(userObj.clientIds)) {
+          userObj.clientIds.forEach((c: any) => {
+            if (c && c.name) userSnapshot.clients.add(c.name);
+          });
+        }
+
+        if (Array.isArray(userObj.projectIds)) {
+          userObj.projectIds.forEach((p: any) => {
+            if (p && p.name) {
+              let clientName = "";
+              if (p.clientId && p.clientId.name) {
+                clientName = p.clientId.name;
+                userSnapshot.clients.add(clientName);
+              }
+              addProjectSnapshot(p.name, clientName);
+            }
+          });
+        }
+      }
+
+      if (projectsInfo.length > 0) {
+        userProject = projectsInfo.map((p) => p.name).join(", ");
+        userRoleFrame = projectsInfo.map((p) => p.role).join(", ");
+      }
+
+      return {
+        ...v,
+        userId: userObj && userObj._id ? userObj._id : v.userId, // Restore ID if populated
+        userProject,
+        userRoleFrame,
+        projectsInfo,
+        userSnapshot: {
+          sedes: Array.from(userSnapshot.sedes),
+          rolFrames: Array.from(userSnapshot.rolFrames),
+          clients: Array.from(userSnapshot.clients),
+          projects: userSnapshot.projects,
+        },
+      };
+    });
+
+    res.json(mappedVacations);
   } catch (error: any) {
     console.error("Error fetching vacations:", error);
     res.status(500).json({ error: "Error al obtener las solicitudes de vacaciones" });
