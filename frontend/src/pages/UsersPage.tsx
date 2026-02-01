@@ -58,6 +58,8 @@ export const UsersPage: React.FC = () => {
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
   const [totalUsers, setTotalUsers] = useState(0);
   const [hasLoaded, setHasLoaded] = useState(false);
+  // Map for ID -> Name lookup for all users
+  const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
   // Specific client context
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -70,6 +72,7 @@ export const UsersPage: React.FC = () => {
   const [filterProjectId, setFilterProjectId] = useState("");
   const [filterRoleFrameId, setFilterRoleFrameId] = useState("");
   const [filterActiveContract, setFilterActiveContract] = useState(false);
+  const [filterIsReplacement, setFilterIsReplacement] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -185,6 +188,7 @@ export const UsersPage: React.FC = () => {
         fetchAllClients();
         fetchAllProjects();
         fetchAllRoleFrames();
+        fetchUserLookup(); // Fetch all users for name resolution
       }
     };
     init();
@@ -199,7 +203,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterActiveContract]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterActiveContract, filterIsReplacement]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -209,13 +213,32 @@ export const UsersPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, limit]);
 
+  const fetchUserLookup = async () => {
+    try {
+      // Fetch all users for lookup map (limit 10000 to get all)
+      const response = await usersAPI.list({ limit: 10000, page: 1 });
+      const map = new Map<number | string, string>();
+      response.users.forEach((u) => {
+        const metaId = (u.metadata as any)?.id;
+        if (metaId) {
+          const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email;
+          map.set(metaId, name);
+        }
+      });
+      setUserLookup(map);
+      console.log(`📋 User lookup map built with ${map.size} entries`);
+    } catch (error) {
+      console.error("Error fetching user lookup:", error);
+    }
+  };
+
   const fetchUsers = async ({ silent = false, page = currentPage }: { silent?: boolean; page?: number } = {}) => {
     try {
       if (!silent) setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
       // If filtering by client or using additional filters, fetch ALL users to filter client-side
-      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || filterActiveContract;
+      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || filterActiveContract || filterIsReplacement;
       const isClientSideFilterNeeded = !!clientId || hasAdditionalFilters;
       const effectiveLimit = isClientSideFilterNeeded ? 10000 : limit;
       const effectivePage = isClientSideFilterNeeded ? 1 : page;
@@ -286,7 +309,7 @@ export const UsersPage: React.FC = () => {
         }
 
         // ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, ActiveContract)
-        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterActiveContract;
+        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterActiveContract || filterIsReplacement;
         if (hasAdditionalFilters) {
           // If we have additional filters but haven't already fetched all, fetch all for client-side
           const allUsers = clientId ? finalUsers : response.users;
@@ -343,6 +366,32 @@ export const UsersPage: React.FC = () => {
               }
 
               if (!hasActiveContract) return false;
+            }
+
+            // Is Replacement filter
+            if (filterIsReplacement) {
+              let isUserReplacement = false;
+              const userMetaProjects = (u as any).metadata?.projects || [];
+
+              // Check metadata.projects[].contracts[] for reemplazo: true
+              for (const proj of userMetaProjects) {
+                if (proj.contracts && Array.isArray(proj.contracts)) {
+                  for (const contract of proj.contracts) {
+                    const endDateStr = contract.fecha_baja_contrato;
+                    const endDate = endDateStr ? new Date(endDateStr) : null;
+                    if (endDate) endDate.setHours(23, 59, 59, 999);
+
+                    const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+                    if (isActive && contract.reemplazo) {
+                      isUserReplacement = true;
+                      break;
+                    }
+                  }
+                }
+                if (isUserReplacement) break;
+              }
+
+              if (!isUserReplacement) return false;
             }
 
             return true;
@@ -685,9 +734,77 @@ export const UsersPage: React.FC = () => {
     return contractType;
   };
 
+  // Get replacement info from active contract (returns boolean)
+  const isReplacement = (user: User): boolean => {
+    if (user.metadata?.projects) {
+      for (const p of user.metadata.projects as any[]) {
+        if (p.contracts) {
+          for (const c of p.contracts) {
+            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+
+            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+
+            if (isActive && c.reemplazo) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  // Get replaced employee info from active contract
+  const getReplacedEmployee = (user: User): string | number | null => {
+    let replacedEmployee: string | number | null = null;
+    if (user.metadata?.projects) {
+      user.metadata.projects.forEach((p: any) => {
+        if (p.contracts) {
+          p.contracts.forEach((c: any) => {
+            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+
+            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+
+            // Note: Field is 'empleado_id_reemplezado' (with 'e' not 'a' - typo in source data)
+            if (isActive && c.empleado_id_reemplezado) {
+              replacedEmployee = c.empleado_id_reemplezado;
+            }
+          });
+        }
+      });
+    }
+    return replacedEmployee;
+  };
+
   // Memoizar mapas para búsquedas O(1) en el renderizado de cards
   const projectMap = React.useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
   const clientMap = React.useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
+
+  // Mapa de empleado_id (metadata.id) -> nombre completo del usuario
+  const empleadoIdToNameMap = React.useMemo(() => {
+    const map = new Map<number | string, string>();
+    users.forEach((user) => {
+      // Get the user's metadata.id (this is the empleado_id in external system)
+      const metadataId = (user.metadata as any)?.id;
+      if (metadataId) {
+        const fullName = user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0];
+        map.set(metadataId, fullName);
+      }
+    });
+    return map;
+  }, [users]);
+
+  // Helper function to get employee name by ID (using the global lookup map)
+  const getEmployeeNameById = (empleadoId: number | string): string => {
+    // First try the lookup map (contains all users)
+    if (userLookup.has(empleadoId)) {
+      return userLookup.get(empleadoId)!;
+    }
+    // Fallback to searching in current users list (though lookup should cover it)
+    return empleadoIdToNameMap.get(empleadoId) || `ID: ${empleadoId}`;
+  };
 
   return (
     <PageLayout
@@ -774,6 +891,11 @@ export const UsersPage: React.FC = () => {
                   value: filterActiveContract,
                   onChange: setFilterActiveContract,
                   label: "Contrato Activo",
+                },
+                {
+                  value: filterIsReplacement,
+                  onChange: setFilterIsReplacement,
+                  label: "Es Reemplazo",
                 },
               ]}
             />
@@ -1633,7 +1755,7 @@ export const UsersPage: React.FC = () => {
                 }}
               />
             ) : viewMode === "cards" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-0.5 lg:mx-0">
                 {users.map((user) => (
                   <Card
                     key={user._id}
@@ -1888,6 +2010,31 @@ export const UsersPage: React.FC = () => {
                         {getActiveContractType(user) ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(user)}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin contrato activo</span>}
                       </div>
                     </div>
+                    {/* Reemplazo y Empleado Reemplazado (solo mostrar si tienen valor) */}
+                    {(isReplacement(user) || getReplacedEmployee(user)) && (
+                      <div className="flex flex-wrap gap-6">
+                        {/* Reemplazo */}
+                        {isReplacement(user) && (
+                          <div className="flex flex-col">
+                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                              <FontAwesomeIcon icon={faUser} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                              Reemplazo
+                            </label>
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300 w-fit">Sí</span>
+                          </div>
+                        )}
+                        {/* Empleado Reemplazado */}
+                        {getReplacedEmployee(user) && (
+                          <div className="flex flex-col">
+                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                              <FontAwesomeIcon icon={faUser} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                              Reemplaza a
+                            </label>
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{getEmployeeNameById(getReplacedEmployee(user)!)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </Card>
                 ))}
                 {canManage && (
@@ -1953,7 +2100,7 @@ export const UsersPage: React.FC = () => {
                                 const pId = typeof p === "string" ? p : p._id;
                                 const pName = typeof p !== "string" && p.name ? p.name : allProjects.find((proj) => proj._id === pId)?.name || "P";
                                 return (
-                                  <span key={pId} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 truncate max-w-full">
+                                  <span key={pId} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 shadow-sm truncate max-w-full">
                                     {pName}
                                   </span>
                                 );
@@ -1963,9 +2110,7 @@ export const UsersPage: React.FC = () => {
                             )}
                           </div>
                         </td>
-                        <td className="py-4 px-6 hidden lg:table-cell">
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{user.externalInfo?.rolFrames?.[0] || "—"}</span>
-                        </td>
+                        <td className="py-4 px-6 hidden lg:table-cell">{user.externalInfo?.rolFrames?.[0] ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">{user.externalInfo.rolFrames[0]}</span> : <span className="text-xs text-gray-400">—</span>}</td>
                         <td className="py-4 px-6">
                           <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${user.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{user.isActive ? "Activo" : "Inactivo"}</span>
                         </td>
