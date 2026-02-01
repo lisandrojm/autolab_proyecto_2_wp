@@ -7,6 +7,7 @@ import { levelsAPI, Level } from "../api/levels";
 import { areasAPI, Area } from "../api/areas";
 import { clientsAPI, Client } from "../api/clients";
 import { projectsAPI, Project } from "../api/projects";
+import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -52,6 +53,7 @@ export const UsersPage: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
   const [totalUsers, setTotalUsers] = useState(0);
@@ -64,6 +66,10 @@ export const UsersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  // New filters
+  const [filterProjectId, setFilterProjectId] = useState("");
+  const [filterRoleFrameId, setFilterRoleFrameId] = useState("");
+  const [filterActiveContract, setFilterActiveContract] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -178,6 +184,7 @@ export const UsersPage: React.FC = () => {
         // Carga secundaria (no bloqueante para la lista inicial)
         fetchAllClients();
         fetchAllProjects();
+        fetchAllRoleFrames();
       }
     };
     init();
@@ -192,7 +199,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterActiveContract]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -207,10 +214,11 @@ export const UsersPage: React.FC = () => {
       if (!silent) setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
-      // If filtering by client, fetch ALL users to filter client-side (backend filter might be unreliable)
-      const isClientFilter = !!clientId;
-      const effectiveLimit = isClientFilter ? 10000 : limit;
-      const effectivePage = isClientFilter ? 1 : page;
+      // If filtering by client or using additional filters, fetch ALL users to filter client-side
+      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || filterActiveContract;
+      const isClientSideFilterNeeded = !!clientId || hasAdditionalFilters;
+      const effectiveLimit = isClientSideFilterNeeded ? 10000 : limit;
+      const effectivePage = isClientSideFilterNeeded ? 1 : page;
 
       const params: any = {
         page: effectivePage,
@@ -232,8 +240,8 @@ export const UsersPage: React.FC = () => {
         let finalTotal = response.pagination.total;
         let finalPages = response.pagination.pages;
 
-        // CLIENT-SIDE FILTERING ENFORCEMENT
-        if (isClientFilter && clientId) {
+        // CLIENT-SIDE FILTERING ENFORCEMENT (by client)
+        if (clientId) {
           // Create efficient lookup map from allProjects (state) to ensure we can check project->client
           const localProjMap = new Map(allProjects.map((p: any) => [p._id, p]));
 
@@ -275,6 +283,79 @@ export const UsersPage: React.FC = () => {
           finalPages = Math.ceil(finalTotal / limit) || 1;
 
           console.log(`🔒 Client-Side Filtering applied (with projects lookup). ${response.users.length} -> ${filtered.length} users.`);
+        }
+
+        // ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, ActiveContract)
+        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterActiveContract;
+        if (hasAdditionalFilters) {
+          // If we have additional filters but haven't already fetched all, fetch all for client-side
+          const allUsers = clientId ? finalUsers : response.users;
+
+          const additionalFiltered = allUsers.filter((u: User) => {
+            // Project filter
+            if (filterProjectId) {
+              const userProjectIds = u.projectIds?.map((p: any) => (typeof p === "string" ? p : p._id)) || [];
+              if (!userProjectIds.includes(filterProjectId)) return false;
+            }
+
+            // RoleFrame filter
+            if (filterRoleFrameId) {
+              // Check metadata.projects for rol_frame_id matching
+              const userMetaProjects = (u as any).metadata?.projects || [];
+              const selectedRoleFrame = allRoleFrames.find((rf) => rf._id === filterRoleFrameId);
+              if (selectedRoleFrame) {
+                const hasRole = userMetaProjects.some((mp: any) => mp.rol_frame_id === selectedRoleFrame.externalId || mp.rol_frame_id === selectedRoleFrame.data?.rol?.id || mp.nombre_rol_frame === selectedRoleFrame.name);
+                if (!hasRole) return false;
+              } else {
+                return false;
+              }
+            }
+
+            // Active Contract filter - match logic from getActiveContractType
+            if (filterActiveContract) {
+              let hasActiveContract = false;
+              const userMetaProjects = (u as any).metadata?.projects || [];
+
+              // Check metadata.projects[].contracts[] for active contracts
+              for (const proj of userMetaProjects) {
+                if (proj.contracts && Array.isArray(proj.contracts)) {
+                  for (const contract of proj.contracts) {
+                    const endDateStr = contract.fecha_baja_contrato;
+                    const endDate = endDateStr ? new Date(endDateStr) : null;
+                    if (endDate) endDate.setHours(23, 59, 59, 999);
+
+                    const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+                    if (isActive && (contract.nombre_contrato || contract.tipo_contrato)) {
+                      hasActiveContract = true;
+                      break;
+                    }
+                  }
+                }
+                if (hasActiveContract) break;
+              }
+
+              // Fallback: check externalInfo.contracts
+              if (!hasActiveContract) {
+                const externalContracts = (u as any).externalInfo?.contracts;
+                if (externalContracts && Array.isArray(externalContracts) && externalContracts.length > 0) {
+                  hasActiveContract = true;
+                }
+              }
+
+              if (!hasActiveContract) return false;
+            }
+
+            return true;
+          });
+
+          finalTotal = additionalFiltered.length;
+          // Manual pagination
+          const startIdx = (page - 1) * limit;
+          const endIdx = startIdx + limit;
+          finalUsers = additionalFiltered.slice(startIdx, endIdx);
+          finalPages = Math.ceil(finalTotal / limit) || 1;
+
+          console.log(`🔍 Additional Filters applied. ${allUsers.length} -> ${additionalFiltered.length} users.`);
         }
 
         setUsers(finalUsers);
@@ -375,6 +456,15 @@ export const UsersPage: React.FC = () => {
     } catch (error: any) {
       console.error("Error fetching all projects:", error);
       // Solo loguear, pero podríamos poner un estado de error si quisiéramos
+    }
+  };
+
+  const fetchAllRoleFrames = async () => {
+    try {
+      const roleFrames = await roleFrameAPI.list();
+      setAllRoleFrames(roleFrames);
+    } catch (error: any) {
+      console.error("Error fetching role frames:", error);
     }
   };
 
@@ -651,7 +741,7 @@ export const UsersPage: React.FC = () => {
       }
       // Igual que RolesPage: SearchAndFilters directo (sin botón Buscar)
       searchAndFilters={
-        <div className="flex flex-col md:flex-row gap-4 items-center">
+        <div className="flex flex-col md:flex-row gap-4 items-start">
           <div className="flex-1 w-full">
             <SearchAndFilters
               searchTerm={searchTerm}
@@ -663,6 +753,29 @@ export const UsersPage: React.FC = () => {
                 onStartDateChange: setStartDate,
                 onEndDateChange: setEndDate,
               }}
+              selectFilters={[
+                {
+                  value: filterProjectId,
+                  onChange: setFilterProjectId,
+                  options: allProjects.map((p) => ({ value: p._id, label: p.name })),
+                  label: "Proyecto",
+                  placeholder: "Todos los proyectos",
+                },
+                {
+                  value: filterRoleFrameId,
+                  onChange: setFilterRoleFrameId,
+                  options: allRoleFrames.map((rf) => ({ value: rf._id, label: rf.name })),
+                  label: "Role Frame",
+                  placeholder: "Todos los roles",
+                },
+              ]}
+              switchFilters={[
+                {
+                  value: filterActiveContract,
+                  onChange: setFilterActiveContract,
+                  label: "Contrato Activo",
+                },
+              ]}
             />
           </div>
           {isXXL && (

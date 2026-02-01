@@ -380,8 +380,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const handleDateSelect = async (day: Date) => {
     const formattedDate = format(day, "yyyy-MM-dd");
 
+    // Fallback check - button should be disabled, but guard anyway
     if (isOccupied(day)) {
-      await sweetAlert.error("Fecha no disponible", "Este día ya está ocupado por otro miembro de tu equipo.");
       return;
     }
 
@@ -842,11 +842,6 @@ export default function Vacations({ onNavigate }: VacationsProps) {
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400  tracking-wider mb-0.5">
-                  <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-500 dark:text-slate-400" />
-                  <span className="text-slate-500 dark:text-slate-400 uppercase">Área</span>
-                  <span className="text">{profile?.areaName || profile?.department || "Área"}</span>
-                </div>
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
               </div>
               <div className="flex items-center gap-2">
@@ -922,8 +917,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     }
                   }
 
-                  // Disable past dates and dates exceeding limit
-                  const isDisabled = isPast || isExceedingLimit;
+                  // Disable past dates, dates exceeding limit, AND occupied dates
+                  const isDisabled = isPast || isExceedingLimit || isOccupiedDay;
 
                   const isSelected = isStart || isEnd || isInRange;
                   const isSuggested = !isSelected && !isDisabled && !isOccupiedDay && suggestedEndDate && calendarOpen === "end" && startDate && isAfter(day, parseISO(startDate)) && (isBefore(day, suggestedEndDate) || isSameDay(day, suggestedEndDate));
@@ -939,31 +934,24 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                       classes += " cursor-not-allowed opacity-75";
                     }
                   } else if (isDisabled) {
-                    classes += " text-slate-300 dark:text-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-800/20";
-                    // If it was occupied, keep red background but muted?
-                    // Priority: Disabled takes precedence for opacity/interaction, but visually maybe show occupancy?
-                    // User request: "apagados y no se puedan seleccionar"
+                    classes += " cursor-not-allowed";
                     if (isOccupiedDay) {
                       if (isPendingOcc) {
-                        // Pending Disabled Style
-                        classes += " bg-amber-50 text-amber-300 dark:bg-amber-900/10 dark:text-amber-800";
+                        // Pending Occupied Style (Yellow - another user has pending vacation)
+                        classes += " bg-amber-200 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300";
                       } else {
-                        // Approved Disabled Style
-                        classes += " bg-red-50 text-red-300 dark:bg-red-900/10 dark:text-red-800";
+                        // Approved Occupied Style (Red - another user has approved vacation)
+                        classes += " bg-red-200 text-red-700 dark:bg-red-800/40 dark:text-red-300";
                       }
-                    }
-                  } else if (isOccupiedDay) {
-                    if (isPendingOcc) {
-                      classes += " bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-transparent";
+                      const visualStart = !prevOcc || isMon;
+                      const visualEnd = !nextOcc || isSun;
+                      if (visualStart) classes += " rounded-l-lg";
+                      else classes += " rounded-l-none";
+                      if (visualEnd) classes += " rounded-r-lg";
+                      else classes += " rounded-r-none";
                     } else {
-                      classes += " bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 border-transparent";
+                      classes += " text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/20";
                     }
-                    const visualStart = !prevOcc || isMon;
-                    const visualEnd = !nextOcc || isSun;
-                    if (visualStart) classes += " rounded-l-lg";
-                    else classes += " rounded-l-none";
-                    if (visualEnd) classes += " rounded-r-lg";
-                    else classes += " rounded-r-none";
                   } else if (isSelected) {
                     if (isStart || isEnd) {
                       classes += " bg-blue-900 text-white z-10";
@@ -983,8 +971,18 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     classes += !isCurrentMonth ? " text-slate-300 dark:text-slate-700" : " text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded";
                   }
 
+                  // Generate title for disabled days
+                  let dayTitle = "";
+                  if (isOccupiedDay) {
+                    dayTitle = isPendingOcc ? "Vacación pendiente de otro usuario" : "Vacación aprobada de otro usuario";
+                  } else if (isPast) {
+                    dayTitle = "Fecha pasada";
+                  } else if (isExceedingLimit) {
+                    dayTitle = "Excede límite de días";
+                  }
+
                   return (
-                    <button key={idx} onClick={() => !isDisabled && handleDateSelect(day)} disabled={isDisabled} className={classes} title={isDisabled ? (isPast ? "Fecha pasada" : "Excede límite de días") : isOccupiedDay ? "Ocupado por otro usuario" : ""}>
+                    <button key={idx} onClick={() => !isDisabled && handleDateSelect(day)} disabled={isDisabled} className={classes} title={dayTitle}>
                       {format(day, "d")}
                     </button>
                   );
@@ -1049,13 +1047,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               </div>
 
               <div className="flex flex-col gap-2 mb-4">
+                <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider mb-1">Vacaciones de otros usuarios (No seleccionables)</span>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full border border-green-500/50 bg-green-500/20"></div>
-                  <span className="text-xs text-slate-600 dark:text-slate-400">Solicitudes entregadas / aprobadas</span>
+                  <div className="w-3 h-3 rounded-full border border-red-400 bg-red-200 dark:bg-red-800/40"></div>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Vacaciones aprobadas / entregadas</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full border border-yellow-500/50 bg-yellow-500/20"></div>
-                  <span className="text-xs text-slate-600 dark:text-slate-400">Solicitudes pendientes</span>
+                  <div className="w-3 h-3 rounded-full border border-amber-400 bg-amber-200 dark:bg-amber-800/40"></div>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">Vacaciones pendientes de aprobación</span>
                   <FontAwesomeIcon icon={faInfoCircle} className="w-3 h-3 text-slate-400 ml-auto" onClick={() => setShowPendingInfoModal(true)} />
                 </div>
               </div>

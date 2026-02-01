@@ -41,9 +41,8 @@ router.get("/availability", async (req, res) => {
       }
     }
 
-    if (!userAreaId) {
-      return res.json([]); // No area, no restrictions
-    }
+    // Note: userAreaId may be null/undefined if user has no area assigned.
+    // This is fine - global rules (where areaId is null) should still apply.
 
     // -------------------------------------------------------------------------
     // Helper: Check overlap rules
@@ -124,6 +123,11 @@ router.get("/availability", async (req, res) => {
         applicableRules.push({ rule, score });
       }
     }
+
+    console.log(`[Availability Debug] User: ${userId}, userAreaId: ${userAreaId}, overlaps count: ${vacConfig.overlaps?.length}, applicableRules: ${applicableRules.length}`);
+    applicableRules.forEach((r, i) => {
+      console.log(`[Availability Debug] Rule ${i}: score=${r.score}, maxSimultaneousUsers=${r.rule.maxSimultaneousUsers}, desc=${r.rule.description}`);
+    });
 
     if (applicableRules.length === 0) {
       return res.json([]);
@@ -231,6 +235,8 @@ router.get("/availability", async (req, res) => {
                 endDate: { $gte: searchStart },
                 startDate: { $lte: searchEnd },
               }).lean();
+
+              console.log(`[Availability Debug] Found ${matchingUserIds.length} matching users, ${overlappingVacations.length} overlapping vacations`);
 
               // Aggregate occupancy (Similar to before but inside loop)
               // We need to merge this into the main blockedDatesMap
