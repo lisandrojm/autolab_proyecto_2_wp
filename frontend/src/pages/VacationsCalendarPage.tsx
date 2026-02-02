@@ -12,8 +12,8 @@ import "../styles/vacationsCalendar.css";
 interface TimelineItem {
   id: string;
   content: string;
-  start: string;
-  end: string;
+  start: string | Date;
+  end: string | Date;
   className: string;
   title: string;
 }
@@ -34,6 +34,14 @@ const STATUS_LABELS = {
   delivered: "Entregada",
   rejected: "Rechazada",
   cancelled: "Cancelada",
+};
+
+// Helper to parse date string as local date (00:00:00) to avoid timezone shifts
+const parseDateLocal = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+  const [y, m, d] = datePart.split("-").map(Number);
+  return new Date(y, m - 1, d);
 };
 
 export const VacationsCalendarPage: React.FC = () => {
@@ -102,6 +110,12 @@ export const VacationsCalendarPage: React.FC = () => {
       const color = getStatusColor(vacation.status);
       const statusLabel = STATUS_LABELS[vacation.status as keyof typeof STATUS_LABELS] || vacation.status;
 
+      const startDate = parseDateLocal(vacation.startDate);
+      const originalEndDate = parseDateLocal(vacation.endDate);
+      const visualEndDate = new Date(originalEndDate);
+      // Add 1 day to end date so visual block covers the full end day
+      visualEndDate.setDate(visualEndDate.getDate() + 1);
+
       return {
         id: vacation._id,
         content: `
@@ -110,10 +124,10 @@ export const VacationsCalendarPage: React.FC = () => {
             <div class="timeline-item-days">${vacation.daysRequested} día${vacation.daysRequested > 1 ? "s" : ""}</div>
           </div>
         `,
-        start: vacation.startDate,
-        end: new Date(new Date(vacation.endDate).getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        start: startDate,
+        end: visualEndDate,
         className: `vacation-item vacation-${vacation.status}`,
-        title: `${vacation.userName || "Usuario"}\n${statusLabel}\nPeríodo: ${new Date(vacation.startDate).toLocaleDateString("es-ES")} - ${new Date(vacation.endDate).toLocaleDateString("es-ES")}\nDías: ${vacation.daysRequested}`,
+        title: `${vacation.userName || "Usuario"}\n${statusLabel}\nPeríodo: ${startDate.toLocaleDateString("es-ES")} - ${originalEndDate.toLocaleDateString("es-ES")}\nDías: ${vacation.daysRequested}`,
       };
     });
 

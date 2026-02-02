@@ -743,6 +743,29 @@ export const UsersPage: React.FC = () => {
     return contractType;
   };
 
+  const getActiveSchedule = (user: User): string | null => {
+    let schedule: string | null = null;
+    if (user.metadata?.projects) {
+      user.metadata.projects.forEach((p: any) => {
+        if (p.contracts) {
+          p.contracts.forEach((c: any) => {
+            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+
+            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+
+            if (isActive && (c.hora_inicio || c.hora_fin)) {
+              const start = c.hora_inicio || "?";
+              const end = c.hora_fin || "?";
+              schedule = `${start} - ${end} Hs`;
+            }
+          });
+        }
+      });
+    }
+    return schedule;
+  };
+
   // Get replacement info from active contract (returns boolean)
   const isReplacement = (user: User): boolean => {
     if (user.metadata?.projects) {
@@ -1210,7 +1233,19 @@ export const UsersPage: React.FC = () => {
                   <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-gray-400" />
                   Tipo de Contrato
                 </label>
-                {getActiveContractType(viewUser) ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(viewUser)}</span> : <span className="text-xs text-gray-500">Sin contrato activo</span>}
+                {getActiveContractType(viewUser) ? (
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(viewUser)}</span>
+                    {getActiveSchedule(viewUser) && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 w-fit border border-gray-200 dark:border-gray-600">
+                        <FontAwesomeIcon icon={faClock} className="mr-1 h-3 w-3" />
+                        {getActiveSchedule(viewUser)}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">Sin contrato activo</span>
+                )}
               </div>
 
               <div className="flex flex-col">
