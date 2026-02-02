@@ -71,6 +71,7 @@ export const UsersPage: React.FC = () => {
   // New filters
   const [filterProjectId, setFilterProjectId] = useState("");
   const [filterRoleFrameId, setFilterRoleFrameId] = useState("");
+  const [filterRoleId, setFilterRoleId] = useState("");
   const [filterActiveContract, setFilterActiveContract] = useState(false);
   const [filterIsReplacement, setFilterIsReplacement] = useState(false);
 
@@ -203,7 +204,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterActiveContract, filterIsReplacement]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -238,7 +239,7 @@ export const UsersPage: React.FC = () => {
       const currentId = ++requestIdRef.current;
 
       // If filtering by client or using additional filters, fetch ALL users to filter client-side
-      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || filterActiveContract || filterIsReplacement;
+      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || !!filterRoleId || filterActiveContract || filterIsReplacement;
       const isClientSideFilterNeeded = !!clientId || hasAdditionalFilters;
       const effectiveLimit = isClientSideFilterNeeded ? 10000 : limit;
       const effectivePage = isClientSideFilterNeeded ? 1 : page;
@@ -308,8 +309,8 @@ export const UsersPage: React.FC = () => {
           console.log(`🔒 Client-Side Filtering applied (with projects lookup). ${response.users.length} -> ${filtered.length} users.`);
         }
 
-        // ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, ActiveContract)
-        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterActiveContract || filterIsReplacement;
+        // ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, Role, ActiveContract)
+        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterRoleId || filterActiveContract || filterIsReplacement;
         if (hasAdditionalFilters) {
           // If we have additional filters but haven't already fetched all, fetch all for client-side
           const allUsers = clientId ? finalUsers : response.users;
@@ -332,6 +333,14 @@ export const UsersPage: React.FC = () => {
               } else {
                 return false;
               }
+            }
+
+            // Role filter
+            if (filterRoleId) {
+              const userRoles = u.roles || [];
+              // Check if user has the selected role ID
+              const hasRole = userRoles.some((r: any) => (typeof r === "string" ? r === filterRoleId : r._id === filterRoleId));
+              if (!hasRole) return false;
             }
 
             // Active Contract filter - match logic from getActiveContractType
@@ -883,6 +892,13 @@ export const UsersPage: React.FC = () => {
                   onChange: setFilterRoleFrameId,
                   options: allRoleFrames.map((rf) => ({ value: rf._id, label: rf.name })),
                   label: "Role Frame",
+                  placeholder: "Todos los roles (Frame)",
+                },
+                {
+                  value: filterRoleId,
+                  onChange: setFilterRoleId,
+                  options: roles.map((r) => ({ value: r._id, label: r.name })),
+                  label: "Rol Sistema",
                   placeholder: "Todos los roles",
                 },
               ]}
@@ -1735,8 +1751,10 @@ export const UsersPage: React.FC = () => {
           <div className="relative">
             {/* Overlay de carga cuando se pagina o busca */}
             {isFetching && (
-              <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
-                <LoadingSpinner message="Actualizando lista..." />
+              <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 rounded-xl backdrop-blur-[1px]">
+                <div className="sticky top-[40vh] flex justify-center w-full">
+                  <LoadingSpinner message="Actualizando lista..." />
+                </div>
               </div>
             )}
 
