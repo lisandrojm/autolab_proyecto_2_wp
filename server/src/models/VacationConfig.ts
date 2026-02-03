@@ -11,10 +11,12 @@ export interface IEmbeddedOverlap {
   positionId?: Types.ObjectId;
   levelId?: Types.ObjectId;
   projectId?: Types.ObjectId;
+  clientId?: Types.ObjectId;
   roleFrameId?: Types.ObjectId;
   maxSimultaneousUsers: number;
   description?: string;
   isActive: boolean;
+  useActiveContractSchedule?: boolean;
 }
 
 const EmbeddedOverlapSchema = new Schema<IEmbeddedOverlap>(
@@ -23,10 +25,12 @@ const EmbeddedOverlapSchema = new Schema<IEmbeddedOverlap>(
     positionId: { type: Schema.Types.ObjectId, ref: "Position" },
     levelId: { type: Schema.Types.ObjectId, ref: "Level" },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+    clientId: { type: Schema.Types.ObjectId, ref: "Client" },
     roleFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame" },
     maxSimultaneousUsers: { type: Number, required: true, min: 1 },
     description: { type: String },
     isActive: { type: Boolean, default: true },
+    useActiveContractSchedule: { type: Boolean, default: false },
   },
   { _id: true },
 );

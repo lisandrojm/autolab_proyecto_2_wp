@@ -6,10 +6,12 @@ export interface VacationOverlap {
   positionId?: string | { _id: string; name: string };
   levelId?: string | { _id: string; name: string };
   projectId?: string | { _id: string; name: string };
+  clientId?: string | { _id: string; name: string };
   roleFrameId?: string | { _id: string; name: string };
   maxSimultaneousUsers: number;
   description?: string;
   isActive: boolean;
+  useActiveContractSchedule?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -19,10 +21,12 @@ export interface VacationOverlapInput {
   positionId?: string;
   levelId?: string;
   projectId?: string;
+  clientId?: string;
   roleFrameId?: string;
   maxSimultaneousUsers: number;
   description?: string;
   isActive?: boolean;
+  useActiveContractSchedule?: boolean;
 }
 
 export const vacationOverlapsAPI = {

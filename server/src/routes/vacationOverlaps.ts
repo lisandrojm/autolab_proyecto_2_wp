@@ -7,29 +7,39 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
 const router = Router();
 
-// Esquema base sin refinamiento extra
 const baseOverlapSchema = z.object({
   areaId: z.string().optional(),
   positionId: z.string().optional(),
   levelId: z.string().optional(),
   projectId: z.string().optional(),
+  clientId: z.string().optional(),
   roleFrameId: z.string().optional(),
   maxSimultaneousUsers: z.number().min(1, "Debe ser al menos 1 usuario"),
   description: z.string().optional(),
   isActive: z.boolean().default(true),
+  useActiveContractSchedule: z.boolean().default(false),
 });
 
 const vacationOverlapSchema = baseOverlapSchema;
 
-// Helper para popular datos
 const populateOverlap = async (overlap: any) => {
   const result: any = {
     _id: overlap._id,
     maxSimultaneousUsers: overlap.maxSimultaneousUsers,
     description: overlap.description,
     isActive: overlap.isActive,
+    useActiveContractSchedule: overlap.useActiveContractSchedule || false,
   };
 
+  if (overlap.clientId) {
+    try {
+      const Client = mongoose.model("Client");
+      const doc = await Client.findById(overlap.clientId).select("name");
+      result.clientId = doc ? { _id: overlap.clientId, name: doc.name } : { _id: overlap.clientId, name: "Desconocido" };
+    } catch (e) {
+      result.clientId = { _id: overlap.clientId, name: "Error" };
+    }
+  }
   if (overlap.areaId) {
     try {
       const Area = mongoose.model("Area");
@@ -126,8 +136,10 @@ router.post("/", requireTenant, authenticateToken, async (req: AuthenticatedRequ
       maxSimultaneousUsers: data.maxSimultaneousUsers,
       description: data.description,
       isActive: data.isActive,
+      useActiveContractSchedule: data.useActiveContractSchedule || false,
     };
 
+    if (data.clientId) newOverlap.clientId = new mongoose.Types.ObjectId(data.clientId);
     if (data.areaId) newOverlap.areaId = new mongoose.Types.ObjectId(data.areaId);
     if (data.positionId) newOverlap.positionId = new mongoose.Types.ObjectId(data.positionId);
     if (data.levelId) newOverlap.levelId = new mongoose.Types.ObjectId(data.levelId);
@@ -194,6 +206,7 @@ router.put("/:id", requireTenant, authenticateToken, async (req: AuthenticatedRe
     }
 
     // Update overlap fields
+    if (data.clientId !== undefined) config.overlaps[overlapIndex].clientId = data.clientId ? new mongoose.Types.ObjectId(data.clientId) : undefined;
     if (data.areaId !== undefined) config.overlaps[overlapIndex].areaId = data.areaId ? new mongoose.Types.ObjectId(data.areaId) : undefined;
     if (data.positionId !== undefined) config.overlaps[overlapIndex].positionId = data.positionId ? new mongoose.Types.ObjectId(data.positionId) : undefined;
     if (data.levelId !== undefined) config.overlaps[overlapIndex].levelId = data.levelId ? new mongoose.Types.ObjectId(data.levelId) : undefined;
@@ -203,6 +216,7 @@ router.put("/:id", requireTenant, authenticateToken, async (req: AuthenticatedRe
     if (data.maxSimultaneousUsers !== undefined) config.overlaps[overlapIndex].maxSimultaneousUsers = data.maxSimultaneousUsers;
     if (data.description !== undefined) config.overlaps[overlapIndex].description = data.description;
     if (data.isActive !== undefined) config.overlaps[overlapIndex].isActive = data.isActive;
+    if (data.useActiveContractSchedule !== undefined) config.overlaps[overlapIndex].useActiveContractSchedule = data.useActiveContractSchedule;
 
     await config.save();
 
