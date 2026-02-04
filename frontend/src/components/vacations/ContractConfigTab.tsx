@@ -132,7 +132,7 @@ export const ContractConfigTab: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button type="button" onClick={() => handleToggle(contract.id)} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${isEnabled ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
                         <FontAwesomeIcon icon={isEnabled ? faToggleOn : faToggleOff} className="mr-2" />
-                        {isEnabled ? "Activo" : "Inactiv"}
+                        {isEnabled ? "Activo" : "Inactivo"}
                       </button>
                     </td>
                   </tr>
