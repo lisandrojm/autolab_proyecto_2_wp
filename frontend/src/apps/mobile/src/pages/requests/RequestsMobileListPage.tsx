@@ -100,10 +100,6 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
             </button>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Mis Pedidos</h1>
           </div>
-          <button onClick={() => onNavigate("new")} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors">
-            <FontAwesomeIcon icon={faPlus} className="w-5 h-5" />
-            Nuevo
-          </button>
         </div>
       </div>
 
@@ -163,6 +159,13 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
             ))}
           </div>
         )}
+      </div>
+      {/* Floating Action Button for New Request */}
+      {/* Floating Action Button for New Request */}
+      <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
+        <button onClick={() => onNavigate("new")} className="pointer-events-auto flex items-center justify-center w-14 h-14 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100" title="Nueva Solicitud">
+          <FontAwesomeIcon icon={faPlus} className="w-6 h-6" />
+        </button>
       </div>
     </div>
   );

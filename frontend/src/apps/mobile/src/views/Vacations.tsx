@@ -65,6 +65,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showPendingInfoModal, setShowPendingInfoModal] = useState(false);
   const [showSignatureInfoModal, setShowSignatureInfoModal] = useState(false);
+  const [showProfileInfoModal, setShowProfileInfoModal] = useState(false);
   const [globalConfig, setGlobalConfig] = useState<VacationConfig | null>(null);
 
   useEffect(() => {
@@ -508,12 +509,11 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             <div className="flex items-center gap-2">
               <FontAwesomeIcon icon={faUmbrellaBeach} className="w-5 h-5 text-slate-900 dark:text-slate-100" />
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Mis Vacaciones</h1>
+              <button onClick={() => setShowProfileInfoModal(true)} className="flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-500 transition-colors ml-1">
+                <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest || hasNoDays} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20" title={hasActiveRequest ? "Ya tienes una solicitud en curso" : hasNoDays ? "Sin días disponibles" : "Nueva Solicitud"}>
-            <FontAwesomeIcon icon={faPlus} />
-            <span className="hidden sm:inline">Nueva Solicitud</span>
-          </button>
         </div>
       </div>
 
@@ -552,129 +552,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
         {/* TARJETA DE RESUMEN - Antigüedad elevada */}
         <div className="bg-white dark:bg-slate-900/70 rounded-xl p-4 border border-slate-200 dark:border-slate-700 relative overflow-hidden">
-          {/* Encabezado: Año, Metadatos de Perfil y Ayuda */}
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">Año {selectedYear}</h3>
-              </div>
-
-              {/* METADATOS: Antigüedad y Área (Separados de las métricas de días) */}
-              <div className="text-xs text-slate-500 dark:text-slate-400 grid grid-cols-1 gap-y-1 mb-1">
-                {/* Ingreso y Antigüedad */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <div className="flex items-center gap-1">
-                    <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
-                    <span className="font-semibold">Ingreso:</span> {profile?.hireDate ? format(parseISO(profile.hireDate), "dd/MM/yyyy") : "—"}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
-                    <span className="font-semibold">Antigüedad Total:</span> {calculateAntiguedad()}
-                  </div>
-                </div>
-
-                {/* Sede, Rol Frame, Contrato, Horario y Fechas */}
-                {((profile?.externalInfo?.sedes?.length ?? 0) > 0 || (profile?.externalInfo?.rolFrames?.length ?? 0) > 0 || (profile?.externalInfo?.contracts?.length ?? 0) > 0 || (profile?.externalInfo?.schedules?.length ?? 0) > 0 || (profile?.externalInfo?.projectDates?.length ?? 0) > 0) && (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      {profile?.externalInfo?.sedes && profile.externalInfo.sedes.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
-                          <span className="font-semibold text-amber-600 dark:text-amber-400">Sede:</span> {profile.externalInfo.sedes.join(", ")}
-                        </div>
-                      )}
-                      {profile?.externalInfo?.rolFrames && profile.externalInfo.rolFrames.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <FontAwesomeIcon icon={faIdCard} className="w-3 h-3 text-slate-400" />
-                          <span className="font-semibold text-purple-600 dark:text-purple-400">Rol Frame:</span> {profile.externalInfo.rolFrames.join(", ")}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      {profile?.externalInfo?.contracts && profile.externalInfo.contracts.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Contrato:</span> {profile.externalInfo.contracts.join(", ")}
-                        </div>
-                      )}
-                      {profile?.externalInfo?.schedules && profile.externalInfo.schedules.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-slate-400" />
-                          <span className="font-semibold text-sky-600 dark:text-sky-400">Horario:</span> {profile.externalInfo.schedules.join(", ")}
-                        </div>
-                      )}
-                    </div>
-                    {/* Fechas del Proyecto */}
-                    {profile?.externalInfo?.projectDates && profile.externalInfo.projectDates.length > 0 && (
-                      <div className="flex items-center gap-1">
-                        <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
-                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">Fechas:</span> {profile.externalInfo.projectDates.join(", ")}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Proyecto/s Actual/es */}
-                <div className="flex items-start gap-1">
-                  <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold uppercase truncate">Proyecto/s Actual/es:</span>
-                  <span className="truncate">{stats?.project || "Sin proyectos"}</span>
-                </div>
-
-                {/* Cargo y Área */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <div className="flex items-center gap-1">
-                    <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
-                    <span className="font-semibold uppercase text-[10px]">Área:</span>
-                    {profile?.areaName || profile?.department || "Sin Área"}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
-                    <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <FontAwesomeIcon icon={faUserGraduate} className="w-3 h-3 text-slate-400" />
-                    <span className="font-semibold">Nivel:</span> {profile?.levelName || "Sin Nivel"}
-                  </div>
-                </div>
-
-                {/* Reglas */}
-                <div className="flex items-start gap-1">
-                  <FontAwesomeIcon icon={faRulerCombined} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold uppercase text-[10px]">Reglas:</span>
-                  {(() => {
-                    const effConfig = (stats?.projectVacationConfig as any) ?? globalConfig;
-                    const meta = (stats as any)?.vacationRulesMeta;
-
-                    const fractionalAllowed = effConfig?.permiteFraccionadas;
-                    const minDays = effConfig?.minDiasFraccion ?? 1;
-
-                    const minDaysSource = meta?.minDiasSource || stats?.vacationConfigSource || "Global";
-                    const fracSource = meta?.fractionationSource || stats?.vacationConfigSource || "Global";
-                    const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || "Global";
-
-                    return (
-                      <div className="flex flex-wrap items-center gap-1">
-                        {fractionalAllowed ? (
-                          <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                            Min: {minDays} días <span className="opacity-70">({minDaysSource})</span>
-                          </span>
-                        ) : (
-                          <span className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
-                            No Fracc. <span className="opacity-70">({fracSource})</span>
-                          </span>
-                        )}
-
-                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                          {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({typeSource})</span>
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-            {/* Controles de Año (opcionales) */}
+          {/* Header con Año y Botón de Info */}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">Año {selectedYear}</h3>
             <div className="flex items-center text-slate-500 dark:text-slate-400">
               <button className="p-1 cursor-not-allowed opacity-50">
                 <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4" />
@@ -691,7 +571,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-semibold uppercase text-slate-700 dark:text-slate-200 mr-2">Días Disponibles</h4>
                 {/* Botón de Ayuda movido aquí */}
-                <button onClick={() => setShowInfoModal(true)} className="text-slate-400 hover:text-blue-500 transition-colors p-1">
+                <button onClick={() => setShowInfoModal(true)} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
                   <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
                 </button>
               </div>
@@ -1078,6 +958,136 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         </div>
       )}
 
+      {/* MODAL DE INFORMACIÓN DE PERFIL */}
+      <InfoModal
+        isOpen={showProfileInfoModal}
+        onClose={() => setShowProfileInfoModal(false)}
+        title="Información de Perfil"
+        size="md"
+        actions={[
+          {
+            label: "Cerrar",
+            onClick: () => setShowProfileInfoModal(false),
+            variant: "primary",
+          },
+        ]}
+      >
+        <div className="text-xs text-slate-500 dark:text-slate-400 grid grid-cols-1 gap-y-3">
+          {/* Ingreso y Antigüedad */}
+          <div className="space-y-1">
+            <h4 className="font-semibold text-slate-900 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-2">Datos Generales</h4>
+            <div className="flex items-center gap-1">
+              <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
+              <span className="font-semibold">Ingreso:</span> {profile?.hireDate ? format(parseISO(profile.hireDate), "dd/MM/yyyy") : "—"}
+            </div>
+            <div className="flex items-center gap-1">
+              <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
+              <span className="font-semibold">Antigüedad Total:</span> {calculateAntiguedad()}
+            </div>
+          </div>
+
+          {/* Sede, Rol Frame, Contrato, Horario y Fechas */}
+          {((profile?.externalInfo?.sedes?.length ?? 0) > 0 || (profile?.externalInfo?.rolFrames?.length ?? 0) > 0 || (profile?.externalInfo?.contracts?.length ?? 0) > 0 || (profile?.externalInfo?.schedules?.length ?? 0) > 0 || (profile?.externalInfo?.projectDates?.length ?? 0) > 0) && (
+            <div className="space-y-1">
+              <h4 className="font-semibold text-slate-900 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-2 mt-2">Detalles Laborales</h4>
+              {profile?.externalInfo?.sedes && profile.externalInfo.sedes.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <FontAwesomeIcon icon={faBuilding} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">Sede:</span> {profile.externalInfo.sedes.join(", ")}
+                </div>
+              )}
+              {profile?.externalInfo?.rolFrames && profile.externalInfo.rolFrames.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <FontAwesomeIcon icon={faIdCard} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">Rol Frame:</span> {profile.externalInfo.rolFrames.join(", ")}
+                </div>
+              )}
+              {profile?.externalInfo?.contracts && profile.externalInfo.contracts.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Contrato:</span> {profile.externalInfo.contracts.join(", ")}
+                </div>
+              )}
+              {profile?.externalInfo?.schedules && profile.externalInfo.schedules.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold text-sky-600 dark:text-sky-400">Horario:</span> {profile.externalInfo.schedules.join(", ")}
+                </div>
+              )}
+              {profile?.externalInfo?.projectDates && profile.externalInfo.projectDates.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-slate-400" />
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">Fechas:</span> {profile.externalInfo.projectDates.join(", ")}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Proyecto/s Actual/es */}
+          <div className="space-y-1">
+            <h4 className="font-semibold text-slate-900 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-2 mt-2">Ubicación</h4>
+            <div className="flex items-start gap-1">
+              <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-400 mt-0.5" />
+              <span className="font-semibold uppercase truncate">Proyecto/s Actual/es:</span>
+              <span className="truncate">{stats?.project || "Sin proyectos"}</span>
+            </div>
+
+            {/* Cargo y Área */}
+            <div className="flex items-center gap-1">
+              <FontAwesomeIcon icon={faLayerGroup} className="w-3 h-3 text-slate-400" />
+              <span className="font-semibold uppercase text-[10px]">Área:</span>
+              {profile?.areaName || profile?.department || "Sin Área"}
+            </div>
+            <div className="flex items-center gap-1">
+              <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-slate-400" />
+              <span className="font-semibold">Cargo:</span> {profile?.positionName || profile?.position || "Sin Cargo"}
+            </div>
+            <div className="flex items-center gap-1">
+              <FontAwesomeIcon icon={faUserGraduate} className="w-3 h-3 text-slate-400" />
+              <span className="font-semibold">Nivel:</span> {profile?.levelName || "Sin Nivel"}
+            </div>
+          </div>
+
+          {/* Reglas */}
+          <div className="space-y-1">
+            <h4 className="font-semibold text-slate-900 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-2 mt-2">Configuración Aplicada</h4>
+            <div className="flex items-start gap-1">
+              <FontAwesomeIcon icon={faRulerCombined} className="w-3 h-3 text-slate-400 mt-0.5" />
+              <span className="font-semibold uppercase text-[10px]">Reglas:</span>
+              {(() => {
+                const effConfig = (stats?.projectVacationConfig as any) ?? globalConfig;
+                const meta = (stats as any)?.vacationRulesMeta;
+
+                const fractionalAllowed = effConfig?.permiteFraccionadas;
+                const minDays = effConfig?.minDiasFraccion ?? 1;
+
+                const minDaysSource = meta?.minDiasSource || stats?.vacationConfigSource || "Global";
+                const fracSource = meta?.fractionationSource || stats?.vacationConfigSource || "Global";
+                const typeSource = meta?.diasCorridosSource || stats?.vacationConfigSource || "Global";
+
+                return (
+                  <div className="flex flex-col items-start gap-1">
+                    {fractionalAllowed ? (
+                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                        Min: {minDays} días <span className="opacity-70">({minDaysSource})</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
+                        No Fracc. <span className="opacity-70">({fracSource})</span>
+                      </span>
+                    )}
+
+                    <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                      {applyConsecutiveDaysRule ? "Días Corridos" : "Días Hábiles"} <span className="opacity-70">({typeSource})</span>
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      </InfoModal>
+
       {/* MODAL DE INFORMACIÓN/AYUDA (Explicación de Términos) REVISADO para doble saldo */}
       <InfoModal
         isOpen={showInfoModal}
@@ -1169,6 +1179,14 @@ export default function Vacations({ onNavigate }: VacationsProps) {
         }}
         onRefresh={refetch}
       />
+
+      {/* Floating Action Button for New Request */}
+      {/* Floating Action Button for New Request */}
+      <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
+        <button onClick={() => setShowForm(true)} disabled={loading || hasActiveRequest || hasNoDays} className="pointer-events-auto flex items-center justify-center w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100" title={hasActiveRequest ? "Ya tienes una solicitud en curso" : hasNoDays ? "Sin días disponibles" : "Nueva Solicitud"}>
+          <FontAwesomeIcon icon={faPlus} className="w-6 h-6" />
+        </button>
+      </div>
     </div>
   );
 }

@@ -2060,7 +2060,19 @@ export const UsersPage: React.FC = () => {
                           <FontAwesomeIcon icon={faFileContract} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
                           Tipo Contrato
                         </label>
-                        {getActiveContractType(user) ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(user)}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin contrato activo</span>}
+                        {getActiveContractType(user) ? (
+                          <div className="flex gap-2 items-center flex-wrap">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(user)}</span>
+                            {getActiveSchedule(user) && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 w-fit border border-gray-200 dark:border-gray-600">
+                                <FontAwesomeIcon icon={faClock} className="mr-1 h-3 w-3" />
+                                {getActiveSchedule(user)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin contrato activo</span>
+                        )}
                       </div>
                     </div>
                     {/* Reemplazo y Empleado Reemplazado (solo mostrar si tienen valor) */}

@@ -28,7 +28,7 @@ const overlapSchema = z.object({
   maxSimultaneousUsers: z.number().min(1, "Mínimo 1 usuario"),
   description: z.string().optional(),
   isActive: z.boolean().default(true),
-  useActiveContractSchedule: z.boolean().default(false),
+  useActiveContractSchedule: z.boolean().default(true),
 });
 
 type OverlapFormData = z.infer<typeof overlapSchema>;
@@ -70,7 +70,7 @@ export const VacationOverlapRules: React.FC = () => {
       roleFrameId: "",
       maxSimultaneousUsers: 1,
       isActive: true,
-      useActiveContractSchedule: false,
+      useActiveContractSchedule: true,
     },
   });
 
@@ -325,7 +325,7 @@ export const VacationOverlapRules: React.FC = () => {
       maxSimultaneousUsers: 1,
       description: "",
       isActive: true,
-      useActiveContractSchedule: false,
+      useActiveContractSchedule: true,
     });
     setModalOpen(true);
   };
@@ -925,8 +925,8 @@ export const VacationOverlapRules: React.FC = () => {
 
                         {/* Project Badges */}
                         {projectNames.map((name) => (
-                          <span key={name} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-blue-600 text-white shadow-sm">
-                            <FontAwesomeIcon icon={faBriefcase} className="text-[9px]" /> {name}
+                          <span key={name} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-600 text-white dark:bg-blue-900 dark:text-blue-300 w-fit">
+                            <FontAwesomeIcon icon={faBriefcase} className="text-[10px]" /> {name}
                           </span>
                         ))}
 

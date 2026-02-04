@@ -964,12 +964,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleCreateNew} className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl w-10 h-10 sm:w-auto sm:h-10 sm:px-4 font-medium transition-colors disabled:opacity-50 shadow-lg shadow-blue-500/20">
-              <FontAwesomeIcon icon={faPlus} />
-              <span className="hidden sm:inline">Nueva Novedad</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -2381,6 +2375,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           </div>
         </div>
       </Modal>
+
+      {/* Floating Action Button for New Report */}
+      {/* Floating Action Button for New Report */}
+      <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
+        <button onClick={handleCreateNew} className="pointer-events-auto flex items-center justify-center w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100" title="Nueva Novedad">
+          <FontAwesomeIcon icon={faPlus} className="w-6 h-6" />
+        </button>
+      </div>
     </div>
   );
 }
