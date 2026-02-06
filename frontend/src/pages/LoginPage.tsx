@@ -68,6 +68,30 @@ export const LoginPage: React.FC = () => {
   const [availableTenants, setAvailableTenants] = useState<TenantOption[]>([]);
   const [showTenantSelector, setShowTenantSelector] = useState(false);
   const [showPortalSelector, setShowPortalSelector] = useState(false);
+  const [showFirstTimeMessage, setShowFirstTimeMessage] = useState(false);
+
+  const checkUserStatus = async (email: string) => {
+    try {
+      if (!email.includes("@")) return;
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/check-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.exists && data.isFirstLogin) {
+          setShowFirstTimeMessage(true);
+        } else {
+          setShowFirstTimeMessage(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error checking user status:", error);
+    }
+  };
 
   const {
     register,
@@ -326,9 +350,44 @@ export const LoginPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("auth.email")}</label>
-              <input {...register("email")} type="email" className="input-field" placeholder="admin@example.com" autoComplete="username" />
+              <input
+                {...register("email")}
+                type="email"
+                className="input-field"
+                placeholder="admin@example.com"
+                autoComplete="username"
+                onBlur={(e) => {
+                  register("email").onBlur(e); // Mantener validación original
+                  if (e.target.value && !errors.email) {
+                    checkUserStatus(e.target.value);
+                  }
+                }}
+              />
               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
             </div>
+
+            {/* Aviso de primer ingreso */}
+            {showFirstTimeMessage && (
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 animate-fade-in text-sm">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <FontAwesomeIcon icon={faMagicWandSparkles} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="text-blue-800 dark:text-blue-200">
+                    <p className="font-semibold mb-1">¿Es tu primera vez ingresando?</p>
+                    <p className="mb-2">Tus credenciales de ingreso son:</p>
+                    <ul className="list-disc list-inside space-y-1 opacity-90">
+                      <li>
+                        <strong>Correo:</strong> El que registraste en la plataforma
+                      </li>
+                      <li>
+                        <strong>Contraseña:</strong> Tu número de DNI
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("auth.password")}</label>

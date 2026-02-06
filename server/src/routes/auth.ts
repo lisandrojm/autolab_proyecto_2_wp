@@ -64,6 +64,36 @@ router.post("/check-tenants", async (req, res) => {
   }
 });
 
+// POST /auth/check-status - Verificar si es la primera vez que ingresa
+router.post("/check-status", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || typeof email !== "string") {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+
+    const users = await User.find({ email: email.toLowerCase(), isActive: true }).select("lastLoginAt");
+
+    if (users.length === 0) {
+      res.json({ exists: false, isFirstLogin: false });
+      return;
+    }
+
+    // Si el usuario existe pero nunca se ha logueado (lastLoginAt es nulo o undefined)
+    // Verificamos si CUALQUIERA de las cuentas asociadas a este email nunca se ha logueado.
+    // O mejor, si TODAS las cuentas tienen lastLoginAt null/undefined.
+    // Asumiremos que si no se ha logueado en ninguna, es first login.
+    const isFirstLogin = users.every((u) => !u.lastLoginAt);
+
+    res.json({ exists: true, isFirstLogin });
+  } catch (error) {
+    console.error("Check status error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/login", validate(loginWithClientSchema), async (req, res) => {
   try {
     const { email, password, tenantSlug, clientId } = req.body;
