@@ -264,12 +264,16 @@ export const UsersPage: React.FC = () => {
         let finalTotal = response.pagination.total;
         let finalPages = response.pagination.pages;
 
-        // CLIENT-SIDE FILTERING ENFORCEMENT (by client)
+        let workingList = response.users;
+
+        // 1. CLIENT-SIDE FILTERING ENFORCEMENT (by client)
         if (clientId) {
+          console.log(`[UsersPage] Starting Client Filter. Initial users: ${response.users.length}`);
+
           // Create efficient lookup map from allProjects (state) to ensure we can check project->client
           const localProjMap = new Map(allProjects.map((p: any) => [p._id, p]));
 
-          const filtered = response.users.filter((u) => {
+          const clientFiltered = workingList.filter((u) => {
             // 1. Direct match
             if (
               u.clientIds?.some((c: any) => {
@@ -299,23 +303,17 @@ export const UsersPage: React.FC = () => {
             return false;
           });
 
-          finalTotal = filtered.length;
-          // Manual pagination
-          const startIndex = (page - 1) * limit;
-          const endIndex = startIndex + limit;
-          finalUsers = filtered.slice(startIndex, endIndex);
-          finalPages = Math.ceil(finalTotal / limit) || 1;
-
-          console.log(`🔒 Client-Side Filtering applied (with projects lookup). ${response.users.length} -> ${filtered.length} users.`);
+          workingList = clientFiltered;
+          console.log(`[UsersPage] Client Filter done. Result: ${workingList.length} users.`);
         }
 
-        // ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, Role, ActiveContract)
+        // 2. ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, Role, ActiveContract)
         const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterRoleId || filterActiveContract || filterIsReplacement;
-        if (hasAdditionalFilters) {
-          // If we have additional filters but haven't already fetched all, fetch all for client-side
-          const allUsers = clientId ? finalUsers : response.users;
 
-          const additionalFiltered = allUsers.filter((u: User) => {
+        if (hasAdditionalFilters) {
+          console.log(`[UsersPage] Applying Additional Filters to ${workingList.length} users...`);
+
+          workingList = workingList.filter((u: User) => {
             // Project filter
             if (filterProjectId) {
               const userProjectIds = u.projectIds?.map((p: any) => (typeof p === "string" ? p : p._id)) || [];
@@ -338,8 +336,12 @@ export const UsersPage: React.FC = () => {
             // Role filter
             if (filterRoleId) {
               const userRoles = u.roles || [];
-              // Check if user has the selected role ID
-              const hasRole = userRoles.some((r: any) => (typeof r === "string" ? r === filterRoleId : r._id === filterRoleId));
+              const hasRole = userRoles.some((r: any) => {
+                // Determine ID whether populated object or string ID
+                const rId = r && typeof r === "object" && r._id ? String(r._id) : String(r);
+                return rId === String(filterRoleId);
+              });
+
               if (!hasRole) return false;
             }
 
@@ -405,16 +407,16 @@ export const UsersPage: React.FC = () => {
 
             return true;
           });
-
-          finalTotal = additionalFiltered.length;
-          // Manual pagination
-          const startIdx = (page - 1) * limit;
-          const endIdx = startIdx + limit;
-          finalUsers = additionalFiltered.slice(startIdx, endIdx);
-          finalPages = Math.ceil(finalTotal / limit) || 1;
-
-          console.log(`🔍 Additional Filters applied. ${allUsers.length} -> ${additionalFiltered.length} users.`);
+          console.log(`[UsersPage] After Additional Filters: ${workingList.length} users`);
         }
+
+        // Apply Pagination to final list
+        finalTotal = workingList.length;
+        // Manual pagination
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        finalUsers = workingList.slice(startIndex, endIndex);
+        finalPages = Math.ceil(finalTotal / limit) || 1;
 
         setUsers(finalUsers);
         setTotalUsers(finalTotal);

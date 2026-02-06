@@ -153,7 +153,7 @@ export const RequestsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
   const [openInfo, setOpenInfo] = useState(false);
   const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
-  const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments">("attendance");
+  const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments" | "overtime">("attendance");
   const [reports, setReports] = useState<ActivityReport[]>([]);
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -519,15 +519,17 @@ export const RequestsPage: React.FC = () => {
           </Modal>
 
           {/* Tabs Navigation */}
-          {/* Tabs Navigation */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 bg-white dark:bg-gray-800 rounded-t-lg px-2 pt-2">
-            <button onClick={() => setDetailTab("attendance")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "attendance" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 bg-white dark:bg-gray-800 rounded-t-lg px-2 pt-2 overflow-x-auto">
+            <button onClick={() => setDetailTab("attendance")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "attendance" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Asistencia del Personal ({mergedAttendance.length})
             </button>
-            <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+            <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Ausentes ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
             </button>
-            <button onClick={() => setDetailTab("comments")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${detailTab === "comments" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+            <button onClick={() => setDetailTab("overtime")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "overtime" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Horas Extras ({selectedReport.attendance.filter((r) => (r.overtimeHours || 0) > 0).length})
+            </button>
+            <button onClick={() => setDetailTab("comments")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "comments" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Comentarios ({selectedReport.comments ? 1 : 0})
             </button>
           </div>
@@ -557,9 +559,6 @@ export const RequestsPage: React.FC = () => {
                   })
                   .filter(Boolean);
 
-                // Also handle "Unknown" or types not in the list if any?
-                // For now, based on request "Dinamizar con el AMB", we show what's configured.
-                // Maybe catch others?
                 const knownNames = logTypes.map((t) => t.name);
                 const otherRecords = absentRecords.filter((r) => !r.absenceReason || !knownNames.includes(r.absenceReason));
                 if (otherRecords.length > 0) {
@@ -568,6 +567,22 @@ export const RequestsPage: React.FC = () => {
 
                 return dynamicBlocks.length > 0 ? <div className="space-y-4 animate-fade-in">{dynamicBlocks}</div> : <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Ausentes</div>;
               })()}
+
+            {detailTab === "overtime" &&
+              (() => {
+                const overtimeRecords = selectedReport.attendance.filter((r) => (r.overtimeHours || 0) > 0);
+
+                return overtimeRecords.length > 0 ? (
+                  <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden animate-fade-in">
+                    <div className="p-4">
+                      <AttendanceTable attendance={overtimeRecords} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registros de Horas Extras</div>
+                );
+              })()}
+
             {detailTab === "comments" &&
               (selectedReport.comments ? (
                 <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-5 animate-fade-in">
