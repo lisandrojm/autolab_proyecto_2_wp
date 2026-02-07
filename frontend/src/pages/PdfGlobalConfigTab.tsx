@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { pdfConfigAPI, PdfConfig } from "../api/pdfConfig";
+import { pdfConfigAPI } from "../api/pdfConfig";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faBuilding, faSignature, faImage, faEye, faSpinner } from "@fortawesome/free-solid-svg-icons";
@@ -13,15 +13,8 @@ import { useAuthStore } from "../stores/authStore";
 export function PdfGlobalConfigTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [config, setConfig] = useState<PdfConfig | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<{
+  const { register, handleSubmit, reset } = useForm<{
     razonSocial: string;
     cuit: string;
     ciudad: string;
@@ -41,10 +34,13 @@ export function PdfGlobalConfigTab() {
     try {
       setLoading(true);
       const data = await pdfConfigAPI.get();
-      setConfig(data);
-      setValue("razonSocial", data.razonSocial || "");
-      setValue("cuit", data.cuit || "");
-      setValue("ciudad", data.ciudad || "");
+
+      reset({
+        razonSocial: data.razonSocial || "",
+        cuit: data.cuit || "",
+        ciudad: data.ciudad || "",
+      });
+
       if (data.logoUrl) setLogoPreview(data.logoUrl);
       if (data.signatureUrl) setSignaturePreview(data.signatureUrl);
     } catch (error) {
@@ -88,7 +84,6 @@ export function PdfGlobalConfigTab() {
       }
 
       const updated = await pdfConfigAPI.update(formData);
-      setConfig(updated);
 
       if (updated.logoUrl) setLogoPreview(updated.logoUrl);
       if (updated.signatureUrl) setSignaturePreview(updated.signatureUrl);
@@ -200,7 +195,7 @@ export function PdfGlobalConfigTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Logo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <FontAwesomeIcon icon={faImage} /> Logo de la Empresa
             </label>
             <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
@@ -235,7 +230,7 @@ export function PdfGlobalConfigTab() {
 
           {/* Signature */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
               <FontAwesomeIcon icon={faSignature} /> Firma por Defecto
             </label>
             <div className="h-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex flex-col justify-between items-center">
