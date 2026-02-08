@@ -5,8 +5,11 @@ export interface IPdfConfig extends Document {
   razonSocial?: string;
   cuit?: string;
   ciudad?: string;
+  direccion?: string;
   logoUrl?: string; // stored relative path or full URL
   signatureUrl?: string; // stored relative path or full URL
+  signerName?: string;
+  signerRole?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,8 +30,11 @@ const PdfConfigSchema = new Schema<IPdfConfig>(
     razonSocial: { type: String, trim: true },
     cuit: { type: String, trim: true },
     ciudad: { type: String, trim: true },
+    direccion: { type: String, trim: true },
     logoUrl: { type: String, trim: true },
     signatureUrl: { type: String, trim: true },
+    signerName: { type: String, trim: true },
+    signerRole: { type: String, trim: true },
   },
   {
     timestamps: true,

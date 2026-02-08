@@ -6,8 +6,11 @@ export interface PdfConfig {
   razonSocial?: string;
   cuit?: string;
   ciudad?: string;
+  direccion?: string;
   logoUrl?: string;
   signatureUrl?: string;
+  signerName?: string;
+  signerRole?: string;
   createdAt: string;
   updatedAt: string;
 }

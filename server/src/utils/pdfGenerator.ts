@@ -96,6 +96,7 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
             <strong>${systemVars.razonSocial}</strong><br>
             CUIT: ${systemVars.cuit}<br>
             ${systemVars.ciudad}<br>
+            ${systemVars.direccion ? `${systemVars.direccion}<br>` : ""}
             ${systemVars.fecha}
           </div>
         </div>
@@ -106,6 +107,10 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
 
         <div class="footer">
           ${signatureImgTag}
+          <div class="signer-info" style="margin-top: 5px; font-size: 10pt; color: #555;">
+            <strong>${systemVars.signerName}</strong><br>
+            ${systemVars.signerRole}
+          </div>
         </div>
       </body>
       </html>

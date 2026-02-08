@@ -283,6 +283,9 @@ export function getSystemVariables(config: any): Record<string, string> {
     razonSocial: config?.razonSocial || "Razón Social Default",
     cuit: config?.cuit || "00-00000000-0",
     ciudad: config?.ciudad || "Ciudad Default",
+    direccion: config?.direccion || "",
+    signerName: config?.signerName || "",
+    signerRole: config?.signerRole || "",
     fecha: fecha,
   };
 }

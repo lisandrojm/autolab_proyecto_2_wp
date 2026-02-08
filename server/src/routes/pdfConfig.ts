@@ -59,7 +59,7 @@ router.put(
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-      const { razonSocial, cuit, ciudad, logoUrl, signatureUrl } = req.body;
+      const { razonSocial, cuit, ciudad, direccion, logoUrl, signatureUrl, signerName, signerRole } = req.body;
 
       let config = await PdfConfig.findOne({ tenantId: req.tenantObjectId });
       if (!config) {
@@ -69,8 +69,11 @@ router.put(
       if (razonSocial !== undefined) config.razonSocial = razonSocial;
       if (cuit !== undefined) config.cuit = cuit;
       if (ciudad !== undefined) config.ciudad = ciudad;
+      if (direccion !== undefined) config.direccion = direccion;
       if (logoUrl !== undefined) config.logoUrl = logoUrl;
       if (signatureUrl !== undefined) config.signatureUrl = signatureUrl;
+      if (signerName !== undefined) config.signerName = signerName;
+      if (signerRole !== undefined) config.signerRole = signerRole;
 
       const tenantIdStr = req.tenantObjectId.toString();
 
@@ -88,7 +91,7 @@ router.put(
       console.error("Update PDF Global Config error:", error);
       res.status(500).json({ error: "Error al actualizar configuración" });
     }
-  }
+  },
 );
 
 export { router as PdfConfigRoutes };
