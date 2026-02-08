@@ -10,6 +10,7 @@ export interface ISubtype {
   id: string;
   label: string;
   requiere_certificado?: boolean;
+  maxDays?: number; // Added
   [key: string]: any;
 }
 
@@ -37,6 +38,7 @@ export interface IOrderConfig extends Document {
   sortOrder: number;
   categoryType: "fecha" | "dinero" | "objeto" | "otros";
   dateMode?: DateMode;
+  maxDays?: number; // Added
   config: ITypeConfig;
   montoMaximo?: number;
   requiresAction?: boolean;
@@ -75,6 +77,7 @@ const orderConfigSchema = new Schema<IOrderConfig>(
       default: "single",
       trim: true,
     },
+    maxDays: { type: Number, min: 1 },
     config: { type: Schema.Types.Mixed, default: {} },
     montoMaximo: { type: Number, min: 0 },
     requiresAction: { type: Boolean, default: false },

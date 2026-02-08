@@ -83,7 +83,15 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
         {orderConfig.categoryType === "dinero" && orderConfig.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${orderConfig.montoMaximo.toLocaleString("es-ES")}</div>}
       </td>
       <td className="py-3 px-4">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderConfig.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderConfig.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
+        <div className="flex flex-col items-start gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderConfig.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderConfig.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
+
+            {orderConfig.categoryType === "fecha" && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.dateMode === "range" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200" : "bg-sky-100 text-sky-800 dark:bg-sky-500/30 dark:text-sky-200"}`}>{orderConfig.dateMode === "range" ? "Rango de Fechas" : "Fecha Única"}</span>}
+          </div>
+
+          {orderConfig.categoryType === "fecha" && orderConfig.dateMode === "range" && orderConfig.maxDays && <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">Max: {orderConfig.maxDays} días</span>}
+        </div>
       </td>
       <td className="py-3 px-4">
         <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.config?.subtipos?.length ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>{orderConfig.config?.subtipos?.length ? "Sí" : "No"}</span>
@@ -136,6 +144,7 @@ export const OrderTypesPage: React.FC = () => {
     isActive: boolean;
     categoryType: CategoryType;
     dateMode: DateMode;
+    maxDays?: number;
     montoMaximo?: number;
     requiresAction: boolean;
     actionText: string;
@@ -156,6 +165,7 @@ export const OrderTypesPage: React.FC = () => {
     isActive: true,
     categoryType: "fecha",
     dateMode: "single",
+    maxDays: undefined,
     montoMaximo: undefined,
     requiresAction: false,
     actionText: "",
@@ -242,6 +252,7 @@ export const OrderTypesPage: React.FC = () => {
       isActive: true,
       categoryType: "fecha",
       dateMode: "single",
+      maxDays: undefined,
       montoMaximo: undefined,
       requiresAction: false,
       actionText: "",
@@ -267,6 +278,7 @@ export const OrderTypesPage: React.FC = () => {
       isActive: orderType.isActive,
       categoryType: orderType.categoryType || "fecha",
       dateMode: orderType.dateMode || "single",
+      maxDays: orderType.maxDays,
       montoMaximo: orderType.montoMaximo,
       requiresAction: orderType.requiresAction || false,
       actionText: orderType.actionText || "",
@@ -360,6 +372,7 @@ export const OrderTypesPage: React.FC = () => {
         isActive: formData.isActive,
         categoryType: formData.categoryType,
         dateMode: formData.categoryType === "fecha" ? formData.dateMode : undefined,
+        maxDays: formData.categoryType === "fecha" && formData.dateMode === "range" ? (formData.maxDays ?? null) : undefined,
         montoMaximo: formData.categoryType === "dinero" && formData.montoMaximo ? formData.montoMaximo : undefined,
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction && formData.requiresUserConfirmation ? formData.actionText : undefined,

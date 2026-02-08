@@ -10,6 +10,7 @@ export interface Subtype {
   id: string;
   label: string;
   requiere_certificado?: boolean;
+  maxDays?: number; // Added
   [key: string]: any;
 }
 
@@ -30,6 +31,7 @@ export interface OrderConfig {
   sortOrder: number;
   categoryType: CategoryType;
   dateMode?: DateMode;
+  maxDays?: number; // Added
   config: TypeConfig;
   montoMaximo?: number;
   requiresAction?: boolean;
@@ -60,7 +62,7 @@ export const orderConfigAPI = {
     return data;
   },
 
-  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfId?: string }): Promise<OrderConfig> => {
+  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; maxDays?: number; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfId?: string }): Promise<OrderConfig> => {
     const { data } = await axios.post<OrderConfig>("/order-config", typeData);
     return data;
   },
@@ -74,6 +76,7 @@ export const orderConfigAPI = {
       sortOrder?: number;
       categoryType?: CategoryType;
       dateMode?: DateMode;
+      maxDays?: number;
       config?: TypeConfig;
       montoMaximo?: number;
       requiresAction?: boolean;

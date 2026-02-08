@@ -16,6 +16,7 @@ const subtypeSchema = z
     id: z.string().min(1),
     label: z.string().min(1),
     requiere_certificado: z.boolean().optional(),
+    maxDays: z.number().min(1).nullable().optional(),
   })
   .passthrough();
 
@@ -32,6 +33,7 @@ const createCategorySchema = z
     isActive: z.boolean().default(true),
     categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).default("otros"),
     dateMode: z.enum(["single", "range"]).default("single").optional(),
+    maxDays: z.number().min(1).nullable().optional(),
     config: configSchema.optional(),
     montoMaximo: z.number().min(0).optional(),
     requiresAction: z.boolean().default(false),
@@ -116,6 +118,7 @@ const updateCategorySchema = z
     sortOrder: z.number().int().min(0).optional(),
     categoryType: z.enum(["fecha", "dinero", "objeto", "otros"]).optional(),
     dateMode: z.enum(["single", "range"]).optional(),
+    maxDays: z.number().min(1).nullable().optional(),
     config: configSchema.optional(),
     montoMaximo: z.number().min(0).optional(),
     requiresAction: z.boolean().optional(),

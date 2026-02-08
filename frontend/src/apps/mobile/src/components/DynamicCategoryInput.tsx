@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar } from "@fortawesome/free-solid-svg-icons";
-import { OrderType } from "../../../../api/orderTypes";
+import { OrderConfig as OrderType } from "../../../../api/orderConfig";
 
 interface DynamicCategoryInputProps {
   category: OrderType | null;
@@ -67,9 +67,22 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           const fechaDesde = dynamicValue?.fechaDesde || "";
           const fechaHasta = dynamicValue?.fechaHasta || "";
 
-          console.log("DynamicCategoryInput - Date Range - dynamicValue:", dynamicValue);
-          console.log("DynamicCategoryInput - Date Range - fechaDesde:", fechaDesde);
-          console.log("DynamicCategoryInput - Date Range - fechaHasta:", fechaHasta);
+          // Calculate active max days
+          let activeMaxDays = category.maxDays;
+          if (subcategories && category.config?.subtipos) {
+            const selectedSubtype = category.config.subtipos.find((s) => s.id === subcategories);
+            if (selectedSubtype?.maxDays) {
+              activeMaxDays = selectedSubtype.maxDays;
+            }
+          }
+
+          // Calculate max date string if maxDays is set and start date is selected
+          let maxDateStr: string | undefined = undefined;
+          if (activeMaxDays && fechaDesde) {
+            const d = new Date(fechaDesde);
+            d.setDate(d.getDate() + activeMaxDays);
+            maxDateStr = d.toISOString().split("T")[0];
+          }
 
           return (
             <div className="space-y-3">
@@ -81,12 +94,34 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     type="date"
                     value={fechaDesde}
                     onChange={(e) => {
-                      console.log("fechaDesde changed to:", e.target.value);
+                      const newStart = e.target.value;
+                      let newEnd = fechaHasta;
+
+                      const dStart = new Date(newStart);
+
+                      // If new start date makes current end date invalid (checks against max days)
+                      if (activeMaxDays && newEnd && newStart) {
+                        const dEnd = new Date(newEnd);
+                        const diffTime = Math.abs(dEnd.getTime() - dStart.getTime());
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                        if (diffDays > activeMaxDays) {
+                          newEnd = "";
+                        }
+                      }
+
+                      // Also validate min date (end date cannot be before start date)
+                      if (newEnd && newStart) {
+                        const dEnd = new Date(newEnd);
+                        if (dEnd < dStart) {
+                          newEnd = "";
+                        }
+                      }
+
                       const newValue = {
-                        fechaDesde: e.target.value,
-                        fechaHasta: fechaHasta,
+                        fechaDesde: newStart,
+                        fechaHasta: newEnd,
                       };
-                      console.log("Calling onDynamicValueChange with:", newValue);
                       onDynamicValueChange(newValue);
                     }}
                     min={today}
@@ -100,18 +135,18 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     type="date"
                     value={fechaHasta}
                     onChange={(e) => {
-                      console.log("fechaHasta changed to:", e.target.value);
                       const newValue = {
                         fechaDesde: fechaDesde,
                         fechaHasta: e.target.value,
                       };
-                      console.log("Calling onDynamicValueChange with:", newValue);
                       onDynamicValueChange(newValue);
                     }}
                     min={fechaDesde || today}
+                    max={maxDateStr}
                     required
                     className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
                   />
+                  {activeMaxDays && <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Máximo {activeMaxDays} días permitidos.</p>}
                 </div>
               </div>
             </div>
@@ -263,32 +298,6 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1"> Presentar "{category.documentoRequerido && <span>{category.documentoRequerido}"</span>}</p>
               {renderDeadlineInfo()}
-
-              {/*               <div className="mt-3">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subir Documento</label>
-                {documentPreview ? (
-                  <div className="relative rounded overflow-hidden border-2 border-slate-300 dark:border-slate-600">
-                    <img src={documentPreview} alt="Preview" className="w-full h-48 object-cover" />
-                    <button type="button" onClick={handleRemoveDocument} className="absolute top-2 right-2 p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg">
-                      <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
-                      <FontAwesomeIcon icon={faCamera} className="w-6 h-6 text-slate-400" />
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tomar Foto</span>
-                    </button>
-
-                    <inpt ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 py-4 px-3 hover:bg-slate-100 dark:hover:bg-slate-700">
-                      <FontAwesomeIcon icon={faImage} className="w-6 h-6 text-slate-400" />
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Subir Archivo</span>
-                    </button>
-                  </div>
-                )}
-              </div> */}
             </div>
           )}
 
