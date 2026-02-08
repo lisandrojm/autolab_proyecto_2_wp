@@ -410,13 +410,19 @@ export const UsersPage: React.FC = () => {
           console.log(`[UsersPage] After Additional Filters: ${workingList.length} users`);
         }
 
-        // Apply Pagination to final list
-        finalTotal = workingList.length;
-        // Manual pagination
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        finalUsers = workingList.slice(startIndex, endIndex);
-        finalPages = Math.ceil(finalTotal / limit) || 1;
+        if (isClientSideFilterNeeded) {
+          // Apply Pagination to final list (client-side)
+          finalTotal = workingList.length;
+          // Manual pagination
+          const startIndex = (page - 1) * limit;
+          const endIndex = startIndex + limit;
+          finalUsers = workingList.slice(startIndex, endIndex);
+          finalPages = Math.ceil(finalTotal / limit) || 1;
+        } else {
+          // Server-side pagination
+          finalUsers = workingList;
+          // finalTotal and finalPages are already set from response.pagination
+        }
 
         setUsers(finalUsers);
         setTotalUsers(finalTotal);
