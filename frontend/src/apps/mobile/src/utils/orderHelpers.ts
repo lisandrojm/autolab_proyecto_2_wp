@@ -25,6 +25,28 @@ export const getUserPosition = (user: any): string => {
   return "Sin puesto asignado";
 };
 
+export const getUserRoleFrame = (user: any): string => {
+  if (!user || typeof user === "string") return "Sin role frame asignado";
+
+  if (user.metadata && user.metadata.projects && user.metadata.projects.length > 0) {
+    for (const project of user.metadata.projects) {
+      if (project.nombre_rol_frame) return project.nombre_rol_frame;
+
+      if (project.contracts && project.contracts.length > 0) {
+        // Find active contract or just take the first one?
+        // Let's take the most recent one (assuming order in array or just first)
+        for (const contract of project.contracts) {
+          if (contract.nombre_rol_frame) {
+            return contract.nombre_rol_frame;
+          }
+        }
+      }
+    }
+  }
+
+  return "Sin role frame asignado";
+};
+
 export const getUserAvatar = (user: any): string | null => {
   if (!user || typeof user === "string") return null;
   return user.avatar || user.photoUrl || null;

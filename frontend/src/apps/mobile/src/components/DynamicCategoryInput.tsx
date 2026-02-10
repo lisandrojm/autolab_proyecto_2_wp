@@ -80,7 +80,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           let maxDateStr: string | undefined = undefined;
           if (activeMaxDays && fechaDesde) {
             const d = new Date(fechaDesde);
-            d.setDate(d.getDate() + activeMaxDays);
+            d.setDate(d.getDate() + activeMaxDays - 1);
             maxDateStr = d.toISOString().split("T")[0];
           }
 
@@ -105,7 +105,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                         const diffTime = Math.abs(dEnd.getTime() - dStart.getTime());
                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                        if (diffDays > activeMaxDays) {
+                        if (diffDays >= activeMaxDays) {
                           newEnd = "";
                         }
                       }
@@ -149,13 +149,58 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                   {activeMaxDays && <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Máximo {activeMaxDays} días permitidos.</p>}
                 </div>
               </div>
+              {(() => {
+                if (!fechaHasta) return null;
+                const [y, m, d] = fechaHasta.split("-").map(Number);
+                const dateObj = new Date(y, m - 1, d);
+
+                const nextWorkingDay = new Date(dateObj);
+                nextWorkingDay.setDate(nextWorkingDay.getDate() + 1);
+
+                if (nextWorkingDay.getDay() === 6) nextWorkingDay.setDate(nextWorkingDay.getDate() + 2);
+                else if (nextWorkingDay.getDay() === 0) nextWorkingDay.setDate(nextWorkingDay.getDate() + 1);
+
+                return (
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded p-3 text-sm text-emerald-700 dark:text-emerald-400">
+                    <p>
+                      <span className="font-bold">Presentarse a trabajar el día:</span> {nextWorkingDay.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           );
         } else {
+          const nextWorkingDay = (() => {
+            if (!dynamicValue) return null;
+            if (typeof dynamicValue !== "string") return null;
+
+            const [y, m, d] = dynamicValue.split("-").map(Number);
+            const dateObj = new Date(y, m - 1, d);
+
+            const next = new Date(dateObj);
+            next.setDate(next.getDate() + 1); // Next day
+
+            // If Saturday (6), add 2 days -> Monday
+            if (next.getDay() === 6) next.setDate(next.getDate() + 2);
+            // If Sunday (0), add 1 day -> Monday
+            else if (next.getDay() === 0) next.setDate(next.getDate() + 1);
+            return next;
+          })();
+
           return (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha</label>
-              <input type="date" min={today} value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha</label>
+                <input type="date" min={today} value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+              </div>
+              {nextWorkingDay && (
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded p-3 text-sm text-emerald-700 dark:text-emerald-400">
+                  <p>
+                    <span className="font-bold">Presentarse a trabajar el día:</span> {nextWorkingDay.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                  </p>
+                </div>
+              )}
             </div>
           );
         }

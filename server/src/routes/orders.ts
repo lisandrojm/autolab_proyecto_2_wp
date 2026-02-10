@@ -136,7 +136,14 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       userId,
     })
       .sort({ requestedAt: -1 })
-      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId metadata",
+        populate: [
+          { path: "positionId", select: "name" },
+          { path: "metadata.projects", model: "UserProject" },
+        ],
+      })
       .populate("approvedBy", "firstName lastName email")
       .populate("categoryId");
 
@@ -188,7 +195,14 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       tenantId: req.tenantObjectId,
       userId,
     })
-      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId metadata",
+        populate: [
+          { path: "positionId", select: "name" },
+          { path: "metadata.projects", model: "UserProject" },
+        ],
+      })
       .populate("approvedBy", "firstName lastName email")
       .populate("categoryId");
 
@@ -417,7 +431,14 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     }
 
     const populatedOrder = await Order.findById(order._id)
-      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId metadata",
+        populate: [
+          { path: "positionId", select: "name" },
+          { path: "metadata.projects", model: "UserProject" },
+        ],
+      })
       .populate("approvedBy", "firstName lastName email")
       .populate("categoryId");
 
@@ -493,7 +514,14 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
     }
 
     const populatedOrder = await Order.findById(order._id)
-      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId metadata",
+        populate: [
+          { path: "positionId", select: "name" },
+          { path: "metadata.projects", model: "UserProject" },
+        ],
+      })
       .populate("approvedBy", "firstName lastName email")
       .populate("categoryId");
 
@@ -545,7 +573,14 @@ router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRe
     }
 
     const populatedOrder = await Order.findById(order._id)
-      .populate({ path: "userId", select: "firstName lastName email positionId", populate: { path: "positionId", select: "name" } })
+      .populate({
+        path: "userId",
+        select: "firstName lastName email positionId metadata",
+        populate: [
+          { path: "positionId", select: "name" },
+          { path: "metadata.projects", model: "UserProject" },
+        ],
+      })
       .populate("approvedBy", "firstName lastName email")
       .populate("categoryId");
 

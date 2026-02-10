@@ -4,7 +4,7 @@ import { faSpinner, faTimes, faCamera, faUpload, faFileArrowUp, faBell, faClock,
 import { Order } from "../../../../api/management";
 import { personnelAPI } from "../../../../api/personnel";
 import { Modal } from "../../../../components/ui/Modal";
-import { getUserName, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray } from "../utils/orderHelpers";
+import { getUserName, getUserPosition, getUserAvatar, formatDateShort, getCategoryName, getOrderNumber, getSubcategoriesArray, getUserRoleFrame } from "../utils/orderHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
 import { mapOrderStatusToStatusTypeForMobile, mapDocumentStateToStatusType, mapSignatureStateToStatusType, isOrderInFinalState } from "../../../../utils/statusHelpers";
@@ -284,7 +284,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
             </div>
             <div>
               <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(order.userId)}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">{getUserPosition(order.userId)}</p>
+              <span className="bg-purple-600/20 text-purple-600 dark:text-purple-400 border border-purple-600/30 rounded px-2 py-0.5 text-xs inline-block mt-0.5 font-medium">{getUserRoleFrame(order.userId)}</span>
             </div>
           </div>
 
@@ -301,7 +301,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                 ))}
               </div>
             </div>
-            <div className="flex gap-10">
+            <div className="flex flex-wrap gap-10">
               {typeof order.dynamicValue === "string" && !/^\d{4}-\d{2}-\d{2}/.test(order.dynamicValue) && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{(order.categoryId as any)?.categoryType === "otros" ? "Detalle" : "Objeto Especificado"}</p>
@@ -332,6 +332,39 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   <p className="font-medium text-slate-800 dark:text-slate-100">{formatDateShort(order.dynamicValue.fechaHasta)}</p>
                 </div>
               )}
+              {(() => {
+                const parseDate = (dateStr: string) => {
+                  const [y, m, d] = dateStr.split("-").map(Number);
+                  return new Date(y, m - 1, d);
+                };
+
+                let lastDate: Date | null = null;
+                if (order.dynamicValue?.fechaHasta) {
+                  lastDate = parseDate(order.dynamicValue.fechaHasta);
+                } else if (order.dynamicValue?.fechaUnica) {
+                  lastDate = parseDate(order.dynamicValue.fechaUnica);
+                } else if (typeof order.dynamicValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(order.dynamicValue)) {
+                  lastDate = parseDate(order.dynamicValue);
+                }
+
+                if (!lastDate) return null;
+
+                const nextWorkingDay = new Date(lastDate);
+                nextWorkingDay.setDate(nextWorkingDay.getDate() + 1);
+
+                // If Saturday (6), add 2 days -> Monday
+                if (nextWorkingDay.getDay() === 6) nextWorkingDay.setDate(nextWorkingDay.getDate() + 2);
+                // If Sunday (0), add 1 day -> Monday
+                else if (nextWorkingDay.getDay() === 0) nextWorkingDay.setDate(nextWorkingDay.getDate() + 1);
+
+                return (
+                  <div className="w-full mt-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded p-3 text-sm text-emerald-700 dark:text-emerald-400">
+                    <p>
+                      <span className="font-bold">Presentarse a trabajar el día:</span> {nextWorkingDay.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                    </p>
+                  </div>
+                );
+              })()}
               {order.photoUrl && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Imagen adjunta</p>
