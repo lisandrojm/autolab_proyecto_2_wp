@@ -403,13 +403,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   </div>
                 ) : (
                   <div className="flex flex-col lg:flex-row gap-3">
-                    <input ref={cameraInputRef} type="file" accept="image/*,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
-                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
+                    <input ref={cameraInputRef} type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,application/pdf" capture="environment" onChange={handleDocumentChange} className="hidden" />
+                    <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm lg:hidden">
                       <FontAwesomeIcon icon={faCamera} className="w-4 h-4" />
                       <span className="text-sm font-medium">Tomar Foto</span>
                     </button>
 
-                    <input ref={galleryInputRef} type="file" accept="image/*,application/pdf" onChange={handleDocumentChange} className="hidden" />
+                    <input ref={galleryInputRef} type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,application/pdf" onChange={handleDocumentChange} className="hidden" />
                     <button type="button" onClick={() => galleryInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 rounded border border-yellow-600 bg-slate-800 hover:bg-slate-900/40 text-white py-2.5 px-4 transition-colors shadow-sm">
                       <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                       <span className="text-sm font-medium">Subir Archivo</span>

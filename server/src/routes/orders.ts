@@ -56,13 +56,14 @@ const uploadOrderImage = multer({
   storage: orderStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const allowedTypes = /jpeg|jpg|png|gif|webp|heic|heif/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
+    const isImage = file.mimetype.startsWith("image/");
+
+    if (isImage || extname) {
       return cb(null, true);
     }
-    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp)"));
+    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp, heic, etc)"));
   },
 }).single("photo");
 
@@ -91,13 +92,15 @@ const uploadDocument = multer({
   storage: documentStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|pdf/;
+    const allowedTypes = /jpeg|jpg|png|gif|webp|heic|heif|pdf/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = /jpeg|jpg|png|pdf|application\/pdf/i.test(file.mimetype);
-    if (mimetype && extname) {
+    const isImage = file.mimetype.startsWith("image/");
+    const isPdf = file.mimetype === "application/pdf";
+
+    if (isImage || isPdf || extname) {
       return cb(null, true);
     }
-    cb(new Error("Solo se permiten imágenes (jpeg, jpg, png) y archivos PDF"));
+    cb(new Error("Solo se permiten imágenes y archivos PDF"));
   },
 }).single("document");
 
