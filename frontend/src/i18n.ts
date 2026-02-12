@@ -71,7 +71,7 @@ const resources = {
       "auth.password": "Contraseña",
       "auth.signIn": "Iniciar sesión",
       "auth.welcome": "Bienvenido",
-      "auth.loginSubtitle": "Inicia sesión en tu cuenta para continuar",
+      "auth.loginSubtitle": "Inicia sesión en tu cuenta para continuar test",
       "auth.registerSubtitle": "Crea tu cuenta para continuar",
       "auth.invalidCredentials": "Credenciales inválidas",
       "auth.loginSuccess": "Inicio de sesión exitoso",
