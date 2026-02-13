@@ -206,6 +206,49 @@ const reorderCategoriesSchema = z.object({
     .min(1),
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// General Settings Routes (Must be before /:id)
+// ─────────────────────────────────────────────────────────────────────────────
+import { OrderGeneralConfig } from "../models/OrderGeneralConfig.js";
+
+router.get("/settings", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const config = await OrderGeneralConfig.getOrCreateDefault(req.tenantObjectId!);
+    res.json(config);
+  } catch (error) {
+    console.error("Get order settings error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/settings", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { contractRules, orderingEnabled } = req.body;
+
+    // Simple validation
+    if (contractRules && !Array.isArray(contractRules)) {
+      res.status(400).json({ error: "contractRules must be an array" });
+      return;
+    }
+
+    const config = await OrderGeneralConfig.findOneAndUpdate(
+      { tenantId: req.tenantObjectId },
+      {
+        $set: {
+          contractRules: contractRules || [],
+          orderingEnabled: orderingEnabled !== undefined ? orderingEnabled : true,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    );
+
+    res.json(config);
+  } catch (error) {
+    console.error("Update order settings error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { isActive } = req.query;

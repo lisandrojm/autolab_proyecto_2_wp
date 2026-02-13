@@ -11,7 +11,7 @@ interface CardItemAction {
 
 interface CardItemGenericProps {
   title: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   avatarUrl?: string | null;
   avatarFallback?: string;
   badgesTop?: React.ReactNode[];

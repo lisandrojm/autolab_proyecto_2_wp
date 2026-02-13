@@ -397,13 +397,17 @@ export const OrdersPage: React.FC = () => {
     return user.email || "Usuario desconocido";
   };
 
-  const getUserPosition = (user: any): string => {
-    if (!user) return "Sin puesto asignado";
-    if (typeof user === "string") return "Sin puesto asignado";
-    if (user.positionId && typeof user.positionId === "object" && user.positionId.name) {
-      return user.positionId.name;
+  const renderUserRoleBadge = (user: any) => {
+    if (!user || typeof user === "string") return <span className="text-xs text-gray-500">-</span>;
+
+    if (user.metadata?.projects?.length > 0) {
+      const role = user.metadata.projects[0]?.nombre_rol_frame;
+      if (role) {
+        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">{role}</span>;
+      }
     }
-    return "Sin puesto asignado";
+
+    return <span className="text-xs text-gray-400">-</span>;
   };
 
   const renderSignatureStatus = (order: Order) => {
@@ -612,7 +616,7 @@ export const OrdersPage: React.FC = () => {
             <CardItemGeneric
               key={order._id}
               title={getUserName(order.userId)}
-              subtitle={getUserPosition(order.userId)}
+              subtitle={renderUserRoleBadge(order.userId)}
               avatarUrl={avatarUrl}
               avatarFallback={getAvatarFallback(order.userId)}
               badgesTop={badgesTop}
@@ -812,7 +816,7 @@ export const OrdersPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cargo</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
@@ -847,7 +851,7 @@ export const OrdersPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(order.userId)}</td>
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{getUserPosition(order.userId)}</td>
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserRoleBadge(order.userId)}</td>
                             <td className="py-3 px-4">
                               <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
                             </td>
@@ -979,7 +983,7 @@ export const OrdersPage: React.FC = () => {
               </div>
               <div className="bg-slate-800">
                 <p className="font-semibold text-slate-800 dark:text-slate-100">{getUserName(selectedOrder.userId)}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{getUserPosition(selectedOrder.userId)}</p>
+                <div className="text-sm text-slate-500 dark:text-slate-400">{renderUserRoleBadge(selectedOrder.userId)}</div>
               </div>
             </div>
             <div className="flex flex-col gap-4">
@@ -1061,7 +1065,7 @@ export const OrdersPage: React.FC = () => {
             {(() => {
               const futureAction = selectedOrder.futureActions && selectedOrder.futureActions.length > 0 ? selectedOrder.futureActions[0] : null;
 
-              if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "pendiente_documento") {
+              if (!futureAction || futureAction.tipoAccionFutura !== "documento" || futureAction.estadoAccion !== "pendiente_documento" || selectedOrder.status === "pending") {
                 return null;
               }
 

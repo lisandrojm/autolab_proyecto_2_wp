@@ -2,6 +2,7 @@ import React, { useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { OrderConfig as OrderType } from "../../../../api/orderConfig";
+import { CustomDatePicker } from "./CustomDatePicker";
 
 interface DynamicCategoryInputProps {
   category: OrderType | null;
@@ -23,9 +24,11 @@ interface DynamicCategoryInputProps {
   onDocumentChange?: (file: File | null) => void;
   documentPreview?: string | null;
   onDocumentPreviewChange?: (preview: string | null) => void;
+  validateDate?: (date: Date) => { valid: boolean; message?: string };
+  getNextWorkingDay?: (date: Date) => Date;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange, validateDate, getNextWorkingDay }) => {
   if (!category) return null;
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +37,8 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
   const today = new Date().toISOString().split("T")[0];
 
   const hasSubcategories = category.config?.subtipos && category.config.subtipos.length > 0;
+
+  // ... (handleDocumentChange and handleRemoveDocument kept as is)
 
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,76 +94,64 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Rango de Fechas</label>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Fecha Desde</label>
-                  <input
-                    type="date"
+                  <CustomDatePicker
+                    label="Fecha Desde"
                     value={fechaDesde}
-                    onChange={(e) => {
-                      const newStart = e.target.value;
+                    onChange={(newStart) => {
                       let newEnd = fechaHasta;
 
-                      const dStart = new Date(newStart);
-
-                      // If new start date makes current end date invalid (checks against max days)
+                      // Logic to clear end date if start date changes and invalidates range
                       if (activeMaxDays && newEnd && newStart) {
+                        const dStart = new Date(newStart);
                         const dEnd = new Date(newEnd);
                         const diffTime = Math.abs(dEnd.getTime() - dStart.getTime());
                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
                         if (diffDays >= activeMaxDays) {
                           newEnd = "";
                         }
                       }
-
-                      // Also validate min date (end date cannot be before start date)
                       if (newEnd && newStart) {
+                        const dStart = new Date(newStart);
                         const dEnd = new Date(newEnd);
-                        if (dEnd < dStart) {
-                          newEnd = "";
-                        }
+                        if (dEnd < dStart) newEnd = "";
                       }
 
-                      const newValue = {
-                        fechaDesde: newStart,
-                        fechaHasta: newEnd,
-                      };
-                      onDynamicValueChange(newValue);
+                      onDynamicValueChange({ fechaDesde: newStart, fechaHasta: newEnd });
                     }}
-                    min={today}
-                    required
-                    className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                    minDate={today}
+                    validateDate={validateDate}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Fecha Hasta</label>
-                  <input
-                    type="date"
+                  <CustomDatePicker
+                    label="Fecha Hasta"
                     value={fechaHasta}
-                    onChange={(e) => {
-                      const newValue = {
-                        fechaDesde: fechaDesde,
-                        fechaHasta: e.target.value,
-                      };
-                      onDynamicValueChange(newValue);
+                    onChange={(newEnd) => {
+                      onDynamicValueChange({ fechaDesde, fechaHasta: newEnd });
                     }}
-                    min={fechaDesde || today}
-                    max={maxDateStr}
-                    required
-                    className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none"
+                    minDate={fechaDesde || today}
+                    maxDate={maxDateStr}
+                    validateDate={validateDate}
+                    disabled={!fechaDesde}
                   />
                   {activeMaxDays && <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Máximo {activeMaxDays} días permitidos.</p>}
                 </div>
               </div>
+
               {(() => {
                 if (!fechaHasta) return null;
                 const [y, m, d] = fechaHasta.split("-").map(Number);
                 const dateObj = new Date(y, m - 1, d);
 
-                const nextWorkingDay = new Date(dateObj);
-                nextWorkingDay.setDate(nextWorkingDay.getDate() + 1);
-
-                if (nextWorkingDay.getDay() === 6) nextWorkingDay.setDate(nextWorkingDay.getDate() + 2);
-                else if (nextWorkingDay.getDay() === 0) nextWorkingDay.setDate(nextWorkingDay.getDate() + 1);
+                const nextWorkingDay = getNextWorkingDay
+                  ? getNextWorkingDay(dateObj)
+                  : (() => {
+                      const next = new Date(dateObj);
+                      next.setDate(next.getDate() + 1);
+                      if (next.getDay() === 6) next.setDate(next.getDate() + 2);
+                      else if (next.getDay() === 0) next.setDate(next.getDate() + 1);
+                      return next;
+                    })();
 
                 return (
                   <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded p-3 text-sm text-emerald-700 dark:text-emerald-400">
@@ -171,29 +164,29 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             </div>
           );
         } else {
+          // Single Date Mode
           const nextWorkingDay = (() => {
-            if (!dynamicValue) return null;
-            if (typeof dynamicValue !== "string") return null;
-
+            if (!dynamicValue || typeof dynamicValue !== "string") return null;
             const [y, m, d] = dynamicValue.split("-").map(Number);
             const dateObj = new Date(y, m - 1, d);
 
-            const next = new Date(dateObj);
-            next.setDate(next.getDate() + 1); // Next day
-
-            // If Saturday (6), add 2 days -> Monday
-            if (next.getDay() === 6) next.setDate(next.getDate() + 2);
-            // If Sunday (0), add 1 day -> Monday
-            else if (next.getDay() === 0) next.setDate(next.getDate() + 1);
-            return next;
+            return getNextWorkingDay
+              ? getNextWorkingDay(dateObj)
+              : (() => {
+                  const next = new Date(dateObj);
+                  next.setDate(next.getDate() + 1);
+                  if (next.getDay() === 6) next.setDate(next.getDate() + 2);
+                  else if (next.getDay() === 0) next.setDate(next.getDate() + 1);
+                  return next;
+                })();
           })();
 
           return (
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fecha</label>
-                <input type="date" min={today} value={dynamicValue || ""} onChange={(e) => onDynamicValueChange(e.target.value)} required className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none" />
+                <CustomDatePicker label="Fecha" value={dynamicValue || ""} onChange={(newDate) => onDynamicValueChange(newDate)} minDate={today} validateDate={validateDate} />
               </div>
+
               {nextWorkingDay && (
                 <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded p-3 text-sm text-emerald-700 dark:text-emerald-400">
                   <p>

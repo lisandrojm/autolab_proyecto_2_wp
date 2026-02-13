@@ -103,4 +103,14 @@ export const orderConfigAPI = {
   reorder: async (categories: Array<{ id: string; sortOrder: number }>): Promise<void> => {
     await axios.put("/order-config/reorder", { categories });
   },
+
+  getSettings: async (): Promise<any> => {
+    const { data } = await axios.get("/order-config/settings");
+    return data;
+  },
+
+  updateSettings: async (settings: { contractRules: any[]; orderingEnabled?: boolean }): Promise<any> => {
+    const { data } = await axios.put("/order-config/settings", settings);
+    return data;
+  },
 };

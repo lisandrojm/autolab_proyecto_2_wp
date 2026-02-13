@@ -139,7 +139,7 @@ export default function Home({ onNavigate }: HomeProps) {
       ...vacationsAction,
       disabled: true,
       description: hasActiveContract(profile) ? "Módulo deshabilitado" : "Sin contrato activo",
-      title: hasActiveContract(profile) ? "Vacaciones (Deshabilitado)" : "Vacaciones",
+      title: hasActiveContract(profile) ? "Vacaciones" : "Vacaciones",
     });
   }
 
