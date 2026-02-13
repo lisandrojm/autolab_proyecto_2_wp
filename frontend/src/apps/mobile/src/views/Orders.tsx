@@ -236,24 +236,20 @@ export default function Orders({ onNavigate }: OrdersProps) {
   const validateDate = (date: Date): { valid: boolean; message?: string } => {
     const rule = getContractRule();
 
-    // If no rule found, we might default to allowing everything or standard M-F
-    // Let's assume standard M-F (Sat/Sun disabled) if strict, or allow all if loose.
-    // Given the prompt implies "configuration", if no config, maybe allow all?
-    // But let's check standard weekends if we have a rule.
+    const day = date.getDay();
+    const isSat = day === 6;
+    const isSun = day === 0;
+    const isHol = isHoliday(date);
 
     if (rule) {
-      const day = date.getDay();
-      const isSat = day === 6;
-      const isSun = day === 0;
-      const isHol = isHoliday(date); // Placeholder
-
       if (isSat && !rule.saturday) return { valid: false, message: "Sábados no habilitados por contrato." };
       if (isSun && !rule.sunday) return { valid: false, message: "Domingos no habilitados por contrato." };
       if (isHol && !rule.holiday) return { valid: false, message: "Feriados no habilitados por contrato." };
     } else {
-      // If no rule is found, we defaults to generic behavior (usually strict on backend, but maybe lax here?)
-      // Let's default to blocking weekends to be safe? Or just return valid.
-      // Returning valid allows user to pick, backend can reject if needed.
+      // Default: Block weekends and holidays if no rule is found
+      if (isSat) return { valid: false, message: "Sábados no habilitados por defecto." };
+      if (isSun) return { valid: false, message: "Domingos no habilitados por defecto." };
+      if (isHol) return { valid: false, message: "Feriados no habilitados por defecto." };
     }
 
     return { valid: true };
@@ -280,8 +276,8 @@ export default function Orders({ onNavigate }: OrdersProps) {
         if (isSun && !rule.sunday) isAllowed = false;
         if (isHol && !rule.holiday) isAllowed = false;
       } else {
-        // Default logic if no rule: Skip weekends
-        if (isSat || isSun) isAllowed = false;
+        // Default logic if no rule: Skip weekends and holidays
+        if (isSat || isSun || isHol) isAllowed = false;
       }
 
       if (isAllowed) return next;
