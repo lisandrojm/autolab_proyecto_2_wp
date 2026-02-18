@@ -26,9 +26,10 @@ interface DynamicCategoryInputProps {
   onDocumentPreviewChange?: (preview: string | null) => void;
   validateDate?: (date: Date) => { valid: boolean; message?: string };
   getNextWorkingDay?: (date: Date) => Date;
+  remainingDays?: number;
 }
 
-export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange, validateDate, getNextWorkingDay }) => {
+export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ category, subcategories, onSubcategoriesChange, dynamicValue, onDynamicValueChange, amount, onAmountChange, actionCompleted, onActionCompletedChange, futureActionPlazoDias, onOrderFutureActionPlazoDiasChange, futureActionFechaLimite, onOrderFutureActionFechaLimiteChange, futureActionDocumento, onOrderFutureActionDocumentoChange, document, onDocumentChange, documentPreview, onDocumentPreviewChange, validateDate, getNextWorkingDay, remainingDays }) => {
   if (!category) return null;
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +82,11 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             }
           }
 
+          // Apply remaining days limit
+          if (typeof remainingDays === "number") {
+            activeMaxDays = activeMaxDays ? Math.min(activeMaxDays, remainingDays) : remainingDays;
+          }
+
           // Calculate max date string if maxDays is set and start date is selected
           let maxDateStr: string | undefined = undefined;
           if (activeMaxDays && fechaDesde) {
@@ -120,8 +126,10 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     }}
                     minDate={today}
                     validateDate={validateDate}
+                    disabled={typeof remainingDays === "number" && remainingDays <= 0}
                   />
                 </div>
+
                 <div>
                   <CustomDatePicker
                     label="Fecha Hasta"
@@ -132,9 +140,10 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
                     minDate={fechaDesde || today}
                     maxDate={maxDateStr}
                     validateDate={validateDate}
-                    disabled={!fechaDesde}
+                    disabled={!fechaDesde || (typeof remainingDays === "number" && remainingDays <= 0)}
                   />
                   {activeMaxDays && <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Máximo {activeMaxDays} días permitidos.</p>}
+                  {typeof remainingDays === "number" && remainingDays <= 0 && <p className="text-xs text-red-600 dark:text-red-400 mt-1">No tienes días disponibles.</p>}
                 </div>
               </div>
 
@@ -184,7 +193,8 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           return (
             <div className="space-y-3">
               <div>
-                <CustomDatePicker label="Fecha" value={dynamicValue || ""} onChange={(newDate) => onDynamicValueChange(newDate)} minDate={today} validateDate={validateDate} />
+                <CustomDatePicker label="Fecha" value={dynamicValue || ""} onChange={(newDate) => onDynamicValueChange(newDate)} minDate={today} validateDate={validateDate} disabled={typeof remainingDays === "number" && remainingDays <= 0} />
+                {typeof remainingDays === "number" && remainingDays <= 0 && <p className="text-xs text-red-600 dark:text-red-400 mt-1">No tienes días disponibles.</p>}
               </div>
 
               {nextWorkingDay && (

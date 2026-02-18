@@ -196,6 +196,7 @@ export interface OrderData {
   actionCompleted?: boolean;
   amount?: number;
   photoUrl?: string;
+  daysRequested?: number;
   status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
   requestedAt: string;
   preApprovedBy?: {
@@ -284,7 +285,7 @@ export const personnelAPI = {
     return data;
   },
 
-  createOrder: async (orderData: { description?: string; category?: string; categoryId?: string; subcategories?: string[]; dynamicValue?: any; actionCompleted?: boolean; amount?: number; photo?: File | null; document?: File | null; futureActionPlazoDias?: number; futureActionFechaLimite?: string; futureActionDocumento?: string }): Promise<OrderData> => {
+  createOrder: async (orderData: { description?: string; category?: string; categoryId?: string; subcategories?: string[]; dynamicValue?: any; actionCompleted?: boolean; amount?: number; photo?: File | null; document?: File | null; futureActionPlazoDias?: number; futureActionFechaLimite?: string; futureActionDocumento?: string; daysRequested?: number }): Promise<OrderData> => {
     const formData = new FormData();
     if (orderData.description) formData.append("description", orderData.description);
     if (orderData.category) formData.append("category", orderData.category);
@@ -296,6 +297,7 @@ export const personnelAPI = {
     if (orderData.futureActionPlazoDias !== undefined) formData.append("futureActionPlazoDias", orderData.futureActionPlazoDias.toString());
     if (orderData.futureActionFechaLimite) formData.append("futureActionFechaLimite", orderData.futureActionFechaLimite);
     if (orderData.futureActionDocumento) formData.append("futureActionDocumento", orderData.futureActionDocumento);
+    if (orderData.daysRequested !== undefined) formData.append("daysRequested", orderData.daysRequested.toString());
     if (orderData.photo) formData.append("photo", orderData.photo);
     if (orderData.document) formData.append("document", orderData.document);
 

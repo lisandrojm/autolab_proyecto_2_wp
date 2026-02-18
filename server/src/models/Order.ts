@@ -61,6 +61,7 @@ export interface IOrder extends Document {
   documentoUrl?: string;
   actionCompleted?: boolean;
   dynamicValue?: any;
+  daysRequested?: number;
   requiereAccionFutura?: boolean;
   futureActionId?: Types.ObjectId;
   signatureStatus?: "not_required" | "pending" | "sent" | "signed";
@@ -103,6 +104,7 @@ const orderSchema = new Schema<IOrder>(
     actionCompleted: { type: Boolean },
     dynamicValue: { type: Schema.Types.Mixed },
     requiereAccionFutura: { type: Boolean, default: false },
+    daysRequested: { type: Number, default: 0 },
 
     // Arrays embebidos
     documents: [EmbeddedDocumentSchema],

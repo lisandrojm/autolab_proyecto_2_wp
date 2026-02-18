@@ -117,6 +117,7 @@ const createOrderSchema = z.object({
   futureActionPlazoDias: z.number().min(1).max(365).optional(),
   futureActionFechaLimite: z.string().optional(),
   futureActionDocumento: z.string().optional(),
+  daysRequested: z.number().optional(),
 });
 
 const updateOrderSchema = z.object({
@@ -182,6 +183,37 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     res.json(stats);
   } catch (error) {
     console.error("Get order stats error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/usage", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+    const { categoryId, subcategory } = req.query;
+
+    const now = new Date();
+    const startOfYear = new Date(Date.UTC(now.getFullYear(), 0, 1));
+    const endOfYear = new Date(Date.UTC(now.getFullYear(), 11, 31, 23, 59, 59));
+
+    const query: any = {
+      tenantId: req.tenantObjectId,
+      userId,
+      status: { $in: ["pending", "approved", "delivered", "pre_approved"] },
+      requestedAt: { $gte: startOfYear, $lte: endOfYear },
+    };
+
+    if (categoryId) query.categoryId = categoryId;
+    if (subcategory) query.subcategories = subcategory;
+
+    const orders = await Order.find(query).select("daysRequested categoryId subcategories");
+
+    // Group by category/subcategory if needed, or just return total for the query
+    const usedDays = orders.reduce((sum, o) => sum + (o.daysRequested || 0), 0);
+
+    res.json({ usedDays });
+  } catch (error) {
+    console.error("Get order usage error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -263,6 +295,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       subcategories: parsedSubcategories,
       photoUrl,
       documentoUrl,
+      daysRequested: req.body.daysRequested ? parseFloat(req.body.daysRequested) : 0,
     });
 
     if (data.categoryId) {
@@ -286,6 +319,50 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
           return;
         }
       }
+
+      // --- Validation for Max Days ---
+      if (category.categoryType === "fecha" && data.daysRequested && data.daysRequested > 0) {
+        const now = new Date();
+        const startOfYear = new Date(Date.UTC(now.getFullYear(), 0, 1));
+        const endOfYear = new Date(Date.UTC(now.getFullYear(), 11, 31, 23, 59, 59));
+
+        const checkLimit = async (subId: string | null, max: number, label: string) => {
+          const query: any = {
+            tenantId: req.tenantObjectId,
+            userId,
+            categoryId: data.categoryId,
+            status: { $in: ["pending", "approved", "delivered", "pre_approved"] },
+            requestedAt: { $gte: startOfYear, $lte: endOfYear },
+          };
+
+          if (subId) {
+            query.subcategories = subId;
+          }
+
+          const existingOrders = await Order.find(query).select("daysRequested");
+          const used = existingOrders.reduce((sum, o) => sum + (o.daysRequested || 0), 0);
+
+          if (used + (data.daysRequested || 0) > max) {
+            throw new Error(`El pedido excede el límite de días para "${label}". Máximo: ${max}, Usados: ${used}, Solicitados: ${data.daysRequested}`);
+          }
+        };
+
+        // 1. Check Subtype limits
+        if (data.subcategories && data.subcategories.length > 0 && category.config?.subtipos) {
+          for (const subId of data.subcategories) {
+            const subtype = category.config.subtipos.find((st: any) => st.id === subId);
+            if (subtype && subtype.maxDays) {
+              await checkLimit(subId, subtype.maxDays, subtype.label);
+            }
+          }
+        }
+
+        // 2. Check Global Category limit
+        if (category.maxDays) {
+          await checkLimit(null, category.maxDays, category.name);
+        }
+      }
+      // -------------------------------
 
       if (category.categoryType === "fecha" && category.dateMode === "range") {
         const actionType = category.futureActionType || "sinVencimiento";

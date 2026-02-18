@@ -333,6 +333,41 @@ export default function Orders({ onNavigate }: OrdersProps) {
 
       const isDocumentType = selectedCategory?.futureActionType === "documento";
 
+      const calculateRequestedDays = (): number => {
+        if (!selectedCategory || selectedCategory.categoryType !== "fecha") return 0;
+
+        let start: Date;
+        let end: Date;
+
+        if (selectedCategory.dateMode === "range") {
+          if (!validDynamicValue?.fechaDesde || !validDynamicValue?.fechaHasta) return 0;
+          start = new Date(validDynamicValue.fechaDesde);
+          end = new Date(validDynamicValue.fechaHasta);
+        } else {
+          // Single date
+          if (!validDynamicValue) return 0;
+          start = new Date(validDynamicValue);
+          end = new Date(validDynamicValue);
+        }
+
+        let count = 0;
+        let curr = new Date(start);
+        // Safety break for infinite loops if dates are weird
+        const MAX_DAYS = 365;
+        let loops = 0;
+
+        while (curr <= end && loops < MAX_DAYS) {
+          if (validateDate(curr).valid) {
+            count++;
+          }
+          curr.setDate(curr.getDate() + 1);
+          loops++;
+        }
+        return count;
+      };
+
+      const daysRequested = calculateRequestedDays();
+
       const orderData = {
         description,
         category: selectedCategory?.name || "other",
@@ -346,6 +381,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
         futureActionDocumento: futureActionDocumento || undefined,
         photo: shouldIncludePhoto ? photo : null,
         document: isDocumentType ? document : null,
+        daysRequested: daysRequested > 0 ? daysRequested : undefined,
       };
 
       if (selectedCategory?.informacion?.trim()) {
@@ -394,6 +430,25 @@ export default function Orders({ onNavigate }: OrdersProps) {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const getUsedDays = (catId: string, subId?: string): number => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    return orders
+      .filter((o) => {
+        // Handle populated vs string ID
+        const oCatId = typeof o.categoryId === "object" && o.categoryId ? o.categoryId._id : o.categoryId;
+        const matchesCat = oCatId === catId;
+        const matchesSub = subId ? o.subcategories?.includes(subId) : true;
+        // Check active status
+        const isActive = ["pending", "approved", "delivered", "pre_approved"].includes(o.status);
+        const isCurrentYear = new Date(o.requestedAt) >= startOfYear;
+
+        return matchesCat && matchesSub && isActive && isCurrentYear;
+      })
+      .reduce((sum, o) => sum + (o.daysRequested || 0), 0);
   };
 
   const handleOrderClick = (order: OrderData) => {
@@ -464,8 +519,87 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     )}
 
                     <div className="pt-3">
-                      <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} />
+                      {(() => {
+                        let remainingDays: number | undefined = undefined;
+                        if (selectedCategory?.categoryType === "fecha") {
+                          let max = selectedCategory.maxDays;
+                          let subIdForUsage: string | undefined = undefined;
+
+                          if (subcategories && selectedCategory.config?.subtipos) {
+                            const subId = subcategories;
+                            const sub = selectedCategory.config.subtipos.find((s: any) => s.id === subId);
+                            if (sub && sub.maxDays) {
+                              max = sub.maxDays;
+                              subIdForUsage = subId;
+                            }
+                          }
+
+                          if (typeof max === "number") {
+                            const used = subIdForUsage ? getUsedDays(selectedCategory._id, subIdForUsage) : getUsedDays(selectedCategory._id);
+                            remainingDays = Math.max(0, max - used);
+                          }
+                        }
+
+                        return <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} remainingDays={remainingDays} />;
+                      })()}
                     </div>
+
+                    {/* Show Remaining Days Logic */}
+                    {(() => {
+                      if (selectedCategory?.categoryType !== "fecha") return null;
+
+                      let max = selectedCategory.maxDays;
+                      let label = "Total anual";
+                      let used = 0;
+                      let subIdForUsage: string | undefined = undefined;
+
+                      // Check subtype
+                      if (subcategories && selectedCategory.config?.subtipos) {
+                        // subcategories is string here based on DynamicCategoryInput typical usage (single select usually), but let's be careful
+                        // Actually in DynamicCategoryInput prop types: subcategories: string. So it's single select ID.
+                        const subId = subcategories;
+                        const sub = selectedCategory.config.subtipos.find((s: any) => s.id === subId);
+
+                        if (sub) {
+                          if (sub.maxDays) {
+                            max = sub.maxDays;
+                            label = sub.label || subId;
+                            subIdForUsage = subId;
+                          } else {
+                            // If subtype has no limit, fallback to global max
+                            // Label remains Global?
+                          }
+                        }
+                      }
+
+                      if (subIdForUsage) {
+                        used = getUsedDays(selectedCategory._id, subIdForUsage);
+                      } else {
+                        // Global usage (any subtype or none)?
+                        // Logic: if max is global, we should count ALL orders in this category?
+                        // Yes, usually "Total Annual Days for Study Leave" = X, regardless of subtype options if defined globally.
+                        used = getUsedDays(selectedCategory._id);
+                      }
+
+                      if (max) {
+                        const remaining = Math.max(0, max - used);
+                        return (
+                          <div className="mt-4 mb-2 flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                            <div>
+                              <p className="font-semibold text-sm text-blue-900 dark:text-blue-100">{label}</p>
+                              <p className="text-xs text-blue-700 dark:text-blue-300">
+                                Días utilizados: {used} / {max}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{remaining}</p>
+                              <p className="text-[10px] uppercase font-bold text-blue-500 dark:text-blue-500">Restantes</p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   <div>
