@@ -4,6 +4,7 @@ export interface IPdf extends Document {
   tenantId: Types.ObjectId;
   code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
   name: string;
+  title?: string;
   content: string;
   variablesHint?: string;
   isActive: boolean;
@@ -27,6 +28,11 @@ const pdfSchema = new Schema<IPdf>(
       trim: true,
       minlength: 1,
       maxlength: 100,
+    },
+    title: {
+      type: String,
+      trim: true,
+      default: "",
     },
     content: {
       type: String,

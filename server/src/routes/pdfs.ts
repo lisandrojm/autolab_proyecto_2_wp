@@ -9,6 +9,7 @@ const router = Router();
 const PdfSchema = z.object({
   code: z.enum(["dinero", "fechaRango", "fechaUnica", "vacaciones", "objeto", "otros"]),
   name: z.string().min(1).max(100),
+  title: z.string().optional(),
   content: z.string().min(10).max(50000),
   variablesHint: z.string().max(1000).optional(),
   isActive: z.boolean().optional(),

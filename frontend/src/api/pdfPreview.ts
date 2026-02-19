@@ -1,8 +1,8 @@
 import axios from "./axiosConfig";
 
 export const pdfPreviewAPI = {
-  preview: async (content: string, code: string): Promise<Blob> => {
-    const response = await axios.post("/pdf-preview/preview", { content, code }, { responseType: "blob" });
+  preview: async (content: string, code: string, title?: string): Promise<Blob> => {
+    const response = await axios.post("/pdf-preview/preview", { content, code, title }, { responseType: "blob" });
     return response.data;
   },
 

@@ -12,6 +12,7 @@ interface PdfVariables {
   fechaUnica: string;
   dias: string;
   nombreCompleto: string;
+  nombreUsuario: string;
   numeroPedido: string;
   fechaSolicitud: string;
   fechaAprobacion: string;
@@ -224,6 +225,7 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
     fechaUnica,
     dias,
     nombreCompleto: sanitizeHtml(nombreCompleto),
+    nombreUsuario: sanitizeHtml(nombreCompleto),
     numeroPedido,
     fechaSolicitud,
     fechaAprobacion,
@@ -253,7 +255,9 @@ export function prepareVacationVariables(vacation: IVacation, user: IUser, tenan
     fechaUnica: "-",
     dias,
     nombreCompleto: sanitizeHtml(nombreCompleto),
+    nombreUsuario: sanitizeHtml(nombreCompleto),
     numeroPedido,
+    numeroOrden: numeroPedido,
     fechaSolicitud,
     fechaAprobacion,
     tenantName: sanitizeHtml(tenantName),
@@ -279,6 +283,15 @@ export function getSystemVariables(config: any): Record<string, string> {
   const now = new Date();
   const fecha = now.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+  const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const day = now.getDate();
+  const month = months[now.getMonth()];
+  const year = now.getFullYear();
+  const fechaLarga = `${day} de ${month} de ${year}`;
+
+  const ciudad = config?.ciudad || "";
+  const fechaCompleta = ciudad ? `${ciudad}, ${fechaLarga}` : fechaLarga;
+
   return {
     razonSocial: config?.razonSocial || "Razón Social Default",
     cuit: config?.cuit || "00-00000000-0",
@@ -287,6 +300,7 @@ export function getSystemVariables(config: any): Record<string, string> {
     signerName: config?.signerName || "",
     signerRole: config?.signerRole || "",
     fecha: fecha,
+    fechaCompleta: fechaCompleta,
   };
 }
 

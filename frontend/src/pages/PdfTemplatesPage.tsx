@@ -64,7 +64,7 @@ export function PdfTemplatesPage() {
         },
       });
 
-      const blob = await pdfPreviewAPI.preview(formData.content, formData.code);
+      const blob = await pdfPreviewAPI.preview(formData.content, formData.code, formData.title);
       Swal.close();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -128,6 +128,7 @@ export function PdfTemplatesPage() {
     setFormData({
       code: template.code,
       name: template.name,
+      title: template.title || "",
       content: template.content,
       variablesHint: template.variablesHint || "",
       isActive: template.isActive,
@@ -191,19 +192,17 @@ export function PdfTemplatesPage() {
 
   const getBadge = (template: Pdf) => {
     if (template.isActive) {
-      return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 px-2 py-1 rounded-md">
-          <FontAwesomeIcon icon={faCheckCircle} className="h-3 w-3" />
-          Activa
-        </span>
-      );
+      return {
+        text: "Activa",
+        color: "emerald",
+        icon: faCheckCircle,
+      };
     }
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 px-2 py-1 rounded-md">
-        <FontAwesomeIcon icon={faTimesCircle} className="h-3 w-3" />
-        Inactiva
-      </span>
-    );
+    return {
+      text: "Inactiva",
+      color: "slate",
+      icon: faTimesCircle,
+    };
   };
 
   const usedCodes = templates.map((t) => t.code);
@@ -390,7 +389,7 @@ export function PdfTemplatesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-field" />
+                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
                 {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
               </div>
 
@@ -404,23 +403,21 @@ export function PdfTemplatesPage() {
                       code: e.target.value as any,
                     })
                   }
-                  className="input-field"
+                  className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 >
-                  {codeOptions
-                    .filter((opt) => {
-                      // Logic: Show option if:
-                      // 1. We are editing and this is the current template's code
-                      // 2. OR the code is NOT used by any other template
-                      if (editingTemplate && editingTemplate.code === opt.value) return true;
-                      return !templates.some((t) => t.code === opt.value);
-                    })
-                    .map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
+                  {codeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título del Documento</label>
+              <input type="text" value={formData.title || ""} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Ej: AUTORIZACIÓN GENERAL DE SOLICITUDES DE RECURSOS HUMANOS" className="input-field w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+              <p className="text-xs text-gray-500 mt-1">Este título aparecerá centrado en el PDF, debajo del encabezado.</p>
             </div>
 
             <label className="flex items-center gap-2 text-sm">
@@ -433,6 +430,7 @@ export function PdfTemplatesPage() {
                     isActive: e.target.checked,
                   })
                 }
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               />
               Plantilla activa
             </label>

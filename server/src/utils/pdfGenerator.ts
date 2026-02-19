@@ -11,7 +11,7 @@ import { PdfConfig } from "../models/PdfConfig.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables } from "./pdfVariableReplacer.js";
 
 // Helper function to build the full HTML with layout
-async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}): Promise<string> {
+async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = ""): Promise<string> {
   const config = (await PdfConfig.findOne({ tenantId })) || {};
   const systemVars = getSystemVariables(config);
   const allVars = { ...additionalVars, ...systemVars };
@@ -81,10 +81,14 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
       <head>
         <style>
           body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #333; margin: 0; padding: 0; }
-          .header { display: flex; justify-content: space-between; align-items: top; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+          .header { display: flex; justify-content: space-between; align-items: top; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
           .company-info { text-align: right; font-size: 10pt; color: #555; }
-          .content { min-height: 400px; padding: 0 10px; white-space: pre-wrap; } 
-          .footer { margin-top: 50px; text-align: center; page-break-inside: avoid; }
+          .date-line { text-align: right; margin-bottom: 20px; font-size: 11pt; }
+          .title { text-align: center; font-size: 12pt; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; width: 100%; }
+          .content { min-height: 400px; padding: 0; white-space: pre-wrap; width: 100%; } 
+          .footer { margin-top: 50px; page-break-inside: avoid; display: flex; justify-content: space-between; align-items: flex-end; }
+          .user-signature { text-align: left; }
+          .company-signature { text-align: center; }
         </style>
       </head>
       <body>
@@ -95,21 +99,30 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
           <div class="company-info">
             <strong>${systemVars.razonSocial}</strong><br>
             CUIT: ${systemVars.cuit}<br>
-            ${systemVars.ciudad}<br>
             ${systemVars.direccion ? `${systemVars.direccion}<br>` : ""}
-            ${systemVars.fecha}
+            ${systemVars.ciudad}<br>
           </div>
         </div>
 
-        <div class="content">
-          ${processedBodyContent}
+        ${title ? `<div class="title">${title}</div>` : ""}
+
+        <div class="date-line">
+          ${systemVars.fechaCompleta}
         </div>
 
+        <div class="content">${processedBodyContent}</div>
+
         <div class="footer">
-          ${signatureImgTag}
-          <div class="signer-info" style="margin-top: 5px; font-size: 10pt; color: #555;">
-            <strong>${systemVars.signerName}</strong><br>
-            ${systemVars.signerRole}
+          <div class="user-signature">
+            <div style="margin-bottom: 15px;">Firma: __________________________</div>
+            <div>Aclaración: ${allVars.nombreUsuario || ""}</div>
+          </div>
+          <div class="company-signature">
+            ${signatureImgTag}
+            <div class="signer-info" style="margin-top: 5px; font-size: 10pt; color: #555;">
+              <strong>${systemVars.signerName}</strong><br>
+              ${systemVars.signerRole}
+            </div>
           </div>
         </div>
       </body>
@@ -118,14 +131,16 @@ async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVar
   return html;
 }
 
-export async function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview: boolean = false): Promise<Buffer> {
+export async function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview: boolean = false, title: string = ""): Promise<Buffer> {
   try {
     console.log("[PDF PREVIEW] Starting generation...");
     console.log("[PDF PREVIEW] CWD:", process.cwd());
 
-    let dummyVars = {};
+    let dummyVars: Record<string, string> = {};
     if (!isGlobalPreview) {
       dummyVars = getDummyVariables(code);
+    } else {
+      dummyVars = { nombreUsuario: "Nombre de usuario" };
     }
 
     let bodyContent = content;
@@ -134,7 +149,7 @@ export async function generatePreviewPDF(content: string, code: string, tenantId
     }
 
     console.log("[PDF PREVIEW] Building HTML...");
-    const html = await buildPdfHtml(tenantId, bodyContent, dummyVars as Record<string, string>);
+    const html = await buildPdfHtml(tenantId, bodyContent, dummyVars as Record<string, string>, title);
     console.log("[PDF PREVIEW] HTML built successfully. Length:", html.length);
 
     const options = {
@@ -180,7 +195,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>);
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {
@@ -257,7 +272,7 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdf, u
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>);
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {

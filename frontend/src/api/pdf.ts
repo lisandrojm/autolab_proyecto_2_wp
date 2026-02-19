@@ -5,6 +5,7 @@ export interface Pdf {
   tenantId: string;
   code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
   name: string;
+  title?: string;
   content: string;
   variablesHint?: string;
   isActive: boolean;
@@ -15,6 +16,7 @@ export interface Pdf {
 export interface PdfInput {
   code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
   name: string;
+  title?: string;
   content: string;
   variablesHint?: string;
   isActive?: boolean;
