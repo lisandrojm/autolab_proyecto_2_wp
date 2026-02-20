@@ -8,11 +8,19 @@ import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
 import { PdfConfig } from "../models/PdfConfig.js";
+import { ProjectPdfConfig } from "../models/ProjectPdfConfig.js";
 import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables } from "./pdfVariableReplacer.js";
 
 // Helper function to build the full HTML with layout
-async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = ""): Promise<string> {
-  const config = (await PdfConfig.findOne({ tenantId })) || {};
+async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", user?: IUser): Promise<string> {
+  let config: any = null;
+  if (user && user.projectIds && user.projectIds.length > 0) {
+    config = await ProjectPdfConfig.findOne({ tenantId, projects: { $in: user.projectIds } }).lean();
+  }
+  if (!config) {
+    config = (await PdfConfig.findOne({ tenantId }).lean()) || {};
+  }
+
   const systemVars = getSystemVariables(config);
   const allVars = { ...additionalVars, ...systemVars };
 
@@ -195,7 +203,7 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title);
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title, user);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {
@@ -272,7 +280,7 @@ export async function generateVacationPDF(vacation: IVacation, template: IPdf, u
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title);
+    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title, user);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {

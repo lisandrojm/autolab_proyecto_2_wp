@@ -15,6 +15,7 @@ import Swal from "sweetalert2";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Modal } from "../components/ui/Modal";
 import { PdfGlobalConfigTab } from "./PdfGlobalConfigTab";
+import { PdfProjectConfigTab } from "./PdfProjectConfigTab";
 import { PdfAssignmentStatus } from "./PdfAssignmentStatus";
 
 const HELP_KEY = "pdfTemplates" as const;
@@ -51,7 +52,7 @@ export function PdfTemplatesPage() {
   const helpEntry = showHelp ? getHelp(HELP_KEY) : { title: "Ayuda", size: "md" as const, content: <div /> };
 
   // tabs
-  const [activeTab, setActiveTab] = useState<"global" | "templates">("global");
+  const [activeTab, setActiveTab] = useState<"global" | "projectConfig" | "templates">("global");
 
   const handlePreview = async () => {
     try {
@@ -247,12 +248,15 @@ export function PdfTemplatesPage() {
             <button onClick={() => setActiveTab("global")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "global" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Configuración Global
             </button>
+            <button onClick={() => setActiveTab("projectConfig")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "projectConfig" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Configuración por proyecto
+            </button>
             <button onClick={() => setActiveTab("templates")} className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "templates" ? "border-blue-500 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Plantillas
             </button>
           </div>
 
-          {activeTab !== "global" && (
+          {activeTab === "templates" && (
             <SearchAndFilters
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
@@ -280,6 +284,8 @@ export function PdfTemplatesPage() {
         </div>
       ) : activeTab === "global" ? (
         <PdfGlobalConfigTab />
+      ) : activeTab === "projectConfig" ? (
+        <PdfProjectConfigTab />
       ) : (
         <>
           <div className="relative">

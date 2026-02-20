@@ -397,6 +397,26 @@ export const OrdersPage: React.FC = () => {
     return user.email || "Usuario desconocido";
   };
 
+  const renderUserClientBadge = (user: any) => {
+    if (!user || typeof user === "string") return <span className="text-xs text-gray-500">-</span>;
+
+    if (user.metadata?.projects?.length > 0) {
+      const clientName = user.metadata.projects[0]?.projectId?.clientId?.name;
+      if (clientName) {
+        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300">{clientName}</span>;
+      }
+    }
+
+    if (user.clientIds && user.clientIds.length > 0) {
+      const clientName = user.clientIds[0]?.name;
+      if (clientName) {
+        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300">{clientName}</span>;
+      }
+    }
+
+    return <span className="text-xs text-gray-400">-</span>;
+  };
+
   const renderUserRoleBadge = (user: any) => {
     if (!user || typeof user === "string") return <span className="text-xs text-gray-500">-</span>;
 
@@ -404,6 +424,26 @@ export const OrdersPage: React.FC = () => {
       const role = user.metadata.projects[0]?.nombre_rol_frame;
       if (role) {
         return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">{role}</span>;
+      }
+    }
+
+    return <span className="text-xs text-gray-400">-</span>;
+  };
+
+  const renderUserProjectBadge = (user: any) => {
+    if (!user || typeof user === "string") return <span className="text-xs text-gray-500">-</span>;
+
+    if (user.metadata?.projects?.length > 0) {
+      const projectName = user.metadata.projects[0]?.nombre_proyecto;
+      if (projectName) {
+        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">{projectName}</span>;
+      }
+    }
+
+    if (user.projectIds && user.projectIds.length > 0) {
+      const projectName = user.projectIds[0]?.name;
+      if (projectName) {
+        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">{projectName}</span>;
       }
     }
 
@@ -616,7 +656,13 @@ export const OrdersPage: React.FC = () => {
             <CardItemGeneric
               key={order._id}
               title={getUserName(order.userId)}
-              subtitle={renderUserRoleBadge(order.userId)}
+              subtitle={
+                <div className="flex flex-wrap gap-2">
+                  {renderUserClientBadge(order.userId)}
+                  {renderUserProjectBadge(order.userId)}
+                  {renderUserRoleBadge(order.userId)}
+                </div>
+              }
               avatarUrl={avatarUrl}
               avatarFallback={getAvatarFallback(order.userId)}
               badgesTop={badgesTop}
@@ -816,6 +862,8 @@ export const OrdersPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente/s</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto/s</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
@@ -851,6 +899,8 @@ export const OrdersPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(order.userId)}</td>
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserClientBadge(order.userId)}</td>
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserProjectBadge(order.userId)}</td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserRoleBadge(order.userId)}</td>
                             <td className="py-3 px-4">
                               <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
