@@ -833,19 +833,16 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                       classes += " text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/20";
                     }
                   } else if (isSelected) {
-                    if (isStart || isEnd) {
-                      classes += " bg-blue-900 text-white z-10";
-                    } else {
-                      classes += " bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
-                    }
+                    classes += " bg-blue-900 text-white z-10";
+
                     classes += " border border-y-blue-800 dark:border-y-blue-400";
                     if (isStart || isMon) classes += " border-l-blue-800 dark:border-l-blue-400 rounded-l-lg";
                     else classes += " border-l-transparent rounded-l-none";
                     if (isEnd || isSun) classes += " border-r-blue-800 dark:border-r-blue-400 rounded-r-lg";
                     else classes += " border-r-transparent rounded-r-none";
                   } else if (isSuggested) {
-                    classes += " bg-sky-100 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300 rounded";
-                    classes += " border border-sky-200 dark:border-sky-800 border-dashed";
+                    classes += " bg-transparent text-sky-600 dark:text-white rounded";
+                    classes += " border border-blue-500 border-dashed";
                   } else {
                     classes += " border-transparent border-2";
                     classes += !isCurrentMonth ? " text-slate-300 dark:text-slate-700" : " text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded";
