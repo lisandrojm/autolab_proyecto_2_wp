@@ -15,6 +15,9 @@ import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
 import { Pdf } from "../models/Pdf.js";
 import { User } from "../models/User.js";
+import { Project } from "../models/Project.js";
+import { Client } from "../models/Client.js";
+import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
@@ -256,8 +259,8 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
               populate: {
                 path: "projectId",
                 select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+                populate: { path: "clientId", select: "name" },
+              },
             },
           ],
         })
@@ -334,16 +337,16 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
             select: "firstName lastName email positionId metadata clientIds",
             populate: [
               { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+              { path: "clientIds", select: "name" },
               {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
-            },
+                path: "metadata.projects",
+                select: "nombre_rol_frame nombre_proyecto projectId",
+                populate: {
+                  path: "projectId",
+                  select: "clientId",
+                  populate: { path: "clientId", select: "name" },
+                },
+              },
             ],
           })
           .populate("approvedBy", "firstName lastName email")
@@ -441,16 +444,18 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
         select: "firstName lastName email positionId metadata clientIds",
         populate: [
           { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+          { path: "clientIds", select: "name", model: "Client" },
           {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+            path: "metadata.projects",
+            model: "UserProject",
+            select: "nombre_rol_frame nombre_proyecto projectId",
+            populate: {
+              path: "projectId",
+              model: "Project",
+              select: "clientId",
+              populate: { path: "clientId", select: "name", model: "Client" },
             },
+          },
         ],
       })
       .populate("approvedBy", "firstName lastName email")
@@ -659,16 +664,18 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
         select: "firstName lastName email positionId metadata clientIds",
         populate: [
           { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+          { path: "clientIds", select: "name", model: "Client" },
           {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+            path: "metadata.projects",
+            model: "UserProject",
+            select: "nombre_rol_frame nombre_proyecto projectId",
+            populate: {
+              path: "projectId",
+              model: "Project",
+              select: "clientId",
+              populate: { path: "clientId", select: "name", model: "Client" },
             },
+          },
         ],
       })
       .populate("categoryId")
@@ -748,16 +755,18 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
         select: "firstName lastName email positionId metadata clientIds",
         populate: [
           { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+          { path: "clientIds", select: "name", model: "Client" },
           {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+            path: "metadata.projects",
+            model: "UserProject",
+            select: "nombre_rol_frame nombre_proyecto projectId",
+            populate: {
+              path: "projectId",
+              model: "Project",
+              select: "clientId",
+              populate: { path: "clientId", select: "name", model: "Client" },
             },
+          },
         ],
       })
       .populate("categoryId")
@@ -822,16 +831,18 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
         select: "firstName lastName email positionId metadata clientIds",
         populate: [
           { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+          { path: "clientIds", select: "name", model: "Client" },
           {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+            path: "metadata.projects",
+            model: "UserProject",
+            select: "nombre_rol_frame nombre_proyecto projectId",
+            populate: {
+              path: "projectId",
+              model: "Project",
+              select: "clientId",
+              populate: { path: "clientId", select: "name", model: "Client" },
             },
+          },
         ],
       })
       .populate("categoryId")
@@ -885,16 +896,18 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
         select: "firstName lastName email positionId metadata clientIds",
         populate: [
           { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+          { path: "clientIds", select: "name", model: "Client" },
           {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+            path: "metadata.projects",
+            model: "UserProject",
+            select: "nombre_rol_frame nombre_proyecto projectId",
+            populate: {
+              path: "projectId",
+              model: "Project",
+              select: "clientId",
+              populate: { path: "clientId", select: "name", model: "Client" },
             },
+          },
         ],
       })
       .populate("categoryId")
@@ -954,16 +967,18 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
         select: "firstName lastName email positionId metadata clientIds",
         populate: [
           { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+          { path: "clientIds", select: "name", model: "Client" },
           {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+            path: "metadata.projects",
+            model: "UserProject",
+            select: "nombre_rol_frame nombre_proyecto projectId",
+            populate: {
+              path: "projectId",
+              model: "Project",
+              select: "clientId",
+              populate: { path: "clientId", select: "name", model: "Client" },
             },
+          },
         ],
       })
       .populate("categoryId")
@@ -1026,16 +1041,18 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
         select: "firstName lastName email positionId metadata clientIds",
         populate: [
           { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+          { path: "clientIds", select: "name", model: "Client" },
           {
-              path: "metadata.projects",
-              select: "nombre_rol_frame nombre_proyecto projectId",
-              populate: {
-                path: "projectId",
-                select: "clientId",
-                populate: { path: "clientId", select: "name" }
-              }
+            path: "metadata.projects",
+            model: "UserProject",
+            select: "nombre_rol_frame nombre_proyecto projectId",
+            populate: {
+              path: "projectId",
+              model: "Project",
+              select: "clientId",
+              populate: { path: "clientId", select: "name", model: "Client" },
             },
+          },
         ],
       })
       .populate("categoryId")
