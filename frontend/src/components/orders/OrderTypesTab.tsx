@@ -292,7 +292,7 @@ export const OrderTypesTab: React.FC = () => {
     setSubmitting(true);
 
     try {
-      if (formData.requiresUserConfirmation && !formData.actionText.trim()) {
+      if (formData.requiresAction && formData.requiresUserConfirmation && !formData.actionText.trim()) {
         sweetAlert.error("Error", "Debes especificar el texto de la acción requerida");
         setSubmitting(false);
         return;
