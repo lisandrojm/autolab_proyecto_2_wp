@@ -50,6 +50,14 @@ const createProjectSchema = z.object({
   externalId: z.number().optional(),
   metadata: z.any().optional(),
   workSchedule: z.any().optional(),
+  activityLogConfig: z
+    .object({
+      useGlobalConfig: z.boolean(),
+      enableFastEntry: z.boolean().optional(),
+      allowsAdditionalStaff: z.boolean().optional(),
+    })
+    .optional()
+    .nullable(),
 });
 
 const updateTeamConfigSchema = z.object({

@@ -66,6 +66,11 @@ export interface IProject extends Document {
     minDiasFraccion?: number;
     diasCorridos?: boolean;
   };
+  activityLogConfig?: {
+    useGlobalConfig: boolean;
+    enableFastEntry?: boolean;
+    allowsAdditionalStaff?: boolean;
+  };
   externalId?: number;
   metadata?: IProjectMetadata;
   workSchedule?: IWorkSchedule;
@@ -116,6 +121,12 @@ const projectSchema = new Schema<IProject>(
       permiteFraccionadas: { type: Boolean, default: true },
       minDiasFraccion: { type: Number },
       diasCorridos: { type: Boolean },
+    },
+
+    activityLogConfig: {
+      useGlobalConfig: { type: Boolean, default: true },
+      enableFastEntry: { type: Boolean },
+      allowsAdditionalStaff: { type: Boolean },
     },
 
     workSchedule: {
