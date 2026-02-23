@@ -162,7 +162,36 @@ export const RequestsPage: React.FC = () => {
   // Filters
   const [dateFilter, setDateFilter] = useState("daily"); // daily, weekly, monthly
   const [areaFilter, setAreaFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [showStatsModal, setShowStatsModal] = useState(false);
+
+  const uniqueProjects = useMemo(() => {
+    const map = new Map<string, string>();
+    reports.forEach((r) => {
+      if (r.projectIdRaw) map.set(r.projectIdRaw, r.projectName);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [reports]);
+
+  const filteredReports = useMemo(() => {
+    let result = reports;
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      result = result.filter((r) => (r.reportNumber || "").toLowerCase().includes(lower) || r.projectName.toLowerCase().includes(lower) || r.submittedBy.toLowerCase().includes(lower));
+    }
+
+    if (areaFilter !== "all") {
+      result = result.filter((r) => r.areaId === areaFilter);
+    }
+
+    if (projectFilter !== "all") {
+      result = result.filter((r) => r.projectIdRaw === projectFilter);
+    }
+
+    return result;
+  }, [reports, searchTerm, areaFilter, projectFilter]);
 
   // Check for URL params to auto-open report detail
   useEffect(() => {
@@ -253,11 +282,11 @@ export const RequestsPage: React.FC = () => {
 
   // Stats calculation
   const stats = React.useMemo(() => {
-    let totalReports = reports.length;
+    let totalReports = filteredReports.length;
     let totalAbsences = 0;
     let totalOvertimeHours = 0;
 
-    reports.forEach((report) => {
+    filteredReports.forEach((report) => {
       report.attendance.forEach((record) => {
         if (record.status !== "present" && record.status !== "late") {
           totalAbsences++;
@@ -269,7 +298,7 @@ export const RequestsPage: React.FC = () => {
     });
 
     return { totalReports, totalAbsences, totalOvertimeHours };
-  }, [reports]);
+  }, [filteredReports]);
 
   // Compute merged attendance for selected report
   const mergedAttendance = useMemo(() => {
@@ -373,7 +402,7 @@ export const RequestsPage: React.FC = () => {
   const renderCardsView = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {reports.map((report) => {
+        {filteredReports.map((report) => {
           const badgesTop = [
             <span key="id" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
               {report.reportNumber || "Pendiente"}
@@ -428,7 +457,7 @@ export const RequestsPage: React.FC = () => {
             </CardItemGeneric>
           );
         })}
-        {!loading && reports.length === 0 && <div className="col-span-full py-12 text-center text-gray-500">No se encontraron reportes.</div>}
+        {!loading && filteredReports.length === 0 && <div className="col-span-full py-12 text-center text-gray-500">No se encontraron reportes.</div>}
       </div>
     );
   };
@@ -601,7 +630,7 @@ export const RequestsPage: React.FC = () => {
   return (
     <PageLayout
       title="Novedades"
-      itemCount={reports.length}
+      itemCount={filteredReports.length}
       subtitle="Historial de reportes diarios de asistencia y novedades"
       faIcon={{ icon: faFileText }}
       infoModal={{
@@ -627,7 +656,19 @@ export const RequestsPage: React.FC = () => {
         <div className="flex gap-4 items-center justify-between flex-wrap">
           <div className="relative w-full lg:flex-1">
             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Buscar solicitudes..." className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+            <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+          </div>
+
+          <div className="relative">
+            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+              <option value="all">Todos los Proyectos</option>
+              {uniqueProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="relative">
@@ -689,7 +730,7 @@ export const RequestsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {reports.map((report) => (
+                {filteredReports.map((report) => (
                   <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
                     <td className="py-3 px-4">
                       <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{report.reportNumber || "Pendiente"}</span>
@@ -751,7 +792,7 @@ export const RequestsPage: React.FC = () => {
           </div>
         )}
 
-        {!loading && reports.length === 0 && (
+        {!loading && filteredReports.length === 0 && (
           <div className="text-center py-12">
             <FontAwesomeIcon icon={faFileText} className="h-16 w-16 text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400">No hay novedades registradas</p>

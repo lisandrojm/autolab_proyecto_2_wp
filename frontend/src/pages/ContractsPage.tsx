@@ -7,7 +7,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faSearch, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faSearch, faClock, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -43,6 +43,7 @@ export const ContractsPage: React.FC = () => {
 
   // Filtering & Pagination
   const [searchTerm, setSearchTerm] = useState("");
+  const [projectFilter, setProjectFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(20);
   const [viewMode, setViewMode] = useState<"table" | "cards">(() => {
@@ -157,11 +158,24 @@ export const ContractsPage: React.FC = () => {
     }
   };
 
+  const uniqueProjects = useMemo(() => {
+    const projects = new Set<string>();
+    allContracts.forEach((c) => {
+      if (c.projectName) {
+        projects.add(c.projectName);
+      }
+    });
+    return Array.from(projects).sort();
+  }, [allContracts]);
+
   const filteredContracts = useMemo(() => {
-    if (!searchTerm) return allContracts;
-    const lower = searchTerm.toLowerCase();
-    return allContracts.filter((c) => c.userName.toLowerCase().includes(lower) || c.userEmail.toLowerCase().includes(lower) || c.projectName.toLowerCase().includes(lower) || c.nombre_contrato.toLowerCase().includes(lower));
-  }, [allContracts, searchTerm]);
+    return allContracts.filter((c) => {
+      const lower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || c.userName.toLowerCase().includes(lower) || c.userEmail.toLowerCase().includes(lower) || c.projectName.toLowerCase().includes(lower) || c.nombre_contrato.toLowerCase().includes(lower);
+      const matchesProject = projectFilter === "all" || c.projectName === projectFilter;
+      return matchesSearch && matchesProject;
+    });
+  }, [allContracts, searchTerm, projectFilter]);
 
   const paginatedContracts = useMemo(() => {
     const start = (currentPage - 1) * limit;
@@ -191,12 +205,26 @@ export const ContractsPage: React.FC = () => {
       }}
       shouldShowInfo={hasHelp(HELP_KEY)}
       searchAndFilters={
-        <div className="flex gap-4 items-center justify-between">
-          <div className="relative w-full">
+        <div className="flex gap-4 items-center justify-between flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
               <FontAwesomeIcon icon={faSearch} />
             </span>
-            <input type="text" className="input-field pl-10 h-10" placeholder="Buscar por usuario, proyecto o contrato..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" className="input-field pl-10 pr-4 h-10 w-full border border-gray-300 dark:border-gray-600 rounded bg-transparent focus:ring-2 focus:ring-blue-500" placeholder="Buscar por usuario, proyecto o contrato..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
+
+          <div className="relative">
+            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+              <FontAwesomeIcon icon={faFilter} />
+            </span>
+            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="input-field pl-10 pr-8 h-10 border border-gray-300 dark:border-gray-600 rounded bg-transparent appearance-none focus:ring-2 focus:ring-blue-500">
+              <option value="all">Todos los Proyectos</option>
+              {uniqueProjects.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="items-center gap-2 shrink-0 hidden lg:flex">

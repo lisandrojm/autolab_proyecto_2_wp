@@ -31,6 +31,7 @@ export const OrdersPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
   const [stats, setStats] = useState<any>({ pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
   const [docStats, setDocStats] = useState({ total: 0, normal: 0, urgent: 0, overdue: 0, uploaded: 0 });
 
@@ -308,8 +309,36 @@ export const OrdersPage: React.FC = () => {
 
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    // Filter by project
+    const user = order.userId as any;
+    let orderProjectIdRaw = "";
+    if (user?.metadata?.projects?.length > 0) {
+      orderProjectIdRaw = user.metadata.projects[0]?.projectId?._id || user.metadata.projects[0]?.projectId || "";
+    } else if (user?.projectIds?.length > 0) {
+      orderProjectIdRaw = user.projectIds[0]?._id || user.projectIds[0] || "";
+    }
+
+    const matchesProject = projectFilter === "all" || orderProjectIdRaw === projectFilter;
+
+    return matchesSearch && matchesStatus && matchesProject;
   });
+
+  const uniqueProjects = React.useMemo(() => {
+    const map = new Map<string, string>();
+    orders.forEach((order) => {
+      const user = order.userId as any;
+      if (user?.metadata?.projects?.length > 0) {
+        const pId = user.metadata.projects[0]?.projectId?._id || user.metadata.projects[0]?.projectId;
+        const pName = user.metadata.projects[0]?.nombre_proyecto || user.metadata.projects[0]?.projectId?.name;
+        if (pId && pName) map.set(pId, pName);
+      } else if (user?.projectIds?.length > 0) {
+        const pId = user.projectIds[0]?._id || user.projectIds[0];
+        const pName = user.projectIds[0]?.name;
+        if (pId && pName) map.set(pId, pName);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [orders]);
 
   const currentOrderIndex = selectedOrder ? filteredOrders.findIndex((o) => o._id === selectedOrder._id) : -1;
   const hasPreviousOrder = currentOrderIndex > 0;
@@ -813,14 +842,25 @@ export const OrdersPage: React.FC = () => {
         </div>
       }
       searchAndFilters={
-        <div className="flex gap-4 items-center justify-between">
-          <div className="flex-1 relative">
+        <div className="flex gap-4 items-center justify-between flex-wrap">
+          <div className="flex-1 relative min-w-[200px]">
             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input type="text" placeholder="Buscar pedidos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
           </div>
           <div className="relative">
             <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+              <option value="all">Todos los Proyectos</option>
+              {uniqueProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
               <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="pre_approved">Preaprobados</option>

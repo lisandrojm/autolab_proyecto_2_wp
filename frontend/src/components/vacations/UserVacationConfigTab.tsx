@@ -3,9 +3,8 @@ import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faFilter, faSpinner, faSave } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../api/users";
-import { areasAPI, Area } from "../../api/areas";
-import { positionsAPI, Position } from "../../api/positions";
-import { levelsAPI, Level } from "../../api/levels";
+import { projectsAPI, Project } from "../../api/projects";
+import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
 
 export const UserVacationConfigTab: React.FC = () => {
@@ -14,14 +13,14 @@ export const UserVacationConfigTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [levels, setLevels] = useState<Level[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
+  const [contractTypes, setContractTypes] = useState<string[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedArea, setSelectedArea] = useState<string>("");
-  const [selectedPosition, setSelectedPosition] = useState<string>("");
-  const [selectedLevel, setSelectedLevel] = useState<string>("");
+  const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedRoleFrame, setSelectedRoleFrame] = useState<string>("");
+  const [selectedContract, setSelectedContract] = useState<string>("");
 
   // Editing state: userId -> new extra days value
   const [editedValues, setEditedValues] = useState<Record<string, number>>({});
@@ -33,27 +32,55 @@ export const UserVacationConfigTab: React.FC = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, selectedArea, selectedPosition, selectedLevel]);
+  }, [users, searchTerm, selectedProject, selectedRoleFrame, selectedContract]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersData, areasData, positionsData, levelsData] = await Promise.all([
-        usersAPI.list({ limit: 1000 }), // Get all users
-        areasAPI.list({ limit: 100 }),
-        positionsAPI.list({ limit: 100 }),
-        levelsAPI.list({ limit: 100 }),
+      const [usersData, projectsData, roleFramesData] = await Promise.all([
+        usersAPI.list({ limit: 10000 }), // Get all users
+        projectsAPI.listAll(),
+        roleFrameAPI.list(),
       ]);
       setUsers(usersData.users);
-      setAreas(areasData.areas);
-      setPositions(positionsData.positions);
-      setLevels(levelsData.levels);
+      setProjects(projectsData);
+      setRoleFrames(roleFramesData);
+
+      const contractsSet = new Set<string>();
+      usersData.users.forEach((u) => {
+        const cType = getActiveContractType(u);
+        if (cType) contractsSet.add(cType);
+      });
+      setContractTypes(Array.from(contractsSet).sort());
     } catch (error) {
       console.error("Error loading data:", error);
       sweetAlert.error("Error", "No se pudieron cargar los datos");
     } finally {
       setLoading(false);
     }
+  };
+
+  const getActiveContractType = (user: User): string | null => {
+    let contractType: string | null = null;
+    if (user.metadata?.projects) {
+      user.metadata.projects.forEach((p: any) => {
+        if (p.contracts) {
+          p.contracts.forEach((c: any) => {
+            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+            if (endDate) endDate.setHours(23, 59, 59, 999);
+            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+            const type = c.nombre_contrato || c.tipo_contrato;
+            if (isActive && type) {
+              contractType = type;
+            }
+          });
+        }
+      });
+    }
+    if (!contractType && user.externalInfo && (user.externalInfo as any).contracts && (user.externalInfo as any).contracts.length > 0) {
+      contractType = (user.externalInfo as any).contracts[0];
+    }
+    return contractType;
   };
 
   const filterUsers = () => {
@@ -64,24 +91,27 @@ export const UserVacationConfigTab: React.FC = () => {
       result = result.filter((u) => u.firstName?.toLowerCase().includes(lowerTerm) || u.lastName?.toLowerCase().includes(lowerTerm) || u.email.toLowerCase().includes(lowerTerm));
     }
 
-    if (selectedArea) {
+    if (selectedProject) {
       result = result.filter((u) => {
-        const areaId = typeof u.areaId === "object" ? u.areaId?._id : u.areaId;
-        return areaId === selectedArea;
+        const userProjectIds = u.projectIds?.map((p: any) => (typeof p === "string" ? p : p._id)) || [];
+        return userProjectIds.includes(selectedProject);
       });
     }
 
-    if (selectedPosition) {
+    if (selectedRoleFrame) {
       result = result.filter((u) => {
-        const posId = typeof u.positionId === "object" ? u.positionId?._id : u.positionId;
-        return posId === selectedPosition;
+        const userMetaProjects = (u as any).metadata?.projects || [];
+        const rf = roleFrames.find((r) => r._id === selectedRoleFrame);
+        if (rf) {
+          return userMetaProjects.some((mp: any) => mp.rol_frame_id === rf.externalId || mp.rol_frame_id === rf.data?.rol?.id || mp.nombre_rol_frame === rf.name);
+        }
+        return false;
       });
     }
 
-    if (selectedLevel) {
+    if (selectedContract) {
       result = result.filter((u) => {
-        const levelId = typeof u.levelId === "object" ? u.levelId?._id : u.levelId;
-        return levelId === selectedLevel;
+        return getActiveContractType(u) === selectedContract;
       });
     }
 
@@ -147,6 +177,25 @@ export const UserVacationConfigTab: React.FC = () => {
     }
   };
 
+  const getUserProjects = (user: User) => {
+    if (user.projectIds && user.projectIds.length > 0) {
+      return (
+        user.projectIds
+          .map((p) => (typeof p === "object" && p.name ? p.name : ""))
+          .filter(Boolean)
+          .join(", ") || "N/A"
+      );
+    }
+    return "N/A";
+  };
+
+  const getUserRolFrames = (user: User) => {
+    if (user.externalInfo?.rolFrames && user.externalInfo.rolFrames.length > 0) {
+      return user.externalInfo.rolFrames.join(", ");
+    }
+    return "N/A";
+  };
+
   if (loading) {
     return <LoadingSpinner message="Cargando reglas..." />;
   }
@@ -154,7 +203,7 @@ export const UserVacationConfigTab: React.FC = () => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Configuración Individual de Días Extra</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Configuración Individual de Días Extra ({filteredUsers.length})</h3>
       </div>
 
       {/* Filters */}
@@ -166,21 +215,9 @@ export const UserVacationConfigTab: React.FC = () => {
 
         <div className="relative">
           <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-            <option value="">Todas las Areas</option>
-            {areas.map((a) => (
-              <option key={a._id} value={a._id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="relative">
-          <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select value={selectedPosition} onChange={(e) => setSelectedPosition(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-            <option value="">Todos los Cargos</option>
-            {positions.map((p) => (
+          <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+            <option value="">Todos los Proyectos</option>
+            {projects.map((p) => (
               <option key={p._id} value={p._id}>
                 {p.name}
               </option>
@@ -190,11 +227,23 @@ export const UserVacationConfigTab: React.FC = () => {
 
         <div className="relative">
           <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-            <option value="">Todos los Niveles</option>
-            {levels.map((l) => (
-              <option key={l._id} value={l._id}>
-                {l.name}
+          <select value={selectedRoleFrame} onChange={(e) => setSelectedRoleFrame(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+            <option value="">Todos los Roles Frame</option>
+            {roleFrames.map((rf) => (
+              <option key={rf._id} value={rf._id}>
+                {rf.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="relative">
+          <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <select value={selectedContract} onChange={(e) => setSelectedContract(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+            <option value="">Todos los Contratos</option>
+            {contractTypes.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </select>
@@ -227,13 +276,13 @@ export const UserVacationConfigTab: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       <div>
-                        Area: <span className="font-medium text-gray-700 dark:text-gray-300">{(user.areaId as any)?.name || "N/A"}</span>
+                        Proyecto: <span className="font-medium text-gray-700 dark:text-gray-300">{getUserProjects(user)}</span>
                       </div>
                       <div>
-                        Cargo: <span className="font-medium text-gray-700 dark:text-gray-300">{(user.positionId as any)?.name || "N/A"}</span>
+                        Rol frame: <span className="font-medium text-gray-700 dark:text-gray-300">{getUserRolFrames(user)}</span>
                       </div>
                       <div>
-                        Nivel: <span className="font-medium text-gray-700 dark:text-gray-300">{(user.levelId as any)?.name || "N/A"}</span>
+                        Contrato: <span className="font-medium text-gray-700 dark:text-gray-300">{getActiveContractType(user) || "N/A"}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">

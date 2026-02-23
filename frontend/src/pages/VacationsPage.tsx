@@ -61,6 +61,7 @@ export const VacationsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
   const [stats, setStats] = useState({ pending: 0, pre_approved: 0, approved: 0, rejected: 0, delivered: 0, cancelled: 0 });
   const [currentVacationIndex, setCurrentVacationIndex] = useState<number>(0);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -70,7 +71,7 @@ export const VacationsPage: React.FC = () => {
   const [allClients, setAllClients] = useState<Client[]>([]);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: any;
 
     const handleResize = () => {
       clearTimeout(timeoutId);
@@ -249,7 +250,7 @@ export const VacationsPage: React.FC = () => {
     setStats(newStats);
   };
 
-  const handleDelete = async (vacationId: string, numeroPedido: string, status: string, e?: React.MouseEvent) => {
+  const handleDelete = async (vacationId: string, numeroPedido: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
@@ -464,25 +465,9 @@ export const VacationsPage: React.FC = () => {
     }
   };
 
-  const handleNavigatePrevVacation = () => {
-    if (currentVacationIndex > 0) {
-      const newIndex = currentVacationIndex - 1;
-      setCurrentVacationIndex(newIndex);
-      setSelectedVacation(filteredVacations[newIndex]);
-    }
-  };
-
-  const handleNavigateNextVacation = () => {
-    if (currentVacationIndex < filteredVacations.length - 1) {
-      const newIndex = currentVacationIndex + 1;
-      setCurrentVacationIndex(newIndex);
-      setSelectedVacation(filteredVacations[newIndex]);
-    }
-  };
-
-  const handleOpenModal = (vacation: VacationRequestMock, index: number) => {
+  const handleOpenModal = (vacation: VacationRequestMock, index?: number) => {
     setSelectedVacation(vacation);
-    setCurrentVacationIndex(index);
+    if (index !== undefined) setCurrentVacationIndex(index);
     setShowDetailModal(true);
   };
 
@@ -501,12 +486,30 @@ export const VacationsPage: React.FC = () => {
 
     const matchesStatus = statusFilter === "all" || vacation.estado === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    let projectNames: string[] = [];
+    if (vacation.userSnapshot?.projects) {
+      projectNames = vacation.userSnapshot.projects.map((p: any) => p.name);
+    }
+    const matchesProject = projectFilter === "all" || projectNames.includes(projectFilter);
+
+    return matchesSearch && matchesStatus && matchesProject;
   });
 
-  useEffect(() => {
-    calculateStats(mockVacations);
+  const uniqueProjects = React.useMemo(() => {
+    const map = new Map<string, string>();
+    mockVacations.forEach((vacation) => {
+      if (vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0) {
+        vacation.userSnapshot.projects.forEach((p: any) => {
+          if (p.name) map.set(p.name, p.name);
+        });
+      }
+    });
+    return Array.from(map.values()).sort();
   }, [mockVacations]);
+
+  useEffect(() => {
+    calculateStats(filteredVacations);
+  }, [filteredVacations]);
 
   const renderModalFooter = () => {
     if (updating) {
@@ -587,7 +590,7 @@ export const VacationsPage: React.FC = () => {
 
     if (selectedVacation.estado === "delivered") {
       return (
-        <button onClick={(e) => handleDelete(selectedVacation.id, selectedVacation.numeroPedido, selectedVacation.estado, e)} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+        <button onClick={(e) => handleDelete(selectedVacation.id, selectedVacation.numeroPedido, e)} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
           Cancelar Solicitud
         </button>
       );
@@ -648,8 +651,7 @@ export const VacationsPage: React.FC = () => {
                     icon: faTrash,
                     onClick: (e: any) => {
                       e?.stopPropagation();
-                      // @ts-ignore
-                      handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e);
+                      handleDelete(vacation.id, vacation.numeroPedido, e);
                     },
                     title: "Eliminar solicitud",
                     variant: "default",
@@ -715,15 +717,27 @@ export const VacationsPage: React.FC = () => {
         </div>
       }
       searchAndFilters={
-        <div className="flex gap-4 items-center justify-between">
-          <div className="flex-1 relative">
+        <div className="flex gap-4 items-center justify-between flex-wrap">
+          <div className="flex-1 relative min-w-[200px]">
             <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input type="text" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
           </div>
 
           <div className="relative">
             <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+              <option value="all">Todos los Proyectos</option>
+              {uniqueProjects.map((pName) => (
+                <option key={pName} value={pName}>
+                  {pName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative">
+            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
               <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="approved">Aprobadas</option>
@@ -775,14 +789,7 @@ export const VacationsPage: React.FC = () => {
 
                     <tbody>
                       {filteredVacations.map((vacation) => (
-                        <tr
-                          key={vacation.id}
-                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                          onClick={() => {
-                            setSelectedVacation(vacation);
-                            setShowDetailModal(true);
-                          }}
-                        >
+                        <tr key={vacation.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleOpenModal(vacation)}>
                           <td className="py-3 px-4">
                             <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
                           </td>
@@ -859,7 +866,7 @@ export const VacationsPage: React.FC = () => {
                             )}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, vacation.estado, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
+                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
                               <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                             </button>
                           </td>
@@ -931,7 +938,7 @@ export const VacationsPage: React.FC = () => {
                       type={
                         mapVacationSignatureStateToStatusType({
                           status: selectedVacation.estado,
-                          requiresSignature: selectedVacation.requiresSignature || selectedVacation.firmaEstado !== "not_required",
+                          requiresSignature: selectedVacation.requiresSignature || true,
                           signatureStatus: selectedVacation.firmaEstado,
                         })!
                       }
