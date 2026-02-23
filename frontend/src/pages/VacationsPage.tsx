@@ -763,7 +763,7 @@ export const VacationsPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>
+                        {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>*/}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Role Frame</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
@@ -797,7 +797,7 @@ export const VacationsPage: React.FC = () => {
                           </div>
                         </td> */}
                           <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
-                          <td className="py-3 px-4">
+                          {/* <td className="py-3 px-4">
                             {(() => {
                               // Calculate client from project
                               const clientNames: string[] = [];
@@ -818,7 +818,7 @@ export const VacationsPage: React.FC = () => {
                               }
                               return <span className="text-xs text-gray-500">-</span>;
                             })()}
-                          </td>
+                          </td> */}
                           <td className="py-3 px-4">
                             <div className="flex flex-wrap gap-1">
                               {vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0 ? (

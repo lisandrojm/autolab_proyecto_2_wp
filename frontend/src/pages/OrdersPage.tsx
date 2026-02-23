@@ -862,7 +862,7 @@ export const OrdersPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente/s</th>
+                        {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente/s</th>*/}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto/s</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
@@ -899,7 +899,7 @@ export const OrdersPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(order.userId)}</td>
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserClientBadge(order.userId)}</td>
+                            {/* <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserClientBadge(order.userId)}</td>*/}
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserProjectBadge(order.userId)}</td>
                             <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserRoleBadge(order.userId)}</td>
                             <td className="py-3 px-4">
