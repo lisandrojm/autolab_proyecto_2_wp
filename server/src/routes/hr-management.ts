@@ -249,17 +249,25 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
         .limit(Number(limit))
         .populate({
           path: "userId",
-          select: "firstName lastName email positionId metadata clientIds",
+          select: "firstName lastName email positionId metadata clientIds projectIds",
           populate: [
             { path: "positionId", select: "name" },
-            { path: "clientIds", select: "name" },
+            { path: "clientIds", select: "name", model: "Client" },
+            {
+              path: "projectIds",
+              model: "Project",
+              select: "clientId name",
+              populate: { path: "clientId", select: "name", model: "Client" },
+            },
             {
               path: "metadata.projects",
+              model: "UserProject",
               select: "nombre_rol_frame nombre_proyecto projectId",
               populate: {
                 path: "projectId",
+                model: "Project",
                 select: "clientId",
-                populate: { path: "clientId", select: "name" },
+                populate: { path: "clientId", select: "name", model: "Client" },
               },
             },
           ],
