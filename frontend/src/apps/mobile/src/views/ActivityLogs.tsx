@@ -20,7 +20,6 @@ interface EmployeeOption {
   role?: string;
   roles?: { name: string }[];
   positionName?: string;
-  isActive?: boolean;
 }
 
 interface LocalAttendanceRecord {
@@ -258,7 +257,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           role: u.role,
           roles: u.roles,
           positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
-          isActive: u.isActive,
         })),
       );
     } catch (e) {
@@ -1410,7 +1408,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                   <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.replacementId || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementId: e.target.value })}>
                                                     <option value="">Sin reemplazo</option>
                                                     {employees
-                                                      .filter((e) => e.id !== currentEmp.id && e.isActive)
+                                                      .filter((e) => e.id !== currentEmp.id)
                                                       .map((e) => (
                                                         <option key={e.id} value={e.id}>
                                                           {e.name}
@@ -1510,10 +1508,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         <div className="overflow-y-auto flex-1">
                                           {(() => {
                                             const filteredByProject = selectedProjectId ? employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)) : [];
-                                            // Only show those not already in entries and explicitly isActive (valid contract mapping logic handled below)
-                                            // Wait, the prompt says "Solo se tienen que mostrar usuarios que tengan contrato activo para reemplazo opcional".
-                                            // The main list (filteredByProject) is not the replacement list. It is the new entry target list. We should leave it as is or add isActive if asked, but we stick to replacement.
-                                            // Leaving filteredByProject matching original
+                                            // Exclude already added employees
                                             const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));
                                             const filteredByName = searchTerm ? availableEmployees.filter((e) => e.name.toLowerCase().includes(searchTerm.toLowerCase())) : availableEmployees;
 
@@ -1710,7 +1705,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={draftReplacementId} onChange={(e) => setDraftReplacementId(e.target.value)}>
                                               <option value="">Sin reemplazo</option>
                                               {employees
-                                                .filter((e) => e.id !== selectedEmployee.id && e.isActive)
+                                                .filter((e) => e.id !== selectedEmployee.id)
                                                 .map((e) => (
                                                   <option key={e.id} value={e.id}>
                                                     {e.name}
