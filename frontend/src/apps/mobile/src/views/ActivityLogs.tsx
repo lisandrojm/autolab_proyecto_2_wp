@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isFuture, isToday, isBefore, isAfter, getDate, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
@@ -20,6 +20,7 @@ interface EmployeeOption {
   role?: string;
   roles?: { name: string }[];
   positionName?: string;
+  isActive?: boolean;
 }
 
 interface LocalAttendanceRecord {
@@ -234,6 +235,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
 
+  const formScrollRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -255,6 +258,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           role: u.role,
           roles: u.roles,
           positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
+          isActive: u.isActive,
         })),
       );
     } catch (e) {
@@ -263,7 +267,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     // 3. Fetch Projects
     try {
-      const myProjects = await projectsAPI.listAll();
+      const allProjects = await projectsAPI.listAll();
+      const myProjects = profile?.projectIds && profile.projectIds.length > 0 ? allProjects.filter((p) => profile.projectIds?.includes(p._id)) : [];
       setUserProjects(myProjects);
       // Auto-select if only one
       if (myProjects.length === 1) {
@@ -318,8 +323,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   useEffect(() => {
     if (profile?.projectIds && profile.projectIds.length > 0 && userProjects.length === 0) {
       projectsAPI.listAll().then((allProjs) => {
-        setUserProjects(allProjs);
-        if (allProjs.length > 0) setSelectedProjectId(allProjs[0]._id);
+        const myProjects = allProjs.filter((p) => profile.projectIds?.includes(p._id));
+        setUserProjects(myProjects);
+        if (myProjects.length > 0) setSelectedProjectId(myProjects[0]._id);
       });
     }
   }, [profile, userProjects.length]);
@@ -529,6 +535,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return;
     }
     setWizardIndex(0);
+
+    setTimeout(() => {
+      if (formScrollRef.current) {
+        formScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 50);
 
     // Initialize data
     // If we have entries (Editing mode or previous draft), use them to populate
@@ -913,10 +925,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     // Refresh projects to get latest config (allowsAdditionalStaff, etc.)
     try {
       const allProjs = await projectsAPI.listAll();
-      setUserProjects(allProjs);
+      const myProjects = profile?.projectIds && profile.projectIds.length > 0 ? allProjs.filter((p) => profile.projectIds?.includes(p._id)) : [];
+      setUserProjects(myProjects);
       // Reset Project Selection with fresh data
-      if (allProjs.length > 0) {
-        setSelectedProjectId(allProjs[0]._id);
+      if (myProjects.length > 0) {
+        setSelectedProjectId(myProjects[0]._id);
       } else {
         setSelectedProjectId("");
       }
@@ -1002,7 +1015,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
         {showForm && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] h-[80vh] flex flex-col">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[96dvh] h-[96dvh] flex flex-col">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">{selectedReportId ? "Editar Reporte" : "Nuevo Reporte"}</h3>
                 <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -1010,40 +1023,62 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 </button>
               </div>
 
-              <div className="overflow-y-auto p-4 space-y-6 flex-1">
+              <div className="overflow-y-auto p-4 space-y-6 flex-1" ref={formScrollRef}>
                 <div className="space-y-6">
-                  {/* Project Selector - Moved to Top */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente | Proyecto</label>
-                    {userProjects.length > 0 ? (
-                      <select
-                        value={selectedProjectId}
-                        onChange={(e) => {
-                          setSelectedProjectId(e.target.value);
-                          setDraftTypeId("");
-                        }}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      >
-                        {userProjects.map((p) => (
-                          <option key={p._id} value={p._id}>
-                            {typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">No hay proyectos asignados.</div>
-                    )}
-                  </div>
-
-                  {/* Date - Moved Below Project */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
-                    <div onClick={() => selectedProjectId && setCalendarOpen(true)} className={`relative w-full px-4 py-2 border rounded flex items-center justify-between transition-colors ${!selectedProjectId ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 cursor-pointer focus-within:ring-2 focus-within:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500"}`}>
-                      <span className={`text-sm ${!reportDate ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Seleccionar fecha"}</span>
-                      <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                  {wizardIndex >= 0 ? (
+                    <div className="flex flex-col gap-1.5 px-1 py-1">
+                      <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-blue-500" />
+                        <span className="truncate uppercase">
+                          {(() => {
+                            const p = userProjects.find((up) => up._id === selectedProjectId);
+                            if (!p) return "Proyecto";
+                            const cName = typeof p.clientId === "object" ? p.clientId?.name : "";
+                            return cName ? `${cName} | ${p.name}` : p.name;
+                          })()}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-blue-500" />
+                        <span className="capitalize">{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}</span>
+                      </div>
                     </div>
-                    {!selectedProjectId && <p className="text-xs text-orange-500 mt-1">Selecciona un proyecto primero</p>}
-                  </div>
+                  ) : (
+                    <>
+                      {/* Project Selector - Moved to Top */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente | Proyecto</label>
+                        {userProjects.length > 0 ? (
+                          <select
+                            value={selectedProjectId}
+                            onChange={(e) => {
+                              setSelectedProjectId(e.target.value);
+                              setDraftTypeId("");
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          >
+                            {userProjects.map((p) => (
+                              <option key={p._id} value={p._id}>
+                                {typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">No hay proyectos asignados.</div>
+                        )}
+                      </div>
+
+                      {/* Date - Moved Below Project */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
+                        <div onClick={() => selectedProjectId && setCalendarOpen(true)} className={`relative w-full px-4 py-2 border rounded flex items-center justify-between transition-colors ${!selectedProjectId ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 cursor-pointer focus-within:ring-2 focus-within:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500"}`}>
+                          <span className={`text-sm ${!reportDate ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Seleccionar fecha"}</span>
+                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                        </div>
+                        {!selectedProjectId && <p className="text-xs text-orange-500 mt-1">Selecciona un proyecto primero</p>}
+                      </div>
+                    </>
+                  )}
 
                   {/* Calendar Modal */}
                   {calendarOpen && (
@@ -1194,14 +1229,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     {!isFastEntryEnabled ? (
                       <div className="space-y-4">
                         {wizardIndex === -1 ? (
-                          <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                          <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Reporte Detallado de Asistencia</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs mx-auto">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
                               Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
                             </p>
-                            <button onClick={startWizard} className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-md transition-all active:scale-95">
-                              Comenzar Reporte
-                            </button>
                           </div>
                         ) : (
                           <>
@@ -1243,10 +1275,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                       <div>
                                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
                                         <div className="flex gap-3">
-                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
+                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
                                             SÍ
                                           </button>
-                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 })} className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${!isPresent ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
+                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 })} className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!isPresent ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
                                             NO
                                           </button>
                                         </div>
@@ -1378,7 +1410,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                   <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.replacementId || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementId: e.target.value })}>
                                                     <option value="">Sin reemplazo</option>
                                                     {employees
-                                                      .filter((e) => e.id !== currentEmp.id)
+                                                      .filter((e) => e.id !== currentEmp.id && e.isActive)
                                                       .map((e) => (
                                                         <option key={e.id} value={e.id}>
                                                           {e.name}
@@ -1478,7 +1510,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         <div className="overflow-y-auto flex-1">
                                           {(() => {
                                             const filteredByProject = selectedProjectId ? employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)) : [];
-                                            // Exclude already added employees
+                                            // Only show those not already in entries and explicitly isActive (valid contract mapping logic handled below)
+                                            // Wait, the prompt says "Solo se tienen que mostrar usuarios que tengan contrato activo para reemplazo opcional".
+                                            // The main list (filteredByProject) is not the replacement list. It is the new entry target list. We should leave it as is or add isActive if asked, but we stick to replacement.
+                                            // Leaving filteredByProject matching original
                                             const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));
                                             const filteredByName = searchTerm ? availableEmployees.filter((e) => e.name.toLowerCase().includes(searchTerm.toLowerCase())) : availableEmployees;
 
@@ -1528,7 +1563,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                           setDraftTypeId("");
                                           setNoveltyCategory(null); // Clear old category state if any
                                         }}
-                                        className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${attendanceStatus === "present" ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                        className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "present" ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                       >
                                         SÍ
                                       </button>
@@ -1538,7 +1573,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                           setDraftTypeId("");
                                           setShowOvertimeForm(false);
                                         }}
-                                        className={`flex-1 py-3 rounded-md font-bold text-lg transition-all shadow-sm border ${attendanceStatus === "absent" ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                        className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "absent" ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                       >
                                         NO
                                       </button>
@@ -1675,7 +1710,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={draftReplacementId} onChange={(e) => setDraftReplacementId(e.target.value)}>
                                               <option value="">Sin reemplazo</option>
                                               {employees
-                                                .filter((e) => e.id !== selectedEmployee.id)
+                                                .filter((e) => e.id !== selectedEmployee.id && e.isActive)
                                                 .map((e) => (
                                                   <option key={e.id} value={e.id}>
                                                     {e.name}
@@ -1746,31 +1781,37 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               {/* Footer Actions */}
               <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 {/* Wizard Navigation Footer */}
-                {!isFastEntryEnabled && wizardIndex >= 0 ? (
+                {!isFastEntryEnabled && wizardIndex >= -1 ? (
                   <div className="flex gap-3 items-center w-full">
-                    <button onClick={handleWizardPrev} disabled={wizardIndex === 0} className="flex-1 py-3 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
-                      <FontAwesomeIcon icon={faChevronLeft} />
-                      Anterior
-                    </button>
-
-                    {/* Summary in Footer */}
-
-                    <button
-                      onClick={handleWizardNext}
-                      disabled={(() => {
-                        const currentEmp = projectEmployees[wizardIndex];
-                        const data = wizardData[currentEmp.id];
-                        // If OT is enabled (defined), value MUST be > 0.
-                        if (data?.status === "present" && data.overtimeHours !== undefined) {
-                          return data.overtimeHours <= 0;
-                        }
-                        return false;
-                      })()}
-                      className="flex-1 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:shadow-none"
-                    >
-                      Siguiente
-                      <FontAwesomeIcon icon={faChevronRight} />
-                    </button>
+                    {wizardIndex === -1 ? (
+                      <button onClick={startWizard} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-md transition-all active:scale-95 text-sm md:text-base">
+                        Comenzar Reporte
+                      </button>
+                    ) : (
+                      <>
+                        <button onClick={handleWizardPrev} disabled={wizardIndex === 0} className="flex-1 py-3 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                          <FontAwesomeIcon icon={faChevronLeft} />
+                          Anterior
+                        </button>
+                        <button
+                          onClick={handleWizardNext}
+                          disabled={(() => {
+                            const currentEmp = projectEmployees[wizardIndex];
+                            if (!currentEmp) return true;
+                            const data = wizardData[currentEmp.id];
+                            // If OT is enabled (defined), value MUST be > 0.
+                            if (data?.status === "present" && data.overtimeHours !== undefined) {
+                              return data.overtimeHours <= 0;
+                            }
+                            return false;
+                          })()}
+                          className="flex-1 py-3 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:shadow-none"
+                        >
+                          Siguiente
+                          <FontAwesomeIcon icon={faChevronRight} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   // Fast Entry / Default Footer

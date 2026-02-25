@@ -68,6 +68,10 @@ export interface Project {
     useGlobalConfig: boolean;
     enableFastEntry?: boolean;
     allowsAdditionalStaff?: boolean;
+    schedule?: {
+      type: "daily" | "workdays" | "custom";
+      days: number[];
+    };
   };
   teamConfig?: {
     userId: string;
@@ -284,6 +288,10 @@ class ProjectsAPI {
         useGlobalConfig: boolean;
         enableFastEntry?: boolean;
         allowsAdditionalStaff?: boolean;
+        schedule?: {
+          type: "daily" | "workdays" | "custom";
+          days: number[];
+        };
       };
       workSchedule?: WorkSchedule;
     },

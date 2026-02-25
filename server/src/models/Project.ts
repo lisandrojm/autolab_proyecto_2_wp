@@ -70,6 +70,10 @@ export interface IProject extends Document {
     useGlobalConfig: boolean;
     enableFastEntry?: boolean;
     allowsAdditionalStaff?: boolean;
+    schedule?: {
+      type: "daily" | "workdays" | "custom";
+      days: number[];
+    };
   };
   externalId?: number;
   metadata?: IProjectMetadata;
@@ -127,6 +131,10 @@ const projectSchema = new Schema<IProject>(
       useGlobalConfig: { type: Boolean, default: true },
       enableFastEntry: { type: Boolean },
       allowsAdditionalStaff: { type: Boolean },
+      schedule: {
+        type: { type: String, enum: ["daily", "workdays", "custom"] },
+        days: [{ type: Number }],
+      },
     },
 
     workSchedule: {

@@ -90,10 +90,16 @@ export const RequestsConfigPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedProject) {
-      setType("daily");
-      setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
+      const currentConfig = selectedProject.activityLogConfig?.schedule;
+      if (currentConfig) {
+        setType(currentConfig.type);
+        setSelectedDays(currentConfig.days);
+      } else {
+        setType("daily");
+        setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
+      }
     }
-  }, [selectedProject]);
+  }, [selectedProject?._id, selectedProject?.activityLogConfig]);
 
   const handleTypeChange = (newType: ReportSchedule["type"]) => {
     setType(newType);
@@ -107,10 +113,41 @@ export const RequestsConfigPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!selectedProject) return;
     setSavingFrequency(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSavingFrequency(false);
-    sweetAlert.success("Configuración Guardada", `Se ha actualizado la frecuencia para ${selectedProject?.name || "el proyecto"}`);
+    try {
+      const newConfig = {
+        useGlobalConfig: false,
+        ...selectedProject.activityLogConfig,
+        schedule: {
+          type,
+          days: selectedDays,
+        },
+      };
+
+      await projectsAPI.updateProject(selectedProject._id, { activityLogConfig: newConfig });
+
+      setSelectedProject((prev: any) => (prev ? { ...prev, activityLogConfig: newConfig } : prev));
+      setAllProjects((prev) => prev.map((p) => (p._id === selectedProject._id ? { ...p, activityLogConfig: newConfig } : p)));
+
+      sweetAlert.success("Configuración Guardada", `Se ha actualizado la frecuencia para ${selectedProject.name}`);
+    } catch (error) {
+      console.error("Error saving frequency:", error);
+      sweetAlert.error("Error", "No se pudo guardar la configuración");
+    } finally {
+      setSavingFrequency(false);
+    }
+  };
+
+  const handleSelectProject = (projectFromSelector: any) => {
+    if (!projectFromSelector) {
+      setSelectedProject(null);
+      return;
+    }
+    // We use allProjects as the source of truth to avoid stale configurations
+    // from ProjectHeaderSelector's internal state.
+    const upToDateProject = allProjects.find((p) => p._id === projectFromSelector._id) || projectFromSelector;
+    setSelectedProject(upToDateProject);
   };
 
   const handleBack = () => navigate("/requests");
@@ -507,7 +544,7 @@ export const RequestsConfigPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Seleccionar Proyecto</h3>
-                  <ProjectHeaderSelector onSelectProject={setSelectedProject} selectedProjectId={selectedProject?._id} />
+                  <ProjectHeaderSelector onSelectProject={handleSelectProject} selectedProjectId={selectedProject?._id} />
                 </div>
 
                 {!selectedProject && (
