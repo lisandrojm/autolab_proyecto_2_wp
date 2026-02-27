@@ -343,27 +343,38 @@ export default function Orders({ onNavigate }: OrdersProps) {
           if (!validDynamicValue?.fechaDesde || !validDynamicValue?.fechaHasta) return 0;
           start = new Date(validDynamicValue.fechaDesde);
           end = new Date(validDynamicValue.fechaHasta);
-        } else {
-          // Single date
-          if (!validDynamicValue) return 0;
-          start = new Date(validDynamicValue);
-          end = new Date(validDynamicValue);
-        }
 
-        let count = 0;
-        let curr = new Date(start);
-        // Safety break for infinite loops if dates are weird
-        const MAX_DAYS = 365;
-        let loops = 0;
+          let count = 0;
+          let curr = new Date(start);
+          const MAX_DAYS = 365;
+          let loops = 0;
 
-        while (curr <= end && loops < MAX_DAYS) {
-          if (validateDate(curr).valid) {
-            count++;
+          while (curr <= end && loops < MAX_DAYS) {
+            if (validateDate(curr).valid) {
+              count++;
+            }
+            curr.setDate(curr.getDate() + 1);
+            loops++;
           }
-          curr.setDate(curr.getDate() + 1);
-          loops++;
+          return count;
+        } else {
+          // Single or Multiple discrete dates
+          if (!validDynamicValue) return 0;
+
+          if (Array.isArray(validDynamicValue)) {
+            let count = 0;
+            for (const d of validDynamicValue) {
+              const dt = new Date(d);
+              if (!isNaN(dt.getTime()) && validateDate(dt).valid) {
+                count++;
+              }
+            }
+            return count;
+          } else {
+            start = new Date(validDynamicValue);
+            return validateDate(start).valid ? 1 : 0;
+          }
         }
-        return count;
       };
 
       const daysRequested = calculateRequestedDays();

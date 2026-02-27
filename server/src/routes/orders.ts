@@ -545,8 +545,8 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
       return;
     }
 
-    if (req.body.status === "cancelled" && order.status !== "pending") {
-      res.status(400).json({ error: "Solo puedes cancelar pedidos en estado pendiente" });
+    if (req.body.status === "cancelled" && ["approved", "rejected", "cancelled", "delivered"].includes(order.status)) {
+      res.status(400).json({ error: "No puedes cancelar un pedido que ya fue aprobado, rechazado, entregado o cancelado" });
       return;
     }
 

@@ -169,7 +169,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
 
     return (
       <div className="flex flex-row items-center justify-end gap-3 w-full px-2">
-        {order.status === "pending" && (
+        {!["approved", "rejected", "cancelled", "delivered"].includes(order.status) && (
           <button onClick={handleCancelOrder} disabled={updatingStatus} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50">
             Cancelar Pedido
           </button>
@@ -308,10 +308,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   <p className="font-medium text-slate-800 dark:text-slate-100">{order.dynamicValue}</p>
                 </div>
               )}
-              {((typeof order.dynamicValue === "string" && /^\d{4}-\d{2}-\d{2}/.test(order.dynamicValue)) || order.dynamicValue?.fechaUnica) && (
+              {((typeof order.dynamicValue === "string" && /^\d{4}-\d{2}-\d{2}/.test(order.dynamicValue)) || order.dynamicValue?.fechaUnica || Array.isArray(order.dynamicValue)) && (
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Fecha Solicitada</p>
-                  <p className="font-medium text-slate-800 dark:text-slate-100">{typeof order.dynamicValue === "string" ? formatDateShort(order.dynamicValue) : formatDateShort(order.dynamicValue.fechaUnica)}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{Array.isArray(order.dynamicValue) ? order.dynamicValue.map((d) => formatDateShort(d)).join(", ") : typeof order.dynamicValue === "string" ? formatDateShort(order.dynamicValue) : formatDateShort(order.dynamicValue.fechaUnica)}</p>
                 </div>
               )}
               {monto !== null && (
@@ -345,6 +345,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onStatusUpdat
                   lastDate = parseDate(order.dynamicValue.fechaUnica);
                 } else if (typeof order.dynamicValue === "string" && /^\d{4}-\d{2}-\d{2}$/.test(order.dynamicValue)) {
                   lastDate = parseDate(order.dynamicValue);
+                } else if (Array.isArray(order.dynamicValue) && order.dynamicValue.length > 0) {
+                  lastDate = parseDate(order.dynamicValue[order.dynamicValue.length - 1]);
                 }
 
                 if (!lastDate) return null;

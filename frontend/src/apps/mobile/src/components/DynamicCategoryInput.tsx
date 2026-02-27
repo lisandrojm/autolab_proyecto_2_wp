@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar } from "@fortawesome/free-solid-svg-icons";
 import { OrderConfig as OrderType } from "../../../../api/orderConfig";
 import { CustomDatePicker } from "./CustomDatePicker";
+import { CustomMultiDatePicker } from "./CustomMultiDatePicker";
 
 interface DynamicCategoryInputProps {
   category: OrderType | null;
@@ -173,10 +174,14 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
             </div>
           );
         } else {
-          // Single Date Mode
+          // Single/Multiple Date Mode
           const nextWorkingDay = (() => {
-            if (!dynamicValue || typeof dynamicValue !== "string") return null;
-            const [y, m, d] = dynamicValue.split("-").map(Number);
+            if (!dynamicValue) return null;
+            const datesArr = Array.isArray(dynamicValue) ? dynamicValue : [dynamicValue];
+            if (datesArr.length === 0) return null;
+            const lastDate = datesArr[datesArr.length - 1]; // Assuming sorted
+            if (typeof lastDate !== "string") return null;
+            const [y, m, d] = lastDate.split("-").map(Number);
             const dateObj = new Date(y, m - 1, d);
 
             return getNextWorkingDay
@@ -193,7 +198,7 @@ export const DynamicCategoryInput: React.FC<DynamicCategoryInputProps> = ({ cate
           return (
             <div className="space-y-3">
               <div>
-                <CustomDatePicker label="Fecha" value={dynamicValue || ""} onChange={(newDate) => onDynamicValueChange(newDate)} minDate={today} validateDate={validateDate} disabled={typeof remainingDays === "number" && remainingDays <= 0} />
+                <CustomMultiDatePicker label="Fecha" value={dynamicValue || []} onChange={(newDates) => onDynamicValueChange(newDates)} minDate={today} validateDate={validateDate} disabled={typeof remainingDays === "number" && remainingDays <= 0} remainingDays={remainingDays} getNextWorkingDay={getNextWorkingDay} />
                 {typeof remainingDays === "number" && remainingDays <= 0 && <p className="text-xs text-red-600 dark:text-red-400 mt-1">No tienes días disponibles.</p>}
               </div>
 

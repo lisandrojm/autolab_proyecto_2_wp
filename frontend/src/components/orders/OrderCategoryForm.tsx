@@ -354,7 +354,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               }}
               className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white"
             >
-              <option value="single">Fecha única</option>
+              <option value="single">Fecha / de a 1 día</option>
               <option value="range">Rango de fechas</option>
             </select>
 
@@ -596,7 +596,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         <div className="text-gray-700 dark:text-gray-300 space-y-3">
           <p>Define cómo se cargan fechas:</p>
           <p>
-            <strong>Fecha única:</strong> Una sola fecha.
+            <strong>Fecha / de a 1 día:</strong> Seleccionar uno o más días individuales.
           </p>
           <p>
             <strong>Rango:</strong> Fecha inicio y fin.
