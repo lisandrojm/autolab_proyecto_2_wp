@@ -187,7 +187,7 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
                 <div className="mb-4 bg-[#11231a] rounded-lg p-3 text-sm text-[#4ade80] flex items-center justify-center gap-2 border border-[#1b3a2a]">
                   <FontAwesomeIcon icon={faCheckCircle} />
                   <p className="font-semibold tracking-wide">
-                    Vuelve a trabajar el <span className="font-bold capitalize">{format(nextWorkingDay, "eeee d 'De' MMMM", { locale: es })}</span>
+                    Vuelve a trabajar el <span className="font-bold capitalize">{format(nextWorkingDay, "eeee d 'De' MMMM", { locale: es })}. Si corresponde a tu jornada laboral.</span>
                   </p>
                 </div>
               )}

@@ -873,7 +873,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                 <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800 rounded-lg text-xs text-green-700 dark:text-green-300 flex items-center justify-center gap-2">
                   <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
                   <span>
-                    Vuelve a trabajar el <strong className="capitalize">{format(returnDate, "EEEE d 'de' MMMM", { locale: es })}</strong>
+                    Vuelve a trabajar el <strong className="capitalize">{format(returnDate, "EEEE d 'de' MMMM", { locale: es })}</strong>. Si corresponde a tu jornada laboral.
                   </span>
                 </div>
               )}
