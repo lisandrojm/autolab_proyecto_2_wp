@@ -84,7 +84,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
           <div className="flex items-center gap-1 flex-wrap">
             <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderConfig.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderConfig.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
 
-            {orderConfig.categoryType === "fecha" && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.dateMode === "range" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200" : "bg-sky-100 text-sky-800 dark:bg-sky-500/30 dark:text-sky-200"}`}>{orderConfig.dateMode === "range" ? "Rango de Fechas" : "Fecha de a un día"}</span>}
+            {orderConfig.categoryType === "fecha" && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.dateMode === "range" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200" : "bg-sky-100 text-sky-800 dark:bg-sky-500/30 dark:text-sky-200"}`}>{orderConfig.dateMode === "range" ? "Rango de Fechas" : "Fechas Múltiples"}</span>}
           </div>
 
           {orderConfig.categoryType === "fecha" && orderConfig.dateMode === "range" && orderConfig.maxDays && <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">Max: {orderConfig.maxDays} días</span>}
