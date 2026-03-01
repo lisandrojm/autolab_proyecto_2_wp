@@ -40,6 +40,7 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
           <tr>
             <th className="py-3 px-4">Colaborador</th>
             <th className="py-3 px-4 text-center">Presente</th>
+            <th className="py-3 px-4">Motivo</th>
             <th className="py-3 px-4">Area</th>
             <th className="py-3 px-4 text-center">Entrada</th>
             <th className="py-3 px-4 text-center">Salida</th>
@@ -57,13 +58,11 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
 
             return (
               <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>
-                  {record.employeeName}
-                  {isAbsent && <span className="block text-xs font-normal text-red-500 italic">({record.absenceReason || "Ausente"})</span>}
-                </td>
+                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>{record.employeeName}</td>
                 <td className="py-3 px-4 text-center">
                   <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-gray-300"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : "-"}</td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
