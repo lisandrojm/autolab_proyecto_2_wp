@@ -1021,7 +1021,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 </button>
               </div>
 
-              <div className="overflow-y-auto p-4 space-y-6 flex-1" ref={formScrollRef}>
+              <div className="overflow-y-auto p-4 flex-1" ref={formScrollRef}>
                 <div className="space-y-6">
                   {wizardIndex >= 0 ? (
                     <div className="flex flex-col gap-1.5 px-1 py-1">
@@ -1227,7 +1227,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     {!isFastEntryEnabled ? (
                       <div className="space-y-4">
                         {wizardIndex === -1 ? (
-                          <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                          <div className="text-center p-4 bg-gray-50 dark:bg-blue-600/10 rounded border border-blue-600 dark:border-blue-600">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Reporte Detallado de Asistencia</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
                               Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
@@ -1273,10 +1273,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                       <div>
                                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
                                         <div className="flex gap-3">
-                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
+                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined })} className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
                                             SÍ
                                           </button>
-                                          <button onClick={() => updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 })} className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!isPresent ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}>
+                                          <button
+                                            onClick={(e) => {
+                                              updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 });
+                                              setTimeout(() => {
+                                                const target = e.target as HTMLElement;
+                                                target.closest(".p-5.space-y-6")?.querySelector(".absent-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                              }, 150);
+                                            }}
+                                            className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!isPresent ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                          >
                                             NO
                                           </button>
                                         </div>
@@ -1286,7 +1295,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                       {isPresent ? (
                                         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                           {/* Overtime Toggle */}
-                                          <div className="flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                          <div className="ot-container-row flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
                                             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
                                             <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                                               <input
@@ -1295,9 +1304,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 id="toggle-ot"
                                                 checked={data.overtimeHours !== undefined}
                                                 onChange={(e) => {
-                                                  if (e.target.checked) {
+                                                  const target = e.target as HTMLInputElement;
+                                                  if (target.checked) {
                                                     // Enable OT
                                                     updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
+                                                    setTimeout(() => {
+                                                      target.closest(".ot-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                                    }, 150);
                                                   } else {
                                                     updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
                                                   }
@@ -1371,20 +1384,24 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         </div>
                                       ) : (
                                         /* Absent Logic */
-                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="absent-container-row space-y-4 animate-in fade-in slide-in-from-top-2 scroll-mt-[70px]">
                                           <div>
                                             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
                                             <select
                                               className="w-full p-3 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                               value={data.typeId || ""}
                                               onChange={(e) => {
-                                                const newId = e.target.value;
+                                                const target = e.target as HTMLSelectElement;
+                                                const newId = target.value;
                                                 // Reset replacement if type doesn't need it
                                                 const type = logTypes.find((t) => t._id === newId);
                                                 updateWizardEntry(currentEmp.id, {
                                                   typeId: newId,
                                                   replacementId: type?.requiresReplacement ? data.replacementId : undefined,
                                                 });
+                                                setTimeout(() => {
+                                                  target.closest(".absent-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                                }, 150);
                                               }}
                                             >
                                               <option value="">Seleccionar motivo...</option>
@@ -1563,10 +1580,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         SÍ
                                       </button>
                                       <button
-                                        onClick={() => {
+                                        onClick={(e) => {
                                           setAttendanceStatus("absent");
                                           setDraftTypeId("");
                                           setShowOvertimeForm(false);
+                                          setTimeout(() => {
+                                            const target = e.target as HTMLElement;
+                                            target.closest(".animate-fade-in")?.querySelector(".absent-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                          }, 150);
                                         }}
                                         className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "absent" ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                       >
@@ -1579,7 +1600,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   {attendanceStatus === "present" && (
                                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                       {/* Overtime Toggle */}
-                                      <div className="flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                      <div className="ot-container-row flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
                                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
                                         <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                                           <input
@@ -1588,13 +1609,17 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             id="toggle-manual-ot"
                                             checked={showOvertimeForm}
                                             onChange={(e) => {
-                                              const isChecked = e.target.checked;
+                                              const target = e.target as HTMLInputElement;
+                                              const isChecked = target.checked;
                                               setShowOvertimeForm(isChecked);
                                               if (isChecked) {
                                                 // Auto-select overtime type
                                                 const overtimeType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
                                                 if (overtimeType) setDraftTypeId(overtimeType._id);
                                                 setDraftOvertimeHours(0);
+                                                setTimeout(() => {
+                                                  target.closest(".ot-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                                }, 150);
                                               } else {
                                                 setDraftTypeId("");
                                                 setDraftOvertimeHours(0);
@@ -1610,9 +1635,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   )}
 
                                   {attendanceStatus === "absent" && (
-                                    <div className="animate-in fade-in slide-in-from-top-2">
+                                    <div className="absent-container-row animate-in fade-in slide-in-from-top-2 scroll-mt-[70px]">
                                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Motivo de Ausencia</label>
-                                      <select className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-shadow" value={draftTypeId} onChange={handleTypeChange}>
+                                      <select
+                                        className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                                        value={draftTypeId}
+                                        onChange={(e) => {
+                                          const target = e.target as HTMLSelectElement;
+                                          handleTypeChange(e as any); // cast for synthetic event type compatibility if needed
+                                          setTimeout(() => {
+                                            target.closest(".absent-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                          }, 150);
+                                        }}
+                                      >
                                         <option value="">Seleccionar motivo...</option>
                                         {logTypes
                                           .filter((t) => {
