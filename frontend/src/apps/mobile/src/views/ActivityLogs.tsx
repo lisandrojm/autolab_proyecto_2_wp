@@ -20,6 +20,8 @@ interface EmployeeOption {
   role?: string;
   roles?: { name: string }[];
   positionName?: string;
+  isActive?: boolean;
+  hasActiveContract?: boolean;
 }
 
 interface LocalAttendanceRecord {
@@ -225,6 +227,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [selectedAdditionalStaff, setSelectedAdditionalStaff] = useState<string[]>([]);
   const [additionalStaffSearchTerm, setAdditionalStaffSearchTerm] = useState("");
 
+  // Replacement Modal State
+  const [showReplacementModal, setShowReplacementModal] = useState(false);
+  const [replacementSearchTerm, setReplacementSearchTerm] = useState("");
+  const [replacementShowOnlyActiveContracts, setReplacementShowOnlyActiveContracts] = useState(true);
+  const [replacementTargetEmpId, setReplacementTargetEmpId] = useState<string | null>(null); // For wizard mode, null for fast entry mode
+
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
@@ -257,6 +265,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           role: u.role,
           roles: u.roles,
           positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
+          isActive: u.isActive,
+          hasActiveContract: !!u.metadata?.projects?.some((p) =>
+            p.contracts?.some((c) => {
+              if (!c.fecha_baja_contrato) return true;
+              const endDate = new Date(c.fecha_baja_contrato);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              return endDate >= today;
+            }),
+          ),
         })),
       );
     } catch (e) {
@@ -338,24 +356,35 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
         let totalOvertime = 0;
 
-        // 1. Exit Overtime
-        if (draftOutTime && endTime) {
-          const [outH, outM] = draftOutTime.split(":").map(Number);
-          const [endH, endM] = endTime.split(":").map(Number);
-          const outTotal = outH * 60 + outM;
-          const endTotal = endH * 60 + endM;
-          let diff = (outTotal - endTotal) / 60;
-          if (diff > 0) totalOvertime += diff;
-        }
-
-        // 2. Entry Overtime (Early Start)
+        // 1. Entry Overtime (Early Start)
+        let inTotal = 0;
         if (draftInTime && startTime) {
           const [inH, inM] = draftInTime.split(":").map(Number);
           const [startH, startM] = startTime.split(":").map(Number);
-          const inTotal = inH * 60 + inM;
+          inTotal = inH * 60 + inM;
           const startTotal = startH * 60 + startM;
           // If came in BEFORE start time
           let diff = (startTotal - inTotal) / 60;
+          if (diff > 0) totalOvertime += diff;
+        } else if (draftInTime) {
+          const [inH, inM] = draftInTime.split(":").map(Number);
+          inTotal = inH * 60 + inM;
+        }
+
+        // 2. Exit Overtime
+        if (draftOutTime && endTime) {
+          const [outH, outM] = draftOutTime.split(":").map(Number);
+          const [endH, endM] = endTime.split(":").map(Number);
+          let outTotal = outH * 60 + outM;
+          const endTotal = endH * 60 + endM;
+
+          if (draftInTime && outTotal < inTotal) {
+            outTotal += 24 * 60; // Next day
+          } else if (!draftInTime && outTotal < endTotal && outTotal < 12 * 60) {
+            outTotal += 24 * 60; // Fallback heuristic
+          }
+
+          let diff = (outTotal - endTotal) / 60;
           if (diff > 0) totalOvertime += diff;
         }
 
@@ -394,23 +423,34 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       let totalOvertime = 0;
 
-      // 1. Exit OT
-      if (data.outTime && endTime) {
-        const [outH, outM] = data.outTime.split(":").map(Number);
-        const [endH, endM] = endTime.split(":").map(Number);
-        const outTotal = outH * 60 + outM;
-        const endTotal = endH * 60 + endM;
-        let diff = (outTotal - endTotal) / 60;
-        if (diff > 0) totalOvertime += diff;
-      }
-
-      // 2. Entry OT
+      // 1. Entry OT
+      let inTotal = 0;
       if (data.inTime && startTime) {
         const [inH, inM] = data.inTime.split(":").map(Number);
         const [startH, startM] = startTime.split(":").map(Number);
-        const inTotal = inH * 60 + inM;
+        inTotal = inH * 60 + inM;
         const startTotal = startH * 60 + startM;
         let diff = (startTotal - inTotal) / 60;
+        if (diff > 0) totalOvertime += diff;
+      } else if (data.inTime) {
+        const [inH, inM] = data.inTime.split(":").map(Number);
+        inTotal = inH * 60 + inM;
+      }
+
+      // 2. Exit OT
+      if (data.outTime && endTime) {
+        const [outH, outM] = data.outTime.split(":").map(Number);
+        const [endH, endM] = endTime.split(":").map(Number);
+        let outTotal = outH * 60 + outM;
+        const endTotal = endH * 60 + endM;
+
+        if (data.inTime && outTotal < inTotal) {
+          outTotal += 24 * 60; // Next day
+        } else if (!data.inTime && outTotal < endTotal && outTotal < 12 * 60) {
+          outTotal += 24 * 60; // Fallback heuristic
+        }
+
+        let diff = (outTotal - endTotal) / 60;
         if (diff > 0) totalOvertime += diff;
       }
 
@@ -1013,7 +1053,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
         {showForm && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[96dvh] h-[96dvh] flex flex-col">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[96dvh] h-[96dvh] flex flex-col space-y-2">
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">{selectedReportId ? "Editar Reporte" : "Nuevo Reporte"}</h3>
                 <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -1295,30 +1335,29 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                       {isPresent ? (
                                         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                           {/* Overtime Toggle */}
-                                          <div className="ot-container-row flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
-                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
-                                            <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                                              <input
-                                                type="checkbox"
-                                                name="toggle"
-                                                id="toggle-ot"
-                                                checked={data.overtimeHours !== undefined}
-                                                onChange={(e) => {
-                                                  const target = e.target as HTMLInputElement;
-                                                  if (target.checked) {
-                                                    // Enable OT
-                                                    updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
-                                                    setTimeout(() => {
-                                                      target.closest(".ot-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                                                    }, 150);
-                                                  } else {
-                                                    updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
-                                                  }
+                                          <div className="ot-container-row flex flex-col gap-3 p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
+                                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">¿Realizó Horas Extras?</span>
+                                            <div className="flex gap-3">
+                                              <button
+                                                onClick={(e) => {
+                                                  updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
+                                                  setTimeout(() => {
+                                                    const target = e.target as HTMLElement;
+                                                    target.closest(".ot-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                                  }, 150);
                                                 }}
-                                                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                                                style={{ right: data.overtimeHours !== undefined ? "0" : "auto", left: data.overtimeHours !== undefined ? "auto" : "0" }}
-                                              />
-                                              <label htmlFor="toggle-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${data.overtimeHours !== undefined ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
+                                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${data.overtimeHours !== undefined ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                              >
+                                                SÍ
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
+                                                }}
+                                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${data.overtimeHours === undefined ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                              >
+                                                NO
+                                              </button>
                                             </div>
                                           </div>
 
@@ -1351,6 +1390,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
                                                 <input
                                                   type="time"
+                                                  lang="en-GB"
                                                   className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
                                                   value={data.inTime || ""}
                                                   onChange={(e) => {
@@ -1364,6 +1404,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Real</label>
                                                 <input
                                                   type="time"
+                                                  lang="en-GB"
                                                   className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
                                                   value={data.outTime || ""}
                                                   onChange={(e) => {
@@ -1422,16 +1463,32 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               return (
                                                 <div>
                                                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Reemplazo (Opcional)</label>
-                                                  <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={data.replacementId || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementId: e.target.value })}>
-                                                    <option value="">Sin reemplazo</option>
-                                                    {employees
-                                                      .filter((e) => e.id !== currentEmp.id)
-                                                      .map((e) => (
-                                                        <option key={e.id} value={e.id}>
-                                                          {e.name}
-                                                        </option>
-                                                      ))}
-                                                  </select>
+                                                  <div className="flex flex-col gap-2">
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => {
+                                                        setReplacementTargetEmpId(currentEmp.id);
+                                                        setShowReplacementModal(true);
+                                                      }}
+                                                      className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-left flex justify-between items-center transition-colors hover:bg-slate-50 dark:hover:bg-slate-600 focus:ring-2 focus:ring-blue-500"
+                                                    >
+                                                      <span className={data.replacementId ? "text-slate-900 dark:text-white font-medium" : "text-slate-400 dark:text-slate-500"}>{data.replacementId ? employees.find((e) => e.id === data.replacementId)?.name || "Empleado desconocido" : "Seleccionar reemplazo..."}</span>
+                                                      <div className="flex items-center gap-2">
+                                                        {data.replacementId && (
+                                                          <div
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              updateWizardEntry(currentEmp.id, { replacementId: "" });
+                                                            }}
+                                                            className="text-slate-400 hover:text-red-500 p-1 rounded-full bg-slate-100 dark:bg-slate-800 transition-colors flex items-center justify-center w-6 h-6"
+                                                          >
+                                                            <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                                                          </div>
+                                                        )}
+                                                        <FontAwesomeIcon icon={faChevronRight} className="text-slate-400 text-xs" />
+                                                      </div>
+                                                    </button>
+                                                  </div>
                                                 </div>
                                               );
                                             }
@@ -1600,35 +1657,35 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   {attendanceStatus === "present" && (
                                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                       {/* Overtime Toggle */}
-                                      <div className="ot-container-row flex items-center justify-between p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">¿Realizó Horas Extras?</span>
-                                        <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                                          <input
-                                            type="checkbox"
-                                            name="toggle-manual-ot"
-                                            id="toggle-manual-ot"
-                                            checked={showOvertimeForm}
-                                            onChange={(e) => {
-                                              const target = e.target as HTMLInputElement;
-                                              const isChecked = target.checked;
-                                              setShowOvertimeForm(isChecked);
-                                              if (isChecked) {
-                                                // Auto-select overtime type
-                                                const overtimeType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
-                                                if (overtimeType) setDraftTypeId(overtimeType._id);
-                                                setDraftOvertimeHours(0);
-                                                setTimeout(() => {
-                                                  target.closest(".ot-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                                                }, 150);
-                                              } else {
-                                                setDraftTypeId("");
-                                                setDraftOvertimeHours(0);
-                                              }
+                                      <div className="ot-container-row flex flex-col gap-3 p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">¿Realizó Horas Extras?</span>
+                                        <div className="flex gap-3">
+                                          <button
+                                            onClick={(e) => {
+                                              setShowOvertimeForm(true);
+                                              // Auto-select overtime type
+                                              const overtimeType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
+                                              if (overtimeType) setDraftTypeId(overtimeType._id);
+                                              setDraftOvertimeHours(0);
+                                              setTimeout(() => {
+                                                const target = e.target as HTMLElement;
+                                                target.closest(".ot-container-row")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                              }, 150);
                                             }}
-                                            className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                                            style={{ right: showOvertimeForm ? "0" : "auto", left: showOvertimeForm ? "auto" : "0" }}
-                                          />
-                                          <label htmlFor="toggle-manual-ot" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${showOvertimeForm ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}></label>
+                                            className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${showOvertimeForm ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                          >
+                                            SÍ
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setShowOvertimeForm(false);
+                                              setDraftTypeId("");
+                                              setDraftOvertimeHours(0);
+                                            }}
+                                            className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!showOvertimeForm ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                          >
+                                            NO
+                                          </button>
                                         </div>
                                       </div>
                                     </div>
@@ -1695,13 +1752,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             {/* Entry Time */}
                                             <div>
                                               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
-                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftInTime} onChange={(e) => setDraftInTime(e.target.value)} />
+                                              <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftInTime} onChange={(e) => setDraftInTime(e.target.value)} />
                                             </div>
 
                                             {/* Exit Time */}
                                             <div>
                                               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Efectivo</label>
-                                              <input type="time" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)} />
+                                              <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)} />
                                             </div>
 
                                             {/* Hours */}
@@ -1737,16 +1794,32 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         {needsReplacement && (
                                           <div>
                                             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Reemplazo (Opcional)</label>
-                                            <select className="w-full p-2 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white" value={draftReplacementId} onChange={(e) => setDraftReplacementId(e.target.value)}>
-                                              <option value="">Sin reemplazo</option>
-                                              {employees
-                                                .filter((e) => e.id !== selectedEmployee.id)
-                                                .map((e) => (
-                                                  <option key={e.id} value={e.id}>
-                                                    {e.name}
-                                                  </option>
-                                                ))}
-                                            </select>
+                                            <div className="flex flex-col gap-2">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setReplacementTargetEmpId(null);
+                                                  setShowReplacementModal(true);
+                                                }}
+                                                className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-left flex justify-between items-center transition-colors hover:bg-slate-50 dark:hover:bg-slate-600 focus:ring-2 focus:ring-blue-500"
+                                              >
+                                                <span className={draftReplacementId ? "text-slate-900 dark:text-white font-medium" : "text-slate-400 dark:text-slate-500"}>{draftReplacementId ? employees.find((e) => e.id === draftReplacementId)?.name || "Empleado desconocido" : "Seleccionar reemplazo..."}</span>
+                                                <div className="flex items-center gap-2">
+                                                  {draftReplacementId && (
+                                                    <div
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDraftReplacementId("");
+                                                      }}
+                                                      className="text-slate-400 hover:text-red-500 p-1 rounded-full bg-slate-100 dark:bg-slate-800 transition-colors flex items-center justify-center w-6 h-6"
+                                                    >
+                                                      <FontAwesomeIcon icon={faTimes} className="text-xs" />
+                                                    </div>
+                                                  )}
+                                                  <FontAwesomeIcon icon={faChevronRight} className="text-slate-400 text-xs" />
+                                                </div>
+                                              </button>
+                                            </div>
                                           </div>
                                         )}
 
@@ -2331,6 +2404,65 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             <button onClick={() => setShowProcessedHistory(false)} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded-lg font-bold">
               Cerrar
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Replacement Modal */}
+      <Modal
+        isOpen={showReplacementModal}
+        onClose={() => {
+          setShowReplacementModal(false);
+          setReplacementSearchTerm("");
+          setReplacementTargetEmpId(null);
+        }}
+        title="Seleccionar Reemplazo"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="relative">
+            <input type="text" placeholder="Buscar empleado..." className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 transition-shadow" value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2 px-1 mb-2">
+            <input type="checkbox" id="active-contacts-only" checked={replacementShowOnlyActiveContracts} onChange={(e) => setReplacementShowOnlyActiveContracts(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
+            <label htmlFor="active-contacts-only" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+              Solo contratos activos
+            </label>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 pb-4">
+            {employees
+              .filter((emp) => (replacementShowOnlyActiveContracts ? emp.hasActiveContract : true))
+              .filter((emp) => (replacementTargetEmpId !== null ? emp.id !== replacementTargetEmpId : selectedEmployee ? emp.id !== selectedEmployee.id : true))
+              .filter((emp) => (replacementSearchTerm ? emp.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) : true))
+              .map((emp) => {
+                const isSelected = replacementTargetEmpId ? wizardData[replacementTargetEmpId]?.replacementId === emp.id : draftReplacementId === emp.id;
+                return (
+                  <div
+                    key={emp.id}
+                    onClick={() => {
+                      if (replacementTargetEmpId) {
+                        updateWizardEntry(replacementTargetEmpId, { replacementId: emp.id });
+                      } else {
+                        setDraftReplacementId(emp.id);
+                      }
+                      setShowReplacementModal(false);
+                      setReplacementSearchTerm("");
+                      setReplacementTargetEmpId(null);
+                    }}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-500/50" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500/50"}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-sm ${isSelected ? "bg-blue-600 text-white" : "bg-blue-100 dark:bg-slate-700 text-blue-600 dark:text-slate-300"}`}>{emp.name.charAt(0).toUpperCase()}</div>
+                      <div className="flex flex-col">
+                        <span className={`font-semibold text-sm ${isSelected ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-white"}`}>{emp.name}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 capitalize truncate">{emp.positionName || "Sin Rango"}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            {employees.length > 0 && employees.filter((emp) => (replacementShowOnlyActiveContracts ? emp.hasActiveContract : true)).filter((emp) => (replacementSearchTerm ? emp.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) : true)).length === 0 && <p className="text-sm text-center text-gray-500 italic py-4">No se encontraron colaboradores.</p>}
           </div>
         </div>
       </Modal>

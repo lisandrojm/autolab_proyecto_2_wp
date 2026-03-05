@@ -340,9 +340,13 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
       tenantId: req.tenantObjectId,
       isActive: true,
     })
-      .select("firstName lastName email projectIds areaId")
+      .select("firstName lastName email projectIds areaId metadata")
       .populate("projectIds", "name")
       .populate("areaId", "name")
+      .populate({
+        path: "metadata.projects",
+        model: UserProject,
+      })
       .sort({ firstName: 1, lastName: 1 });
 
     res.json(users);
