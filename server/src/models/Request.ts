@@ -13,8 +13,11 @@ const attendanceRecordSchema = new Schema(
     absenceReason: { type: String }, // e.g., "Enfermedad", "Falta injustificada"
     replacementId: { type: Schema.Types.ObjectId, ref: "User" },
     overtimeHours: { type: Number, default: 0 },
+    replacementOvertimeHours: { type: Number, default: 0 },
     inTime: { type: String }, // Real Entry Time
     outTime: { type: String }, // Real Exit Time
+    replacementInTime: { type: String }, // Real Entry Time for Replacement
+    replacementOutTime: { type: String }, // Real Exit Time for Replacement
     scheduleInTime: { type: String }, // Expected Entry
     scheduleOutTime: { type: String }, // Expected Exit
     notes: { type: String },

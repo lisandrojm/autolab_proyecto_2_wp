@@ -6,6 +6,9 @@ export interface AttendanceRecordInput {
   absenceReason?: string;
   replacementId?: string;
   overtimeHours?: number;
+  replacementOvertimeHours?: number;
+  replacementInTime?: string;
+  replacementOutTime?: string;
   notes?: string;
 }
 
