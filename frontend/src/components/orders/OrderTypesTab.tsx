@@ -77,7 +77,6 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
       </td>
       <td className="py-3 px-4">
         <div className="font-medium text-gray-900 dark:text-gray-100">{orderConfig.name}</div>
-        {orderConfig.categoryType === "dinero" && orderConfig.montoMaximo && <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Max: ${orderConfig.montoMaximo.toLocaleString("es-ES")}</div>}
       </td>
       <td className="py-3 px-4">
         <div className="flex flex-col items-start gap-1">
@@ -85,6 +84,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
             <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.categoryType === "fecha" ? "bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200" : orderConfig.categoryType === "dinero" ? "bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-200" : orderConfig.categoryType === "objeto" ? "bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200" : "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200"}`}>{categoryTypeLabels[orderConfig.categoryType] || orderConfig.categoryType}</span>
 
             {orderConfig.categoryType === "fecha" && <span className={`px-2 py-1 rounded text-xs font-medium ${orderConfig.dateMode === "range" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200" : "bg-sky-100 text-sky-800 dark:bg-sky-500/30 dark:text-sky-200"}`}>{orderConfig.dateMode === "range" ? "Rango de Fechas" : "Fechas Múltiples"}</span>}
+            {orderConfig.categoryType === "dinero" && <span className={`px-2 py-1 rounded text-xs font-medium ${!orderConfig.limitType ? "bg-gray-100 text-gray-800 dark:bg-gray-500/30 dark:text-gray-200" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-200"}`}>{!orderConfig.limitType ? "Sin límite" : orderConfig.limitType === "monto" ? `Máximo por monto: $${orderConfig.montoMaximo ? orderConfig.montoMaximo.toLocaleString("es-ES") : 0}` : `Máximo por porcentaje de sueldo: ${orderConfig.porcentajeMaximo ?? 0}%`}</span>}
           </div>
 
           {orderConfig.categoryType === "fecha" && orderConfig.dateMode === "range" && orderConfig.maxDays && <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">Max: {orderConfig.maxDays} días</span>}
@@ -139,7 +139,9 @@ export const OrderTypesTab: React.FC = () => {
     categoryType: CategoryType;
     dateMode: DateMode;
     maxDays?: number;
+    limitType?: "monto" | "porcentaje";
     montoMaximo?: number;
+    porcentajeMaximo?: number;
     requiresAction: boolean;
     actionText: string;
     actionDescription?: string;
@@ -160,7 +162,9 @@ export const OrderTypesTab: React.FC = () => {
     categoryType: "fecha",
     dateMode: "single",
     maxDays: undefined,
+    limitType: undefined,
     montoMaximo: undefined,
+    porcentajeMaximo: undefined,
     requiresAction: false,
     actionText: "",
     actionDescription: "",
@@ -243,7 +247,9 @@ export const OrderTypesTab: React.FC = () => {
       categoryType: "fecha",
       dateMode: "single",
       maxDays: undefined,
+      limitType: undefined,
       montoMaximo: undefined,
+      porcentajeMaximo: undefined,
       requiresAction: false,
       actionText: "",
       actionDescription: "",
@@ -269,7 +275,9 @@ export const OrderTypesTab: React.FC = () => {
       categoryType: orderType.categoryType || "fecha",
       dateMode: orderType.dateMode || "single",
       maxDays: orderType.maxDays,
+      limitType: orderType.limitType,
       montoMaximo: orderType.montoMaximo,
+      porcentajeMaximo: orderType.porcentajeMaximo,
       requiresAction: orderType.requiresAction || false,
       actionText: orderType.actionText || "",
       actionDescription: orderType.actionDescription || "",
@@ -304,7 +312,7 @@ export const OrderTypesTab: React.FC = () => {
         return;
       }
 
-      if (formData.categoryType === "dinero" && formData.montoMaximo) {
+      if (formData.categoryType === "dinero" && formData.limitType === "monto" && formData.montoMaximo) {
         if (formData.montoMaximo % 50000 !== 0) {
           sweetAlert.error("Error", "El monto máximo debe ser un múltiplo de 50.000");
           setSubmitting(false);
@@ -363,7 +371,9 @@ export const OrderTypesTab: React.FC = () => {
         categoryType: formData.categoryType,
         dateMode: formData.categoryType === "fecha" ? formData.dateMode : undefined,
         maxDays: formData.categoryType === "fecha" && formData.dateMode === "range" ? (formData.maxDays ?? null) : undefined,
-        montoMaximo: formData.categoryType === "dinero" && formData.montoMaximo ? formData.montoMaximo : undefined,
+        limitType: formData.categoryType === "dinero" ? formData.limitType : undefined,
+        montoMaximo: formData.categoryType === "dinero" && formData.limitType === "monto" && formData.montoMaximo ? formData.montoMaximo : undefined,
+        porcentajeMaximo: formData.categoryType === "dinero" && formData.limitType === "porcentaje" && formData.porcentajeMaximo ? formData.porcentajeMaximo : undefined,
         requiresAction: formData.requiresAction,
         actionText: formData.requiresAction && formData.requiresUserConfirmation ? formData.actionText : undefined,
         tituloAccion: formData.requiresAction && formData.futureActionType === "otra" ? formData.tituloAccion : undefined,

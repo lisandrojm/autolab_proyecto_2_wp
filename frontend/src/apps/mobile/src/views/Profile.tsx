@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faPhone, faMapMarkerAlt, faBriefcase, faCalendar, faSignOutAlt, faCog, faShield, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faUserTie, faUserGraduate, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faPhone, faMapMarkerAlt, faBriefcase, faCalendar, faSignOutAlt, faCog, faShield, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faUserTie, faUserGraduate, faFileContract, faMoneyBillWave } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 import { useProfile } from "../hooks/useProfile";
@@ -19,9 +19,9 @@ export default function Profile() {
 
   // Helper to extract active contract info (similar to UsersPage logic)
   const getActiveContractInfo = () => {
-    if (!profile?.metadata?.projects) return { type: "Sin contrato activo", seat: "Sin sede", schedule: "Sin horario", project: "Sin proyecto", dates: "Sin fechas" };
+    if (!profile?.metadata?.projects) return { type: "Sin contrato activo", seat: "Sin sede", schedule: "Sin horario", project: "Sin proyecto", dates: "Sin fechas", salary: "N/A" };
 
-    let info = { type: null as string | null, seat: null as string | null, schedule: null as string | null, project: null as string | null, dates: null as string | null };
+    let info = { type: null as string | null, seat: null as string | null, schedule: null as string | null, project: null as string | null, dates: null as string | null, salary: null as string | null };
 
     profile.metadata.projects.forEach((proj: any) => {
       if (proj.contracts) {
@@ -37,6 +37,7 @@ export default function Profile() {
             const contractType = c.nombre_contrato || c.tipo_contrato;
             if (contractType) info.type = contractType;
             if (c.nombre_sede) info.seat = c.nombre_sede;
+            if (c.sueldo_mano) info.salary = String(c.sueldo_mano);
 
             // Horario: check for 'horario_laboral' or 'horas_semanales'
             if (c.horario_laboral) {
@@ -74,6 +75,7 @@ export default function Profile() {
       schedule: info.schedule || "Sin horario",
       project: profile.projectIds && profile.projectIds.length > 0 ? info.project || "Asignado" : "Sin proyecto",
       dates: info.dates || "Sin fechas",
+      salary: info.salary || "N/A",
     };
   };
 
@@ -160,6 +162,7 @@ export default function Profile() {
     activeProject: stats?.project || contractInfo.project || "Sin proyecto activo",
     schedule: contractInfo.schedule || profile?.externalInfo?.schedules?.[0] || "Sin horario",
     dates: contractInfo.dates,
+    salary: contractInfo.salary,
     rules: {
       minDays: stats?.vacationRulesMeta?.minDiasSource || "N/A",
       continuous: stats?.vacationRulesMeta?.diasCorridosSource || "N/A",
@@ -301,6 +304,15 @@ export default function Profile() {
                 <div className="flex-1">
                   <p className="text-xs text-slate-500 dark:text-slate-400">Vigencia</p>
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.dates}</p>
+                </div>
+              </div>
+
+              {/* Sueldo */}
+              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
+                <FontAwesomeIcon icon={faMoneyBillWave} className="w-5 h-5 text-primary" />
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Sueldo en mano</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.salary !== "N/A" && typeof realUserInfo.salary === "string" ? `$ ${!isNaN(Number(realUserInfo.salary.replace(/[,.]/g, ""))) ? Number(realUserInfo.salary.replace(/[,.]/g, "")).toLocaleString("es-ES") : realUserInfo.salary}` : "N/A"}</p>
                 </div>
               </div>
             </div>

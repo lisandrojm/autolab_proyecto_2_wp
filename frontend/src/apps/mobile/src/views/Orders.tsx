@@ -201,6 +201,39 @@ export default function Orders({ onNavigate }: OrdersProps) {
     return null;
   }, [profile, orderSettings]);
 
+  const getUserSalary = useCallback((): number | undefined => {
+    if (!profile?.metadata?.projects) return undefined;
+
+    for (const project of profile.metadata.projects) {
+      if (project.contracts && project.contracts.length > 0) {
+        // Sort contracts: active ones first
+        const sortedContracts = [...project.contracts].sort((a, b) => {
+          const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
+          const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
+          const now = new Date().getTime();
+          const activeA = endA >= now;
+          const activeB = endB >= now;
+          if (activeA && !activeB) return -1;
+          if (!activeA && activeB) return 1;
+          return 0;
+        });
+
+        for (const contract of sortedContracts) {
+          const endDate = contract.fecha_baja_contrato ? new Date(contract.fecha_baja_contrato) : null;
+          if (endDate) endDate.setHours(23, 59, 59, 999);
+          const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+
+          if (isActive && contract.sueldo_mano) {
+            const rawSalary = String(contract.sueldo_mano).replace(/[,.]/g, ""); // Convert things like "1.000,00" or similar to parsing ready if needed. Assuming it's typically a number, just safely parse
+            const num = parseFloat(rawSalary);
+            if (!isNaN(num)) return num;
+          }
+        }
+      }
+    }
+    return undefined;
+  }, [profile]);
+
   // Update detected name when dependencies change
   useEffect(() => {
     getContractRule();
@@ -551,7 +584,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                           }
                         }
 
-                        return <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} remainingDays={remainingDays} />;
+                        return <DynamicCategoryInput category={selectedCategory} subcategories={subcategories} onSubcategoriesChange={setSubcategories} dynamicValue={dynamicValue} onDynamicValueChange={setDynamicValue} amount={amount} onAmountChange={setAmount} actionCompleted={actionCompleted} onActionCompletedChange={setActionCompleted} futureActionPlazoDias={futureActionPlazoDias} onOrderFutureActionPlazoDiasChange={setOrderFutureActionPlazoDias} futureActionFechaLimite={futureActionFechaLimite} onOrderFutureActionFechaLimiteChange={setOrderFutureActionFechaLimite} futureActionDocumento={futureActionDocumento} onOrderFutureActionDocumentoChange={setOrderFutureActionDocumento} document={document} onDocumentChange={setDocument} documentPreview={documentPreview} onDocumentPreviewChange={setDocumentPreview} validateDate={validateDate} getNextWorkingDay={getNextWorkingDay} remainingDays={remainingDays} userSalary={getUserSalary()} />;
                       })()}
                     </div>
 

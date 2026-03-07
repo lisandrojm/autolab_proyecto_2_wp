@@ -18,7 +18,9 @@ interface OrderCategoryFormProps {
     categoryType: CategoryType;
     dateMode: DateMode;
     maxDays?: number; // Added
+    limitType?: "monto" | "porcentaje";
     montoMaximo?: number;
+    porcentajeMaximo?: number;
     requiresAction: boolean;
     actionText: string;
     actionDescription?: string;
@@ -369,29 +371,77 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
           </div>
         )}
 
-        {/* Monto Máximo */}
+        {/* Dinero - Límite Máximo */}
         {formData.categoryType === "dinero" && (
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monto Máximo (opcional)</label>
-              <span className={`text-sm font-bold ${formData.montoMaximo ? "text-blue-600 dark:text-blue-400" : "text-gray-500"}`}>{formData.montoMaximo ? `$ ${formData.montoMaximo.toLocaleString("es-ES")}` : "Sin límite"}</span>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Límite Máximo (opcional)</label>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="10000000"
-              step="50000"
-              value={formData.montoMaximo || 0}
+            <select
+              value={formData.limitType || ""}
               onChange={(e) => {
-                const v = parseInt(e.target.value, 10);
-                setFormData({ ...formData, montoMaximo: v === 0 ? undefined : v });
+                const limitType = e.target.value as "monto" | "porcentaje" | "";
+                setFormData({
+                  ...formData,
+                  limitType: limitType || undefined,
+                  montoMaximo: limitType === "monto" ? formData.montoMaximo || 50000 : undefined,
+                  porcentajeMaximo: limitType === "porcentaje" ? formData.porcentajeMaximo : undefined,
+                });
               }}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
-            />
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-              <span>Sin límite</span>
-              <span>$ 10.000.000</span>
-            </div>
+              className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 mb-4"
+            >
+              <option value="">Sin límite</option>
+              <option value="monto">Máximo por monto</option>
+              <option value="porcentaje">Máximo por porcentaje de sueldo</option>
+            </select>
+
+            {formData.limitType === "monto" && (
+              <div className="mt-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monto Máximo</label>
+                  <span className={`text-sm font-bold ${formData.montoMaximo ? "text-blue-600 dark:text-blue-400" : "text-gray-500"}`}>{formData.montoMaximo ? `$ ${formData.montoMaximo.toLocaleString("es-ES")}` : "$ 50.000"}</span>
+                </div>
+                <input
+                  type="range"
+                  min="50000"
+                  max="10000000"
+                  step="50000"
+                  value={formData.montoMaximo || 50000}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setFormData({ ...formData, montoMaximo: v });
+                  }}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>$ 50.000</span>
+                  <span>$ 10.000.000</span>
+                </div>
+              </div>
+            )}
+
+            {formData.limitType === "porcentaje" && (
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Porcentaje Máximo (%) *</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="100"
+                    value={formData.porcentajeMaximo || ""}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      setFormData({ ...formData, porcentajeMaximo: val > 0 && val <= 100 ? val : undefined });
+                    }}
+                    className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 pr-8"
+                    placeholder="Ej: 30"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">El límite se calculará según el sueldo en mano del usuario al momento de crear el pedido.</p>
+              </div>
+            )}
           </div>
         )}
 

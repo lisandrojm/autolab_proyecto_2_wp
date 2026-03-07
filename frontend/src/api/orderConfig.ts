@@ -33,7 +33,9 @@ export interface OrderConfig {
   dateMode?: DateMode;
   maxDays?: number; // Added
   config: TypeConfig;
+  limitType?: "monto" | "porcentaje";
   montoMaximo?: number;
+  porcentajeMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
   actionDescription?: string;
@@ -62,7 +64,7 @@ export const orderConfigAPI = {
     return data;
   },
 
-  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; maxDays?: number; config?: TypeConfig; montoMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfId?: string }): Promise<OrderConfig> => {
+  create: async (typeData: { name: string; informacion?: string; isActive?: boolean; sortOrder?: number; categoryType?: CategoryType; dateMode?: DateMode; maxDays?: number; config?: TypeConfig; limitType?: "monto" | "porcentaje"; montoMaximo?: number; porcentajeMaximo?: number; requiresAction?: boolean; actionText?: string; actionDescription?: string; tituloAccion?: string; futureActionType?: TipoAccionFutura; deadlineMode?: DeadlineMode; plazoDias?: number; fechaLimite?: string; documentoRequerido?: string; requiresSignature?: boolean; pdfId?: string }): Promise<OrderConfig> => {
     const { data } = await axios.post<OrderConfig>("/order-config", typeData);
     return data;
   },
@@ -78,7 +80,9 @@ export const orderConfigAPI = {
       dateMode?: DateMode;
       maxDays?: number;
       config?: TypeConfig;
+      limitType?: "monto" | "porcentaje";
       montoMaximo?: number;
+      porcentajeMaximo?: number;
       requiresAction?: boolean;
       actionText?: string;
       actionDescription?: string;

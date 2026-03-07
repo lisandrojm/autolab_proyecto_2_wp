@@ -40,7 +40,9 @@ export interface IOrderConfig extends Document {
   dateMode?: DateMode;
   maxDays?: number; // Added
   config: ITypeConfig;
+  limitType?: "monto" | "porcentaje";
   montoMaximo?: number;
+  porcentajeMaximo?: number;
   requiresAction?: boolean;
   actionText?: string;
   actionDescription?: string;
@@ -79,7 +81,9 @@ const orderConfigSchema = new Schema<IOrderConfig>(
     },
     maxDays: { type: Number, min: 1 },
     config: { type: Schema.Types.Mixed, default: {} },
+    limitType: { type: String, enum: ["monto", "porcentaje"] },
     montoMaximo: { type: Number, min: 0 },
+    porcentajeMaximo: { type: Number, min: 0, max: 100 },
     requiresAction: { type: Boolean, default: false },
     actionText: { type: String, trim: true },
     actionDescription: { type: String, trim: true },

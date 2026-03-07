@@ -186,6 +186,17 @@ const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: str
   // 2. Otherwise use project general schedule
   return getProjectStartTime(project, dateStr);
 };
+
+const formatToAMPM = (timeStr: string | null | undefined) => {
+  if (!timeStr || timeStr === "—") return "—";
+  const parts = timeStr.split(":");
+  if (parts.length !== 2) return timeStr;
+  const hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${minutes} ${ampm}`;
+};
 export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -1855,7 +1866,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? getEmployeeStartTime(proj, currentEmp.id, reportDate) || "—" : "—";
+                          return proj ? formatToAMPM(getEmployeeStartTime(proj, currentEmp.id, reportDate)) : "—";
                         })()}
                       </span>
                     </div>
@@ -1864,7 +1875,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? getEmployeeEndTime(proj, currentEmp.id, reportDate) || "—" : "—";
+                          return proj ? formatToAMPM(getEmployeeEndTime(proj, currentEmp.id, reportDate)) : "—";
                         })()}
                       </span>
                     </div>
@@ -1900,7 +1911,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? getEmployeeStartTime(proj, selectedEmployee.id, reportDate) || "—" : "—";
+                            return proj ? formatToAMPM(getEmployeeStartTime(proj, selectedEmployee.id, reportDate)) : "—";
                           })()}
                         </span>
                       </div>
@@ -1909,7 +1920,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? getEmployeeEndTime(proj, selectedEmployee.id, reportDate) || "—" : "—";
+                            return proj ? formatToAMPM(getEmployeeEndTime(proj, selectedEmployee.id, reportDate)) : "—";
                           })()}
                         </span>
                       </div>
@@ -1958,7 +1969,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? getEmployeeStartTime(proj, data.replacementId, reportDate) || "—" : "—";
+                          return proj ? formatToAMPM(getEmployeeStartTime(proj, data.replacementId, reportDate)) : "—";
                         })()}
                       </span>
                     </div>
@@ -1967,7 +1978,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? getEmployeeEndTime(proj, data.replacementId, reportDate) || "—" : "—";
+                          return proj ? formatToAMPM(getEmployeeEndTime(proj, data.replacementId, reportDate)) : "—";
                         })()}
                       </span>
                     </div>
@@ -2003,7 +2014,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? getEmployeeStartTime(proj, draftReplacementId, reportDate) || "—" : "—";
+                            return proj ? formatToAMPM(getEmployeeStartTime(proj, draftReplacementId, reportDate)) : "—";
                           })()}
                         </span>
                       </div>
@@ -2012,7 +2023,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? getEmployeeEndTime(proj, draftReplacementId, reportDate) || "—" : "—";
+                            return proj ? formatToAMPM(getEmployeeEndTime(proj, draftReplacementId, reportDate)) : "—";
                           })()}
                         </span>
                       </div>
