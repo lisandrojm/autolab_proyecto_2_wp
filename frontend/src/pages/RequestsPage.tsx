@@ -34,9 +34,9 @@ const MOCK_AREAS = [
 
 const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attendance }) => {
   return (
-    <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+    <div className="overflow-auto max-h-[calc(100vh-320px)] rounded border border-gray-200 dark:border-gray-700">
       <table className="w-full text-sm text-left">
-        <thead className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold border-b border-gray-200 dark:border-gray-700">
+        <thead className="sticky top-0 z-10 shadow-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold outline outline-1 outline-gray-200 dark:outline-gray-700">
           <tr>
             <th className="py-3 px-4">Colaborador</th>
             <th className="py-3 px-4 text-center">Presente</th>
@@ -99,9 +99,9 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
       {isOpen && (
         <div className="border-t border-gray-100 dark:border-gray-700 animate-fade-in">
           {count > 0 ? (
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[calc(100vh-320px)]">
               <table className="w-full text-sm">
-                <thead className="text-xs uppercase text-gray-500 font-medium border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <thead className="sticky top-0 z-10 shadow-sm text-xs uppercase text-gray-500 font-medium outline outline-1 outline-gray-100 dark:outline-gray-700 bg-white dark:bg-gray-800">
                   <tr>
                     <th className="py-2 px-5 text-left w-1/2 font-semibold">Colaborador</th>
                     <th className="py-2 px-5 text-left w-1/2 font-semibold">Reemplazo / Detalle</th>
