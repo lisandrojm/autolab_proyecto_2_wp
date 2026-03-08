@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faCalendarDays, faFileSignature, faBuilding, faIdCard, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
@@ -58,7 +58,7 @@ export const VacationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
@@ -705,9 +705,6 @@ export const VacationsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/vacations-rules")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full" title="Configurar reglas de vacaciones" aria-label="Configurar reglas de vacaciones">
-            <FontAwesomeIcon icon={faGear} />
-          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de vacaciones" title="Ver resumen de vacaciones">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>

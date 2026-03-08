@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faCog, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
@@ -126,11 +126,10 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
   );
 };
 
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 
 export const RequestsPage: React.FC = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const [listLayout, setListLayout] = useState<"table" | "cards">("table");
@@ -643,9 +642,6 @@ export const RequestsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/requests/config")} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Configurar Frecuencia" title="Configurar Frecuencia">
-            <FontAwesomeIcon icon={faCog} className="h-4 w-4" />
-          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>

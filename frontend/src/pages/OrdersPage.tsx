@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner, faSearch, faFilter, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/management";
 import { OrderConfig } from "../api/orderConfig";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -18,8 +18,6 @@ import { getFormattedOrderNumber } from "../utils/orderHelpers";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 
 export const OrdersPage: React.FC = () => {
-  const navigate = useNavigate();
-
   // 🔥 DECLARAR LA CLAVE
   const HELP_KEY = "orders" as const;
   // 🔥 STATE PARA MODAL INFO
@@ -833,9 +831,6 @@ export const OrdersPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/order-types")} className="hidden lg:flex p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors items-center gap-2 text-sm h-full">
-            <FontAwesomeIcon icon={faGear} />
-          </button>
           <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen de pedidos" title="Ver resumen de pedidos">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
           </button>
