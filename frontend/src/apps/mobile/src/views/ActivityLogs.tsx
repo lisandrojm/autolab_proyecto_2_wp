@@ -197,6 +197,21 @@ const formatToAMPM = (timeStr: string | null | undefined) => {
   const hours12 = hours % 12 || 12;
   return `${hours12}:${minutes} ${ampm}`;
 };
+const TIME_OPTIONS = (() => {
+  const options = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hh = h.toString().padStart(2, "0");
+      const mm = m.toString().padStart(2, "0");
+      const val = `${hh}:${mm}`;
+      const ampm = h >= 12 ? "PM" : "AM";
+      const h12 = h % 12 || 12;
+      options.push({ value: val, label: `${h12}:${mm} ${ampm}` });
+    }
+  }
+  return options;
+})();
+
 export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -355,6 +370,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
+
+    // Check reporting frequency config first
+    const schedule = selectedProject.activityLogConfig?.schedule;
+    if (schedule && schedule.days) {
+      const [year, month, day] = reportDate.split("-").map(Number);
+      const date = new Date(year, month - 1, day);
+      const dayIndex = date.getDay(); // 0 is Sunday, 6 is Saturday
+      return schedule.days.includes(dayIndex);
+    }
+
     return getProjectEndTime(selectedProject, reportDate) !== "";
   }, [selectedProject, reportDate]);
 
@@ -415,6 +440,47 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       }
     }
   }, [draftOutTime, draftInTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee]);
+
+  // Fast-entry REPLACEMENT OT calculation
+  useEffect(() => {
+    if (draftReplacementId && draftTypeId && selectedProjectId) {
+      const project = userProjects.find((p) => p._id === selectedProjectId);
+      if (project) {
+        const endTime = getEmployeeEndTime(project, draftReplacementId, reportDate);
+        const startTime = getEmployeeStartTime(project, draftReplacementId, reportDate);
+
+        let totalOvertime = 0;
+        let inTotal = 0;
+        if (draftReplacementInTime && startTime) {
+          const [inH, inM] = draftReplacementInTime.split(":").map(Number);
+          const [startH, startM] = startTime.split(":").map(Number);
+          inTotal = inH * 60 + inM;
+          const startTotal = startH * 60 + startM;
+          let diff = (startTotal - inTotal) / 60;
+          if (diff > 0) totalOvertime += diff;
+        } else if (draftReplacementInTime) {
+          const [inH, inM] = draftReplacementInTime.split(":").map(Number);
+          inTotal = inH * 60 + inM;
+        }
+
+        if (draftReplacementOutTime && endTime) {
+          const [outH, outM] = draftReplacementOutTime.split(":").map(Number);
+          const [endH, endM] = endTime.split(":").map(Number);
+          let outTotal = outH * 60 + outM;
+          const endTotal = endH * 60 + endM;
+
+          if (draftReplacementInTime && outTotal < inTotal) {
+            outTotal += 24 * 60;
+          } else if (!draftReplacementInTime && outTotal < endTotal && outTotal < 12 * 60) {
+            outTotal += 24 * 60;
+          }
+          let diff = (outTotal - endTotal) / 60;
+          if (diff > 0) totalOvertime += diff;
+        }
+        setDraftReplacementOvertimeHours(parseFloat(totalOvertime.toFixed(2)));
+      }
+    }
+  }, [draftReplacementOutTime, draftReplacementInTime, draftReplacementId, draftTypeId, selectedProjectId, reportDate, userProjects]);
 
   // Pre-fill Out/In Time for Overtime when employee or type changes
   useEffect(() => {
@@ -481,6 +547,46 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       // Only update if it's different to avoid infinite loops
       if (finalVal !== data.overtimeHours) {
         updateWizardEntry(currentEmp.id, { overtimeHours: finalVal });
+      }
+    }
+
+    if (data?.replacementId && (data.replacementInTime || data.replacementOutTime)) {
+      const endTime = getEmployeeEndTime(selectedProject, data.replacementId, reportDate);
+      const startTime = getEmployeeStartTime(selectedProject, data.replacementId, reportDate);
+
+      let totalOvertime = 0;
+      let inTotal = 0;
+      if (data.replacementInTime && startTime) {
+        const [inH, inM] = data.replacementInTime.split(":").map(Number);
+        const [startH, startM] = startTime.split(":").map(Number);
+        inTotal = inH * 60 + inM;
+        const startTotal = startH * 60 + startM;
+        let diff = (startTotal - inTotal) / 60;
+        if (diff > 0) totalOvertime += diff;
+      } else if (data.replacementInTime) {
+        const [inH, inM] = data.replacementInTime.split(":").map(Number);
+        inTotal = inH * 60 + inM;
+      }
+
+      if (data.replacementOutTime && endTime) {
+        const [outH, outM] = data.replacementOutTime.split(":").map(Number);
+        const [endH, endM] = endTime.split(":").map(Number);
+        let outTotal = outH * 60 + outM;
+        const endTotal = endH * 60 + endM;
+
+        if (data.replacementInTime && outTotal < inTotal) {
+          outTotal += 24 * 60; // Next day
+        } else if (!data.replacementInTime && outTotal < endTotal && outTotal < 12 * 60) {
+          outTotal += 24 * 60; // Fallback heuristic
+        }
+
+        let diff = (outTotal - endTotal) / 60;
+        if (diff > 0) totalOvertime += diff;
+      }
+
+      const finalVal = parseFloat(totalOvertime.toFixed(2));
+      if (finalVal !== data.replacementOvertimeHours) {
+        updateWizardEntry(currentEmp.id, { replacementOvertimeHours: finalVal });
       }
     }
   }, [wizardIndex, wizardData, selectedProject, reportDate]);
@@ -682,8 +788,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       if (isAfter(day, pEnd)) return false;
     }
 
-    // Work Schedule Check
-    // Use getProjectEndTime to determine if it is a working day (returns "" if not)
+    // Work Schedule Check based on reporting frequency config
+    const schedule = project.activityLogConfig?.schedule;
+    if (schedule && schedule.days) {
+      const dayIndex = day.getDay();
+      return schedule.days.includes(dayIndex);
+    }
+
+    // Fallback logic
     return getProjectEndTime(project, dateStr) !== "";
   };
 
@@ -721,12 +833,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       finalizeWizard();
     } else {
       setWizardIndex(wizardIndex + 1);
+      setTimeout(() => {
+        if (formScrollRef.current) {
+          formScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 50);
     }
   };
 
   const handleWizardPrev = () => {
     if (wizardIndex > 0) {
       setWizardIndex(wizardIndex - 1);
+      setTimeout(() => {
+        if (formScrollRef.current) {
+          formScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 50);
     }
   };
 
@@ -1448,12 +1570,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                           const histData = wizardData[histEmp.id];
                                           const histIsPresent = histData?.status === "present";
                                           const histType = histData?.typeId ? logTypes.find((t) => t._id === histData.typeId) : null;
+                                          const histReplacement = histData?.replacementId ? employees.find((e) => e.id === histData.replacementId) : null;
+                                          const repString = histReplacement ? ` (Reemplazo: ${histReplacement.name}${histData?.replacementOvertimeHours ? ` + ${histData.replacementOvertimeHours}h Extra` : ""})` : "";
 
                                           return (
                                             <div key={histEmp.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center opacity-75 grayscale-[0.3]">
                                               <div>
                                                 <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
-                                                <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : histType?.name || "Ausente"}</div>
+                                                <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
                                               </div>
                                               <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === histEmp.id))} className="text-xs text-blue-500 hover:underline">
                                                 Editar
@@ -1862,7 +1986,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 <div className="space-y-4 pt-2">
                   <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Teórica</span>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -1871,7 +1995,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       </span>
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Teórica</span>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -1883,12 +2007,36 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                   <div>
                     <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
-                    <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow" value={data?.inTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { inTime: e.target.value })} />
+                    <div className="relative">
+                      <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow appearance-none cursor-pointer" value={data?.inTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { inTime: e.target.value })}>
+                        <option value="">--:--</option>
+                        {TIME_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                        <FontAwesomeIcon icon={faClock} />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Real</label>
-                    <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow" value={data?.outTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { outTime: e.target.value })} />
+                    <div className="relative">
+                      <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow appearance-none cursor-pointer" value={data?.outTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { outTime: e.target.value })}>
+                        <option value="">--:--</option>
+                        {TIME_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                        <FontAwesomeIcon icon={faClock} />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
@@ -1907,7 +2055,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   <div className="space-y-4 pt-2">
                     <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
                       <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Teórica</span>
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -1916,7 +2064,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         </span>
                       </div>
                       <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Teórica</span>
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -1928,12 +2076,36 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
-                      <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftInTime} onChange={(e) => setDraftInTime(e.target.value)} />
+                      <div className="relative">
+                        <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer" value={draftInTime} onChange={(e) => setDraftInTime(e.target.value)}>
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <FontAwesomeIcon icon={faClock} />
+                        </div>
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Efectivo</label>
-                      <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)} />
+                      <div className="relative">
+                        <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer" value={draftOutTime} onChange={(e) => setDraftOutTime(e.target.value)}>
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <FontAwesomeIcon icon={faClock} />
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -1965,7 +2137,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 <div className="space-y-4 pt-2">
                   <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Teórica</span>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -1974,7 +2146,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       </span>
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Teórica</span>
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -1986,12 +2158,36 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                   <div>
                     <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
-                    <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow" value={data?.replacementInTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementInTime: e.target.value })} />
+                    <div className="relative">
+                      <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow appearance-none cursor-pointer" value={data?.replacementInTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementInTime: e.target.value })}>
+                        <option value="">--:--</option>
+                        {TIME_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                        <FontAwesomeIcon icon={faClock} />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Real</label>
-                    <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow" value={data?.replacementOutTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementOutTime: e.target.value })} />
+                    <div className="relative">
+                      <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow appearance-none cursor-pointer" value={data?.replacementOutTime || ""} onChange={(e) => updateWizardEntry(currentEmp.id, { replacementOutTime: e.target.value })}>
+                        <option value="">--:--</option>
+                        {TIME_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                        <FontAwesomeIcon icon={faClock} />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
@@ -2010,7 +2206,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   <div className="space-y-4 pt-2">
                     <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
                       <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Teórica</span>
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -2019,7 +2215,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         </span>
                       </div>
                       <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Teórica</span>
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
@@ -2031,12 +2227,36 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
-                      <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftReplacementInTime} onChange={(e) => setDraftReplacementInTime(e.target.value)} />
+                      <div className="relative">
+                        <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer" value={draftReplacementInTime} onChange={(e) => setDraftReplacementInTime(e.target.value)}>
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <FontAwesomeIcon icon={faClock} />
+                        </div>
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Efectivo</label>
-                      <input type="time" lang="en-GB" className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider" value={draftReplacementOutTime} onChange={(e) => setDraftReplacementOutTime(e.target.value)} />
+                      <div className="relative">
+                        <select className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer" value={draftReplacementOutTime} onChange={(e) => setDraftReplacementOutTime(e.target.value)}>
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <FontAwesomeIcon icon={faClock} />
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -2127,8 +2347,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             <button
                               type="button"
                               onClick={() => {
+                                const updates: Partial<WizardEntry> = {};
                                 if (!data.replacementOvertimeHours) {
-                                  updateWizardEntry(currentEmp.id, { replacementOvertimeHours: 0 });
+                                  updates.replacementOvertimeHours = 0;
+                                }
+                                if (!data.replacementInTime || !data.replacementOutTime) {
+                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                  if (proj && data.replacementId) {
+                                    if (!data.replacementInTime) {
+                                      const st = getEmployeeStartTime(proj, data.replacementId, reportDate);
+                                      if (st) updates.replacementInTime = st;
+                                    }
+                                    if (!data.replacementOutTime) {
+                                      const et = getEmployeeEndTime(proj, data.replacementId, reportDate);
+                                      if (et) updates.replacementOutTime = et;
+                                    }
+                                  }
+                                }
+                                if (Object.keys(updates).length > 0) {
+                                  updateWizardEntry(currentEmp.id, updates);
                                 }
                                 setActiveReplacementOvertimeModal("wizard");
                               }}
@@ -2148,7 +2385,33 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           </div>
                           {data.replacementOvertimeHours !== undefined && data.replacementOvertimeHours !== null && (
                             <div className="pt-1 text-center">
-                              <button type="button" onClick={() => setActiveReplacementOvertimeModal("wizard")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updates: Partial<WizardEntry> = {};
+                                  if (!data.replacementOvertimeHours) {
+                                    updates.replacementOvertimeHours = 0;
+                                  }
+                                  if (!data.replacementInTime || !data.replacementOutTime) {
+                                    const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                    if (proj && data.replacementId) {
+                                      if (!data.replacementInTime) {
+                                        const st = getEmployeeStartTime(proj, data.replacementId, reportDate);
+                                        if (st) updates.replacementInTime = st;
+                                      }
+                                      if (!data.replacementOutTime) {
+                                        const et = getEmployeeEndTime(proj, data.replacementId, reportDate);
+                                        if (et) updates.replacementOutTime = et;
+                                      }
+                                    }
+                                  }
+                                  if (Object.keys(updates).length > 0) {
+                                    updateWizardEntry(currentEmp.id, updates);
+                                  }
+                                  setActiveReplacementOvertimeModal("wizard");
+                                }}
+                                className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10"
+                              >
                                 <FontAwesomeIcon icon={faClock} />
                                 {data.replacementOvertimeHours > 0 ? `${data.replacementOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
                               </button>
@@ -2229,6 +2492,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   if (!draftReplacementOvertimeHours) {
                                     setDraftReplacementOvertimeHours(0);
                                   }
+                                  if (!draftReplacementInTime || !draftReplacementOutTime) {
+                                    const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                    if (proj && draftReplacementId) {
+                                      if (!draftReplacementInTime) {
+                                        const st = getEmployeeStartTime(proj, draftReplacementId, reportDate);
+                                        if (st) setDraftReplacementInTime(st);
+                                      }
+                                      if (!draftReplacementOutTime) {
+                                        const et = getEmployeeEndTime(proj, draftReplacementId, reportDate);
+                                        if (et) setDraftReplacementOutTime(et);
+                                      }
+                                    }
+                                  }
                                   setActiveReplacementOvertimeModal("fast-entry");
                                 }}
                                 className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${draftReplacementOvertimeHours !== undefined && draftReplacementOvertimeHours !== null && draftReplacementOvertimeHours !== 0 ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
@@ -2249,7 +2525,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             </div>
                             {draftReplacementOvertimeHours > 0 && (
                               <div className="pt-1 text-center">
-                                <button type="button" onClick={() => setActiveReplacementOvertimeModal("fast-entry")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!draftReplacementInTime || !draftReplacementOutTime) {
+                                      const proj = userProjects.find((p) => p._id === selectedProjectId);
+                                      if (proj && draftReplacementId) {
+                                        if (!draftReplacementInTime) {
+                                          const st = getEmployeeStartTime(proj, draftReplacementId, reportDate);
+                                          if (st) setDraftReplacementInTime(st);
+                                        }
+                                        if (!draftReplacementOutTime) {
+                                          const et = getEmployeeEndTime(proj, draftReplacementId, reportDate);
+                                          if (et) setDraftReplacementOutTime(et);
+                                        }
+                                      }
+                                    }
+                                    setActiveReplacementOvertimeModal("fast-entry");
+                                  }}
+                                  className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10"
+                                >
                                   <FontAwesomeIcon icon={faClock} />
                                   {draftReplacementOvertimeHours > 0 ? `${draftReplacementOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
                                 </button>
@@ -2665,7 +2960,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 if (!data) return null;
                 const isPresent = data.status === "present";
                 const isOvertime = (data.overtimeHours || 0) > 0;
-                const typeName = isPresent ? (isOvertime ? `Horas Extra (${data.overtimeHours}h)` : "Presente") : logTypes.find((t) => t._id === data.typeId)?.name || "Ausente";
+
+                const repObj = data.replacementId ? employees.find((e) => e.id === data.replacementId) : null;
+                const repStr = repObj ? ` (Reemplazo: ${repObj.name}${data.replacementOvertimeHours ? ` + ${data.replacementOvertimeHours}h Extra` : ""})` : "";
+
+                const typeName = isPresent ? (isOvertime ? `Horas Extra (${data.overtimeHours}h)` : "Presente") : `${logTypes.find((t) => t._id === data.typeId)?.name || "Ausente"}${repStr}`;
 
                 return (
                   <div key={emp.id} className="bg-white dark:bg-slate-800/50 rounded-xl p-3 flex justify-between items-center border border-slate-100 dark:border-slate-700 shadow-sm">
