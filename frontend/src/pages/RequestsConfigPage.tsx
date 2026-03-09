@@ -382,6 +382,7 @@ export const RequestsConfigPage: React.FC = () => {
                           try {
                             const newState = !isActive;
                             const newConfig = {
+                              ...conf,
                               useGlobalConfig: false,
                               enableFastEntry: newState,
                               allowsAdditionalStaff: conf?.allowsAdditionalStaff ?? false,
@@ -402,6 +403,7 @@ export const RequestsConfigPage: React.FC = () => {
                           try {
                             const newState = !allowsAdditionalStaff;
                             const newConfig = {
+                              ...conf,
                               useGlobalConfig: false,
                               enableFastEntry: conf?.enableFastEntry ?? true,
                               allowsAdditionalStaff: newState,

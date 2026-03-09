@@ -7,11 +7,12 @@ import { activityReportsAPI, ActivityReport } from "../../../../api/request";
 import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
 import { Modal } from "../components/Modal";
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 
 interface EmployeeOption {
   id: string;
@@ -22,6 +23,7 @@ interface EmployeeOption {
   positionName?: string;
   isActive?: boolean;
   hasActiveContract?: boolean;
+  metadataProjects?: Array<{ projectId: string; roleFrame: string; hasActiveContract: boolean; contractStartTime?: string; contractEndTime?: string }>;
 }
 
 interface LocalAttendanceRecord {
@@ -105,7 +107,14 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
   return "";
 };
 
-const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: string): string => {
+const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: string, employee?: EmployeeOption): string => {
+  if (employee && employee.metadataProjects) {
+    const projMeta = employee.metadataProjects.find((m) => m.projectId === project._id);
+    if (projMeta && projMeta.contractEndTime) {
+      return projMeta.contractEndTime;
+    }
+  }
+
   if (!project.teamConfig) return getProjectEndTime(project, dateStr);
 
   // 1. Check if user has a specific schedule in teamConfig
@@ -170,7 +179,14 @@ const getProjectStartTime = (project: Project, dateStr: string): string => {
   return "";
 };
 
-const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: string): string => {
+const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: string, employee?: EmployeeOption): string => {
+  if (employee && employee.metadataProjects) {
+    const projMeta = employee.metadataProjects.find((m) => m.projectId === project._id);
+    if (projMeta && projMeta.contractStartTime) {
+      return projMeta.contractStartTime;
+    }
+  }
+
   if (!project.teamConfig) return getProjectStartTime(project, dateStr);
 
   // 1. Check if user has a specific schedule in teamConfig
@@ -221,6 +237,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [viewingReport, setViewingReport] = useState<ActivityReport | null>(null);
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const [activeProjectTab, setActiveProjectTab] = useState<"info" | "schedule" | "team">("info");
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Form State
   const [reportDate, setReportDate] = useState(() => {
@@ -273,7 +290,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
-  const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [allProjectsCache, setAllProjectsCache] = useState<Project[]>([]);
   const [reports, setReports] = useState<ActivityReport[]>([]);
 
   // Calendar State
@@ -287,52 +304,79 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   }, []);
 
   const loadData = async () => {
-    // 1. Fetch Types
-    const types = await activityLogTypesAPI.getAll();
-    const activeTypes = types.filter((t) => t.isActive);
-    setLogTypes(activeTypes);
-
-    // 2. Fetch Employees
+    setIsLoadingData(true);
     try {
-      const users = await usersAPI.getDirectory();
-      setEmployees(
-        users.map((u) => ({
-          id: u._id,
-          name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
-          projectIds: u.projectIds?.map((p) => p._id) || [],
-          role: u.role,
-          roles: u.roles,
-          positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
-          isActive: u.isActive,
-          hasActiveContract: !!u.metadata?.projects?.some((p) =>
-            p.contracts?.some((c) => {
-              if (!c.fecha_baja_contrato) return true;
-              const endDate = new Date(c.fecha_baja_contrato);
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              return endDate >= today;
-            }),
-          ),
-        })),
-      );
-    } catch (e) {
-      console.error("Error loading users", e);
-    }
+      // 1. Fetch Types
+      const types = await activityLogTypesAPI.getAll();
+      const activeTypes = types.filter((t) => t.isActive);
+      setLogTypes(activeTypes);
 
-    // 3. Fetch Projects
-    try {
-      const allProjects = await projectsAPI.listAll();
-      const myProjects = profile?.projectIds && profile.projectIds.length > 0 ? allProjects.filter((p) => profile.projectIds?.includes(p._id)) : [];
-      setUserProjects(myProjects);
-      // Auto-select if only one
-      if (myProjects.length === 1) {
-        setSelectedProjectId(myProjects[0]._id);
+      // 2. Fetch Employees
+      try {
+        const users = await usersAPI.getDirectory();
+        setEmployees(
+          users.map((u) => ({
+            id: u._id,
+            name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
+            projectIds: u.projectIds?.map((p) => p._id) || [],
+            role: u.role,
+            roles: u.roles,
+            positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
+            isActive: u.isActive,
+            hasActiveContract: !!u.metadata?.projects?.some((p) =>
+              p.contracts?.some((c) => {
+                if (!c.fecha_baja_contrato) return true;
+                const endDate = new Date(c.fecha_baja_contrato);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return endDate >= today;
+              }),
+            ),
+            metadataProjects:
+              u.metadata?.projects?.map((p: any) => {
+                const pId = typeof p.projectId === "string" ? p.projectId : p.projectId?._id;
+
+                let activeContract = undefined;
+                const hasActive =
+                  p.contracts?.some((c: any) => {
+                    if (!c.fecha_baja_contrato) {
+                      if (!activeContract) activeContract = c;
+                      return true;
+                    }
+                    const endDate = new Date(c.fecha_baja_contrato);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const isActive = endDate >= today;
+                    if (isActive && !activeContract) activeContract = c;
+                    return isActive;
+                  }) ?? false;
+
+                return {
+                  projectId: pId,
+                  roleFrame: p.nombre_rol_frame,
+                  hasActiveContract: hasActive,
+                  contractStartTime: activeContract?.hora_inicio || undefined,
+                  contractEndTime: activeContract?.hora_fin || undefined,
+                };
+              }) || [],
+          })),
+        );
+      } catch (e) {
+        console.error("Error loading users", e);
       }
-    } catch (e) {
-      console.error("Error loading projects", e);
-    }
 
-    fetchReports();
+      // 3. Fetch Projects
+      try {
+        const allProjects = await projectsAPI.listAll();
+        setAllProjectsCache(allProjects);
+      } catch (e) {
+        console.error("Error loading projects", e);
+      }
+
+      fetchReports();
+    } finally {
+      setIsLoadingData(false);
+    }
   };
 
   const fetchReports = async () => {
@@ -362,10 +406,27 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   const { profile, stats } = useProfile();
+
+  const userProjects = useMemo(() => {
+    if (!profile || allProjectsCache.length === 0) return [];
+
+    // Admin / Coordinador o usuario normal con projectos asignados
+    const myProjects = profile.projectIds && profile.projectIds.length > 0 ? allProjectsCache.filter((p) => profile.projectIds?.includes(p._id)) : [];
+
+    // Si no tiene proyectos asignados, pero es admin, en mobile mostramos todos por si acaso (o respetamos la regla original)
+    // Para respetar estrictamente la regla original, dejamos la línea anterior.
+    // Aunque, para que el componente no falle nunca si el endpoint no trajo projectIds:
+    return myProjects;
+  }, [profile, allProjectsCache]);
+
   const selectedProject = useMemo(() => userProjects.find((p) => p._id === selectedProjectId), [userProjects, selectedProjectId]);
   const projectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
-    return employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId));
+    return employees.filter((e) => {
+      if (!e.projectIds || !e.projectIds.includes(selectedProjectId)) return false;
+      const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+      return projMeta ? projMeta.hasActiveContract : false; // Only show personnel with active contracts for this project
+    });
   }, [employees, selectedProjectId]);
 
   const isWorkDay = useMemo(() => {
@@ -380,27 +441,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return schedule.days.includes(dayIndex);
     }
 
-    return getProjectEndTime(selectedProject, reportDate) !== "";
+    // If no explicit frequency schedule is set for activity logs, fallback to allowing it
+    // because the default configuration UI assumes "Todos los días (Lunes a Domingo)".
+    return true;
   }, [selectedProject, reportDate]);
 
-  // Effect to load projects once profile is loaded if not already loaded (fallback)
+  // Effect to auto-select a project once userProjects are loaded to prevent empty selects
   useEffect(() => {
-    if (profile?.projectIds && profile.projectIds.length > 0 && userProjects.length === 0) {
-      projectsAPI.listAll().then((allProjs) => {
-        const myProjects = allProjs.filter((p) => profile.projectIds?.includes(p._id));
-        setUserProjects(myProjects);
-        if (myProjects.length > 0) setSelectedProjectId(myProjects[0]._id);
-      });
+    if (userProjects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(userProjects[0]._id);
     }
-  }, [profile, userProjects.length]);
+  }, [userProjects, selectedProjectId]);
 
   useEffect(() => {
     const type = logTypes.find((t) => t._id === draftTypeId);
     if (type?.name.toLowerCase().includes("horas extra") && selectedProjectId) {
       const project = userProjects.find((p) => p._id === selectedProjectId);
       if (project) {
-        const endTime = selectedEmployee ? getEmployeeEndTime(project, selectedEmployee.id, reportDate) : getProjectEndTime(project, reportDate);
-        const startTime = selectedEmployee ? getEmployeeStartTime(project, selectedEmployee.id, reportDate) : getProjectStartTime(project, reportDate);
+        const endTime = selectedEmployee ? getEmployeeEndTime(project, selectedEmployee.id, reportDate, selectedEmployee) : getProjectEndTime(project, reportDate);
+        const startTime = selectedEmployee ? getEmployeeStartTime(project, selectedEmployee.id, reportDate, selectedEmployee) : getProjectStartTime(project, reportDate);
 
         let totalOvertime = 0;
 
@@ -489,10 +548,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       if (type?.name.toLowerCase().includes("horas extra")) {
         const project = userProjects.find((p) => p._id === selectedProjectId);
         if (project) {
-          const endTime = getEmployeeEndTime(project, selectedEmployee.id, reportDate);
+          const endTime = getEmployeeEndTime(project, selectedEmployee.id, reportDate, selectedEmployee);
           if (endTime) setDraftOutTime(endTime);
 
-          const startTime = getEmployeeStartTime(project, selectedEmployee.id, reportDate);
+          const startTime = getEmployeeStartTime(project, selectedEmployee.id, reportDate, selectedEmployee);
           if (startTime) setDraftInTime(startTime);
         }
       }
@@ -507,8 +566,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     const data = wizardData[currentEmp.id];
     if (data?.status === "present" && (data.outTime || data.inTime)) {
-      const endTime = getEmployeeEndTime(selectedProject, currentEmp.id, reportDate);
-      const startTime = getEmployeeStartTime(selectedProject, currentEmp.id, reportDate);
+      const endTime = getEmployeeEndTime(selectedProject, currentEmp.id, reportDate, currentEmp);
+      const startTime = getEmployeeStartTime(selectedProject, currentEmp.id, reportDate, currentEmp);
 
       let totalOvertime = 0;
 
@@ -551,8 +610,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     }
 
     if (data?.replacementId && (data.replacementInTime || data.replacementOutTime)) {
-      const endTime = getEmployeeEndTime(selectedProject, data.replacementId, reportDate);
-      const startTime = getEmployeeStartTime(selectedProject, data.replacementId, reportDate);
+      const replacement = employees.find((e) => e.id === data.replacementId);
+      const endTime = getEmployeeEndTime(selectedProject, data.replacementId, reportDate, replacement);
+      const startTime = getEmployeeStartTime(selectedProject, data.replacementId, reportDate, replacement);
 
       let totalOvertime = 0;
       let inTotal = 0;
@@ -1120,25 +1180,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     const d = new Date();
     setReportDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
 
-    // Refresh projects to get latest config (allowsAdditionalStaff, etc.)
-    try {
-      const allProjs = await projectsAPI.listAll();
-      const myProjects = profile?.projectIds && profile.projectIds.length > 0 ? allProjs.filter((p) => profile.projectIds?.includes(p._id)) : [];
-      setUserProjects(myProjects);
-      // Reset Project Selection with fresh data
-      if (myProjects.length > 0) {
-        setSelectedProjectId(myProjects[0]._id);
-      } else {
-        setSelectedProjectId("");
-      }
-    } catch (e) {
-      console.error("Error refreshing projects", e);
-      // Fallback to existing data
-      if (userProjects.length > 0) {
-        setSelectedProjectId(userProjects[0]._id);
-      } else {
-        setSelectedProjectId("");
-      }
+    if (userProjects.length > 0) {
+      setSelectedProjectId(userProjects[0]._id);
+    } else {
+      setSelectedProjectId("");
     }
 
     setHasActivity(null);
@@ -1222,261 +1267,535 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               </div>
 
               <div className="overflow-y-auto p-4 flex-1" ref={formScrollRef}>
-                <div className="space-y-6">
-                  {wizardIndex >= 0 ? (
-                    <div className="flex flex-col gap-1.5 px-1 py-1">
-                      <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                        <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-blue-500" />
-                        <span className="truncate uppercase">
-                          {(() => {
-                            const p = userProjects.find((up) => up._id === selectedProjectId);
-                            if (!p) return "Proyecto";
-                            const cName = typeof p.clientId === "object" ? p.clientId?.name : "";
-                            return cName ? `${cName} | ${p.name}` : p.name;
-                          })()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                        <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-blue-500" />
-                        <span className="capitalize">{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Project Selector - Moved to Top */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente | Proyecto</label>
-                        {userProjects.length > 0 ? (
-                          <select
-                            value={selectedProjectId}
-                            onChange={(e) => {
-                              setSelectedProjectId(e.target.value);
-                              setDraftTypeId("");
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                          >
-                            {userProjects.map((p) => (
-                              <option key={p._id} value={p._id}>
-                                {typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">No hay proyectos asignados.</div>
-                        )}
-                      </div>
-
-                      {/* Date - Moved Below Project */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
-                        <div onClick={() => selectedProjectId && setCalendarOpen(true)} className={`relative w-full px-4 py-2 border rounded flex items-center justify-between transition-colors ${!selectedProjectId ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 cursor-pointer focus-within:ring-2 focus-within:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500"}`}>
-                          <span className={`text-sm ${!reportDate ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Seleccionar fecha"}</span>
-                          <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
+                {isLoadingData ? (
+                  <div className="flex flex-col items-center justify-center h-full min-h-[40vh] space-y-4">
+                    <LoadingSpinner size="lg" message="Cargando..." />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-6">
+                      {wizardIndex >= 0 ? (
+                        <div className="flex flex-col gap-1.5 px-1 py-1">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-blue-500" />
+                            <span className="truncate uppercase">
+                              {(() => {
+                                const p = userProjects.find((up) => up._id === selectedProjectId);
+                                if (!p) return "Proyecto";
+                                const cName = typeof p.clientId === "object" ? p.clientId?.name : "";
+                                return cName ? `${cName} | ${p.name}` : p.name;
+                              })()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 text-blue-500" />
+                            <span className="capitalize">{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}</span>
+                          </div>
                         </div>
-                        {!selectedProjectId && <p className="text-xs text-orange-500 mt-1">Selecciona un proyecto primero</p>}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Calendar Modal */}
-                  {calendarOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                          <div className="flex flex-col">
-                            {selectedProjectId && (
-                              <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wider mb-0.5">
-                                <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-500 dark:text-slate-400" />
-                                <span className="text-slate-500 dark:text-slate-400 uppercase">PROYECTO</span>
-                                <span className="text truncate max-w-[150px]">{userProjects.find((p) => p._id === selectedProjectId)?.name || "Proyecto"}</span>
-                              </div>
+                      ) : (
+                        <>
+                          {/* Project Selector - Moved to Top */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente | Proyecto</label>
+                            {userProjects.length > 0 ? (
+                              <select
+                                value={selectedProjectId}
+                                onChange={(e) => {
+                                  setSelectedProjectId(e.target.value);
+                                  setDraftTypeId("");
+                                }}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                              >
+                                {userProjects.map((p) => (
+                                  <option key={p._id} value={p._id}>
+                                    {typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">No hay proyectos asignados.</div>
                             )}
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
-                              <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
-                                <FontAwesomeIcon icon={faChevronLeft} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
-                              </button>
-                              <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
-                                <FontAwesomeIcon icon={faChevronRight} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
-                              </button>
+
+                          {/* Date - Moved Below Project */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
+                            <div onClick={() => selectedProjectId && setCalendarOpen(true)} className={`relative w-full px-4 py-2 border rounded flex items-center justify-between transition-colors ${!selectedProjectId ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 cursor-pointer focus-within:ring-2 focus-within:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500"}`}>
+                              <span className={`text-sm ${!reportDate ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Seleccionar fecha"}</span>
+                              <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
                             </div>
-                            <button onClick={() => setCalendarOpen(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ml-1">
-                              <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
-                            </button>
+                            {!selectedProjectId && <p className="text-xs text-orange-500 mt-1">Selecciona un proyecto primero</p>}
                           </div>
-                        </div>
+                        </>
+                      )}
 
-                        <div className="p-4">
-                          <div className="grid grid-cols-7 mb-2 text-center">
-                            {["L", "M", "M", "J", "V", "S", "D"].map((day, index) => (
-                              <div key={index} className="text-xs font-bold text-slate-400">
-                                {day}
+                      {/* Calendar Modal */}
+                      {calendarOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                              <div className="flex flex-col">
+                                {selectedProjectId && (
+                                  <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wider mb-0.5">
+                                    <FontAwesomeIcon icon={faBriefcase} className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                                    <span className="text-slate-500 dark:text-slate-400 uppercase">PROYECTO</span>
+                                    <span className="text truncate max-w-[150px]">{userProjects.find((p) => p._id === selectedProjectId)?.name || "Proyecto"}</span>
+                                  </div>
+                                )}
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
                               </div>
-                            ))}
-                          </div>
-                          <div className="grid grid-cols-7 gap-y-1">
-                            {generateCalendarDays().map((day, idx) => {
-                              const isCurrentMonth = isSameMonth(day, viewDate);
-                              const formattedDay = format(day, "yyyy-MM-dd");
-                              const isReported = hasReport(day);
-                              const isFutureDate = isFuture(day) && !isToday(day);
-                              const isSelected = reportDate === formattedDay;
-                              const isProjectDay = isProjectWorkDay(day);
-
-                              // Style Classes
-                              let bgClass = "transparent";
-                              let textClass = "text-slate-700 dark:text-slate-300";
-                              let cursorClass = "cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-700";
-                              let borderClass = "border border-transparent";
-
-                              if (!isCurrentMonth) {
-                                textClass = "text-slate-300 dark:text-slate-600";
-                                cursorClass = "cursor-default";
-                              } else if (!isProjectDay) {
-                                // Non-working day or outside project duration
-                                textClass = "text-gray-300 dark:text-gray-600";
-                                cursorClass = "cursor-not-allowed opacity-60";
-                              } else {
-                                // Valid Project Day
-                                textClass = "text-blue-600 dark:text-blue-400 font-semibold";
-                              }
-
-                              if (isReported) {
-                                bgClass = "bg-red-50 dark:bg-red-900/20";
-                                textClass = "text-red-400 dark:text-red-400 line-through decoration-red-400/50";
-                                cursorClass = "cursor-not-allowed opacity-70";
-                                borderClass = "border border-red-100 dark:border-red-900/30";
-                              }
-
-                              if (isFutureDate) {
-                                // Only override text color if it's NOT a project day. If it IS, keep it blue (from above) but show opacity.
-                                if (!isProjectDay) {
-                                  textClass = "text-slate-300 dark:text-slate-600";
-                                }
-                                cursorClass = "cursor-not-allowed opacity-40";
-                              }
-
-                              if (isSelected) {
-                                bgClass = "bg-blue-500 text-white shadow-md shadow-blue-500/30";
-                                textClass = "text-white";
-                                cursorClass = "cursor-default";
-                              }
-
-                              // Disable interaction for invalid days
-                              const isDisabled = isFutureDate || isReported || !isProjectDay || (!isCurrentMonth && !isSelected);
-
-                              return (
-                                <div key={idx} className="flex justify-center py-0.5">
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      if (!isDisabled) handleDateSelect(day);
-                                    }}
-                                    disabled={isDisabled}
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all relative ${bgClass} ${textClass} ${cursorClass} ${borderClass}`}
-                                  >
-                                    {getDate(day)}
-                                    {isReported && <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-red-500"></div>}
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
+                                  <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
+                                    <FontAwesomeIcon icon={faChevronLeft} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
+                                    <FontAwesomeIcon icon={faChevronRight} className="text-slate-600 dark:text-slate-400 w-4 h-4" />
                                   </button>
                                 </div>
-                              );
-                            })}
+                                <button onClick={() => setCalendarOpen(false)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ml-1">
+                                  <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="p-4">
+                              <div className="grid grid-cols-7 mb-2 text-center">
+                                {["L", "M", "M", "J", "V", "S", "D"].map((day, index) => (
+                                  <div key={index} className="text-xs font-bold text-slate-400">
+                                    {day}
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="grid grid-cols-7 gap-y-1">
+                                {generateCalendarDays().map((day, idx) => {
+                                  const isCurrentMonth = isSameMonth(day, viewDate);
+                                  const formattedDay = format(day, "yyyy-MM-dd");
+                                  const isReported = hasReport(day);
+                                  const isFutureDate = isFuture(day) && !isToday(day);
+                                  const isSelected = reportDate === formattedDay;
+                                  const isProjectDay = isProjectWorkDay(day);
+
+                                  // Style Classes
+                                  let bgClass = "transparent";
+                                  let textClass = "text-slate-700 dark:text-slate-300";
+                                  let cursorClass = "cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-700";
+                                  let borderClass = "border border-transparent";
+
+                                  if (!isCurrentMonth) {
+                                    textClass = "text-slate-300 dark:text-slate-600";
+                                    cursorClass = "cursor-default";
+                                  } else if (!isProjectDay) {
+                                    // Non-working day or outside project duration
+                                    textClass = "text-gray-300 dark:text-gray-600";
+                                    cursorClass = "cursor-not-allowed opacity-60";
+                                  } else {
+                                    // Valid Project Day
+                                    textClass = "text-blue-600 dark:text-blue-400 font-semibold";
+                                  }
+
+                                  if (isReported) {
+                                    bgClass = "bg-red-50 dark:bg-red-900/20";
+                                    textClass = "text-red-400 dark:text-red-400 line-through decoration-red-400/50";
+                                    cursorClass = "cursor-not-allowed opacity-70";
+                                    borderClass = "border border-red-100 dark:border-red-900/30";
+                                  }
+
+                                  if (isFutureDate) {
+                                    // Only override text color if it's NOT a project day. If it IS, keep it blue (from above) but show opacity.
+                                    if (!isProjectDay) {
+                                      textClass = "text-slate-300 dark:text-slate-600";
+                                    }
+                                    cursorClass = "cursor-not-allowed opacity-40";
+                                  }
+
+                                  if (isSelected) {
+                                    bgClass = "bg-blue-500 text-white shadow-md shadow-blue-500/30";
+                                    textClass = "text-white";
+                                    cursorClass = "cursor-default";
+                                  }
+
+                                  // Disable interaction for invalid days
+                                  const isDisabled = isFutureDate || isReported || !isProjectDay || (!isCurrentMonth && !isSelected);
+
+                                  return (
+                                    <div key={idx} className="flex justify-center py-0.5">
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          if (!isDisabled) handleDateSelect(day);
+                                        }}
+                                        disabled={isDisabled}
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all relative ${bgClass} ${textClass} ${cursorClass} ${borderClass}`}
+                                      >
+                                        {getDate(day)}
+                                        {isReported && <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-red-500"></div>}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-red-500/50"></span>
+                                <span>Reporte existente</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                                <span>Días Proyecto</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-red-500/50"></span>
-                            <span>Reporte existente</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                            <span>Días Proyecto</span>
-                          </div>
+                      )}
+                    </div>
+
+                    {/* Sticky Project Info Bar - Moved below select as requested */}
+                    {selectedProject && (
+                      <div id="sticky-project-header" className="px-4 py-3 bg-slate-900/95 dark:bg-slate-900 border-b border-slate-800 backdrop-blur-md flex items-center gap-3 sticky -mx-4 top-[-20px] z-30 flex-shrink-0">
+                        <div className="flex items-center justify-center w-8 h-8 rounded bg-blue-500/10 text-blue-500">
+                          <FontAwesomeIcon icon={faBriefcase} className="text-lg" />
+                        </div>
+                        <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                          <h3 className="text-lg sm:text-xl font-bold text-white truncate flex items-center gap-2 mb-0 leading-tight">
+                            <span className="shrink-0">{typeof selectedProject.clientId === "object" && selectedProject.clientId.name ? selectedProject.clientId.name : "Cliente"}</span>
+                            <span className="font-extrabold mx-1">|</span>
+                            <span className="truncate">{selectedProject.name}</span>
+                            <button type="button" onClick={() => setShowProjectInfo(true)} className="ml-auto text-slate-400 hover:text-white transition-colors p-1" title="Más información">
+                              <FontAwesomeIcon icon={faInfoCircle} className="text-sm" />
+                            </button>
+                          </h3>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
 
-                {/* Sticky Project Info Bar - Moved below select as requested */}
-                {selectedProject && (
-                  <div className="px-4 py-3 bg-slate-900/95 dark:bg-slate-900 border-b border-slate-800 backdrop-blur-md flex items-center gap-3 sticky -mx-4 top-[-20px] z-30 flex-shrink-0">
-                    <div className="flex items-center justify-center w-8 h-8 rounded bg-blue-500/10 text-blue-500">
-                      <FontAwesomeIcon icon={faBriefcase} className="text-lg" />
-                    </div>
-                    <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                      <h3 className="text-lg sm:text-xl font-bold text-white truncate flex items-center gap-2 mb-0 leading-tight">
-                        <span className="shrink-0">{typeof selectedProject.clientId === "object" && selectedProject.clientId.name ? selectedProject.clientId.name : "Cliente"}</span>
-                        <span className="font-extrabold mx-1">|</span>
-                        <span className="truncate">{selectedProject.name}</span>
-                        <button type="button" onClick={() => setShowProjectInfo(true)} className="ml-auto text-slate-400 hover:text-white transition-colors p-1" title="Más información">
-                          <FontAwesomeIcon icon={faInfoCircle} className="text-sm" />
-                        </button>
-                      </h3>
-                    </div>
-                  </div>
-                )}
+                    {/* Main Toggle & Form Content */}
+                    {isWorkDay ? (
+                      <>
+                        {/* ===================== LOGIC BRANCH: WIZARD VS FAST ENTRY ===================== */}
+                        {!isFastEntryEnabled ? (
+                          <div className="space-y-4">
+                            {wizardIndex === -1 ? (
+                              <div className="text-center p-4 bg-gray-50 dark:bg-blue-600/10 rounded border border-blue-600 dark:border-blue-600">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Reporte Detallado de Asistencia</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
+                                  Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
+                                </p>
+                              </div>
+                            ) : (
+                              <>
+                                {/* WIZARD CARD */}
+                                {(() => {
+                                  // Check if it is the Comments Step (Last Step)
 
-                {/* Main Toggle & Form Content */}
-                {isWorkDay ? (
-                  <>
-                    {/* ===================== LOGIC BRANCH: WIZARD VS FAST ENTRY ===================== */}
-                    {!isFastEntryEnabled ? (
-                      <div className="space-y-4">
-                        {wizardIndex === -1 ? (
-                          <div className="text-center p-4 bg-gray-50 dark:bg-blue-600/10 rounded border border-blue-600 dark:border-blue-600">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Reporte Detallado de Asistencia</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
-                              Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
-                            </p>
-                          </div>
-                        ) : (
-                          <>
-                            {/* WIZARD CARD */}
-                            {(() => {
-                              // Check if it is the Comments Step (Last Step)
+                                  // Normal Employee Step
+                                  const currentEmp = projectEmployees[wizardIndex];
+                                  const data = wizardData[currentEmp.id] || {};
+                                  const isPresent = data.status === "present";
+                                  const isAbsent = data.status === "absent";
 
-                              // Normal Employee Step
-                              const currentEmp = projectEmployees[wizardIndex];
-                              const data = wizardData[currentEmp.id] || {};
-                              const isPresent = data.status === "present";
-                              const isAbsent = data.status === "absent";
-
-                              return (
-                                <>
-                                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
-                                    {/* Header: Progress & Name */}
-                                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-700">
-                                      <div className="flex justify-between items-center mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                            Colaborador {wizardIndex + 1} de {projectEmployees.length}
-                                          </span>
+                                  return (
+                                    <>
+                                      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+                                        {/* Header: Progress & Name */}
+                                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-100 dark:border-slate-700">
+                                          <div className="flex justify-between items-center mb-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                                Colaborador {wizardIndex + 1} de {projectEmployees.length}
+                                              </span>
+                                            </div>
+                                            <div className="flex gap-1">
+                                              {Array.from({ length: Math.min(projectEmployees.length + 1, 6) }).map((_, i) => (
+                                                <div key={i} className={`h-1.5 w-6 rounded-full ${i <= (wizardIndex * 5) / projectEmployees.length ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"}`} />
+                                              ))}
+                                            </div>
+                                          </div>
+                                          <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
+                                            {currentEmp.name}
+                                          </h3>
+                                          <div className="flex items-center gap-2 mt-1 ml-10">
+                                            <span className="text-xs text-slate-500 dark:text-gray-400">{currentEmp.positionName || "Colaborador"}</span>
+                                            {(() => {
+                                              const roleFrame = currentEmp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                              return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider">{roleFrame}</span> : null;
+                                            })()}
+                                          </div>
                                         </div>
-                                        <div className="flex gap-1">
-                                          {Array.from({ length: Math.min(projectEmployees.length + 1, 6) }).map((_, i) => (
-                                            <div key={i} className={`h-1.5 w-6 rounded-full ${i <= (wizardIndex * 5) / projectEmployees.length ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"}`} />
-                                          ))}
+
+                                        <div className="p-5 space-y-6">
+                                          {/* 1. Presence Toggle */}
+                                          <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
+                                            <div className="flex gap-3">
+                                              <button
+                                                onClick={() => {
+                                                  updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined });
+                                                  setTimeout(() => {
+                                                    const otContainer = document.querySelector(".ot-container-row");
+                                                    if (otContainer) {
+                                                      otContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+                                                    }
+                                                  }, 100);
+                                                }}
+                                                className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                              >
+                                                SÍ
+                                              </button>
+                                              <button
+                                                onClick={(e) => {
+                                                  updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 });
+                                                  setActiveAbsenceModal("wizard");
+                                                }}
+                                                className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isAbsent ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                              >
+                                                NO
+                                              </button>
+                                            </div>
+                                          </div>
+
+                                          {/* 2. Logic based on Presence */}
+                                          {isPresent && (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                              {/* Overtime Toggle */}
+                                              <div className="ot-container-row flex flex-col gap-3 p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
+                                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">¿Realizó Horas Extras?</span>
+                                                <div className="flex gap-3">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      if (data.overtimeHours === undefined) {
+                                                        updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
+                                                      }
+                                                      setActiveOvertimeModal("wizard");
+                                                      setTimeout(() => {
+                                                        const otDetails = document.querySelector(".ot-details-row");
+                                                        if (otDetails) {
+                                                          otDetails.scrollIntoView({ behavior: "smooth", block: "start" });
+                                                        }
+                                                      }, 100);
+                                                    }}
+                                                    className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${data.overtimeHours !== undefined ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                                  >
+                                                    SÍ
+                                                  </button>
+                                                  <button
+                                                    onClick={() => {
+                                                      updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
+                                                    }}
+                                                    className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${data.overtimeHours === undefined ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                                  >
+                                                    NO
+                                                  </button>
+                                                </div>
+                                              </div>
+
+                                              {/* Overtime Details */}
+                                              {data.overtimeHours !== undefined && (
+                                                <div className="pt-2 pb-1 text-center ot-details-row scroll-mt-[70px]">
+                                                  <button onClick={() => setActiveOvertimeModal("wizard")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
+                                                    <FontAwesomeIcon icon={faClock} />
+                                                    {data.overtimeHours > 0 ? `${data.overtimeHours} Horas Extras` : "Configurar Horas Extras"}
+                                                  </button>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {isAbsent && (
+                                            /* Absent Logic */
+                                            <div className="pt-2 pb-1 text-center animate-in fade-in slide-in-from-top-2">
+                                              <button onClick={() => setActiveAbsenceModal("wizard")} className="text-sm font-bold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-red-200 dark:border-red-900/50 rounded bg-red-50 dark:bg-red-900/10">
+                                                <FontAwesomeIcon icon={faInfoCircle} />
+                                                {data.typeId ? `Motivo: ${logTypes.find((t) => t._id === data.typeId)?.name || "Configurado"}` : "Configurar Ausencia"}
+                                              </button>
+                                            </div>
+                                          )}
+
+                                          {/* Processed History Summary (Moved Inside Content) */}
                                         </div>
                                       </div>
-                                      <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
-                                        {currentEmp.name}
-                                      </h3>
-                                      <span className="text-xs text-slate-500 dark:text-gray-400 mt-1 ml-10">{currentEmp.positionName || "Colaborador"}</span>
-                                    </div>
 
-                                    <div className="p-5 space-y-6">
-                                      {/* 1. Presence Toggle */}
+                                      {/* Processed History List (Moved to Bottom) */}
+                                      {wizardIndex > 0 && (
+                                        <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-bottom-2">
+                                          <h4 className="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider pl-1">Colaboradores Procesados ({wizardIndex})</h4>
+                                          <div className="space-y-2">
+                                            {projectEmployees.slice(0, wizardIndex).map((histEmp) => {
+                                              const histData = wizardData[histEmp.id];
+                                              const histIsPresent = histData?.status === "present";
+                                              const histType = histData?.typeId ? logTypes.find((t) => t._id === histData.typeId) : null;
+                                              const histReplacement = histData?.replacementId ? employees.find((e) => e.id === histData.replacementId) : null;
+                                              const repString = histReplacement ? ` (Reemplazo: ${histReplacement.name}${histData?.replacementOvertimeHours ? ` + ${histData.replacementOvertimeHours}h Extra` : ""})` : "";
+
+                                              return (
+                                                <div key={histEmp.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center opacity-75 grayscale-[0.3]">
+                                                  <div>
+                                                    <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
+                                                    <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
+                                                  </div>
+                                                  <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === histEmp.id))} className="text-xs text-blue-500 hover:underline">
+                                                    Editar
+                                                  </button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                                {/* History List was here, moved inside local Wizard block */}
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          /* --------------------- FAST ENTRY MODE (Original) --------------------- */
+                          <>
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4 text-center">
+                              <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">¿Hubo novedades en el turno?</h2>
+                              <div className="flex justify-center gap-4">
+                                <button
+                                  onClick={() => setHasActivity(false)}
+                                  className={`flex-1 py-2 rounded border-2 transition-all flex flex-col items-center gap-1
+                                      ${hasActivity === false ? "border-slate-500 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white" : "border-gray-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-slate-600 text-gray-500 dark:text-gray-400"}`}
+                                >
+                                  <span className="font-bold">NO</span>
+                                </button>
+                                <button
+                                  onClick={() => setHasActivity(true)}
+                                  className={`flex-1 py-2 rounded border-2 transition-all flex flex-col items-center gap-1
+                                      ${hasActivity === true ? "border-blue-600 bg-blue-600 text-white" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 text-gray-500 dark:text-gray-400"}`}
+                                >
+                                  <span className="font-bold">SÍ</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* New Record Builder */}
+                            {hasActivity && (
+                              <div className="space-y-4">
+                                <div className="bg-white dark:bg-slate-800 rounded p-4 border border-slate-200 dark:border-slate-700 shadow-sm transition-all">
+                                  {!selectedEmployee ? (
+                                    <>
+                                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Colaborador</label>
                                       <div>
-                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">¿Asistió al turno?</label>
+                                        {/* Select Trigger */}
+                                        <div className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white flex justify-between items-center cursor-pointer bg-white" onClick={() => setIsEmployeeSelectOpen(true)}>
+                                          <span className="text-gray-500">Seleccionar colaborador...</span>
+                                          <FontAwesomeIcon icon={faLayerGroup} className="text-gray-400" />
+                                        </div>
+
+                                        {/* Employee Select Modal */}
+                                        <Modal
+                                          isOpen={isEmployeeSelectOpen}
+                                          onClose={() => setIsEmployeeSelectOpen(false)}
+                                          title={`Seleccionar Colaborador (${(() => {
+                                            const filteredByProject = selectedProjectId
+                                              ? employees.filter((e) => {
+                                                  if (!e.projectIds?.includes(selectedProjectId)) return false;
+                                                  const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                                                  return projMeta ? projMeta.hasActiveContract : false;
+                                                })
+                                              : [];
+                                            const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));
+                                            return searchTerm
+                                              ? availableEmployees.filter((e) => {
+                                                  const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
+                                                  return e.name.toLowerCase().includes(searchTerm.toLowerCase()) || roleFrameStr.includes(searchTerm.toLowerCase());
+                                                }).length
+                                              : availableEmployees.length;
+                                          })()})`}
+                                          size="md"
+                                        >
+                                          <div className="flex flex-col h-[60vh]">
+                                            {/* Search Input inside Modal */}
+                                            <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 sticky top-0 z-10">
+                                              <div className="relative">
+                                                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                                <input type="text" autoFocus className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Buscar por nombre o rol..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                              </div>
+                                            </div>
+
+                                            {/* List */}
+                                            <div className="overflow-y-auto flex-1 p-2">
+                                              {(() => {
+                                                const filteredByProject = selectedProjectId
+                                                  ? employees.filter((e) => {
+                                                      if (!e.projectIds?.includes(selectedProjectId)) return false;
+                                                      const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                                                      return projMeta ? projMeta.hasActiveContract : false;
+                                                    })
+                                                  : [];
+                                                // Exclude already added employees
+                                                const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));
+                                                const filteredByName = searchTerm
+                                                  ? availableEmployees.filter((e) => {
+                                                      const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
+                                                      return e.name.toLowerCase().includes(searchTerm.toLowerCase()) || roleFrameStr.includes(searchTerm.toLowerCase());
+                                                    })
+                                                  : availableEmployees;
+
+                                                return (
+                                                  <>
+                                                    {filteredByName.map((emp) => (
+                                                      <div
+                                                        key={emp.id}
+                                                        className="p-3 mb-1 rounded hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-gray-800 hover:border-blue-100 dark:hover:border-slate-600 transition-colors"
+                                                        onClick={() => {
+                                                          setSelectedEmployee(emp);
+                                                          setSearchTerm("");
+                                                          setIsEmployeeSelectOpen(false);
+                                                          setTimeout(() => {
+                                                            const header = document.getElementById("sticky-project-header");
+                                                            if (header) {
+                                                              header.scrollIntoView({ behavior: "smooth", block: "start" });
+                                                            }
+                                                          }, 100);
+                                                        }}
+                                                      >
+                                                        <div className="flex items-center gap-2">
+                                                          <div className="font-medium text-slate-800 dark:text-white truncate">{emp.name}</div>
+                                                          {(() => {
+                                                            const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                            return roleFrame ? <span className="shrink-0 bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
+                                                          })()}
+                                                        </div>
+                                                      </div>
+                                                    ))}
+                                                    {filteredByName.length === 0 && <div className="p-8 text-center text-gray-500 italic bg-gray-50 dark:bg-slate-800/50 rounded mt-2">{selectedProjectId ? "No se encontraron colaboradores." : "Selecciona un proyecto primero."}</div>}
+                                                  </>
+                                                );
+                                              })()}
+                                            </div>
+                                          </div>
+                                        </Modal>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="space-y-4 animate-fade-in">
+                                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
+                                        <div>
+                                          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5 uppercase">Colaborador</label>
+                                          <h3 className="font-bold text-slate-800 dark:text-white text-lg">{selectedEmployee.name}</h3>
+                                        </div>
+                                        <button onClick={() => setSelectedEmployee(null)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">
+                                          <FontAwesomeIcon icon={faTimes} />
+                                        </button>
+                                      </div>
+
+                                      {/* ATTENDANCE STATUS SELECTOR */}
+                                      <div className="mb-4 animate-fade-in">
+                                        <label className="block text-center text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">¿Asistió al turno?</label>
                                         <div className="flex gap-3">
                                           <button
                                             onClick={() => {
-                                              updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined });
+                                              setAttendanceStatus("present");
+                                              setDraftTypeId("");
+                                              setNoveltyCategory(null); // Clear old category state if any
                                               setTimeout(() => {
                                                 const otContainer = document.querySelector(".ot-container-row");
                                                 if (otContainer) {
@@ -1484,24 +1803,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 }
                                               }, 100);
                                             }}
-                                            className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                            className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "present" ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                           >
                                             SÍ
                                           </button>
                                           <button
                                             onClick={(e) => {
-                                              updateWizardEntry(currentEmp.id, { status: "absent", overtimeHours: 0 });
-                                              setActiveAbsenceModal("wizard");
+                                              setAttendanceStatus("absent");
+                                              setDraftTypeId("");
+                                              setShowOvertimeForm(false);
+                                              setActiveAbsenceModal("fast-entry");
                                             }}
-                                            className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isAbsent ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                            className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "absent" ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                           >
                                             NO
                                           </button>
                                         </div>
                                       </div>
 
-                                      {/* 2. Logic based on Presence */}
-                                      {isPresent && (
+                                      {/* LOGIC BASED ON STATUS */}
+                                      {attendanceStatus === "present" && (
                                         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                           {/* Overtime Toggle */}
                                           <div className="ot-container-row flex flex-col gap-3 p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
@@ -1509,348 +1830,132 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             <div className="flex gap-3">
                                               <button
                                                 onClick={(e) => {
-                                                  if (data.overtimeHours === undefined) {
-                                                    updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
-                                                  }
-                                                  setActiveOvertimeModal("wizard");
+                                                  setShowOvertimeForm(true);
+                                                  // Auto-select overtime type
+                                                  const overtimeType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
+                                                  if (overtimeType) setDraftTypeId(overtimeType._id);
+                                                  if (!draftOvertimeHours) setDraftOvertimeHours(0);
+                                                  setActiveOvertimeModal("fast-entry");
                                                   setTimeout(() => {
-                                                    const otDetails = document.querySelector(".ot-details-row");
+                                                    const otDetails = document.querySelector(".ot-details-row-fast");
                                                     if (otDetails) {
                                                       otDetails.scrollIntoView({ behavior: "smooth", block: "start" });
                                                     }
                                                   }, 100);
                                                 }}
-                                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${data.overtimeHours !== undefined ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${showOvertimeForm ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                               >
                                                 SÍ
                                               </button>
                                               <button
                                                 onClick={() => {
-                                                  updateWizardEntry(currentEmp.id, { overtimeHours: undefined, outTime: undefined, inTime: undefined });
+                                                  setShowOvertimeForm(false);
+                                                  setDraftTypeId("");
+                                                  setDraftOvertimeHours(0);
                                                 }}
-                                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${data.overtimeHours === undefined ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!showOvertimeForm ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                               >
                                                 NO
                                               </button>
                                             </div>
                                           </div>
-
-                                          {/* Overtime Details */}
-                                          {data.overtimeHours !== undefined && (
-                                            <div className="pt-2 pb-1 text-center ot-details-row scroll-mt-[70px]">
-                                              <button onClick={() => setActiveOvertimeModal("wizard")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
-                                                <FontAwesomeIcon icon={faClock} />
-                                                {data.overtimeHours > 0 ? `${data.overtimeHours} Horas Extras` : "Configurar Horas Extras"}
-                                              </button>
-                                            </div>
-                                          )}
                                         </div>
                                       )}
 
-                                      {isAbsent && (
-                                        /* Absent Logic */
+                                      {attendanceStatus === "absent" && (
                                         <div className="pt-2 pb-1 text-center animate-in fade-in slide-in-from-top-2">
-                                          <button onClick={() => setActiveAbsenceModal("wizard")} className="text-sm font-bold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-red-200 dark:border-red-900/50 rounded bg-red-50 dark:bg-red-900/10">
+                                          <button onClick={() => setActiveAbsenceModal("fast-entry")} className="text-sm font-bold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-red-200 dark:border-red-900/50 rounded bg-red-50 dark:bg-red-900/10">
                                             <FontAwesomeIcon icon={faInfoCircle} />
-                                            {data.typeId ? `Motivo: ${logTypes.find((t) => t._id === data.typeId)?.name || "Configurado"}` : "Configurar Ausencia"}
+                                            {draftTypeId ? `Motivo: ${logTypes.find((t) => t._id === draftTypeId)?.name || "Configurado"}` : "Configurar Ausencia"}
                                           </button>
                                         </div>
                                       )}
 
-                                      {/* Processed History Summary (Moved Inside Content) */}
-                                    </div>
-                                  </div>
-
-                                  {/* Processed History List (Moved to Bottom) */}
-                                  {wizardIndex > 0 && (
-                                    <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-bottom-2">
-                                      <h4 className="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider pl-1">Colaboradores Procesados ({wizardIndex})</h4>
-                                      <div className="space-y-2">
-                                        {projectEmployees.slice(0, wizardIndex).map((histEmp) => {
-                                          const histData = wizardData[histEmp.id];
-                                          const histIsPresent = histData?.status === "present";
-                                          const histType = histData?.typeId ? logTypes.find((t) => t._id === histData.typeId) : null;
-                                          const histReplacement = histData?.replacementId ? employees.find((e) => e.id === histData.replacementId) : null;
-                                          const repString = histReplacement ? ` (Reemplazo: ${histReplacement.name}${histData?.replacementOvertimeHours ? ` + ${histData.replacementOvertimeHours}h Extra` : ""})` : "";
-
+                                      {(() => {
+                                        // 1. If Overtime Mode is ON (via toggle)
+                                        if (showOvertimeForm) {
                                           return (
-                                            <div key={histEmp.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center opacity-75 grayscale-[0.3]">
-                                              <div>
-                                                <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
-                                                <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
+                                            <div className="bg-slate-50 dark:bg-slate-900/50 rounded p-3 space-y-3 border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2 ot-details-row-fast scroll-mt-[70px]">
+                                              <div className="pt-2 pb-1 text-center">
+                                                <button onClick={() => setActiveOvertimeModal("fast-entry")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
+                                                  <FontAwesomeIcon icon={faClock} />
+                                                  {draftOvertimeHours > 0 ? `${draftOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
+                                                </button>
                                               </div>
-                                              <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === histEmp.id))} className="text-xs text-blue-500 hover:underline">
-                                                Editar
+                                              <button onClick={handleAddRecord} disabled={!draftTypeId} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded mt-2 disabled:opacity-50 shadow-sm">
+                                                Confirmar Registro
                                               </button>
                                             </div>
                                           );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-                                </>
-                              );
-                            })()}
-                            {/* History List was here, moved inside local Wizard block */}
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      /* --------------------- FAST ENTRY MODE (Original) --------------------- */
-                      <>
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4 text-center">
-                          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">¿Hubo novedades en el turno?</h2>
-                          <div className="flex justify-center gap-4">
-                            <button
-                              onClick={() => setHasActivity(false)}
-                              className={`flex-1 py-2 rounded border-2 transition-all flex flex-col items-center gap-1
-                                      ${hasActivity === false ? "border-slate-500 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white" : "border-gray-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-slate-600 text-gray-500 dark:text-gray-400"}`}
-                            >
-                              <span className="font-bold">NO</span>
-                            </button>
-                            <button
-                              onClick={() => setHasActivity(true)}
-                              className={`flex-1 py-2 rounded border-2 transition-all flex flex-col items-center gap-1
-                                      ${hasActivity === true ? "border-blue-600 bg-blue-600 text-white" : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 text-gray-500 dark:text-gray-400"}`}
-                            >
-                              <span className="font-bold">SÍ</span>
-                            </button>
-                          </div>
-                        </div>
+                                        }
 
-                        {/* New Record Builder */}
-                        {hasActivity && (
-                          <div className="space-y-4">
-                            <div className="bg-white dark:bg-slate-800 rounded p-4 border border-slate-200 dark:border-slate-700 shadow-sm transition-all">
-                              {!selectedEmployee ? (
-                                <>
-                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Colaborador</label>
-                                  <div className="relative">
-                                    {/* Select Trigger */}
-                                    <div className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white flex justify-between items-center cursor-pointer bg-white" onClick={() => setIsEmployeeSelectOpen(!isEmployeeSelectOpen)}>
-                                      <span className={searchTerm ? "text-gray-900 dark:text-white" : "text-gray-500"}>Seleccionar colaborador...</span>
-                                      <FontAwesomeIcon icon={isEmployeeSelectOpen ? faTimes : faLayerGroup} className="text-gray-400" />
-                                    </div>
+                                        // 2. Normal Logic (Absence or others selected via dropdown)
+                                        const type = logTypes.find((t) => t._id === draftTypeId);
+                                        if (!type) return null;
 
-                                    {/* Dropdown Content */}
-                                    {isEmployeeSelectOpen && (
-                                      <div className="absolute z-50 w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded shadow-xl mt-1 max-h-60 flex flex-col">
-                                        {/* Search Input inside Dropdown */}
-                                        <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky top-0">
-                                          <input type="text" autoFocus className="w-full p-2 border border-blue-200 dark:border-blue-900 rounded dark:bg-slate-800 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" placeholder="Buscar nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} />
-                                        </div>
-
-                                        {/* List */}
-                                        <div className="overflow-y-auto flex-1">
-                                          {(() => {
-                                            const filteredByProject = selectedProjectId ? employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)) : [];
-                                            // Exclude already added employees
-                                            const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));
-                                            const filteredByName = searchTerm ? availableEmployees.filter((e) => e.name.toLowerCase().includes(searchTerm.toLowerCase())) : availableEmployees;
-
-                                            return (
-                                              <>
-                                                {filteredByName.map((emp) => (
-                                                  <div
-                                                    key={emp.id}
-                                                    className="p-3 hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer border-b border-gray-50 dark:border-gray-700 last:border-0"
-                                                    onClick={() => {
-                                                      setSelectedEmployee(emp);
-                                                      setSearchTerm("");
-                                                      setIsEmployeeSelectOpen(false);
-                                                    }}
-                                                  >
-                                                    <div className="font-medium text-slate-800 dark:text-white">{emp.name}</div>
-                                                  </div>
-                                                ))}
-                                                {filteredByName.length === 0 && <div className="p-4 text-center text-gray-500 italic">{selectedProjectId ? "No se encontraron colaboradores." : "Selecciona un proyecto primero."}</div>}
-                                              </>
-                                            );
-                                          })()}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="space-y-4 animate-fade-in">
-                                  <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
-                                    <div>
-                                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5 uppercase">Colaborador</label>
-                                      <h3 className="font-bold text-slate-800 dark:text-white text-lg">{selectedEmployee.name}</h3>
-                                    </div>
-                                    <button onClick={() => setSelectedEmployee(null)} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">
-                                      <FontAwesomeIcon icon={faTimes} />
-                                    </button>
-                                  </div>
-
-                                  {/* ATTENDANCE STATUS SELECTOR */}
-                                  <div className="mb-4 animate-fade-in">
-                                    <label className="block text-center text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">¿Asistió al turno?</label>
-                                    <div className="flex gap-3">
-                                      <button
-                                        onClick={() => {
-                                          setAttendanceStatus("present");
-                                          setDraftTypeId("");
-                                          setNoveltyCategory(null); // Clear old category state if any
-                                          setTimeout(() => {
-                                            const otContainer = document.querySelector(".ot-container-row");
-                                            if (otContainer) {
-                                              otContainer.scrollIntoView({ behavior: "smooth", block: "start" });
-                                            }
-                                          }, 100);
-                                        }}
-                                        className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "present" ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
-                                      >
-                                        SÍ
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          setAttendanceStatus("absent");
-                                          setDraftTypeId("");
-                                          setShowOvertimeForm(false);
-                                          setActiveAbsenceModal("fast-entry");
-                                        }}
-                                        className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "absent" ? "bg-red-500 border-red-500 text-white shadow-md dark:shadow-red-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
-                                      >
-                                        NO
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* LOGIC BASED ON STATUS */}
-                                  {attendanceStatus === "present" && (
-                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                      {/* Overtime Toggle */}
-                                      <div className="ot-container-row flex flex-col gap-3 p-3 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 scroll-mt-[70px]">
-                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">¿Realizó Horas Extras?</span>
-                                        <div className="flex gap-3">
-                                          <button
-                                            onClick={(e) => {
-                                              setShowOvertimeForm(true);
-                                              // Auto-select overtime type
-                                              const overtimeType = logTypes.find((t) => t.name.toLowerCase().includes("horas extra"));
-                                              if (overtimeType) setDraftTypeId(overtimeType._id);
-                                              if (!draftOvertimeHours) setDraftOvertimeHours(0);
-                                              setActiveOvertimeModal("fast-entry");
-                                              setTimeout(() => {
-                                                const otDetails = document.querySelector(".ot-details-row-fast");
-                                                if (otDetails) {
-                                                  otDetails.scrollIntoView({ behavior: "smooth", block: "start" });
-                                                }
-                                              }, 100);
-                                            }}
-                                            className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${showOvertimeForm ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
-                                          >
-                                            SÍ
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              setShowOvertimeForm(false);
-                                              setDraftTypeId("");
-                                              setDraftOvertimeHours(0);
-                                            }}
-                                            className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!showOvertimeForm ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
-                                          >
-                                            NO
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {attendanceStatus === "absent" && (
-                                    <div className="pt-2 pb-1 text-center animate-in fade-in slide-in-from-top-2">
-                                      <button onClick={() => setActiveAbsenceModal("fast-entry")} className="text-sm font-bold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-red-200 dark:border-red-900/50 rounded bg-red-50 dark:bg-red-900/10">
-                                        <FontAwesomeIcon icon={faInfoCircle} />
-                                        {draftTypeId ? `Motivo: ${logTypes.find((t) => t._id === draftTypeId)?.name || "Configurado"}` : "Configurar Ausencia"}
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  {(() => {
-                                    // 1. If Overtime Mode is ON (via toggle)
-                                    if (showOvertimeForm) {
-                                      return (
-                                        <div className="bg-slate-50 dark:bg-slate-900/50 rounded p-3 space-y-3 border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2 ot-details-row-fast scroll-mt-[70px]">
-                                          <div className="pt-2 pb-1 text-center">
-                                            <button onClick={() => setActiveOvertimeModal("fast-entry")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
-                                              <FontAwesomeIcon icon={faClock} />
-                                              {draftOvertimeHours > 0 ? `${draftOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
+                                        return (
+                                          <div className="bg-slate-50 dark:bg-slate-900/50 rounded p-3 space-y-3 border border-slate-100 dark:border-slate-700 animate-in fade-in">
+                                            <button onClick={handleAddRecord} disabled={!draftTypeId} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded mt-2 disabled:opacity-50 shadow-sm">
+                                              Confirmar Registro
                                             </button>
                                           </div>
-                                          <button onClick={handleAddRecord} disabled={!draftTypeId} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded mt-2 disabled:opacity-50 shadow-sm">
-                                            Confirmar Registro
-                                          </button>
-                                        </div>
-                                      );
-                                    }
-
-                                    // 2. Normal Logic (Absence or others selected via dropdown)
-                                    const type = logTypes.find((t) => t._id === draftTypeId);
-                                    if (!type) return null;
-
-                                    return (
-                                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded p-3 space-y-3 border border-slate-100 dark:border-slate-700 animate-in fade-in">
-                                        <button onClick={handleAddRecord} disabled={!draftTypeId} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded mt-2 disabled:opacity-50 shadow-sm">
-                                          Confirmar Registro
-                                        </button>
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Entries List */}
-                        {entries.length > 0 && (
-                          <div className="space-y-2 mt-4">
-                            <h4 className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Registros Agregados ({entries.length})</h4>
-                            {entries.map((entry) => (
-                              <div key={entry.tempId} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center shadow-sm">
-                                <div>
-                                  <div className="font-bold text-slate-900 dark:text-white text-sm">{entry.employeeName}</div>
-                                  <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                    {entry.typeName} {entry.overtimeHours ? `(${entry.overtimeHours} h)` : ""}
-                                  </div>
-                                  {entry.replacementName && (
-                                    <div className="text-xs text-slate-500">
-                                      Reemplazo: {entry.replacementName} {entry.replacementOvertimeHours ? `(+${entry.replacementOvertimeHours}h)` : ""}
+                                        );
+                                      })()}
                                     </div>
                                   )}
                                 </div>
-                                <button onClick={() => handleRemoveRecord(entry.tempId)} className="text-red-500 hover:text-red-700 p-2">
-                                  <FontAwesomeIcon icon={faTrash} />
-                                </button>
                               </div>
-                            ))}
-                          </div>
+                            )}
+
+                            {/* Entries List */}
+                            {entries.length > 0 && (
+                              <div className="space-y-2 mt-4">
+                                <h4 className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Registros Agregados ({entries.length})</h4>
+                                {entries.map((entry) => (
+                                  <div key={entry.tempId} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center shadow-sm">
+                                    <div>
+                                      <div className="font-bold text-slate-900 dark:text-white text-sm">{entry.employeeName}</div>
+                                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                        {entry.typeName} {entry.overtimeHours ? `(${entry.overtimeHours} h)` : ""}
+                                      </div>
+                                      {entry.replacementName && (
+                                        <div className="text-xs text-slate-500">
+                                          Reemplazo: {entry.replacementName} {entry.replacementOvertimeHours ? `(+${entry.replacementOvertimeHours}h)` : ""}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <button onClick={() => handleRemoveRecord(entry.tempId)} className="text-red-500 hover:text-red-700 p-2">
+                                      <FontAwesomeIcon icon={faTrash} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                       </>
+                    ) : existingReport ? (
+                      <div className="bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800 p-6 text-center animate-fade-in my-4">
+                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto mb-3 text-green-600 dark:text-green-400">
+                          <FontAwesomeIcon icon={faCheck} className="text-xl" />
+                        </div>
+                        <h2 className="text-lg font-bold text-green-900 dark:text-green-100 mb-1">Reporte Completado</h2>
+                        <p className="text-sm text-green-700 dark:text-green-300 leading-relaxed">Ya existe un reporte enviado para este día ({new Date(reportDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}).</p>
+                        <button onClick={() => handleViewReport(existingReport)} className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded shadow-sm transition-colors">
+                          Ver Reporte Detallado
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 p-6 text-center animate-fade-in my-4">
+                        <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-600 dark:text-amber-400">
+                          <FontAwesomeIcon icon={faClock} className="text-xl" />
+                        </div>
+                        <h2 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-1">Día No Laborable</h2>
+                        <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed tabular-nums">Este proyecto no tiene jornada laboral configurada para este día ({new Date(reportDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}).</p>
+                        <p className="text-xs text-amber-500 dark:text-amber-500 mt-4 font-medium italic">No se pueden registrar novedades en días no laborables.</p>
+                      </div>
                     )}
                   </>
-                ) : existingReport ? (
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800 p-6 text-center animate-fade-in my-4">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto mb-3 text-green-600 dark:text-green-400">
-                      <FontAwesomeIcon icon={faCheck} className="text-xl" />
-                    </div>
-                    <h2 className="text-lg font-bold text-green-900 dark:text-green-100 mb-1">Reporte Completado</h2>
-                    <p className="text-sm text-green-700 dark:text-green-300 leading-relaxed">Ya existe un reporte enviado para este día ({new Date(reportDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}).</p>
-                    <button onClick={() => handleViewReport(existingReport)} className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded shadow-sm transition-colors">
-                      Ver Reporte Detallado
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 p-6 text-center animate-fade-in my-4">
-                    <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-600 dark:text-amber-400">
-                      <FontAwesomeIcon icon={faClock} className="text-xl" />
-                    </div>
-                    <h2 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-1">Día No Laborable</h2>
-                    <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed tabular-nums">Este proyecto no tiene jornada laboral configurada para este día ({new Date(reportDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long" })}).</p>
-                    <p className="text-xs text-amber-500 dark:text-amber-500 mt-4 font-medium italic">No se pueden registrar novedades en días no laborables.</p>
-                  </div>
                 )}
               </div>
 
@@ -1990,7 +2095,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? formatToAMPM(getEmployeeStartTime(proj, currentEmp.id, reportDate)) : "—";
+                          return proj ? formatToAMPM(getEmployeeStartTime(proj, currentEmp.id, reportDate, currentEmp)) : "—";
                         })()}
                       </span>
                     </div>
@@ -1999,7 +2104,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                         {(() => {
                           const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? formatToAMPM(getEmployeeEndTime(proj, currentEmp.id, reportDate)) : "—";
+                          return proj ? formatToAMPM(getEmployeeEndTime(proj, currentEmp.id, reportDate, currentEmp)) : "—";
                         })()}
                       </span>
                     </div>
@@ -2059,7 +2164,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeStartTime(proj, selectedEmployee.id, reportDate)) : "—";
+                            return proj ? formatToAMPM(getEmployeeStartTime(proj, selectedEmployee.id, reportDate, selectedEmployee)) : "—";
                           })()}
                         </span>
                       </div>
@@ -2068,7 +2173,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeEndTime(proj, selectedEmployee.id, reportDate)) : "—";
+                            return proj ? formatToAMPM(getEmployeeEndTime(proj, selectedEmployee.id, reportDate, selectedEmployee)) : "—";
                           })()}
                         </span>
                       </div>
@@ -2996,53 +3101,84 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           setReplacementSearchTerm("");
           setReplacementTargetEmpId(null);
         }}
-        title="Seleccionar Reemplazo"
+        title={`Seleccionar Reemplazo (${(() => {
+          const filteredByProject = selectedProjectId
+            ? employees.filter((e) => {
+                if (!e.projectIds?.includes(selectedProjectId)) return false;
+                const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                return projMeta ? projMeta.hasActiveContract : false;
+              })
+            : [];
+          const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
+          return replacementSearchTerm
+            ? availableEmployees.filter((e) => {
+                const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
+                return e.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) || roleFrameStr.includes(replacementSearchTerm.toLowerCase());
+              }).length
+            : availableEmployees.length;
+        })()})`}
         size="md"
       >
-        <div className="space-y-4">
-          <div className="relative">
-            <input type="text" placeholder="Buscar empleado..." className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 transition-shadow" value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
-          </div>
-          <div className="flex items-center gap-2 px-1 mb-2">
-            <input type="checkbox" id="active-contacts-only" checked={replacementShowOnlyActiveContracts} onChange={(e) => setReplacementShowOnlyActiveContracts(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
-            <label htmlFor="active-contacts-only" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-              Solo contratos activos
-            </label>
+        <div className="flex flex-col h-[60vh]">
+          {/* Search Input inside Modal */}
+          <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 sticky top-0 z-10">
+            <div className="relative">
+              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input type="text" autoFocus className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Buscar por nombre o rol..." value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
+            </div>
           </div>
 
-          <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 pb-4">
-            {employees
-              .filter((emp) => (replacementShowOnlyActiveContracts ? emp.hasActiveContract : true))
-              .filter((emp) => (replacementTargetEmpId !== null ? emp.id !== replacementTargetEmpId : selectedEmployee ? emp.id !== selectedEmployee.id : true))
-              .filter((emp) => (replacementSearchTerm ? emp.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) : true))
-              .map((emp) => {
-                const isSelected = replacementTargetEmpId ? wizardData[replacementTargetEmpId]?.replacementId === emp.id : draftReplacementId === emp.id;
-                return (
-                  <div
-                    key={emp.id}
-                    onClick={() => {
-                      if (replacementTargetEmpId) {
-                        updateWizardEntry(replacementTargetEmpId, { replacementId: emp.id });
-                      } else {
-                        setDraftReplacementId(emp.id);
-                      }
-                      setShowReplacementModal(false);
-                      setReplacementSearchTerm("");
-                      setReplacementTargetEmpId(null);
-                    }}
-                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-500/50" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500/50"}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-sm ${isSelected ? "bg-blue-600 text-white" : "bg-blue-100 dark:bg-slate-700 text-blue-600 dark:text-slate-300"}`}>{emp.name.charAt(0).toUpperCase()}</div>
-                      <div className="flex flex-col">
-                        <span className={`font-semibold text-sm ${isSelected ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-white"}`}>{emp.name}</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 capitalize truncate">{emp.positionName || "Sin Rango"}</span>
+          {/* List */}
+          <div className="overflow-y-auto flex-1 p-2">
+            {(() => {
+              const filteredByProject = selectedProjectId
+                ? employees.filter((e) => {
+                    if (!e.projectIds?.includes(selectedProjectId)) return false;
+                    const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                    return projMeta ? projMeta.hasActiveContract : false;
+                  })
+                : [];
+              const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
+              const filteredByName = replacementSearchTerm
+                ? availableEmployees.filter((e) => {
+                    const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
+                    return e.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) || roleFrameStr.includes(replacementSearchTerm.toLowerCase());
+                  })
+                : availableEmployees;
+
+              return (
+                <>
+                  {filteredByName.map((emp) => {
+                    const isSelected = replacementTargetEmpId ? wizardData[replacementTargetEmpId]?.replacementId === emp.id : draftReplacementId === emp.id;
+                    return (
+                      <div
+                        key={emp.id}
+                        className={`p-3 mb-1 rounded cursor-pointer border transition-colors ${isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-500/50" : "border-transparent dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-slate-700 hover:border-blue-100 dark:hover:border-slate-600"}`}
+                        onClick={() => {
+                          if (replacementTargetEmpId) {
+                            updateWizardEntry(replacementTargetEmpId, { replacementId: emp.id });
+                          } else {
+                            setDraftReplacementId(emp.id);
+                          }
+                          setShowReplacementModal(false);
+                          setReplacementSearchTerm("");
+                          setReplacementTargetEmpId(null);
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`font-medium text-slate-800 dark:text-white truncate ${isSelected ? "text-blue-900 dark:text-blue-100 font-semibold" : ""}`}>{emp.name}</div>
+                          {(() => {
+                            const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                            return roleFrame ? <span className="shrink-0 bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
+                          })()}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            {employees.length > 0 && employees.filter((emp) => (replacementShowOnlyActiveContracts ? emp.hasActiveContract : true)).filter((emp) => (replacementSearchTerm ? emp.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) : true)).length === 0 && <p className="text-sm text-center text-gray-500 italic py-4">No se encontraron colaboradores.</p>}
+                    );
+                  })}
+                  {filteredByName.length === 0 && <div className="p-8 text-center text-gray-500 italic bg-gray-50 dark:bg-slate-800/50 rounded mt-2">{selectedProjectId ? "No se encontraron colaboradores." : "Selecciona un proyecto primero."}</div>}
+                </>
+              );
+            })()}
           </div>
         </div>
       </Modal>
