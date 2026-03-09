@@ -285,7 +285,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   // Replacement Modal State
   const [showReplacementModal, setShowReplacementModal] = useState(false);
   const [replacementSearchTerm, setReplacementSearchTerm] = useState("");
-  const [replacementShowOnlyActiveContracts, setReplacementShowOnlyActiveContracts] = useState(true);
+
   const [replacementTargetEmpId, setReplacementTargetEmpId] = useState<string | null>(null); // For wizard mode, null for fast entry mode
 
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
