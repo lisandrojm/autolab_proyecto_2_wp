@@ -462,20 +462,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const startTime = selectedEmployee ? getEmployeeStartTime(project, selectedEmployee.id, reportDate, selectedEmployee) : getProjectStartTime(project, reportDate);
 
         let totalOvertime = 0;
+        let startTotal = 0;
+        if (startTime) {
+          const [sH, sM] = startTime.split(":").map(Number);
+          startTotal = sH * 60 + sM;
+        }
 
         // 1. Entry Overtime (Early Start)
         let inTotal = 0;
-        if (draftInTime && startTime) {
-          const [inH, inM] = draftInTime.split(":").map(Number);
-          const [startH, startM] = startTime.split(":").map(Number);
-          inTotal = inH * 60 + inM;
-          const startTotal = startH * 60 + startM;
-          // If came in BEFORE start time
-          let diff = (startTotal - inTotal) / 60;
-          if (diff > 0) totalOvertime += diff;
-        } else if (draftInTime) {
+        if (draftInTime) {
           const [inH, inM] = draftInTime.split(":").map(Number);
           inTotal = inH * 60 + inM;
+
+          if (startTime) {
+            // If came in BEFORE start time
+            let diff = (startTotal - inTotal) / 60;
+            if (diff > 0) totalOvertime += diff;
+          }
         }
 
         // 2. Exit Overtime
@@ -483,7 +486,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           const [outH, outM] = draftOutTime.split(":").map(Number);
           const [endH, endM] = endTime.split(":").map(Number);
           let outTotal = outH * 60 + outM;
-          const endTotal = endH * 60 + endM;
+          let endTotal = endH * 60 + endM;
+
+          // Adjust endTotal if shift spans midnight
+          if (startTime && endTotal < startTotal) {
+            endTotal += 24 * 60;
+          }
 
           if (draftInTime && outTotal < inTotal) {
             outTotal += 24 * 60; // Next day
@@ -509,24 +517,33 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const startTime = getEmployeeStartTime(project, draftReplacementId, reportDate);
 
         let totalOvertime = 0;
+        let startTotal = 0;
+        if (startTime) {
+          const [sH, sM] = startTime.split(":").map(Number);
+          startTotal = sH * 60 + sM;
+        }
+
         let inTotal = 0;
-        if (draftReplacementInTime && startTime) {
-          const [inH, inM] = draftReplacementInTime.split(":").map(Number);
-          const [startH, startM] = startTime.split(":").map(Number);
-          inTotal = inH * 60 + inM;
-          const startTotal = startH * 60 + startM;
-          let diff = (startTotal - inTotal) / 60;
-          if (diff > 0) totalOvertime += diff;
-        } else if (draftReplacementInTime) {
+        if (draftReplacementInTime) {
           const [inH, inM] = draftReplacementInTime.split(":").map(Number);
           inTotal = inH * 60 + inM;
+
+          if (startTime) {
+            let diff = (startTotal - inTotal) / 60;
+            if (diff > 0) totalOvertime += diff;
+          }
         }
 
         if (draftReplacementOutTime && endTime) {
           const [outH, outM] = draftReplacementOutTime.split(":").map(Number);
           const [endH, endM] = endTime.split(":").map(Number);
           let outTotal = outH * 60 + outM;
-          const endTotal = endH * 60 + endM;
+          let endTotal = endH * 60 + endM;
+
+          // Adjust endTotal if shift spans midnight
+          if (startTime && endTotal < startTotal) {
+            endTotal += 24 * 60;
+          }
 
           if (draftReplacementInTime && outTotal < inTotal) {
             outTotal += 24 * 60;
@@ -570,19 +587,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       const startTime = getEmployeeStartTime(selectedProject, currentEmp.id, reportDate, currentEmp);
 
       let totalOvertime = 0;
+      let startTotal = 0;
+      if (startTime) {
+        const [sH, sM] = startTime.split(":").map(Number);
+        startTotal = sH * 60 + sM;
+      }
 
       // 1. Entry OT
       let inTotal = 0;
-      if (data.inTime && startTime) {
-        const [inH, inM] = data.inTime.split(":").map(Number);
-        const [startH, startM] = startTime.split(":").map(Number);
-        inTotal = inH * 60 + inM;
-        const startTotal = startH * 60 + startM;
-        let diff = (startTotal - inTotal) / 60;
-        if (diff > 0) totalOvertime += diff;
-      } else if (data.inTime) {
+      if (data.inTime) {
         const [inH, inM] = data.inTime.split(":").map(Number);
         inTotal = inH * 60 + inM;
+
+        if (startTime) {
+          let diff = (startTotal - inTotal) / 60;
+          if (diff > 0) totalOvertime += diff;
+        }
       }
 
       // 2. Exit OT
@@ -590,7 +610,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const [outH, outM] = data.outTime.split(":").map(Number);
         const [endH, endM] = endTime.split(":").map(Number);
         let outTotal = outH * 60 + outM;
-        const endTotal = endH * 60 + endM;
+        let endTotal = endH * 60 + endM;
+
+        // Adjust endTotal if shift spans midnight
+        if (startTime && endTotal < startTotal) {
+          endTotal += 24 * 60;
+        }
 
         if (data.inTime && outTotal < inTotal) {
           outTotal += 24 * 60; // Next day
@@ -616,23 +641,26 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       let totalOvertime = 0;
       let inTotal = 0;
-      if (data.replacementInTime && startTime) {
-        const [inH, inM] = data.replacementInTime.split(":").map(Number);
-        const [startH, startM] = startTime.split(":").map(Number);
-        inTotal = inH * 60 + inM;
-        const startTotal = startH * 60 + startM;
-        let diff = (startTotal - inTotal) / 60;
-        if (diff > 0) totalOvertime += diff;
-      } else if (data.replacementInTime) {
+      if (data.replacementInTime) {
         const [inH, inM] = data.replacementInTime.split(":").map(Number);
         inTotal = inH * 60 + inM;
+
+        if (startTime) {
+          let diff = (startTotal - inTotal) / 60;
+          if (diff > 0) totalOvertime += diff;
+        }
       }
 
       if (data.replacementOutTime && endTime) {
         const [outH, outM] = data.replacementOutTime.split(":").map(Number);
         const [endH, endM] = endTime.split(":").map(Number);
         let outTotal = outH * 60 + outM;
-        const endTotal = endH * 60 + endM;
+        let endTotal = endH * 60 + endM;
+
+        // Adjust endTotal if shift spans midnight
+        if (startTime && endTotal < startTotal) {
+          endTotal += 24 * 60;
+        }
 
         if (data.replacementInTime && outTotal < inTotal) {
           outTotal += 24 * 60; // Next day
@@ -1655,8 +1683,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         ) : (
                           /* --------------------- FAST ENTRY MODE (Original) --------------------- */
                           <>
-                            <div className="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4 text-center">
-                              <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">¿Hubo novedades en el turno?</h2>
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-4 text-center mt-4">
+                              <h2 className="text-base font-semibold text-gray-900 dark:text-white m-4">¿Hubo novedades en el turno?</h2>
                               <div className="flex justify-center gap-4">
                                 <button
                                   onClick={() => setHasActivity(false)}
@@ -2671,7 +2699,21 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       </Modal>
 
       {/* Summary Modal */}
-      <Modal isOpen={showSummaryModal} onClose={() => setShowSummaryModal(false)} title="Confirmar Reporte">
+      <Modal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        title="Confirmar Reporte"
+        footer={
+          <div className="flex gap-3 w-full">
+            <button onClick={() => setShowSummaryModal(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 transition-colors text-sm">
+              Volver
+            </button>
+            <button onClick={handleConfirmSubmit} disabled={submitting} className="flex-1 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors disabled:opacity-70 text-sm">
+              {submitting ? "Enviando..." : "Confirmar y Enviar"}
+            </button>
+          </div>
+        }
+      >
         <div className="space-y-4">
           <div className="font-medium text-sm text-gray-900 dark:text-white space-y-2 pb-4">
             <div className="flex gap-2">
@@ -2742,15 +2784,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Comentarios Generales</label>
             <textarea rows={3} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 transition-shadow resize-none" placeholder="Ingrese comentarios finales para el reporte..." value={comments} onChange={(e) => setComments(e.target.value)} />
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button onClick={() => setShowSummaryModal(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 transition-colors text-sm">
-              Volver
-            </button>
-            <button onClick={handleConfirmSubmit} disabled={submitting} className="flex-1 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors disabled:opacity-70 text-sm">
-              {submitting ? "Enviando..." : "Confirmar y Enviar"}
-            </button>
           </div>
         </div>
       </Modal>
