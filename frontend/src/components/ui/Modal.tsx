@@ -8,7 +8,7 @@ interface ModalProps {
   title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
   children: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl" | "fullscreen";
+  size?: "sm" | "md" | "lg" | "xl" | "95" | "fullscreen";
   footer?: React.ReactNode;
   zIndex?: number;
   customHeader?: React.ReactNode;
@@ -41,6 +41,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
         return "max-w-4xl";
       case "xl":
         return "max-w-6xl";
+      case "95":
+        return "max-w-[95vw]";
       case "fullscreen":
         return "max-w-[98vw] max-h-svh";
       default:

@@ -3,7 +3,8 @@ import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { NewsReportsModal } from "../components/news/NewsReportsModal";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
@@ -163,6 +164,7 @@ export const RequestsPage: React.FC = () => {
   const [projectFilter, setProjectFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showReportsModal, setShowReportsModal] = useState(false);
 
   const uniqueProjects = useMemo(() => {
     const map = new Map<string, string>();
@@ -642,8 +644,11 @@ export const RequestsPage: React.FC = () => {
       shouldShowInfo={hasHelp(HELP_KEY)}
       headerActions={
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Ver resumen">
+          <button onClick={() => setShowStatsModal(true)} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm" aria-label="Ver resumen" title="Resumen de Novedades">
             <FontAwesomeIcon icon={faChartSimple} className="h-4 w-4" />
+          </button>
+          <button onClick={() => setShowReportsModal(true)} className="p-2 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-2 text-sm" aria-label="Reportes" title="Reportes">
+            <FontAwesomeIcon icon={faFileLines} className="h-4 w-4" />
           </button>
         </div>
       }
@@ -814,6 +819,8 @@ export const RequestsPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <NewsReportsModal isOpen={showReportsModal} onClose={() => setShowReportsModal(false)} reports={reports as any} allUsers={allUsers} />
     </PageLayout>
   );
 };

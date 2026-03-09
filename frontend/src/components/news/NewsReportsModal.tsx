@@ -1,0 +1,927 @@
+import React, { useMemo, useState } from "react";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faChevronDown, faChevronUp, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel } from "@fortawesome/free-solid-svg-icons";
+import { Modal } from "../ui/Modal";
+import { User, UserProjectMetadata } from "../../api/users";
+import * as XLSX from "xlsx";
+
+// This works with the already-formatted data from RequestsPage
+interface FormattedReport {
+  id: string;
+  reportNumber?: string;
+  date: string;
+  projectIdRaw?: string;
+  projectName: string;
+  submittedBy: string;
+  attendance: {
+    id: string;
+    employeeId: any;
+    employeeName: string;
+    status: string;
+    overtimeHours: number;
+    hasOvertime: boolean;
+    absenceReason?: string;
+    replacementName?: string;
+    [key: string]: any;
+  }[];
+  [key: string]: any;
+}
+
+interface NewsReportsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  reports: FormattedReport[];
+  allUsers: User[];
+}
+
+interface EmployeeStats {
+  employeeId: string;
+  employeeName: string;
+  absences: number;
+  absenceDetails: Record<string, number>; // reason -> count
+  overtimeHours: number;
+  overtime50: number;
+  overtime100: number;
+  daysPresent: number;
+  lateDays: number;
+  totalRecords: number;
+  sueldoJornada: number;
+  sueldoMano: number;
+  projectNames: string[];
+  userProjectsData: UserProjectMetadata[];
+  schedules: string[];
+  overtimeEntries: { date: string; schedule: string; pct: number; hours: number }[];
+}
+
+interface OvertimeSettings {
+  weekdayDayStart: string;
+  weekdayDayEnd: string;
+  satDayStart: string;
+  satDayEnd: string;
+  pct50: number;
+  pct100: number;
+  baseWorkdayHours: number;
+}
+
+// Contract Detail Sub-Modal
+const ContractDetailModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  employeeName: string;
+  userProjectsData: UserProjectMetadata[];
+  filterProjectId?: string;
+}> = ({ isOpen, onClose, employeeName, userProjectsData, filterProjectId }) => {
+  if (!isOpen) return null;
+
+  // If a project filter is active, try to find the matching UserProject
+  const relevantProjects = filterProjectId
+    ? userProjectsData.filter((up) => {
+        const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
+        return upProjId === filterProjectId;
+      })
+    : userProjectsData;
+
+  // If filter produced no results, show all
+  const projectsToShow = relevantProjects.length > 0 ? relevantProjects : userProjectsData;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <FontAwesomeIcon icon={faFileContract} className="text-blue-600 dark:text-blue-400" />
+              Detalle de Contrato
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{employeeName}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            <FontAwesomeIcon icon={faTimes} className="text-lg" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(80vh-70px)] p-6 space-y-6">
+          {projectsToShow.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 italic">No se encontraron datos de contrato.</div>
+          ) : (
+            projectsToShow.map((up, upIdx) => (
+              <div key={upIdx} className="space-y-4">
+                {/* Project Header */}
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <FontAwesomeIcon icon={faBriefcase} className="text-blue-500" />
+                  <span className="font-semibold text-gray-900 dark:text-white">{up.nombre_proyecto}</span>
+                  {up.nombre_rol_frame && <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30">{up.nombre_rol_frame}</span>}
+                </div>
+
+                {/* Contracts within the project */}
+                {up.contracts && up.contracts.length > 0 ? (
+                  up.contracts.map((contract, cIdx) => (
+                    <div key={cIdx} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-100 dark:border-gray-700 space-y-3">
+                      {/* Contract title */}
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                          Contrato #{cIdx + 1} {contract.nombre_contrato ? `— ${contract.nombre_contrato}` : ""}
+                        </span>
+                        {contract.nombre_estado_empleado && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${contract.nombre_estado_empleado?.toLowerCase().includes("activ") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300"}`}>{contract.nombre_estado_empleado}</span>}
+                      </div>
+
+                      {/* Contract details grid */}
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        <ContractField icon={faCalendarDays} label="Alta" value={formatContractDate(contract.fecha_alta_contrato)} />
+                        <ContractField icon={faCalendarDays} label="Baja" value={formatContractDate(contract.fecha_baja_contrato)} />
+                        <ContractField icon={faDollarSign} label="Sueldo Jornada" value={contract.sueldo_jornada != null ? `$${Number(contract.sueldo_jornada).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
+                        <ContractField icon={faDollarSign} label="Sueldo Mano" value={contract.sueldo_mano != null ? `$${Number(contract.sueldo_mano).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
+                        <ContractField icon={faHourglassHalf} label="Jornadas Lab." value={contract.cantidad_jornadas_laborales?.toString() || "-"} />
+                        <ContractField icon={faLocationDot} label="Sede" value={contract.nombre_sede || "-"} />
+                        <ContractField icon={faIdBadge} label="Rol" value={contract.nombre_rol_frame || "-"} />
+                        <ContractField icon={faStar} label="Categoría SAT" value={contract.nombre_categoria_sat || "-"} />
+                        <ContractField icon={faClock} label="Hora Inicio" value={contract.hora_inicio || "-"} />
+                        <ContractField icon={faClock} label="Hora Fin" value={contract.hora_fin || "-"} />
+                      </div>
+
+                      {/* Observations */}
+                      {contract.observaciones && (
+                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                          <div className="flex items-start gap-2">
+                            <FontAwesomeIcon icon={faClipboardList} className="text-gray-400 mt-0.5 text-xs" />
+                            <div>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Observaciones</span>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{contract.observaciones}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-400 italic py-2">Sin contratos registrados para este proyecto.</div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper to format contract dates
+function formatContractDate(dateStr?: string): string {
+  if (!dateStr) return "-";
+  try {
+    return format(new Date(dateStr), "dd/MM/yyyy");
+  } catch {
+    return dateStr;
+  }
+}
+
+// Helper component for contract field rows
+const ContractField: React.FC<{ icon: any; label: string; value: string; highlight?: boolean }> = ({ icon, label, value, highlight }) => (
+  <div className="flex items-center gap-2">
+    <FontAwesomeIcon icon={icon} className="text-gray-400 text-xs w-3" />
+    <span className="text-gray-500 dark:text-gray-400 text-xs">{label}:</span>
+    <span className={`font-medium text-xs ${highlight ? "text-green-600 dark:text-green-400" : "text-gray-800 dark:text-gray-200"}`}>{value}</span>
+  </div>
+);
+
+export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers }) => {
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [overtimePrice, setOvertimePrice] = useState<number>(0);
+  const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
+  const [contractModal, setContractModal] = useState<{ open: boolean; employeeName: string; data: UserProjectMetadata[] }>({ open: false, employeeName: "", data: [] });
+  const [showGlossary, setShowGlossary] = useState(false);
+  const [glossary, setGlossary] = useState<OvertimeSettings>({
+    weekdayDayStart: "06:00",
+    weekdayDayEnd: "20:59",
+    satDayStart: "06:00",
+    satDayEnd: "12:59",
+    pct50: 50,
+    pct100: 100,
+    baseWorkdayHours: 8,
+  });
+
+  // Helper to check if a time is within a range (format "HH:mm")
+  const isTimeInRange = (time: string, start: string, end: string) => {
+    const t = time.replace(":", "");
+    const s = start.replace(":", "");
+    const e = end.replace(":", "");
+    if (s <= e) {
+      return t >= s && t <= e;
+    } else {
+      // Over midnight case (not used in current logic but good practice)
+      return t >= s || t <= e;
+    }
+  };
+
+  // Helper to split overtime hours based on rules
+  const splitOvertime = (date: string, startTime: string, endTime: string, totalHours: number) => {
+    const d = new Date(date + "T00:00:00");
+    const dayOfWeek = d.getDay(); // 0 Sunday, 1-5 Mon-Fri, 6 Sat
+
+    // Sundays are always 100%
+    if (dayOfWeek === 0) return { h50: 0, h100: totalHours };
+
+    // For other days, we look at the start/end times if available
+    if (startTime && endTime) {
+      // Very simplified logic: if start time is in "day" range, we assume 50% for now
+      // A more robust logic would calculate overlap with ranges
+      let isDay = false;
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        isDay = isTimeInRange(startTime, glossary.weekdayDayStart, glossary.weekdayDayEnd);
+      } else if (dayOfWeek === 6) {
+        isDay = isTimeInRange(startTime, glossary.satDayStart, glossary.satDayEnd);
+      }
+
+      if (isDay) return { h50: totalHours, h100: 0 };
+      return { h50: 0, h100: totalHours };
+    }
+
+    // Default fallback if no times: Mon-Fri 50%, Sat/Sun 100% (or adjust as needed)
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) return { h50: totalHours, h100: 0, pct: glossary.pct50 };
+    return { h50: 0, h100: totalHours, pct: glossary.pct100 };
+  };
+
+  // Build a map of userId -> User for quick lookup
+  const usersMap = useMemo(() => {
+    const map = new Map<string, User>();
+    allUsers.forEach((u) => map.set(u._id, u));
+    return map;
+  }, [allUsers]);
+
+  const uniqueProjects = useMemo(() => {
+    const map = new Map<string, string>();
+    reports.forEach((r) => {
+      if (r.projectIdRaw) map.set(r.projectIdRaw, r.projectName);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [reports]);
+
+  const statsByEmployee = useMemo(() => {
+    const employeeMap = new Map<string, EmployeeStats>();
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const start = startOfMonth(new Date(year, month - 1, 1));
+    const end = endOfMonth(start);
+
+    reports.forEach((report) => {
+      try {
+        const reportDate = parseISO(report.date + "T00:00:00");
+        if (!isWithinInterval(reportDate, { start, end })) return;
+      } catch {
+        return;
+      }
+
+      if (projectFilter !== "all" && report.projectIdRaw !== projectFilter) return;
+
+      report.attendance.forEach((record) => {
+        const empId = typeof record.employeeId === "object" ? record.employeeId?._id : record.employeeId;
+        const empName = record.employeeName || "Desconocido";
+
+        if (!empId) return;
+
+        if (!employeeMap.has(empId)) {
+          // Fetch user metadata for salary/project info
+          const user = usersMap.get(empId);
+          const userProjects = user?.metadata?.projects || [];
+
+          // Get sueldo from the latest contract of the filtered project, or any
+          let sueldoJornada = 0;
+          let sueldoMano = 0;
+
+          if (userProjects.length > 0) {
+            // Try to find contract for the filtered project first
+            for (const up of userProjects) {
+              const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
+              const isTargetProject = projectFilter === "all" || upProjId === projectFilter;
+
+              if (up.contracts && up.contracts.length > 0 && isTargetProject) {
+                // Get the last (most recent) contract
+                const lastContract = up.contracts[up.contracts.length - 1];
+                if (lastContract.sueldo_jornada) sueldoJornada = lastContract.sueldo_jornada;
+                if (lastContract.sueldo_mano) sueldoMano = lastContract.sueldo_mano;
+                if (sueldoJornada > 0 || sueldoMano > 0) break;
+              }
+            }
+          }
+
+          // Get project names from User.projectIds
+          const projectNames = user?.projectIds?.map((p) => p.name) || [];
+
+          employeeMap.set(empId, {
+            employeeId: empId,
+            employeeName: empName,
+            absences: 0,
+            absenceDetails: {},
+            overtimeHours: 0,
+            daysPresent: 0,
+            lateDays: 0,
+            totalRecords: 0,
+            sueldoJornada,
+            sueldoMano,
+            projectNames,
+            userProjectsData: userProjects,
+            overtime50: 0,
+            overtime100: 0,
+            schedules: [],
+            overtimeEntries: [],
+          });
+        }
+
+        const stats = employeeMap.get(empId)!;
+        stats.totalRecords += 1;
+
+        if (record.status === "present") {
+          stats.daysPresent += 1;
+        } else if (record.status === "late") {
+          stats.daysPresent += 1;
+          stats.lateDays += 1;
+        } else {
+          stats.absences += 1;
+          const reason = record.absenceReason || "Sin motivo";
+          stats.absenceDetails[reason] = (stats.absenceDetails[reason] || 0) + 1;
+        }
+
+        const totalHs = record.overtimeHours || 0;
+        stats.overtimeHours += totalHs;
+
+        // Split overtime
+        const { h50, h100, pct } = splitOvertime(report.date, record.overtimeEntryTime, record.overtimeExitTime, totalHs);
+        stats.overtime50 += h50;
+        stats.overtime100 += h100;
+
+        // Collect schedules
+        if (record.entryTime && record.exitTime) {
+          const sched = `${record.entryTime}-${record.exitTime}`;
+          if (!stats.schedules.includes(sched)) stats.schedules.push(sched);
+        }
+        if (totalHs > 0) {
+          const oTSched = record.overtimeEntryTime && record.overtimeExitTime ? `${record.overtimeEntryTime}-${record.overtimeExitTime}` : "Hs. Seteadas";
+          const dateFormatted = format(parseISO(report.date + "T00:00:00"), "dd/MM");
+          stats.overtimeEntries.push({ date: dateFormatted, schedule: oTSched, pct: pct || (h100 > 0 ? glossary.pct100 : glossary.pct50), hours: totalHs });
+        }
+      });
+    });
+
+    let results = Array.from(employeeMap.values());
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      results = results.filter((s) => s.employeeName.toLowerCase().includes(lowerSearch));
+    }
+
+    return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+  }, [reports, selectedMonth, projectFilter, searchTerm, usersMap]);
+
+  const formattedMonthLabel = useMemo(() => {
+    try {
+      const [year, month] = selectedMonth.split("-").map(Number);
+      const d = new Date(year, month - 1);
+      const monthStr = d.toLocaleString("es-ES", { month: "long" });
+      return `${monthStr.charAt(0).toUpperCase() + monthStr.slice(1)} ${year}`;
+    } catch {
+      return selectedMonth;
+    }
+  }, [selectedMonth]);
+
+  const activeProjectName = useMemo(() => {
+    if (projectFilter === "all") return "Todos los Proyectos";
+    return uniqueProjects.find((p) => p.id === projectFilter)?.name || "Filtro activo";
+  }, [projectFilter, uniqueProjects]);
+
+  const totalAbsences = statsByEmployee.reduce((acc, curr) => acc + curr.absences, 0);
+  const totalOvertime50 = statsByEmployee.reduce((acc, curr) => acc + curr.overtime50, 0);
+  const totalOvertime100 = statsByEmployee.reduce((acc, curr) => acc + curr.overtime100, 0);
+  const totalCost = statsByEmployee.reduce((acc, curr) => {
+    const hoursInDay = glossary.baseWorkdayHours || 8;
+    const baseHour = curr.sueldoJornada / hoursInDay;
+    const cost50 = curr.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+    const cost100 = curr.overtime100 * baseHour * (1 + glossary.pct100 / 100);
+    return acc + cost50 + cost100;
+  }, 0);
+  const totalSalaries = statsByEmployee.reduce((acc, curr) => acc + curr.sueldoJornada * curr.daysPresent, 0);
+  const grandTotal = totalSalaries + totalCost;
+  const totalEmployees = statsByEmployee.length;
+
+  const handleExport = () => {
+    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const rows = statsByEmployee.map((s) => {
+      const hoursInDay = glossary.baseWorkdayHours || 8;
+      const baseHour = s.sueldoJornada / hoursInDay;
+      const m50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+      const m100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
+      const otDetail = s.overtimeEntries.map((e) => `${e.date} (${e.pct}%): ${e.schedule}`).join("; ");
+      return [
+        `"${s.employeeName}"`,
+        s.sueldoJornada,
+        s.sueldoMano,
+        baseHour.toFixed(2),
+        `"${s.projectNames.join(", ")}"`,
+        s.daysPresent,
+        s.absences,
+        `"${Object.entries(s.absenceDetails)
+          .map(([r, c]) => `${r}: ${c}`)
+          .join("; ")}"`,
+        s.overtime50,
+        s.overtime100,
+        `"${otDetail}"`,
+        (m50 + m100).toFixed(2),
+        (s.sueldoJornada * s.daysPresent + m50 + m100).toFixed(2),
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    // ... rest same
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `reporte_novedades_${selectedMonth}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportXLS = () => {
+    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+
+    const rows = statsByEmployee.map((s) => {
+      const hoursInDay = glossary.baseWorkdayHours || 8;
+      const baseHour = s.sueldoJornada / hoursInDay;
+      const m50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+      const m100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
+      const otDetail = s.overtimeEntries.map((e) => `${e.date} (${e.pct}%): ${e.schedule}`).join("; ");
+      return [
+        s.employeeName,
+        s.sueldoJornada,
+        s.sueldoMano,
+        Number(baseHour.toFixed(2)),
+        s.projectNames.join(", "),
+        s.daysPresent,
+        s.absences,
+        Object.entries(s.absenceDetails)
+          .map(([r, c]) => `${r}: ${c}`)
+          .join("; "),
+        s.overtime50,
+        s.overtime100,
+        otDetail,
+        Number((m50 + m100).toFixed(2)),
+        Number((s.sueldoJornada * s.daysPresent + m50 + m100).toFixed(2)),
+      ];
+    });
+
+    // Add totals row
+    const totalMontoSueldos = statsByEmployee.reduce((a, c) => a + c.sueldoJornada * c.daysPresent, 0);
+    rows.push([
+      `TOTALES (${totalEmployees} empleados)`,
+      "",
+      "",
+      "",
+      "",
+      statsByEmployee.reduce((a, c) => a + c.daysPresent, 0),
+      totalAbsences,
+      "",
+      totalOvertime50,
+      totalOvertime100,
+      "", // Detail column empty for total
+      Number(totalCost.toFixed(2)),
+      Number((totalMontoSueldos + totalCost).toFixed(2)),
+    ] as any);
+
+    const wsData = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Auto-fit column widths
+    const colWidths = headers.map((h, i) => {
+      let maxLen = h.length;
+      rows.forEach((row) => {
+        const cellVal = String(row[i] ?? "");
+        if (cellVal.length > maxLen) maxLen = cellVal.length;
+      });
+      return { wch: Math.min(maxLen + 2, 40) };
+    });
+    ws["!cols"] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Novedades");
+    XLSX.writeFile(wb, `reporte_novedades_${selectedMonth}.xlsx`);
+  };
+
+  const handleOpenContract = (s: EmployeeStats) => {
+    setContractModal({
+      open: true,
+      employeeName: s.employeeName,
+      data: s.userProjectsData,
+    });
+  };
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Reportes de Novedades"
+        size="95"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button onClick={handleExport} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+              <FontAwesomeIcon icon={faFileExport} />
+              Exportar CSV
+            </button>
+            <button onClick={handleExportXLS} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+              <FontAwesomeIcon icon={faFileExcel} />
+              Exportar Excel
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mes</label>
+              <div className="relative">
+                <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</label>
+              <div className="relative">
+                <FontAwesomeIcon icon={faBriefcase} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="w-full pl-8 pr-6 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                  <option value="all">Todos</option>
+                  {uniqueProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Buscar Empleado</label>
+              <div className="relative">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                <input type="text" placeholder="Nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Glosario Extras</label>
+              <button onClick={() => setShowGlossary(!showGlossary)} className={`w-full py-1.5 px-3 text-xs rounded border flex items-center justify-center gap-2 transition-colors ${showGlossary ? "bg-amber-100 border-amber-300 text-amber-700" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300"}`}>
+                <FontAwesomeIcon icon={faClipboardList} />
+                {showGlossary ? "Cerrar Glosario" : "Editar Glosario"}
+              </button>
+            </div>
+          </div>
+
+          {/* Glossary Editor */}
+          {showGlossary && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg animate-fade-in">
+              <div className="flex items-center gap-2 mb-3">
+                <FontAwesomeIcon icon={faStar} className="text-amber-500 text-sm" />
+                <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Configuración de Recargos y Horarios</h4>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">Días de Semana (Día)</p>
+                  <div className="flex items-center gap-2">
+                    <input type="time" value={glossary.weekdayDayStart} onChange={(e) => setGlossary({ ...glossary, weekdayDayStart: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" title="Inicio rago diurno" />
+                    <span className="text-gray-400">—</span>
+                    <input type="time" value={glossary.weekdayDayEnd} onChange={(e) => setGlossary({ ...glossary, weekdayDayEnd: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" title="Fin rango diurno" />
+                    <div className="ml-2 flex items-center gap-1">
+                      <input type="number" value={glossary.pct50} onChange={(e) => setGlossary({ ...glossary, pct50: Number(e.target.value) })} className="w-10 text-xs p-1 rounded border dark:bg-gray-700 text-center" />
+                      <span className="text-xs text-gray-500">%</span>
+                    </div>
+                  </div>
+                  <p className="text-[9px] text-gray-400 italic">Lunes a Viernes. Fuera de este rango se aplica {glossary.pct100}%.</p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">Sábados (Día)</p>
+                  <div className="flex items-center gap-2">
+                    <input type="time" value={glossary.satDayStart} onChange={(e) => setGlossary({ ...glossary, satDayStart: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" />
+                    <span className="text-gray-400">—</span>
+                    <input type="time" value={glossary.satDayEnd} onChange={(e) => setGlossary({ ...glossary, satDayEnd: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" />
+                    <div className="ml-2 flex items-center gap-1">
+                      <input type="number" value={glossary.pct50} onChange={(e) => setGlossary({ ...glossary, pct50: Number(e.target.value) })} className="w-10 text-xs p-1 rounded border dark:bg-gray-700 text-center" />
+                      <span className="text-xs text-gray-500">%</span>
+                    </div>
+                  </div>
+                  <p className="text-[9px] text-gray-400 italic">Sábados. Tarde y Noche se aplica con recargo de {glossary.pct100}%.</p>
+                </div>
+
+                <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded border border-amber-200 dark:border-amber-800/50">
+                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase mb-2">Base de Cálculo</p>
+                  <div className="mb-3">
+                    <label className="text-[9px] font-bold text-gray-500 block mb-1 uppercase tracking-wider">Horas por Jornada</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" value={glossary.baseWorkdayHours} onChange={(e) => setGlossary({ ...glossary, baseWorkdayHours: Number(e.target.value) })} className="w-16 text-xs p-1.5 rounded border dark:bg-gray-700 text-center font-bold" min="1" max="24" />
+                      <span className="text-[10px] text-gray-400 font-medium">hs/día</span>
+                    </div>
+                    <p className="text-[8px] text-gray-400 mt-1 italic leading-tight">Divide el sueldo diario por este valor para obtener el precio/hora base.</p>
+                  </div>
+
+                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase mb-2">Recargo Base 100%</p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between bg-white dark:bg-gray-700 p-2 rounded border border-amber-100">
+                      <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Valor Recargo:</span>
+                      <div className="flex items-center gap-1">
+                        <input type="number" value={glossary.pct100} onChange={(e) => setGlossary({ ...glossary, pct100: Number(e.target.value) })} className="w-12 text-xs p-1 rounded border dark:bg-gray-600 text-center font-bold" />
+                        <span className="text-xs">%</span>
+                      </div>
+                    </div>
+                    <p className="text-[8px] text-gray-400 italic">Aplicado a Domingos, Feriados y horarios nocturnos.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Summary KPIs Section Header */}
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Período</span>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{formattedMonthLabel}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Proyecto</span>
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{activeProjectName}</span>
+              </div>
+            </div>
+            {totalOvertime50 + totalOvertime100 > 0 && (
+              <div className="text-[10px] font-medium text-gray-500 italic">
+                Total hs. extras registradas: <span className="font-bold text-amber-600">{(totalOvertime50 + totalOvertime100).toFixed(1)}h</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pb-2">
+            {/* Empleados */}
+            <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-3 rounded-xl flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                <FontAwesomeIcon icon={faUser} className="text-base" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-blue-600/70 dark:text-blue-400/70 uppercase tracking-wider mb-0.5">Empleados</p>
+                <p className="text-2xl font-black text-blue-700 dark:text-blue-300 leading-none">{totalEmployees}</p>
+              </div>
+            </div>
+
+            {/* Ausencias */}
+            <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-3 rounded-xl flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                <FontAwesomeIcon icon={faUserSlash} className="text-base" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-red-600/70 dark:text-red-400/70 uppercase tracking-wider mb-0.5">Ausencias</p>
+                <p className="text-2xl font-black text-red-700 dark:text-red-300 leading-none">{totalAbsences}</p>
+              </div>
+            </div>
+
+            {/* Costo Hs. Extras */}
+            <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 p-3 rounded-xl flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <FontAwesomeIcon icon={faClock} className="text-base" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-amber-600/70 dark:text-amber-400/70 uppercase tracking-wider mb-0.5">Costo Hs. Extras</p>
+                <p className="text-2xl font-black text-amber-700 dark:text-amber-300 leading-none">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 0 })}</p>
+              </div>
+            </div>
+
+            {/* Monto Total Final */}
+            <div className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-3 rounded-xl flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
+                <FontAwesomeIcon icon={faMoneyBillWave} className="text-base" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-green-600/70 dark:text-green-400/70 uppercase tracking-wider mb-0.5">Total Final</p>
+                <p className="text-2xl font-black text-green-700 dark:text-green-300 leading-none">${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-auto max-h-[calc(100vh-480px)] rounded border border-gray-200 dark:border-gray-700">
+            <table className="w-full text-sm text-left">
+              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold shadow-sm">
+                <tr>
+                  <th className="py-2.5 px-3 text-left">Empleado</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Jornada</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Mano</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">P. Hora</th>
+                  <th className="py-2.5 px-3 text-left">Proyectos</th>
+                  <th className="py-2.5 px-3 text-center">Contrato</th>
+                  <th className="py-2.5 px-2 text-center text-[10px] leading-tight">
+                    Horario
+                    <br />
+                    Base
+                  </th>
+                  <th className="py-2.5 px-3 text-center">Presente</th>
+                  <th className="py-2.5 px-3 text-center">Ausencias</th>
+                  <th className="py-2.5 px-2 text-center text-[10px] leading-tight">
+                    Horario
+                    <br />
+                    Extra
+                  </th>
+                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Hs. 50%</th>
+                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Hs. 100%</th>
+                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight whitespace-nowrap">$ Extras</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">Monto Total</th>
+                  <th className="py-2.5 px-3 text-center w-8"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {statsByEmployee.map((s) => {
+                  const isExpanded = expandedEmployee === s.employeeId;
+                  const absenceEntries = Object.entries(s.absenceDetails);
+                  const colCount = 15;
+                  return (
+                    <React.Fragment key={s.employeeId}>
+                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        {/* Empleado */}
+                        <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 text-[10px] font-bold shrink-0">
+                              {s.employeeName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </div>
+                            <span className="truncate max-w-[140px]">{s.employeeName}</span>
+                          </div>
+                        </td>
+                        {/* Sueldo Jornada */}
+                        <td className="py-2.5 px-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.sueldoJornada > 0 ? `$${s.sueldoJornada.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
+                        {/* Sueldo Mano */}
+                        <td className="py-2.5 px-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.sueldoMano > 0 ? `$${s.sueldoMano.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
+                        {/* Precio Hora */}
+                        <td className="py-2.5 px-3 text-right text-xs font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                          {(() => {
+                            const hoursInDay = glossary.baseWorkdayHours || 8;
+                            const baseHour = s.sueldoJornada / hoursInDay;
+                            return baseHour > 0 ? `$${baseHour.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>;
+                          })()}
+                        </td>
+                        {/* Proyectos */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex flex-wrap gap-1 max-w-[160px]">
+                            {s.projectNames.length > 0 ? (
+                              s.projectNames.map((pn, idx) => (
+                                <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 truncate max-w-[120px]" title={pn}>
+                                  {pn}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
+                            )}
+                          </div>
+                        </td>
+                        {/* Contrato */}
+                        <td className="py-2.5 px-3 text-center">
+                          {s.userProjectsData.length > 0 ? (
+                            <button onClick={() => handleOpenContract(s)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Ver detalle de contrato">
+                              <FontAwesomeIcon icon={faFileContract} />
+                            </button>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
+                        {/* Horario Base */}
+                        <td className="py-2.5 px-2 text-center">
+                          <div className="flex flex-col gap-0.5">
+                            {s.schedules.length > 0 ? (
+                              s.schedules.map((sc, scIdx) => (
+                                <span key={scIdx} className="text-[9px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-1 lowercase">
+                                  {sc}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-gray-300 dark:text-gray-600">-</span>
+                            )}
+                          </div>
+                        </td>
+                        {/* Presente */}
+                        <td className="py-2.5 px-3 text-center">
+                          <span className="text-green-600 dark:text-green-400 font-medium">{s.daysPresent}</span>
+                        </td>
+
+                        {/* Ausencias */}
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${s.absences > 0 ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "text-gray-400 dark:text-gray-600"}`}>{s.absences}</span>
+                        </td>
+                        {/* Horario Extra */}
+                        <td className="py-2.5 px-2 text-center">
+                          <div className="flex flex-col gap-0.5 max-w-[120px] mx-auto">
+                            {s.overtimeEntries.length > 0 ? (
+                              s.overtimeEntries.map((entry, eIdx) => (
+                                <div key={eIdx} className="flex items-center gap-1 justify-center">
+                                  <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500">{entry.date}</span>
+                                  <span className={`text-[9px] font-medium rounded px-1 lowercase whitespace-nowrap ${entry.pct === glossary.pct100 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-gray-100 text-gray-500 dark:bg-gray-800"}`}>
+                                    {entry.schedule} <span className="text-[8px] opacity-70">({entry.pct}%)</span>
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-gray-300 dark:text-gray-600">-</span>
+                            )}
+                          </div>
+                        </td>
+                        {/* Hs 50% */}
+                        <td className="py-2.5 px-2 text-right font-medium text-gray-600 dark:text-gray-400">{s.overtime50 > 0 ? `${s.overtime50}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
+                        {/* Hs 100% */}
+                        <td className="py-2.5 px-2 text-right font-medium text-amber-700 dark:text-amber-500">{s.overtime100 > 0 ? `${s.overtime100}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
+                        {/* $ Extras */}
+                        <td className="py-2.5 px-2 text-right font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                          {(() => {
+                            const hoursInDay = glossary.baseWorkdayHours || 8;
+                            const baseHour = s.sueldoJornada / hoursInDay;
+                            const cost50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+                            const cost100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
+                            return cost50 + cost100 > 0 ? `$${(cost50 + cost100).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-";
+                          })()}
+                        </td>
+                        {/* Monto Total */}
+                        <td className="py-2.5 px-3 text-right font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
+                          {(() => {
+                            const hoursInDay = glossary.baseWorkdayHours || 8;
+                            const baseHour = s.sueldoJornada / hoursInDay;
+                            const cost50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+                            const cost100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
+                            return `$${(s.sueldoJornada * s.daysPresent + cost50 + cost100).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                            })}`;
+                          })()}
+                        </td>
+                        {/* Expand */}
+                        <td className="py-2.5 px-3 text-center">
+                          {absenceEntries.length > 0 && (
+                            <button onClick={() => setExpandedEmployee(isExpanded ? null : s.employeeId)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                              <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="text-xs" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && absenceEntries.length > 0 && (
+                        <tr className="bg-gray-50/50 dark:bg-gray-800/50">
+                          <td colSpan={colCount} className="py-2 px-4 pl-14">
+                            <div className="flex flex-wrap gap-2">
+                              {absenceEntries.map(([reason, count]) => (
+                                <span key={reason} className="text-xs px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
+                                  {reason}: <strong>{count}</strong>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+                {statsByEmployee.length === 0 && (
+                  <tr>
+                    <td colSpan={15} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
+                      No se encontraron registros para el mes y filtros seleccionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {statsByEmployee.length > 0 && (
+                <tfoot className="bg-gray-50 dark:bg-gray-800 font-semibold text-gray-700 dark:text-gray-300 border-t-2 border-gray-200 dark:border-gray-600">
+                  <tr>
+                    <td className="py-2.5 px-3">Totales ({totalEmployees})</td>
+                    <td className="py-2.5 px-3"></td>
+                    <td className="py-2.5 px-3"></td>
+                    <td className="py-2.5 px-3"></td>
+                    <td className="py-2.5 px-3"></td>
+                    <td className="py-2.5 px-3"></td>
+                    <td className="py-2.5 px-3 text-center text-green-600 dark:text-green-400">{statsByEmployee.reduce((a, c) => a + c.daysPresent, 0)}</td>
+                    <td className="py-2.5 px-3 text-center text-red-600 dark:text-red-400">{totalAbsences}</td>
+                    <td className="py-2.5 px-3 text-center"></td>
+                    <td className="py-2.5 px-2 text-right text-xs">{totalOvertime50}h</td>
+                    <td className="py-2.5 px-2 text-right text-xs">{totalOvertime100}h</td>
+                    <td className="py-2.5 px-2 text-right text-xs font-semibold text-amber-600 dark:text-amber-400 border-x border-gray-100 dark:border-gray-700">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-green-600 dark:text-green-400">{`$${(statsByEmployee.reduce((a, c) => a + c.sueldoJornada * c.daysPresent, 0) + totalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Contract Detail Sub-Modal */}
+      <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ open: false, employeeName: "", data: [] })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} filterProjectId={projectFilter !== "all" ? projectFilter : undefined} />
+    </>
+  );
+};

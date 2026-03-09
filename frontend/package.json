@@ -39,6 +39,7 @@
     "sweetalert2": "^11.23.0",
     "vis-data": "^8.0.3",
     "vis-timeline": "^8.4.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8",
     "zustand": "^4.5.2"
   },

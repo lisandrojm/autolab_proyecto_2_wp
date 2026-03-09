@@ -24,6 +24,8 @@ export interface Contract {
   cantidad_jornadas_laborales?: number;
   hora_inicio?: string;
   hora_fin?: string;
+  nombre_estado_empleado?: string;
+  nombre_categoria_sat?: string;
 }
 
 export interface UserProjectMetadata {
