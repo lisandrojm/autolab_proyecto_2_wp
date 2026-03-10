@@ -7,7 +7,7 @@ import { activityReportsAPI, ActivityReport } from "../../../../api/request";
 import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -296,6 +296,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   // Calendar State
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
+
+  // Role Filtering State
+  const [selectedRoleFilters, setSelectedRoleFilters] = useState<string[]>([]);
+  const [isRoleFilterModalOpen, setIsRoleFilterModalOpen] = useState(false);
+
+  const [selectedReplacementRoleFilters, setSelectedReplacementRoleFilters] = useState<string[]>([]);
+  const [isReplacementRoleFilterModalOpen, setIsReplacementRoleFilterModalOpen] = useState(false);
 
   const formScrollRef = useRef<HTMLDivElement>(null);
 
@@ -1730,21 +1737,59 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 })
                                               : [];
                                             const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));
-                                            return searchTerm
-                                              ? availableEmployees.filter((e) => {
-                                                  const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
-                                                  return e.name.toLowerCase().includes(searchTerm.toLowerCase()) || roleFrameStr.includes(searchTerm.toLowerCase());
-                                                }).length
-                                              : availableEmployees.length;
+
+                                            let results = availableEmployees;
+
+                                            // Handle Role Filter
+                                            if (selectedRoleFilters.length > 0) {
+                                              results = results.filter((e) => {
+                                                const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                return roleFrame && selectedRoleFilters.includes(roleFrame);
+                                              });
+                                            }
+
+                                            // Handle Search Term
+                                            if (searchTerm) {
+                                              results = results.filter((e) => e.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                                            }
+
+                                            return results.length;
                                           })()})`}
                                           size="md"
                                         >
                                           <div className="flex flex-col h-[60vh]">
-                                            {/* Search Input inside Modal */}
-                                            <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 sticky top-0 z-10">
-                                              <div className="relative">
-                                                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                                <input type="text" autoFocus className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Buscar por nombre o rol..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                            {/* Search Input and Filter Button inside Modal */}
+                                            <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 sticky top-0 z-10 flex flex-col gap-2">
+                                              {/* Active Filter Badges */}
+                                              {selectedRoleFilters.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mb-1">
+                                                  {selectedRoleFilters.map((role) => (
+                                                    <span key={role} className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-800">
+                                                      {role}
+                                                      <button onClick={() => setSelectedRoleFilters((prev) => prev.filter((r) => r !== role))} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                                                        <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                                                      </button>
+                                                    </span>
+                                                  ))}
+                                                  <button onClick={() => setSelectedRoleFilters([])} className="text-[10px] text-gray-500 hover:underline px-1">
+                                                    Limpiar
+                                                  </button>
+                                                </div>
+                                              )}
+
+                                              <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                  <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                                  <input type="text" autoFocus className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                                </div>
+                                                <button
+                                                  onClick={() => setIsRoleFilterModalOpen(true)}
+                                                  className={`px-3 border rounded transition-colors flex items-center gap-2 whitespace-nowrap text-sm font-medium
+                                                    ${selectedRoleFilters.length > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" : "bg-white border-gray-300 text-gray-700 dark:bg-slate-800 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"}`}
+                                                >
+                                                  <FontAwesomeIcon icon={faFilter} />
+                                                  Rol
+                                                </button>
                                               </div>
                                             </div>
 
@@ -1760,22 +1805,34 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                   : [];
                                                 // Exclude already added employees
                                                 const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));
-                                                const filteredByName = searchTerm
-                                                  ? availableEmployees.filter((e) => {
-                                                      const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
-                                                      return e.name.toLowerCase().includes(searchTerm.toLowerCase()) || roleFrameStr.includes(searchTerm.toLowerCase());
-                                                    })
-                                                  : availableEmployees;
+
+                                                let results = availableEmployees;
+
+                                                // Role Filtering
+                                                if (selectedRoleFilters.length > 0) {
+                                                  results = results.filter((e) => {
+                                                    const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                    return roleFrame && selectedRoleFilters.includes(roleFrame);
+                                                  });
+                                                }
+
+                                                // Name Search
+                                                if (searchTerm) {
+                                                  results = results.filter((e) => e.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                                                }
+
+                                                const filteredResults = results;
 
                                                 return (
                                                   <>
-                                                    {filteredByName.map((emp) => (
+                                                    {filteredResults.map((emp) => (
                                                       <div
                                                         key={emp.id}
                                                         className="p-3 mb-1 rounded hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer border border-transparent dark:border-gray-800 hover:border-blue-100 dark:hover:border-slate-600 transition-colors"
                                                         onClick={() => {
                                                           setSelectedEmployee(emp);
                                                           setSearchTerm("");
+                                                          setSelectedRoleFilters([]);
                                                           setIsEmployeeSelectOpen(false);
                                                           setTimeout(() => {
                                                             const header = document.getElementById("sticky-project-header");
@@ -1794,10 +1851,76 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                         </div>
                                                       </div>
                                                     ))}
-                                                    {filteredByName.length === 0 && <div className="p-8 text-center text-gray-500 italic bg-gray-50 dark:bg-slate-800/50 rounded mt-2">{selectedProjectId ? "No se encontraron colaboradores." : "Selecciona un proyecto primero."}</div>}
+                                                    {filteredResults.length === 0 && <div className="p-8 text-center text-gray-500 italic bg-gray-50 dark:bg-slate-800/50 rounded mt-2">{selectedProjectId ? (selectedRoleFilters.length > 0 || searchTerm ? "No se encontraron colaboradores con estos filtros." : "No se encontraron colaboradores.") : "Selecciona un proyecto primero."}</div>}
                                                   </>
                                                 );
                                               })()}
+                                            </div>
+                                          </div>
+                                        </Modal>
+
+                                        {/* Role Filter Modal */}
+                                        <Modal isOpen={isRoleFilterModalOpen} onClose={() => setIsRoleFilterModalOpen(false)} title="Filtrar por Rol" size="md">
+                                          <div className="flex flex-col max-h-[70vh]">
+                                            <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                                              <p className="text-sm text-gray-500 dark:text-gray-400">Selecciona uno o más roles para filtrar la lista de colaboradores.</p>
+                                            </div>
+
+                                            <div className="overflow-y-auto flex-1 p-2">
+                                              {(() => {
+                                                if (!selectedProjectId) return null;
+
+                                                // Get all unique roles for this project
+                                                const projectRoles = employees
+                                                  .filter((e) => e.projectIds?.includes(selectedProjectId))
+                                                  .flatMap((e) => {
+                                                    const role = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                    return role ? [role] : [];
+                                                  })
+                                                  .filter((role, index, self) => self.indexOf(role) === index) // Unique
+                                                  .sort();
+
+                                                if (projectRoles.length === 0) {
+                                                  return <div className="p-8 text-center text-gray-500 italic">No hay roles definidos para este proyecto.</div>;
+                                                }
+
+                                                return (
+                                                  <div className="space-y-1">
+                                                    {projectRoles.map((role) => {
+                                                      const isSelected = selectedRoleFilters.includes(role);
+                                                      return (
+                                                        <label key={role} className="flex items-center justify-between p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                                                          <span className="text-sm font-medium text-slate-800 dark:text-gray-200">{role}</span>
+                                                          <div className="relative inline-flex items-center cursor-pointer">
+                                                            <input
+                                                              type="checkbox"
+                                                              className="sr-only peer"
+                                                              checked={isSelected}
+                                                              onChange={() => {
+                                                                if (isSelected) {
+                                                                  setSelectedRoleFilters((prev) => prev.filter((r) => r !== role));
+                                                                } else {
+                                                                  setSelectedRoleFilters((prev) => [...prev, role]);
+                                                                }
+                                                              }}
+                                                            />
+                                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                          </div>
+                                                        </label>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                );
+                                              })()}
+                                            </div>
+
+                                            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 flex justify-between items-center">
+                                              <button onClick={() => setSelectedRoleFilters([])} className="text-sm text-red-500 hover:underline font-medium">
+                                                Limpiar Filtros
+                                              </button>
+                                              <button onClick={() => setIsRoleFilterModalOpen(false)} className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-sm shadow-sm hover:bg-blue-700 transition-colors">
+                                                Listo
+                                              </button>
                                             </div>
                                           </div>
                                         </Modal>
@@ -3143,21 +3266,59 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               })
             : [];
           const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
-          return replacementSearchTerm
-            ? availableEmployees.filter((e) => {
-                const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
-                return e.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) || roleFrameStr.includes(replacementSearchTerm.toLowerCase());
-              }).length
-            : availableEmployees.length;
+
+          let results = availableEmployees;
+
+          // Role Filtering
+          if (selectedReplacementRoleFilters.length > 0) {
+            results = results.filter((e) => {
+              const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+              return roleFrame && selectedReplacementRoleFilters.includes(roleFrame);
+            });
+          }
+
+          // Search filtering
+          if (replacementSearchTerm) {
+            results = results.filter((e) => e.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()));
+          }
+
+          return results.length;
         })()})`}
         size="md"
       >
         <div className="flex flex-col h-[60vh]">
-          {/* Search Input inside Modal */}
-          <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 sticky top-0 z-10">
-            <div className="relative">
-              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input type="text" autoFocus className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Buscar por nombre o rol..." value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
+          {/* Search Input and Filter Button inside Modal */}
+          <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 sticky top-0 z-10 flex flex-col gap-2">
+            {/* Active Filter Badges */}
+            {selectedReplacementRoleFilters.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-1">
+                {selectedReplacementRoleFilters.map((role) => (
+                  <span key={role} className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-800">
+                    {role}
+                    <button onClick={() => setSelectedReplacementRoleFilters((prev) => prev.filter((r) => r !== role))} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                ))}
+                <button onClick={() => setSelectedReplacementRoleFilters([])} className="text-[10px] text-gray-500 hover:underline px-1">
+                  Limpiar
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input type="text" autoFocus className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Buscar por nombre..." value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
+              </div>
+              <button
+                onClick={() => setIsReplacementRoleFilterModalOpen(true)}
+                className={`px-3 border rounded transition-colors flex items-center gap-2 whitespace-nowrap text-sm font-medium
+                  ${selectedReplacementRoleFilters.length > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" : "bg-white border-gray-300 text-gray-700 dark:bg-slate-800 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"}`}
+              >
+                <FontAwesomeIcon icon={faFilter} />
+                Rol
+              </button>
             </div>
           </div>
 
@@ -3172,16 +3333,27 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   })
                 : [];
               const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
-              const filteredByName = replacementSearchTerm
-                ? availableEmployees.filter((e) => {
-                    const roleFrameStr = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame?.toLowerCase() || "";
-                    return e.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()) || roleFrameStr.includes(replacementSearchTerm.toLowerCase());
-                  })
-                : availableEmployees;
+
+              let results = availableEmployees;
+
+              // Role Filtering
+              if (selectedReplacementRoleFilters.length > 0) {
+                results = results.filter((e) => {
+                  const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                  return roleFrame && selectedReplacementRoleFilters.includes(roleFrame);
+                });
+              }
+
+              // Search Filter
+              if (replacementSearchTerm) {
+                results = results.filter((e) => e.name.toLowerCase().includes(replacementSearchTerm.toLowerCase()));
+              }
+
+              const filteredResults = results;
 
               return (
                 <>
-                  {filteredByName.map((emp) => {
+                  {filteredResults.map((emp) => {
                     const isSelected = replacementTargetEmpId ? wizardData[replacementTargetEmpId]?.replacementId === emp.id : draftReplacementId === emp.id;
                     return (
                       <div
@@ -3195,6 +3367,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           }
                           setShowReplacementModal(false);
                           setReplacementSearchTerm("");
+                          setSelectedReplacementRoleFilters([]);
                           setReplacementTargetEmpId(null);
                         }}
                       >
@@ -3208,10 +3381,76 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       </div>
                     );
                   })}
-                  {filteredByName.length === 0 && <div className="p-8 text-center text-gray-500 italic bg-gray-50 dark:bg-slate-800/50 rounded mt-2">{selectedProjectId ? "No se encontraron colaboradores." : "Selecciona un proyecto primero."}</div>}
+                  {filteredResults.length === 0 && <div className="p-8 text-center text-gray-500 italic bg-gray-50 dark:bg-slate-800/50 rounded mt-2">{selectedProjectId ? (selectedReplacementRoleFilters.length > 0 || replacementSearchTerm ? "No se encontraron colaboradores con estos filtros." : "No se encontraron colaboradores.") : "Selecciona un proyecto primero."}</div>}
                 </>
               );
             })()}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Role Filter Modal for Replacement */}
+      <Modal isOpen={isReplacementRoleFilterModalOpen} onClose={() => setIsReplacementRoleFilterModalOpen(false)} title="Filtrar por Rol (Reemplazo)" size="md">
+        <div className="flex flex-col max-h-[70vh]">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Selecciona uno o más roles para filtrar la lista de reemplazos.</p>
+          </div>
+
+          <div className="overflow-y-auto flex-1 p-2">
+            {(() => {
+              if (!selectedProjectId) return null;
+
+              // Get all unique roles for this project
+              const projectRoles = employees
+                .filter((e) => e.projectIds?.includes(selectedProjectId))
+                .flatMap((e) => {
+                  const role = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                  return role ? [role] : [];
+                })
+                .filter((role, index, self) => self.indexOf(role) === index) // Unique
+                .sort();
+
+              if (projectRoles.length === 0) {
+                return <div className="p-8 text-center text-gray-500 italic">No hay roles definidos para este proyecto.</div>;
+              }
+
+              return (
+                <div className="space-y-1">
+                  {projectRoles.map((role) => {
+                    const isSelected = selectedReplacementRoleFilters.includes(role);
+                    return (
+                      <label key={role} className="flex items-center justify-between p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                        <span className="text-sm font-medium text-slate-800 dark:text-gray-200">{role}</span>
+                        <div className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedReplacementRoleFilters((prev) => prev.filter((r) => r !== role));
+                              } else {
+                                setSelectedReplacementRoleFilters((prev) => [...prev, role]);
+                              }
+                            }}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 flex justify-between items-center">
+            <button onClick={() => setSelectedReplacementRoleFilters([])} className="text-sm text-red-500 hover:underline font-medium">
+              Limpiar Filtros
+            </button>
+            <button onClick={() => setIsReplacementRoleFilterModalOpen(false)} className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-sm shadow-sm hover:bg-blue-700 transition-colors">
+              Listo
+            </button>
           </div>
         </div>
       </Modal>

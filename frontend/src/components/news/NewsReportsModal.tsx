@@ -188,7 +188,8 @@ const ContractField: React.FC<{ icon: any; label: string; value: string; highlig
 );
 
 export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers }) => {
-  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
+  const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [projectFilter, setProjectFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [overtimePrice, setOvertimePrice] = useState<number>(0);
@@ -263,9 +264,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
   const statsByEmployee = useMemo(() => {
     const employeeMap = new Map<string, EmployeeStats>();
-    const [year, month] = selectedMonth.split("-").map(Number);
-    const start = startOfMonth(new Date(year, month - 1, 1));
-    const end = endOfMonth(start);
+    const start = parseISO(dateFrom + "T00:00:00");
+    const end = parseISO(dateTo + "T23:59:59");
 
     reports.forEach((report) => {
       try {
@@ -373,18 +373,17 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     }
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, selectedMonth, projectFilter, searchTerm, usersMap]);
+  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary]);
 
   const formattedMonthLabel = useMemo(() => {
     try {
-      const [year, month] = selectedMonth.split("-").map(Number);
-      const d = new Date(year, month - 1);
-      const monthStr = d.toLocaleString("es-ES", { month: "long" });
-      return `${monthStr.charAt(0).toUpperCase() + monthStr.slice(1)} ${year}`;
+      const dFrom = parseISO(dateFrom + "T00:00:00");
+      const dTo = parseISO(dateTo + "T00:00:00");
+      return `${format(dFrom, "dd/MM/yyyy")} - ${format(dTo, "dd/MM/yyyy")}`;
     } catch {
-      return selectedMonth;
+      return `${dateFrom} - ${dateTo}`;
     }
-  }, [selectedMonth]);
+  }, [dateFrom, dateTo]);
 
   const activeProjectName = useMemo(() => {
     if (projectFilter === "all") return "Todos los Proyectos";
@@ -438,7 +437,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `reporte_novedades_${selectedMonth}.csv`);
+    link.setAttribute("download", `reporte_novedades_${dateFrom}_a_${dateTo}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -507,7 +506,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Novedades");
-    XLSX.writeFile(wb, `reporte_novedades_${selectedMonth}.xlsx`);
+    XLSX.writeFile(wb, `reporte_novedades_${dateFrom}_a_${dateTo}.xlsx`);
   };
 
   const handleOpenContract = (s: EmployeeStats) => {
@@ -539,12 +538,20 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         }
       >
         <div className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
             <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mes</label>
+              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Desde</label>
               <div className="relative">
                 <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Hasta</label>
+              <div className="relative">
+                <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
               </div>
             </div>
 
@@ -748,17 +755,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                       <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                         {/* Empleado */}
                         <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 text-[10px] font-bold shrink-0">
-                              {s.employeeName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </div>
-                            <span className="truncate max-w-[140px]">{s.employeeName}</span>
-                          </div>
+                          <span className="truncate max-w-[140px]">{s.employeeName}</span>
                         </td>
                         {/* Sueldo Jornada */}
                         <td className="py-2.5 px-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.sueldoJornada > 0 ? `$${s.sueldoJornada.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
