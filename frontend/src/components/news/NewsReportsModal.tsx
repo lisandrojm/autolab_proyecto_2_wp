@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faChevronDown, faChevronUp, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faChevronDown, faChevronUp, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { User, UserProjectMetadata } from "../../api/users";
+import { overtimeUtils, OvertimeSettings } from "../../utils/overtimeUtils";
 import * as XLSX from "xlsx";
 
 // This works with the already-formatted data from RequestsPage
@@ -52,16 +54,6 @@ interface EmployeeStats {
   userProjectsData: UserProjectMetadata[];
   schedules: string[];
   overtimeEntries: { date: string; schedule: string; pct: number; hours: number }[];
-}
-
-interface OvertimeSettings {
-  weekdayDayStart: string;
-  weekdayDayEnd: string;
-  satDayStart: string;
-  satDayEnd: string;
-  pct50: number;
-  pct100: number;
-  baseWorkdayHours: number;
 }
 
 // Contract Detail Sub-Modal
@@ -188,23 +180,21 @@ const ContractField: React.FC<{ icon: any; label: string; value: string; highlig
 );
 
 export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers }) => {
+  const navigate = useNavigate();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [projectFilter, setProjectFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [overtimePrice, setOvertimePrice] = useState<number>(0);
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
   const [contractModal, setContractModal] = useState<{ open: boolean; employeeName: string; data: UserProjectMetadata[] }>({ open: false, employeeName: "", data: [] });
   const [showGlossary, setShowGlossary] = useState(false);
-  const [glossary, setGlossary] = useState<OvertimeSettings>({
-    weekdayDayStart: "06:00",
-    weekdayDayEnd: "20:59",
-    satDayStart: "06:00",
-    satDayEnd: "12:59",
-    pct50: 50,
-    pct100: 100,
-    baseWorkdayHours: 8,
-  });
+  const [glossary, setGlossary] = useState<OvertimeSettings>(overtimeUtils.getGlossary());
+
+  useEffect(() => {
+    if (isOpen) {
+      setGlossary(overtimeUtils.getGlossary());
+    }
+  }, [isOpen]);
 
   // Helper to check if a time is within a range (format "HH:mm")
   const isTimeInRange = (time: string, start: string, end: string) => {
@@ -580,75 +570,66 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Glosario Extras</label>
-              <button onClick={() => setShowGlossary(!showGlossary)} className={`w-full py-1.5 px-3 text-xs rounded border flex items-center justify-center gap-2 transition-colors ${showGlossary ? "bg-amber-100 border-amber-300 text-amber-700" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300"}`}>
-                <FontAwesomeIcon icon={faClipboardList} />
-                {showGlossary ? "Cerrar Glosario" : "Editar Glosario"}
+              <button onClick={() => setShowGlossary(true)} className="w-full py-1.5 px-3 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors" title="Ver configuración actual de horas extras">
+                <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500" />
+                Ver Glosario
               </button>
             </div>
           </div>
 
-          {/* Glossary Editor */}
-          {showGlossary && (
-            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg animate-fade-in">
-              <div className="flex items-center gap-2 mb-3">
-                <FontAwesomeIcon icon={faStar} className="text-amber-500 text-sm" />
-                <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Configuración de Recargos y Horarios</h4>
+          {/* Read-Only Glossary Modal */}
+          <Modal isOpen={showGlossary} onClose={() => setShowGlossary(false)} title="Glosario de Horas Extras" size="md">
+            <div className="space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                <div className="flex gap-3">
+                  <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500 mt-1" />
+                  <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed">Este glosario define cómo se calculan automáticamente las horas extras en este reporte.</p>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase">Días de Semana (Día)</p>
-                  <div className="flex items-center gap-2">
-                    <input type="time" value={glossary.weekdayDayStart} onChange={(e) => setGlossary({ ...glossary, weekdayDayStart: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" title="Inicio rago diurno" />
-                    <span className="text-gray-400">—</span>
-                    <input type="time" value={glossary.weekdayDayEnd} onChange={(e) => setGlossary({ ...glossary, weekdayDayEnd: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" title="Fin rango diurno" />
-                    <div className="ml-2 flex items-center gap-1">
-                      <input type="number" value={glossary.pct50} onChange={(e) => setGlossary({ ...glossary, pct50: Number(e.target.value) })} className="w-10 text-xs p-1 rounded border dark:bg-gray-700 text-center" />
-                      <span className="text-xs text-gray-500">%</span>
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-gray-400 italic">Lunes a Viernes. Fuera de este rango se aplica {glossary.pct100}%.</p>
-                </div>
 
-                <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase">Sábados (Día)</p>
-                  <div className="flex items-center gap-2">
-                    <input type="time" value={glossary.satDayStart} onChange={(e) => setGlossary({ ...glossary, satDayStart: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" />
-                    <span className="text-gray-400">—</span>
-                    <input type="time" value={glossary.satDayEnd} onChange={(e) => setGlossary({ ...glossary, satDayEnd: e.target.value })} className="text-xs p-1 rounded border dark:bg-gray-700" />
-                    <div className="ml-2 flex items-center gap-1">
-                      <input type="number" value={glossary.pct50} onChange={(e) => setGlossary({ ...glossary, pct50: Number(e.target.value) })} className="w-10 text-xs p-1 rounded border dark:bg-gray-700 text-center" />
-                      <span className="text-xs text-gray-500">%</span>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest leading-none">Lunes a Viernes</h4>
+                  <div className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    {glossary.weekdayDayStart}hs — {glossary.weekdayDayEnd}hs
                   </div>
-                  <p className="text-[9px] text-gray-400 italic">Sábados. Tarde y Noche se aplica con recargo de {glossary.pct100}%.</p>
+                  <div className="text-xs text-blue-600 font-medium mt-1">Recargo: {glossary.pct50}% (Diurno)</div>
                 </div>
-
-                <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded border border-amber-200 dark:border-amber-800/50">
-                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase mb-2">Base de Cálculo</p>
-                  <div className="mb-3">
-                    <label className="text-[9px] font-bold text-gray-500 block mb-1 uppercase tracking-wider">Horas por Jornada</label>
-                    <div className="flex items-center gap-2">
-                      <input type="number" value={glossary.baseWorkdayHours} onChange={(e) => setGlossary({ ...glossary, baseWorkdayHours: Number(e.target.value) })} className="w-16 text-xs p-1.5 rounded border dark:bg-gray-700 text-center font-bold" min="1" max="24" />
-                      <span className="text-[10px] text-gray-400 font-medium">hs/día</span>
-                    </div>
-                    <p className="text-[8px] text-gray-400 mt-1 italic leading-tight">Divide el sueldo diario por este valor para obtener el precio/hora base.</p>
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest leading-none">Sábados</h4>
+                  <div className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    {glossary.satDayStart}hs — {glossary.satDayEnd}hs
                   </div>
-
-                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase mb-2">Recargo Base 100%</p>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between bg-white dark:bg-gray-700 p-2 rounded border border-amber-100">
-                      <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Valor Recargo:</span>
-                      <div className="flex items-center gap-1">
-                        <input type="number" value={glossary.pct100} onChange={(e) => setGlossary({ ...glossary, pct100: Number(e.target.value) })} className="w-12 text-xs p-1 rounded border dark:bg-gray-600 text-center font-bold" />
-                        <span className="text-xs">%</span>
-                      </div>
-                    </div>
-                    <p className="text-[8px] text-gray-400 italic">Aplicado a Domingos, Feriados y horarios nocturnos.</p>
-                  </div>
+                  <div className="text-xs text-blue-600 font-medium mt-1">Recargo: {glossary.pct50}% (Diurno)</div>
                 </div>
+              </div>
+
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                <h4 className="text-[10px] font-black text-amber-700 dark:text-amber-500 uppercase mb-2 tracking-widest">Base de Cálculo</h4>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Horas por Jornada:</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{glossary.baseWorkdayHours} hs</span>
+                </div>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-amber-100 dark:border-amber-900/30">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Recargo Base 100%:</span>
+                  <span className="text-sm font-bold text-red-600">{glossary.pct100}%</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => {
+                    setShowGlossary(false);
+                    onClose(); // Close the reports modal
+                    navigate("/requests/config", { state: { activeTab: "glossary" } });
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg"
+                >
+                  Ir a Configuración
+                </button>
               </div>
             </div>
-          )}
+          </Modal>
 
           {/* Summary KPIs Section Header */}
           <div className="flex items-center justify-between mb-1">

@@ -3,8 +3,9 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { ProjectHeaderSelector } from "../components/activity_logs_config/ProjectHeaderSelector";
 import { SortableActivityTypeRow, RequestConfig as RequestConfigType } from "../components/activity_logs_config/SortableActivityTypeRow";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
-import { useNavigate } from "react-router-dom";
+import { faCheck, faCog, faPlus, faGripVertical, faInfoCircle, faGlobe, faUsers, faToggleOn, faToggleOff, faCircleInfo, faSpinner, faBriefcase, faMobileAlt, faUserPlus, faStar, faClipboardList, faCalendarAlt, faFileInvoiceDollar, faSave } from "@fortawesome/free-solid-svg-icons";
+import { overtimeUtils, OvertimeSettings } from "../utils/overtimeUtils";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ReportSchedule } from "../types/activityTypes";
 import { sweetAlert } from "../utils/sweetAlert";
 import { activityLogTypesAPI } from "../api/requestConfig";
@@ -27,9 +28,18 @@ const DAYS_OF_WEEK = [
 
 export const RequestsConfigPage: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"general" | "types" | "project">("general");
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<"general" | "types" | "project" | "reports" | "glossary">("general");
+
+  useEffect(() => {
+    if (location.state && (location.state as any).activeTab) {
+      setActiveTab((location.state as any).activeTab);
+    }
+  }, [location.state]);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [glossary, setGlossary] = useState<OvertimeSettings>(overtimeUtils.getGlossary());
+  const [savingGlossary, setSavingGlossary] = useState(false);
 
   // Config State (Removed Global)
   // const [config, setConfig] = useState<ActivityLogConfig | null>(null);
@@ -274,6 +284,15 @@ export const RequestsConfigPage: React.FC = () => {
     }
   };
 
+  const handleSaveGlossary = () => {
+    setSavingGlossary(true);
+    setTimeout(() => {
+      overtimeUtils.saveGlossary(glossary);
+      setSavingGlossary(false);
+      sweetAlert.success("Glosario Guardado", "La configuración de horas extras se ha actualizado correctamente.");
+    }, 500);
+  };
+
   const tabClass = (isActive: boolean) => `px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${isActive ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`;
 
   return (
@@ -294,6 +313,12 @@ export const RequestsConfigPage: React.FC = () => {
             </button>
             <button className={tabClass(activeTab === "project")} onClick={() => setActiveTab("project")}>
               Frecuencia
+            </button>
+            <button className={tabClass(activeTab === "reports")} onClick={() => setActiveTab("reports")}>
+              Reportes de Novedades
+            </button>
+            <button className={tabClass(activeTab === "glossary")} onClick={() => setActiveTab("glossary")}>
+              Glosario de Extras
             </button>
           </div>
 
@@ -633,6 +658,135 @@ export const RequestsConfigPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ===================== REPORTES DE NOVEDADES TAB ===================== */}
+            {activeTab === "reports" && (
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="text-center py-12">
+                  <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FontAwesomeIcon icon={faCalendarAlt} size="2x" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Configuración de Reportes</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">Esta sección permitirá configurar formatos y envíos automáticos de los reportes de novedades por correo electrónico (Próximamente).</p>
+                </div>
+              </div>
+            )}
+
+            {/* ===================== GLOSARIO DE EXTRAS TAB ===================== */}
+            {activeTab === "glossary" && (
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+                <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-gray-700 pb-4">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Glosario de Horas Extras</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Define los porcentajes de recargo y los rangos horarios para el cálculo automático.</p>
+                    </div>
+                  </div>
+                  <button onClick={handleSaveGlossary} disabled={savingGlossary} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50">
+                    <FontAwesomeIcon icon={savingGlossary ? faSpinner : faSave} spin={savingGlossary} />
+                    {savingGlossary ? "Guardando..." : "Guardar Cambios"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Schedules */}
+                  <div className="space-y-6">
+                    {/* Weekdays */}
+                    <div className="bg-gray-50 dark:bg-gray-900/40 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 shadow-sm border border-gray-100 dark:border-gray-700 text-xs font-black">LV</div>
+                        <h4 className="font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider text-xs">Jornada Diurna (Lunes a Viernes)</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1 ml-1">Inicio de Rango</label>
+                          <input type="time" value={glossary.weekdayDayStart} onChange={(e) => setGlossary({ ...glossary, weekdayDayStart: e.target.value })} className="w-full p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 text-sm font-semibold" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1 ml-1">Fin de Rango</label>
+                          <input type="time" value={glossary.weekdayDayEnd} onChange={(e) => setGlossary({ ...glossary, weekdayDayEnd: e.target.value })} className="w-full p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 text-sm font-semibold" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/10 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                        <div className="flex-1">
+                          <span className="text-xs font-bold text-amber-800 dark:text-amber-400">Recargo Diurno</span>
+                          <p className="text-[10px] text-amber-600/70">Horas trabajadas dentro de este rango.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="number" value={glossary.pct50} onChange={(e) => setGlossary({ ...glossary, pct50: Number(e.target.value) })} className="w-16 p-2 rounded-lg border border-amber-200 dark:bg-gray-800 text-center font-black text-amber-700" />
+                          <span className="font-bold text-amber-600">%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Saturdays */}
+                    <div className="bg-gray-50 dark:bg-gray-900/40 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center text-gray-500 shadow-sm border border-gray-100 dark:border-gray-700 text-xs font-black">S</div>
+                        <h4 className="font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider text-xs">Jornada Diurna (Sábados)</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1 ml-1">Inicio de Rango</label>
+                          <input type="time" value={glossary.satDayStart} onChange={(e) => setGlossary({ ...glossary, satDayStart: e.target.value })} className="w-full p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 text-sm font-semibold" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1 ml-1">Fin de Rango</label>
+                          <input type="time" value={glossary.satDayEnd} onChange={(e) => setGlossary({ ...glossary, satDayEnd: e.target.value })} className="w-full p-2.5 rounded-lg border border-gray-200 dark:border-gray-600 dark:bg-gray-800 text-sm font-semibold" />
+                        </div>
+                      </div>
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl text-[10px] text-blue-600 italic">Nota: Fuera de estos rangos, las horas se calculan automáticamente con el Recargo del 100%.</div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Calculations & Defaults */}
+                  <div className="space-y-6">
+                    {/* Calculation Base */}
+                    <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                      <div className="flex items-center gap-3 mb-4">
+                        <FontAwesomeIcon icon={faFileInvoiceDollar} className="text-blue-500" />
+                        <h4 className="font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider text-xs">Base de Cálculo</h4>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Horas por Jornada Base</label>
+                          <div className="flex items-center gap-3">
+                            <input type="number" value={glossary.baseWorkdayHours} onChange={(e) => setGlossary({ ...glossary, baseWorkdayHours: Number(e.target.value) })} className="w-24 p-2.5 rounded-xl border border-blue-200 dark:bg-gray-800 font-black text-center text-blue-700" min="1" max="24" />
+                            <span className="font-bold text-blue-600/60 uppercase text-[10px]">hs / día</span>
+                          </div>
+                          <p className="text-[11px] text-blue-600/60 mt-2 italic leading-relaxed">Este valor se usa para obtener el valor hora base: (Sueldo Diario / Horas Jornada).</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 100% Recargo */}
+                    <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-2xl border border-red-100 dark:border-red-900/30">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black">!</div>
+                        <h4 className="font-bold text-red-800 dark:text-red-300 uppercase tracking-wider text-xs">Recargo Especial (100%)</h4>
+                      </div>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Valor de Recargo</span>
+                        <div className="flex items-center gap-2">
+                          <input type="number" value={glossary.pct100} onChange={(e) => setGlossary({ ...glossary, pct100: Number(e.target.value) })} className="w-20 p-2 rounded-xl border border-red-200 dark:bg-gray-800 text-center font-black text-red-700" />
+                          <span className="font-bold text-red-600">%</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-red-600/70">
+                          <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                          <span className="text-[11px] font-medium">Aplicado a Domingos y Feriados</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-red-600/70">
+                          <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                          <span className="text-[11px] font-medium">Aplicado a Horarios Nocturnos (fuera de rangos LV/S)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
