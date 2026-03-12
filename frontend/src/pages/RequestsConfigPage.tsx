@@ -751,12 +751,11 @@ export const RequestsConfigPage: React.FC = () => {
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Horas por Jornada Base</label>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Divisor de Sueldo (Mensual)</label>
                           <div className="flex items-center gap-3">
-                            <input type="number" value={glossary.baseWorkdayHours} onChange={(e) => setGlossary({ ...glossary, baseWorkdayHours: Number(e.target.value) })} className="w-24 p-2.5 rounded-xl border border-blue-200 dark:bg-gray-800 font-black text-center text-blue-700" min="1" max="24" />
-                            <span className="font-bold text-blue-600/60 uppercase text-[10px]">hs / día</span>
+                            <input type="number" value={glossary.salaryDivisorPercentage} onChange={(e) => setGlossary({ ...glossary, salaryDivisorPercentage: Number(e.target.value) })} className="w-24 p-2.5 rounded-xl border border-blue-200 dark:bg-gray-800 font-black text-center text-blue-700" min="1" max="1000" />
                           </div>
-                          <p className="text-[11px] text-blue-600/60 mt-2 italic leading-relaxed">Este valor se usa para obtener el valor hora base: (Sueldo Diario / Horas Jornada).</p>
+                          <p className="text-[11px] text-blue-600/60 mt-2 italic leading-relaxed">Este valor se usa para obtener el valor hora base: (Sueldo Mensual / Divisor).</p>
                         </div>
                       </div>
                     </div>

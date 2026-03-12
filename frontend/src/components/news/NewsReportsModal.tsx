@@ -54,7 +54,26 @@ interface EmployeeStats {
   userProjectsData: UserProjectMetadata[];
   schedules: string[];
   overtimeEntries: { date: string; schedule: string; pct: number; hours: number }[];
+  contractHoursPerDay: number;
+  cantidadJornadasLaborales: number;
 }
+
+const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): number => {
+  if (!horaInicio || !horaFin) return 8; // Default 8 hours
+  const parseTime = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
+    return h * 60 + (m || 0);
+  };
+
+  const startMinutes = parseTime(horaInicio);
+  let endMinutes = parseTime(horaFin);
+
+  if (endMinutes < startMinutes) {
+    endMinutes += 24 * 60; // Next day
+  }
+
+  return (endMinutes - startMinutes) / 60;
+};
 
 // Contract Detail Sub-Modal
 const ContractDetailModal: React.FC<{
@@ -281,6 +300,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           // Get sueldo from the latest contract of the filtered project, or any
           let sueldoJornada = 0;
           let sueldoMano = 0;
+          let contractHoursPerDay = 8;
+          let cantidadJornadasLaborales = 0;
 
           if (userProjects.length > 0) {
             // Try to find contract for the filtered project first
@@ -293,6 +314,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 const lastContract = up.contracts[up.contracts.length - 1];
                 if (lastContract.sueldo_jornada) sueldoJornada = lastContract.sueldo_jornada;
                 if (lastContract.sueldo_mano) sueldoMano = lastContract.sueldo_mano;
+                if (lastContract.hora_inicio && lastContract.hora_fin) {
+                  contractHoursPerDay = getDailyHoursFromContract(lastContract.hora_inicio, lastContract.hora_fin);
+                }
+                if (lastContract.cantidad_jornadas_laborales) cantidadJornadasLaborales = lastContract.cantidad_jornadas_laborales;
                 if (sueldoJornada > 0 || sueldoMano > 0) break;
               }
             }
@@ -318,6 +343,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             overtime100: 0,
             schedules: [],
             overtimeEntries: [],
+            contractHoursPerDay,
+            cantidadJornadasLaborales,
           });
         }
 
@@ -384,8 +411,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const totalOvertime50 = statsByEmployee.reduce((acc, curr) => acc + curr.overtime50, 0);
   const totalOvertime100 = statsByEmployee.reduce((acc, curr) => acc + curr.overtime100, 0);
   const totalCost = statsByEmployee.reduce((acc, curr) => {
-    const hoursInDay = glossary.baseWorkdayHours || 8;
-    const baseHour = curr.sueldoJornada / hoursInDay;
+    const salaryDivisor = glossary.salaryDivisorPercentage || 150;
+    const baseHour = curr.sueldoMano / salaryDivisor;
     const cost50 = curr.overtime50 * baseHour * (1 + glossary.pct50 / 100);
     const cost100 = curr.overtime100 * baseHour * (1 + glossary.pct100 / 100);
     return acc + cost50 + cost100;
@@ -395,18 +422,20 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const totalEmployees = statsByEmployee.length;
 
   const handleExport = () => {
-    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Sueldo", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
     const rows = statsByEmployee.map((s) => {
-      const hoursInDay = glossary.baseWorkdayHours || 8;
-      const baseHour = s.sueldoJornada / hoursInDay;
+      const salaryDivisor = glossary.salaryDivisorPercentage || 150;
+      const baseHour = s.sueldoMano / salaryDivisor;
       const m50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+      const normalHora = s.sueldoJornada / s.contractHoursPerDay;
       const m100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
       const otDetail = s.overtimeEntries.map((e) => `${e.date} (${e.pct}%): ${e.schedule}`).join("; ");
       return [
         `"${s.employeeName}"`,
         s.sueldoJornada,
         s.sueldoMano,
-        baseHour.toFixed(2),
+        normalHora.toFixed(2),
+        s.cantidadJornadasLaborales,
         `"${s.projectNames.join(", ")}"`,
         s.daysPresent,
         s.absences,
@@ -415,6 +444,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           .join("; ")}"`,
         s.overtime50,
         s.overtime100,
+        s.sueldoMano,
         `"${otDetail}"`,
         (m50 + m100).toFixed(2),
         (s.sueldoJornada * s.daysPresent + m50 + m100).toFixed(2),
@@ -435,19 +465,21 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   };
 
   const handleExportXLS = () => {
-    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Sueldo", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
 
     const rows = statsByEmployee.map((s) => {
-      const hoursInDay = glossary.baseWorkdayHours || 8;
-      const baseHour = s.sueldoJornada / hoursInDay;
+      const salaryDivisor = glossary.salaryDivisorPercentage || 150;
+      const baseHour = s.sueldoMano / salaryDivisor;
       const m50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+      const normalHora = s.sueldoJornada / s.contractHoursPerDay;
       const m100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
       const otDetail = s.overtimeEntries.map((e) => `${e.date} (${e.pct}%): ${e.schedule}`).join("; ");
       return [
         s.employeeName,
         s.sueldoJornada,
         s.sueldoMano,
-        Number(baseHour.toFixed(2)),
+        Number(normalHora.toFixed(2)),
+        s.cantidadJornadasLaborales,
         s.projectNames.join(", "),
         s.daysPresent,
         s.absences,
@@ -456,6 +488,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           .join("; "),
         s.overtime50,
         s.overtime100,
+        s.sueldoMano,
         otDetail,
         Number((m50 + m100).toFixed(2)),
         Number((s.sueldoJornada * s.daysPresent + m50 + m100).toFixed(2)),
@@ -470,11 +503,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       "",
       "",
       "",
+      "",
       statsByEmployee.reduce((a, c) => a + c.daysPresent, 0),
       totalAbsences,
       "",
       totalOvertime50,
       totalOvertime100,
+      "", // Sueldo
       "", // Detail column empty for total
       Number(totalCost.toFixed(2)),
       Number((totalMontoSueldos + totalCost).toFixed(2)),
@@ -607,8 +642,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/30">
                 <h4 className="text-[10px] font-black text-amber-700 dark:text-amber-500 uppercase mb-2 tracking-widest">Base de Cálculo</h4>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Horas por Jornada:</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">{glossary.baseWorkdayHours} hs</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Divisor de Sueldo:</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{glossary.salaryDivisorPercentage}</span>
                 </div>
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-amber-100 dark:border-amber-900/30">
                   <span className="text-sm text-gray-700 dark:text-gray-300">Recargo Base 100%:</span>
@@ -705,6 +740,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Jornada</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Mano</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">P. Hora</th>
+                  <th className="py-2.5 px-3 text-center whitespace-nowrap">Jornadas</th>
                   <th className="py-2.5 px-3 text-left">Proyectos</th>
                   <th className="py-2.5 px-3 text-center">Contrato</th>
                   <th className="py-2.5 px-2 text-center text-[10px] leading-tight">
@@ -721,6 +757,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   </th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Hs. 50%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Hs. 100%</th>
+                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Sueldo</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight whitespace-nowrap">$ Extras</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">Monto Total</th>
                   <th className="py-2.5 px-3 text-center w-8"></th>
@@ -745,11 +782,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         {/* Precio Hora */}
                         <td className="py-2.5 px-3 text-right text-xs font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
                           {(() => {
-                            const hoursInDay = glossary.baseWorkdayHours || 8;
-                            const baseHour = s.sueldoJornada / hoursInDay;
-                            return baseHour > 0 ? `$${baseHour.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>;
+                            const normalHora = s.sueldoJornada / s.contractHoursPerDay;
+                            return normalHora > 0 ? `$${normalHora.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>;
                           })()}
                         </td>
+                        {/* Jornadas */}
+                        <td className="py-2.5 px-3 text-center text-xs font-medium text-gray-600 dark:text-gray-400">{s.cantidadJornadasLaborales || <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* Proyectos */}
                         <td className="py-2.5 px-3">
                           <div className="flex flex-wrap gap-1 max-w-[160px]">
@@ -818,11 +856,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         <td className="py-2.5 px-2 text-right font-medium text-gray-600 dark:text-gray-400">{s.overtime50 > 0 ? `${s.overtime50}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* Hs 100% */}
                         <td className="py-2.5 px-2 text-right font-medium text-amber-700 dark:text-amber-500">{s.overtime100 > 0 ? `${s.overtime100}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
+                        {/* Sueldo */}
+                        <td className="py-2.5 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.sueldoMano > 0 ? `$${s.sueldoMano.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* $ Extras */}
                         <td className="py-2.5 px-2 text-right font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
                           {(() => {
-                            const hoursInDay = glossary.baseWorkdayHours || 8;
-                            const baseHour = s.sueldoJornada / hoursInDay;
+                            const salaryDivisor = glossary.salaryDivisorPercentage || 150;
+                            const baseHour = s.sueldoMano / salaryDivisor;
                             const cost50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
                             const cost100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
                             return cost50 + cost100 > 0 ? `$${(cost50 + cost100).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-";
@@ -831,8 +871,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         {/* Monto Total */}
                         <td className="py-2.5 px-3 text-right font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
                           {(() => {
-                            const hoursInDay = glossary.baseWorkdayHours || 8;
-                            const baseHour = s.sueldoJornada / hoursInDay;
+                            const salaryDivisor = glossary.salaryDivisorPercentage || 150;
+                            const baseHour = s.sueldoMano / salaryDivisor;
                             const cost50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
                             const cost100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
                             return `$${(s.sueldoJornada * s.daysPresent + cost50 + cost100).toLocaleString(undefined, {
