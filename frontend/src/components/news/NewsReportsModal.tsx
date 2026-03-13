@@ -56,6 +56,8 @@ interface EmployeeStats {
   overtimeEntries: { date: string; schedule: string; pct: number; hours: number }[];
   contractHoursPerDay: number;
   cantidadJornadasLaborales: number;
+  activeContractsCount: number;
+  hasContractSchedules: boolean;
 }
 
 const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): number => {
@@ -76,6 +78,34 @@ const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): numbe
 };
 
 // Contract Detail Sub-Modal
+const isActiveContract = (contract: any) => {
+  if (!contract.fecha_alta_contrato) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const getLocalMidnight = (dateString: string) => {
+    // Handles both "YYYY-MM-DD" and "YYYY-MM-DDTHH:mm:ss.sssZ" formats without timezone shift
+    const isoDate = dateString.substring(0, 10);
+    const parts = isoDate.split("-");
+    if (parts.length === 3) {
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
+    }
+    const d = new Date(dateString);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const altaDate = getLocalMidnight(contract.fecha_alta_contrato);
+
+  if (contract.fecha_baja_contrato) {
+    const bajaDate = getLocalMidnight(contract.fecha_baja_contrato);
+    return today >= altaDate && today <= bajaDate;
+  }
+
+  return today >= altaDate;
+};
+
 const ContractDetailModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -83,6 +113,14 @@ const ContractDetailModal: React.FC<{
   userProjectsData: UserProjectMetadata[];
   filterProjectId?: string;
 }> = ({ isOpen, onClose, employeeName, userProjectsData, filterProjectId }) => {
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShowActiveOnly(true);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // If a project filter is active, try to find the matching UserProject
@@ -108,9 +146,19 @@ const ContractDetailModal: React.FC<{
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{employeeName}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-            <FontAwesomeIcon icon={faTimes} className="text-lg" />
-          </button>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center cursor-pointer gap-2">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Mostrar activos</span>
+              <div className="relative">
+                <input type="checkbox" className="sr-only" checked={showActiveOnly} onChange={(e) => setShowActiveOnly(e.target.checked)} />
+                <div className={`block w-10 h-6 rounded-full transition-colors ${showActiveOnly ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}></div>
+                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${showActiveOnly ? "transform translate-x-4" : ""}`}></div>
+              </div>
+            </label>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <FontAwesomeIcon icon={faTimes} className="text-lg" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -129,44 +177,52 @@ const ContractDetailModal: React.FC<{
 
                 {/* Contracts within the project */}
                 {up.contracts && up.contracts.length > 0 ? (
-                  up.contracts.map((contract, cIdx) => (
-                    <div key={cIdx} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-100 dark:border-gray-700 space-y-3">
-                      {/* Contract title */}
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                          Contrato #{cIdx + 1} {contract.nombre_contrato ? `— ${contract.nombre_contrato}` : ""}
-                        </span>
-                        {contract.nombre_estado_empleado && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${contract.nombre_estado_empleado?.toLowerCase().includes("activ") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300"}`}>{contract.nombre_estado_empleado}</span>}
-                      </div>
+                  (() => {
+                    const filteredContracts = showActiveOnly ? up.contracts.filter(isActiveContract) : up.contracts;
 
-                      {/* Contract details grid */}
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                        <ContractField icon={faCalendarDays} label="Alta" value={formatContractDate(contract.fecha_alta_contrato)} />
-                        <ContractField icon={faCalendarDays} label="Baja" value={formatContractDate(contract.fecha_baja_contrato)} />
-                        <ContractField icon={faDollarSign} label="Sueldo Jornada" value={contract.sueldo_jornada != null ? `$${Number(contract.sueldo_jornada).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
-                        <ContractField icon={faDollarSign} label="Sueldo Mano" value={contract.sueldo_mano != null ? `$${Number(contract.sueldo_mano).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
-                        <ContractField icon={faHourglassHalf} label="Jornadas Lab." value={contract.cantidad_jornadas_laborales?.toString() || "-"} />
-                        <ContractField icon={faLocationDot} label="Sede" value={contract.nombre_sede || "-"} />
-                        <ContractField icon={faIdBadge} label="Rol" value={contract.nombre_rol_frame || "-"} />
-                        <ContractField icon={faStar} label="Categoría SAT" value={contract.nombre_categoria_sat || "-"} />
-                        <ContractField icon={faClock} label="Hora Inicio" value={contract.hora_inicio || "-"} />
-                        <ContractField icon={faClock} label="Hora Fin" value={contract.hora_fin || "-"} />
-                      </div>
+                    if (filteredContracts.length === 0) {
+                      return <div className="text-sm text-gray-400 italic py-2">Sin contratos activos para este proyecto.</div>;
+                    }
 
-                      {/* Observations */}
-                      {contract.observaciones && (
-                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                          <div className="flex items-start gap-2">
-                            <FontAwesomeIcon icon={faClipboardList} className="text-gray-400 mt-0.5 text-xs" />
-                            <div>
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Observaciones</span>
-                              <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{contract.observaciones}</p>
+                    return filteredContracts.map((contract, cIdx) => (
+                      <div key={cIdx} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-100 dark:border-gray-700 space-y-3">
+                        {/* Contract title */}
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                            Contrato #{cIdx + 1} {contract.nombre_contrato ? `— ${contract.nombre_contrato}` : ""}
+                          </span>
+                          {contract.nombre_estado_empleado && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${contract.nombre_estado_empleado?.toLowerCase().includes("activ") ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300"}`}>{contract.nombre_estado_empleado}</span>}
+                        </div>
+
+                        {/* Contract details grid */}
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                          <ContractField icon={faCalendarDays} label="Alta" value={formatContractDate(contract.fecha_alta_contrato)} highlight={isActiveContract(contract)} />
+                          <ContractField icon={faCalendarDays} label="Baja" value={formatContractDate(contract.fecha_baja_contrato)} highlight={isActiveContract(contract)} />
+                          <ContractField icon={faDollarSign} label="Sueldo Jornada" value={contract.sueldo_jornada != null ? `$${Number(contract.sueldo_jornada).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
+                          <ContractField icon={faDollarSign} label="Sueldo Mano" value={contract.sueldo_mano != null ? `$${Number(contract.sueldo_mano).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-"} highlight />
+                          <ContractField icon={faHourglassHalf} label="Jornadas Lab." value={contract.cantidad_jornadas_laborales?.toString() || "-"} />
+                          <ContractField icon={faLocationDot} label="Sede" value={contract.nombre_sede || "-"} />
+                          <ContractField icon={faIdBadge} label="Rol" value={contract.nombre_rol_frame || "-"} />
+                          <ContractField icon={faStar} label="Categoría SAT" value={contract.nombre_categoria_sat || "-"} />
+                          <ContractField icon={faClock} label="Hora Inicio" value={contract.hora_inicio || "-"} />
+                          <ContractField icon={faClock} label="Hora Fin" value={contract.hora_fin || "-"} />
+                        </div>
+
+                        {/* Observations */}
+                        {contract.observaciones && (
+                          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                            <div className="flex items-start gap-2">
+                              <FontAwesomeIcon icon={faClipboardList} className="text-gray-400 mt-0.5 text-xs" />
+                              <div>
+                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Observaciones</span>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{contract.observaciones}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                        )}
+                      </div>
+                    ));
+                  })()
                 ) : (
                   <div className="text-sm text-gray-400 italic py-2">Sin contratos registrados para este proyecto.</div>
                 )}
@@ -207,11 +263,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
   const [contractModal, setContractModal] = useState<{ open: boolean; employeeName: string; data: UserProjectMetadata[] }>({ open: false, employeeName: "", data: [] });
   const [showGlossary, setShowGlossary] = useState(false);
+  const [showActiveTableOnly, setShowActiveTableOnly] = useState(true);
   const [glossary, setGlossary] = useState<OvertimeSettings>(overtimeUtils.getGlossary());
 
   useEffect(() => {
     if (isOpen) {
       setGlossary(overtimeUtils.getGlossary());
+      setShowActiveTableOnly(true);
     }
   }, [isOpen]);
 
@@ -302,23 +360,52 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           let sueldoMano = 0;
           let contractHoursPerDay = 8;
           let cantidadJornadasLaborales = 0;
+          let activeContractsCount = 0;
+          let contractSchedules: string[] = [];
 
           if (userProjects.length > 0) {
-            // Try to find contract for the filtered project first
+            // First loop: Collect completely accurate schedules and counts from ALL target projects
             for (const up of userProjects) {
               const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
               const isTargetProject = projectFilter === "all" || upProjId === projectFilter;
 
               if (up.contracts && up.contracts.length > 0 && isTargetProject) {
-                // Get the last (most recent) contract
-                const lastContract = up.contracts[up.contracts.length - 1];
-                if (lastContract.sueldo_jornada) sueldoJornada = lastContract.sueldo_jornada;
-                if (lastContract.sueldo_mano) sueldoMano = lastContract.sueldo_mano;
-                if (lastContract.hora_inicio && lastContract.hora_fin) {
-                  contractHoursPerDay = getDailyHoursFromContract(lastContract.hora_inicio, lastContract.hora_fin);
+                const activesInProject = up.contracts.filter(isActiveContract);
+                activeContractsCount += activesInProject.length;
+
+                let targetContracts = showActiveTableOnly ? activesInProject : up.contracts;
+                targetContracts.forEach((contract) => {
+                  if (contract.hora_inicio && contract.hora_fin) {
+                    const hours = getDailyHoursFromContract(contract.hora_inicio, contract.hora_fin);
+                    const sched = `${contract.hora_inicio}-${contract.hora_fin} | ${hours}hs`;
+                    if (!contractSchedules.includes(sched)) contractSchedules.push(sched);
+                  }
+                });
+              }
+            }
+
+            // Second loop: Try to find sueldo from the latest contract of the filtered project
+            for (const up of userProjects) {
+              const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
+              const isTargetProject = projectFilter === "all" || upProjId === projectFilter;
+
+              if (up.contracts && up.contracts.length > 0 && isTargetProject) {
+                let targetContracts = up.contracts;
+                if (showActiveTableOnly) {
+                  targetContracts = targetContracts.filter(isActiveContract);
                 }
-                if (lastContract.cantidad_jornadas_laborales) cantidadJornadasLaborales = lastContract.cantidad_jornadas_laborales;
-                if (sueldoJornada > 0 || sueldoMano > 0) break;
+
+                if (targetContracts.length > 0) {
+                  // Get the last (most recent) contract from the target list
+                  const lastContract = targetContracts[targetContracts.length - 1];
+                  if (lastContract.sueldo_jornada) sueldoJornada = lastContract.sueldo_jornada;
+                  if (lastContract.sueldo_mano) sueldoMano = lastContract.sueldo_mano;
+                  if (lastContract.hora_inicio && lastContract.hora_fin) {
+                    contractHoursPerDay = getDailyHoursFromContract(lastContract.hora_inicio, lastContract.hora_fin);
+                  }
+                  if (lastContract.cantidad_jornadas_laborales) cantidadJornadasLaborales = lastContract.cantidad_jornadas_laborales;
+                  if (sueldoJornada > 0 || sueldoMano > 0) break;
+                }
               }
             }
           }
@@ -341,10 +428,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             userProjectsData: userProjects,
             overtime50: 0,
             overtime100: 0,
-            schedules: [],
+            schedules: [...contractSchedules],
             overtimeEntries: [],
             contractHoursPerDay,
             cantidadJornadasLaborales,
+            activeContractsCount,
+            hasContractSchedules: contractSchedules.length > 0,
           });
         }
 
@@ -370,9 +459,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         stats.overtime50 += h50;
         stats.overtime100 += h100;
 
-        // Collect schedules
-        if (record.entryTime && record.exitTime) {
-          const sched = `${record.entryTime}-${record.exitTime}`;
+        // Collect schedules from attendance if we don't have contract schedules
+        if (!stats.hasContractSchedules && record.entryTime && record.exitTime) {
+          const hours = getDailyHoursFromContract(record.entryTime, record.exitTime);
+          const sched = `${record.entryTime}-${record.exitTime} | ${hours}hs`;
           if (!stats.schedules.includes(sched)) stats.schedules.push(sched);
         }
         if (totalHs > 0) {
@@ -384,13 +474,26 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     });
 
     let results = Array.from(employeeMap.values());
+
+    if (showActiveTableOnly) {
+      results = results.filter((emp) => {
+        return emp.userProjectsData.some((up) => {
+          const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
+          const isTargetProject = projectFilter === "all" || upProjId === projectFilter;
+          if (!isTargetProject) return false;
+          if (!up.contracts || up.contracts.length === 0) return false;
+          return up.contracts.some(isActiveContract);
+        });
+      });
+    }
+
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       results = results.filter((s) => s.employeeName.toLowerCase().includes(lowerSearch));
     }
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary]);
+  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly]);
 
   const formattedMonthLabel = useMemo(() => {
     try {
@@ -563,52 +666,72 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         }
       >
         <div className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Desde</label>
-              <div className="relative">
-                <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+          <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+            {/* Primera fila */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Desde</label>
+                <div className="relative">
+                  <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Hasta</label>
+                <div className="relative">
+                  <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</label>
+                <div className="relative">
+                  <FontAwesomeIcon icon={faBriefcase} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                  <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="w-full pl-8 pr-6 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+                    <option value="all">Todos</option>
+                    {uniqueProjects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Buscar Empleado</label>
+                <div className="relative">
+                  <FontAwesomeIcon icon={faSearch} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                  <input type="text" placeholder="Nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Hasta</label>
-              <div className="relative">
-                <FontAwesomeIcon icon={faCalendar} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+            {/* Segunda fila */}
+            <div className="flex justify-start items-center gap-6 pt-1">
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Contratos</label>
+                <div className="flex items-center">
+                  <label className="flex items-center cursor-pointer gap-2 py-0.5">
+                    <div className="relative">
+                      <input type="checkbox" className="sr-only" checked={showActiveTableOnly} onChange={(e) => setShowActiveTableOnly(e.target.checked)} />
+                      <div className={`block w-8 h-4 rounded-full transition-colors ${showActiveTableOnly ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}></div>
+                      <div className={`dot absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform ${showActiveTableOnly ? "transform translate-x-4" : ""}`}></div>
+                    </div>
+                    <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Activos</span>
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</label>
-              <div className="relative">
-                <FontAwesomeIcon icon={faBriefcase} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="w-full pl-8 pr-6 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-                  <option value="all">Todos</option>
-                  {uniqueProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-transparent uppercase tracking-wider mb-1 block select-none">Glosario</label>
+                <button onClick={() => setShowGlossary(true)} className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium py-0.5" title="Ver configuración actual de horas extras">
+                  <FontAwesomeIcon icon={faCircleInfo} />
+                  Ver Glosario
+                </button>
               </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Buscar Empleado</label>
-              <div className="relative">
-                <FontAwesomeIcon icon={faSearch} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
-                <input type="text" placeholder="Nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Glosario Extras</label>
-              <button onClick={() => setShowGlossary(true)} className="w-full py-1.5 px-3 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors" title="Ver configuración actual de horas extras">
-                <FontAwesomeIcon icon={faCircleInfo} className="text-blue-500" />
-                Ver Glosario
-              </button>
             </div>
           </div>
 
@@ -742,12 +865,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">P. Hora</th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Jornadas</th>
                   <th className="py-2.5 px-3 text-left">Proyectos</th>
-                  <th className="py-2.5 px-3 text-center">Contrato</th>
                   <th className="py-2.5 px-2 text-center text-[10px] leading-tight">
                     Horario
                     <br />
                     Base
                   </th>
+                  <th className="py-2.5 px-3 text-center">Contrato</th>
                   <th className="py-2.5 px-3 text-center">Presente</th>
                   <th className="py-2.5 px-3 text-center">Ausencias</th>
                   <th className="py-2.5 px-2 text-center text-[10px] leading-tight">
@@ -802,22 +925,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                             )}
                           </div>
                         </td>
-                        {/* Contrato */}
-                        <td className="py-2.5 px-3 text-center">
-                          {s.userProjectsData.length > 0 ? (
-                            <button onClick={() => handleOpenContract(s)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Ver detalle de contrato">
-                              <FontAwesomeIcon icon={faFileContract} />
-                            </button>
-                          ) : (
-                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
                         {/* Horario Base */}
-                        <td className="py-2.5 px-2 text-center">
+                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">
                             {s.schedules.length > 0 ? (
                               s.schedules.map((sc, scIdx) => (
-                                <span key={scIdx} className="text-[9px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-1 lowercase">
+                                <span key={scIdx} className="text-[9px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-1 lowercase whitespace-nowrap">
                                   {sc}
                                 </span>
                               ))
@@ -825,6 +938,17 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                               <span className="text-gray-300 dark:text-gray-600">-</span>
                             )}
                           </div>
+                        </td>
+                        {/* Contrato */}
+                        <td className="py-2.5 px-3 text-center">
+                          {s.userProjectsData.length > 0 ? (
+                            <button onClick={() => handleOpenContract(s)} className="inline-flex items-center justify-center gap-1.5 mx-auto text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors px-2 py-1 flex-row rounded hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Ver detalle de contrato">
+                              <FontAwesomeIcon icon={faFileContract} />
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.activeContractsCount > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{s.activeContractsCount}</span>
+                            </button>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
+                          )}
                         </td>
                         {/* Presente */}
                         <td className="py-2.5 px-3 text-center">
