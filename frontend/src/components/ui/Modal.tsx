@@ -8,7 +8,7 @@ interface ModalProps {
   title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
   children: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl" | "95" | "fullscreen";
+  size?: "sm" | "md" | "lg" | "xl" | "95" | "fullscreen" | "full";
   footer?: React.ReactNode;
   zIndex?: number;
   customHeader?: React.ReactNode;
@@ -45,33 +45,41 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
         return "max-w-[95vw]";
       case "fullscreen":
         return "max-w-[98vw] max-h-svh";
+      case "full":
+        return "max-w-[1600px] h-[96svh]";
       default:
         return "max-w-2xl";
     }
   };
 
-  const isFullscreen = size === "fullscreen";
+  const isFullscreen = size === "fullscreen" || size === "full";
 
   return (
     <div className="fixed inset-0 overflow-y-auto" style={{ zIndex }}>
-      <div className={`flex min-h-screen items-center justify-center ${isFullscreen ? "p-2" : "p-4"}`}>
+      <div className={`flex min-h-screen items-center justify-center ${size === "full" ? "p-4" : isFullscreen ? "p-2" : "p-4"}`}>
         {/* Backdrop */}
         <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 h-vh h-vh" />
 
         {/* Panel */}
-        <div className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full ${getSizeClasses()} ${isFullscreen ? "overflow-hidden flex flex-col" : "max-h-[85svh] overflow-y-auto"}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId}>
+        <div 
+          className={`relative bg-white dark:bg-gray-800 shadow-xl w-full ${getSizeClasses()} overflow-hidden flex flex-col ${size === "full" ? "rounded-xl" : "rounded-2xl"} ${!isFullscreen ? "max-h-[90vh]" : ""}`} 
+          role="dialog" 
+          aria-modal="true" 
+          aria-labelledby={titleId} 
+          aria-describedby={subtitleId}
+        >
           {/* Header */}
           {customHeader ? (
             customHeader
           ) : (
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 sticky top-0 py-3 z-50">
-              <div>
-                <h2 id={titleId} className="text-xl font-bold text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky top-0 z-50">
+              <div className="min-w-0 flex-1">
+                <h2 id={titleId} className="text-xl font-bold text-gray-900 dark:text-white truncate">
                   {title}
                 </h2>
                 {subtitle &&
                   (typeof subtitle === "string" ? (
-                    <p id={subtitleId} className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <p id={subtitleId} className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">
                       {subtitle}
                     </p>
                   ) : (
@@ -80,17 +88,23 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
                     </div>
                   ))}
               </div>
-              <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Cerrar modal" title="Cerrar">
-                <FontAwesomeIcon icon={faXmark} className="h-5 w-5 text-gray-500" />
+              <button onClick={onClose} className="ml-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors shrink-0" aria-label="Cerrar modal" title="Cerrar">
+                <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
               </button>
             </div>
           )}
 
           {/* Content */}
-          <div className={isFullscreen ? "flex-1 overflow-hidden" : "p-6"}>{children}</div>
+          <div className={`flex-1 overflow-y-auto ${!isFullscreen ? "p-6" : ""}`}>
+            {children}
+          </div>
 
           {/* Footer */}
-          {footer && <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 py-3 z-50">{footer}</div>}
+          {footer && (
+            <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 z-50">
+              {footer}
+            </div>
+          )}
         </div>
       </div>
     </div>

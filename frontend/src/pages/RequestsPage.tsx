@@ -14,6 +14,7 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 import { activityReportsAPI } from "../api/request";
 import { activityLogTypesAPI, RequestConfig } from "../api/requestConfig";
 import { usersAPI, User } from "../api/users";
+import { projectsAPI } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 
 interface ActivityReport extends Omit<BaseActivityReport, "id"> {
@@ -156,6 +157,7 @@ export const RequestsPage: React.FC = () => {
   const [reports, setReports] = useState<ActivityReport[]>([]);
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allProjects, setAllProjects] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -166,13 +168,7 @@ export const RequestsPage: React.FC = () => {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
 
-  const uniqueProjects = useMemo(() => {
-    const map = new Map<string, string>();
-    reports.forEach((r) => {
-      if (r.projectIdRaw) map.set(r.projectIdRaw, r.projectName);
-    });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [reports]);
+
 
   const filteredReports = useMemo(() => {
     let result = reports;
@@ -212,7 +208,17 @@ export const RequestsPage: React.FC = () => {
     fetchReports();
     fetchLogTypes();
     fetchUsers();
+    fetchProjects();
   }, []);
+
+  const fetchProjects = async () => {
+    try {
+      const data = await projectsAPI.listAll();
+      setAllProjects(data.map((p: any) => ({ id: p._id, name: p.name })));
+    } catch (e) {
+      console.error("Error loading projects", e);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -663,7 +669,7 @@ export const RequestsPage: React.FC = () => {
             <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
               <option value="all">Todos los Proyectos</option>
-              {uniqueProjects.map((p) => (
+              {allProjects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -820,7 +826,13 @@ export const RequestsPage: React.FC = () => {
         </div>
       </Modal>
 
-      <NewsReportsModal isOpen={showReportsModal} onClose={() => setShowReportsModal(false)} reports={reports as any} allUsers={allUsers} />
+      <NewsReportsModal
+        isOpen={showReportsModal}
+        onClose={() => setShowReportsModal(false)}
+        reports={reports as any}
+        allUsers={allUsers}
+        allProjects={allProjects}
+      />
     </PageLayout>
   );
 };

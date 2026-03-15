@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faChevronDown, faChevronUp, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faChevronDown, faChevronUp, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { User, UserProjectMetadata } from "../../api/users";
 import { overtimeUtils, OvertimeSettings } from "../../utils/overtimeUtils";
@@ -35,6 +35,7 @@ interface NewsReportsModalProps {
   onClose: () => void;
   reports: FormattedReport[];
   allUsers: User[];
+  allProjects: { id: string; name: string }[];
 }
 
 interface EmployeeStats {
@@ -58,6 +59,9 @@ interface EmployeeStats {
   cantidadJornadasLaborales: number;
   activeContractsCount: number;
   hasContractSchedules: boolean;
+  rowProjectId?: string;
+  rowProjectName?: string;
+  rowKey: string; // Unique identifier for the UI row
 }
 
 const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): number => {
@@ -78,31 +82,47 @@ const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): numbe
 };
 
 // Contract Detail Sub-Modal
-const isActiveContract = (contract: any) => {
+// Improved isActiveContract to check for status and period overlap
+const isActiveContract = (contract: any, periodStart?: Date, periodEnd?: Date) => {
   if (!contract.fecha_alta_contrato) return false;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const getLocalMidnight = (dateString: string) => {
-    // Handles both "YYYY-MM-DD" and "YYYY-MM-DDTHH:mm:ss.sssZ" formats without timezone shift
+    if (!dateString) return null;
     const isoDate = dateString.substring(0, 10);
     const parts = isoDate.split("-");
     if (parts.length === 3) {
       return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
     }
     const d = new Date(dateString);
+    if (isNaN(d.getTime())) return null;
     d.setHours(0, 0, 0, 0);
     return d;
   };
 
-  const altaDate = getLocalMidnight(contract.fecha_alta_contrato);
+  // Status check - many employees might have active-looking dates but are marked as BAJA
+  const status = (contract.nombre_estado_empleado || "").toLowerCase();
+  if (status.includes("baja") || status.includes("inactivo")) return false;
 
-  if (contract.fecha_baja_contrato) {
-    const bajaDate = getLocalMidnight(contract.fecha_baja_contrato);
-    return today >= altaDate && today <= bajaDate;
+  const altaDate = getLocalMidnight(contract.fecha_alta_contrato);
+  if (!altaDate) return false;
+
+  const bajaDate = contract.fecha_baja_contrato ? getLocalMidnight(contract.fecha_baja_contrato) : null;
+
+  // Use current date for "is it active now" or overlap with period
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // If period is provided, check for overlap
+  if (periodStart && periodEnd) {
+    if (bajaDate && bajaDate < periodStart) return false;
+    if (altaDate > periodEnd) return false;
+    return true;
   }
 
+  // Fallback to "active now"
+  if (bajaDate) {
+    return today >= altaDate && today <= bajaDate;
+  }
   return today >= altaDate;
 };
 
@@ -112,7 +132,10 @@ const ContractDetailModal: React.FC<{
   employeeName: string;
   userProjectsData: UserProjectMetadata[];
   filterProjectId?: string;
-}> = ({ isOpen, onClose, employeeName, userProjectsData, filterProjectId }) => {
+  zIndex?: number;
+  periodStart?: Date;
+  periodEnd?: Date;
+}> = ({ isOpen, onClose, employeeName, userProjectsData, filterProjectId, zIndex, periodStart, periodEnd }) => {
   const [showActiveOnly, setShowActiveOnly] = useState(true);
 
   useEffect(() => {
@@ -135,7 +158,7 @@ const ContractDetailModal: React.FC<{
   const projectsToShow = relevantProjects.length > 0 ? relevantProjects : userProjectsData;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 animate-fade-in" style={{ zIndex: zIndex || 60 }} onClick={onClose}>
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800">
@@ -178,7 +201,7 @@ const ContractDetailModal: React.FC<{
                 {/* Contracts within the project */}
                 {up.contracts && up.contracts.length > 0 ? (
                   (() => {
-                    const filteredContracts = showActiveOnly ? up.contracts.filter(isActiveContract) : up.contracts;
+                    const filteredContracts = showActiveOnly ? up.contracts.filter(c => isActiveContract(c, periodStart, periodEnd) || isActiveContract(c)) : up.contracts;
 
                     if (filteredContracts.length === 0) {
                       return <div className="text-sm text-gray-400 italic py-2">Sin contratos activos para este proyecto.</div>;
@@ -254,7 +277,7 @@ const ContractField: React.FC<{ icon: any; label: string; value: string; highlig
   </div>
 );
 
-export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers }) => {
+export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onClose, reports, allUsers, allProjects }) => {
   const navigate = useNavigate();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
@@ -263,6 +286,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
   const [contractModal, setContractModal] = useState<{ open: boolean; employeeName: string; data: UserProjectMetadata[] }>({ open: false, employeeName: "", data: [] });
   const [showGlossary, setShowGlossary] = useState(false);
+  const [showCalcInfo, setShowCalcInfo] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [showActiveTableOnly, setShowActiveTableOnly] = useState(true);
   const [glossary, setGlossary] = useState<OvertimeSettings>(overtimeUtils.getGlossary());
 
@@ -270,6 +295,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (isOpen) {
       setGlossary(overtimeUtils.getGlossary());
       setShowActiveTableOnly(true);
+      setShowStats(false);
     }
   }, [isOpen]);
 
@@ -317,105 +343,188 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   // Build a map of userId -> User for quick lookup
   const usersMap = useMemo(() => {
     const map = new Map<string, User>();
-    allUsers.forEach((u) => map.set(u._id, u));
+    allUsers.forEach((u) => {
+      if (u._id) map.set(u._id.toString(), u);
+    });
     return map;
   }, [allUsers]);
-
-  const uniqueProjects = useMemo(() => {
-    const map = new Map<string, string>();
-    reports.forEach((r) => {
-      if (r.projectIdRaw) map.set(r.projectIdRaw, r.projectName);
-    });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [reports]);
 
   const statsByEmployee = useMemo(() => {
     const employeeMap = new Map<string, EmployeeStats>();
     const start = parseISO(dateFrom + "T00:00:00");
     const end = parseISO(dateTo + "T23:59:59");
 
+    // Helper to normalize project names for consistent keys
+    const normalizeProjectName = (name: string) => 
+      (name || "").trim().toUpperCase().replace(/[\s\-_]/g, '');
+
+    // 1. Initialize from User Roster (Full Metadata Check)
+    allUsers.forEach((user) => {
+      if (!user._id) return;
+      const userIdStr = user._id.toString();
+      const userProjects = user.metadata?.projects || [];
+      
+      // Group metadata by normalized project name to merge contracts/IDs
+      const groupedProjects = new Map<string, {
+        originalName: string,
+        projectId: string | undefined,
+        allContracts: any[]
+      }>();
+
+      userProjects.forEach((up) => {
+        const rawName = up.nombre_proyecto || "Desconocido";
+        const normName = normalizeProjectName(rawName);
+        if (normName === "DESCONOCIDO" && !up.projectId) return;
+
+        if (!groupedProjects.has(normName)) {
+          groupedProjects.set(normName, {
+            originalName: rawName.trim(),
+            projectId: typeof up.projectId === "object" ? up.projectId?._id : up.projectId,
+            allContracts: []
+          });
+        }
+        const group = groupedProjects.get(normName)!;
+        if (up.contracts) group.allContracts.push(...up.contracts);
+      });
+
+      // Process each unique project for this user
+      groupedProjects.forEach((group, normName) => {
+        const { originalName, projectId, allContracts } = group;
+
+        // Project Filter check
+        if (projectFilter !== "all") {
+          const filterProj = allProjects.find(p => p.id === projectFilter);
+          const filterNorm = normalizeProjectName(filterProj?.name || "");
+          if (projectId !== projectFilter && normName !== filterNorm) return;
+        }
+
+        // Active Contract filter
+        const activeContracts = allContracts.filter(c => isActiveContract(c, start, end));
+        const activeCount = activeContracts.length;
+
+        // STRICT: If switch is on, skip this project row if no active contracts overlap the period
+        if (showActiveTableOnly && activeCount === 0) return;
+
+        const mapKey = `${userIdStr}-${normName}`;
+        
+        // Pick best info from available contracts
+        const targetList = showActiveTableOnly ? activeContracts : allContracts;
+        let sueldoJornada = 0;
+        let sueldoMano = 0;
+        let contractHoursPerDay = 8;
+        let cantidadJornadasLaborales = 0;
+        let contractSchedules: string[] = [];
+
+        targetList.forEach((contract) => {
+          if (contract.hora_inicio && contract.hora_fin) {
+            const hours = getDailyHoursFromContract(contract.hora_inicio, contract.hora_fin);
+            const sched = `${contract.hora_inicio}-${contract.hora_fin} | ${hours}hs`;
+            if (!contractSchedules.includes(sched)) contractSchedules.push(sched);
+          }
+        });
+
+        if (targetList.length > 0) {
+          const last = targetList[targetList.length - 1]; // Latest contract
+          sueldoJornada = last.sueldo_jornada || 0;
+          sueldoMano = last.sueldo_mano || 0;
+          if (last.hora_inicio && last.hora_fin) {
+            contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
+          }
+          cantidadJornadasLaborales = last.cantidad_jornadas_laborales || 0;
+        }
+
+        employeeMap.set(mapKey, {
+          employeeId: userIdStr,
+          employeeName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Sin Nombre",
+          absences: 0,
+          absenceDetails: {},
+          overtimeHours: 0,
+          daysPresent: 0,
+          lateDays: 0,
+          totalRecords: 0,
+          sueldoJornada,
+          sueldoMano,
+          projectNames: user.projectIds?.map((p) => p.name) || [],
+          userProjectsData: userProjects,
+          overtime50: 0,
+          overtime100: 0,
+          schedules: [...contractSchedules],
+          overtimeEntries: [],
+          contractHoursPerDay,
+          cantidadJornadasLaborales,
+          activeContractsCount: activeCount,
+          hasContractSchedules: contractSchedules.length > 0,
+          rowProjectId: projectId,
+          rowProjectName: originalName,
+          rowKey: mapKey,
+        });
+      });
+    });
+
+    // 2. Process Attendance Reports
     reports.forEach((report) => {
       try {
         const reportDate = parseISO(report.date + "T00:00:00");
         if (!isWithinInterval(reportDate, { start, end })) return;
-      } catch {
-        return;
-      }
+      } catch { return; }
 
       if (projectFilter !== "all" && report.projectIdRaw !== projectFilter) return;
 
       report.attendance.forEach((record) => {
-        const empId = typeof record.employeeId === "object" ? record.employeeId?._id : record.employeeId;
-        const empName = record.employeeName || "Desconocido";
+        const rawId = typeof record.employeeId === "object" ? record.employeeId?._id : record.employeeId;
+        if (!rawId) return;
+        const empIdStr = rawId.toString();
 
-        if (!empId) return;
+        const reportProjName = report.projectName || allProjects.find(p => p.id === (report.projectIdRaw || ""))?.name || "Sin Proyecto";
+        const normReportProjName = normalizeProjectName(reportProjName);
+        const mapKey = `${empIdStr}-${normReportProjName}`;
 
-        if (!employeeMap.has(empId)) {
-          // Fetch user metadata for salary/project info
-          const user = usersMap.get(empId);
+        // Fallback Initialization (if not in roster or skipped previously)
+        if (!employeeMap.has(mapKey)) {
+          const user = usersMap.get(empIdStr);
           const userProjects = user?.metadata?.projects || [];
-
-          // Get sueldo from the latest contract of the filtered project, or any
+          
           let sueldoJornada = 0;
           let sueldoMano = 0;
           let contractHoursPerDay = 8;
           let cantidadJornadasLaborales = 0;
-          let activeContractsCount = 0;
+          let activeCount = 0;
           let contractSchedules: string[] = [];
 
-          if (userProjects.length > 0) {
-            // First loop: Collect completely accurate schedules and counts from ALL target projects
-            for (const up of userProjects) {
-              const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
-              const isTargetProject = projectFilter === "all" || upProjId === projectFilter;
-
-              if (up.contracts && up.contracts.length > 0 && isTargetProject) {
-                const activesInProject = up.contracts.filter(isActiveContract);
-                activeContractsCount += activesInProject.length;
-
-                let targetContracts = showActiveTableOnly ? activesInProject : up.contracts;
-                targetContracts.forEach((contract) => {
-                  if (contract.hora_inicio && contract.hora_fin) {
-                    const hours = getDailyHoursFromContract(contract.hora_inicio, contract.hora_fin);
-                    const sched = `${contract.hora_inicio}-${contract.hora_fin} | ${hours}hs`;
-                    if (!contractSchedules.includes(sched)) contractSchedules.push(sched);
-                  }
-                });
-              }
+          // Find matches in metadata by name
+          const matchContracts: any[] = [];
+          userProjects.forEach(up => {
+            if (normalizeProjectName(up.nombre_proyecto || "") === normReportProjName) {
+              if (up.contracts) matchContracts.push(...up.contracts);
             }
+          });
 
-            // Second loop: Try to find sueldo from the latest contract of the filtered project
-            for (const up of userProjects) {
-              const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
-              const isTargetProject = projectFilter === "all" || upProjId === projectFilter;
+          const activeContracts = matchContracts.filter(c => isActiveContract(c, start, end));
+          activeCount = activeContracts.length;
 
-              if (up.contracts && up.contracts.length > 0 && isTargetProject) {
-                let targetContracts = up.contracts;
-                if (showActiveTableOnly) {
-                  targetContracts = targetContracts.filter(isActiveContract);
-                }
+          // STRICT: Skip addition if filter is on and no active contract
+          if (showActiveTableOnly && activeCount === 0) return;
 
-                if (targetContracts.length > 0) {
-                  // Get the last (most recent) contract from the target list
-                  const lastContract = targetContracts[targetContracts.length - 1];
-                  if (lastContract.sueldo_jornada) sueldoJornada = lastContract.sueldo_jornada;
-                  if (lastContract.sueldo_mano) sueldoMano = lastContract.sueldo_mano;
-                  if (lastContract.hora_inicio && lastContract.hora_fin) {
-                    contractHoursPerDay = getDailyHoursFromContract(lastContract.hora_inicio, lastContract.hora_fin);
-                  }
-                  if (lastContract.cantidad_jornadas_laborales) cantidadJornadasLaborales = lastContract.cantidad_jornadas_laborales;
-                  if (sueldoJornada > 0 || sueldoMano > 0) break;
-                }
-              }
+          const targets = showActiveTableOnly ? activeContracts : matchContracts;
+          targets.forEach((c) => {
+            if (c.hora_inicio && c.hora_fin) {
+              const h = getDailyHoursFromContract(c.hora_inicio, c.hora_fin);
+              const s = `${c.hora_inicio}-${c.hora_fin} | ${h}hs`;
+              if (!contractSchedules.includes(s)) contractSchedules.push(s);
             }
+          });
+
+          if (targets.length > 0) {
+            const last = targets[targets.length - 1];
+            sueldoJornada = last.sueldo_jornada || 0;
+            sueldoMano = last.sueldo_mano || 0;
+            contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
+            cantidadJornadasLaborales = last.cantidad_jornadas_laborales || 0;
           }
 
-          // Get project names from User.projectIds
-          const projectNames = user?.projectIds?.map((p) => p.name) || [];
-
-          employeeMap.set(empId, {
-            employeeId: empId,
-            employeeName: empName,
+          employeeMap.set(mapKey, {
+            employeeId: empIdStr,
+            employeeName: record.employeeName || (user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "Desconocido"),
             absences: 0,
             absenceDetails: {},
             overtimeHours: 0,
@@ -424,7 +533,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             totalRecords: 0,
             sueldoJornada,
             sueldoMano,
-            projectNames,
+            projectNames: user?.projectIds?.map((p) => p.name) || [],
             userProjectsData: userProjects,
             overtime50: 0,
             overtime100: 0,
@@ -432,59 +541,47 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             overtimeEntries: [],
             contractHoursPerDay,
             cantidadJornadasLaborales,
-            activeContractsCount,
+            activeContractsCount: activeCount,
             hasContractSchedules: contractSchedules.length > 0,
+            rowProjectId: report.projectIdRaw,
+            rowProjectName: reportProjName,
+            rowKey: mapKey,
           });
         }
 
-        const stats = employeeMap.get(empId)!;
-        stats.totalRecords += 1;
+        const stats = employeeMap.get(mapKey);
+        if (!stats) return;
 
-        if (record.status === "present") {
+        stats.totalRecords += 1;
+        if (record.status === "present" || record.status === "late") {
           stats.daysPresent += 1;
-        } else if (record.status === "late") {
-          stats.daysPresent += 1;
-          stats.lateDays += 1;
+          if (record.status === "late") stats.lateDays += 1;
         } else {
           stats.absences += 1;
           const reason = record.absenceReason || "Sin motivo";
           stats.absenceDetails[reason] = (stats.absenceDetails[reason] || 0) + 1;
         }
 
-        const totalHs = record.overtimeHours || 0;
-        stats.overtimeHours += totalHs;
-
-        // Split overtime
-        const { h50, h100, pct } = splitOvertime(report.date, record.overtimeEntryTime, record.overtimeExitTime, totalHs);
+        const ot = record.overtimeHours || 0;
+        stats.overtimeHours += ot;
+        const { h50, h100, pct } = splitOvertime(report.date, record.overtimeEntryTime, record.overtimeExitTime, ot);
         stats.overtime50 += h50;
         stats.overtime100 += h100;
 
-        // Collect schedules from attendance if we don't have contract schedules
-        if (!stats.hasContractSchedules && record.entryTime && record.exitTime) {
-          const hours = getDailyHoursFromContract(record.entryTime, record.exitTime);
-          const sched = `${record.entryTime}-${record.exitTime} | ${hours}hs`;
-          if (!stats.schedules.includes(sched)) stats.schedules.push(sched);
-        }
-        if (totalHs > 0) {
+        if (ot > 0) {
           const oTSched = record.overtimeEntryTime && record.overtimeExitTime ? `${record.overtimeEntryTime}-${record.overtimeExitTime}` : "Hs. Seteadas";
-          const dateFormatted = format(parseISO(report.date + "T00:00:00"), "dd/MM");
-          stats.overtimeEntries.push({ date: dateFormatted, schedule: oTSched, pct: pct || (h100 > 0 ? glossary.pct100 : glossary.pct50), hours: totalHs });
+          const dFmt = format(parseISO(report.date + "T00:00:00"), "dd/MM");
+          stats.overtimeEntries.push({ date: dFmt, schedule: oTSched, pct: pct || (h100 > 0 ? glossary.pct100 : glossary.pct50), hours: ot });
         }
       });
     });
 
+    // 3. Final Filtering & Sorting
     let results = Array.from(employeeMap.values());
-
+    
+    // STRICT RE-CHECK: Guarantee no 0-contract rows exist if filter is on
     if (showActiveTableOnly) {
-      results = results.filter((emp) => {
-        return emp.userProjectsData.some((up) => {
-          const upProjId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
-          const isTargetProject = projectFilter === "all" || upProjId === projectFilter;
-          if (!isTargetProject) return false;
-          if (!up.contracts || up.contracts.length === 0) return false;
-          return up.contracts.some(isActiveContract);
-        });
-      });
+      results = results.filter(emp => emp.activeContractsCount > 0);
     }
 
     if (searchTerm) {
@@ -493,7 +590,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     }
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly]);
+  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects]);
 
   const formattedMonthLabel = useMemo(() => {
     try {
@@ -507,8 +604,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
   const activeProjectName = useMemo(() => {
     if (projectFilter === "all") return "Todos los Proyectos";
-    return uniqueProjects.find((p) => p.id === projectFilter)?.name || "Filtro activo";
-  }, [projectFilter, uniqueProjects]);
+    return allProjects.find((p) => p.id === projectFilter)?.name || "Filtro activo";
+  }, [projectFilter, allProjects]);
 
   const totalAbsences = statsByEmployee.reduce((acc, curr) => acc + curr.absences, 0);
   const totalOvertime50 = statsByEmployee.reduce((acc, curr) => acc + curr.overtime50, 0);
@@ -525,21 +622,26 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const totalEmployees = statsByEmployee.length;
 
   const handleExport = () => {
-    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Sueldo", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
     const rows = statsByEmployee.map((s) => {
       const salaryDivisor = glossary.salaryDivisorPercentage || 150;
       const baseHour = s.sueldoMano / salaryDivisor;
-      const m50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+      const vExtra50 = baseHour * (1 + glossary.pct50 / 100);
+      const vExtra100 = baseHour * (1 + glossary.pct100 / 100);
+      const m50 = s.overtime50 * vExtra50;
       const normalHora = s.sueldoJornada / s.contractHoursPerDay;
-      const m100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
+      const m100 = s.overtime100 * vExtra100;
       const otDetail = s.overtimeEntries.map((e) => `${e.date} (${e.pct}%): ${e.schedule}`).join("; ");
       return [
         `"${s.employeeName}"`,
         s.sueldoJornada,
         s.sueldoMano,
         normalHora.toFixed(2),
+        baseHour.toFixed(2),
+        vExtra50.toFixed(2),
+        vExtra100.toFixed(2),
         s.cantidadJornadasLaborales,
-        `"${s.projectNames.join(", ")}"`,
+        `"${s.rowProjectName}"`,
         s.daysPresent,
         s.absences,
         `"${Object.entries(s.absenceDetails)
@@ -547,7 +649,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           .join("; ")}"`,
         s.overtime50,
         s.overtime100,
-        s.sueldoMano,
         `"${otDetail}"`,
         (m50 + m100).toFixed(2),
         (s.sueldoJornada * s.daysPresent + m50 + m100).toFixed(2),
@@ -568,22 +669,27 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   };
 
   const handleExportXLS = () => {
-    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Sueldo", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
+    const headers = ["Empleado", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total"];
 
     const rows = statsByEmployee.map((s) => {
       const salaryDivisor = glossary.salaryDivisorPercentage || 150;
       const baseHour = s.sueldoMano / salaryDivisor;
-      const m50 = s.overtime50 * baseHour * (1 + glossary.pct50 / 100);
+      const vExtra50 = baseHour * (1 + glossary.pct50 / 100);
+      const vExtra100 = baseHour * (1 + glossary.pct100 / 100);
+      const m50 = s.overtime50 * vExtra50;
       const normalHora = s.sueldoJornada / s.contractHoursPerDay;
-      const m100 = s.overtime100 * baseHour * (1 + glossary.pct100 / 100);
+      const m100 = s.overtime100 * vExtra100;
       const otDetail = s.overtimeEntries.map((e) => `${e.date} (${e.pct}%): ${e.schedule}`).join("; ");
       return [
         s.employeeName,
         s.sueldoJornada,
         s.sueldoMano,
         Number(normalHora.toFixed(2)),
+        Number(baseHour.toFixed(2)),
+        Number(vExtra50.toFixed(2)),
+        Number(vExtra100.toFixed(2)),
         s.cantidadJornadasLaborales,
-        s.projectNames.join(", "),
+        s.rowProjectName,
         s.daysPresent,
         s.absences,
         Object.entries(s.absenceDetails)
@@ -591,7 +697,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           .join("; "),
         s.overtime50,
         s.overtime100,
-        s.sueldoMano,
         otDetail,
         Number((m50 + m100).toFixed(2)),
         Number((s.sueldoJornada * s.daysPresent + m50 + m100).toFixed(2)),
@@ -607,12 +712,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       "",
       "",
       "",
+      "",
+      "",
       statsByEmployee.reduce((a, c) => a + c.daysPresent, 0),
       totalAbsences,
       "",
       totalOvertime50,
       totalOvertime100,
-      "", // Sueldo
       "", // Detail column empty for total
       Number(totalCost.toFixed(2)),
       Number((totalMontoSueldos + totalCost).toFixed(2)),
@@ -650,22 +756,27 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title="Reportes de Novedades"
-        size="95"
+        title={
+          <div className="flex items-center gap-2">
+            <span>Reportes de Novedades</span>
+            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({statsByEmployee.length})</span>
+          </div>
+        }
+        size="full"
         footer={
           <div className="flex justify-end gap-2 w-full">
             <button onClick={handleExport} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <FontAwesomeIcon icon={faFileExport} />
               Exportar CSV
             </button>
-            <button onClick={handleExportXLS} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+            <button onClick={handleExportXLS} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <FontAwesomeIcon icon={faFileExcel} />
               Exportar Excel
             </button>
           </div>
         }
       >
-        <div className="space-y-5">
+        <div className="flex flex-col h-full space-y-5 p-6">
           <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
             {/* Primera fila */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -691,7 +802,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   <FontAwesomeIcon icon={faBriefcase} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
                   <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="w-full pl-8 pr-6 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
                     <option value="all">Todos</option>
-                    {uniqueProjects.map((p) => (
+                    {allProjects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>
@@ -708,11 +819,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 </div>
               </div>
             </div>
-
-            {/* Segunda fila */}
-            <div className="flex justify-start items-center gap-6 pt-1">
-              <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Contratos</label>
+            {/* Segunda fila: Filtros de estado, glosario y etiquetas de contexto */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
+              <div className="flex items-center gap-6">
                 <div className="flex items-center">
                   <label className="flex items-center cursor-pointer gap-2 py-0.5">
                     <div className="relative">
@@ -720,23 +829,47 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                       <div className={`block w-8 h-4 rounded-full transition-colors ${showActiveTableOnly ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}></div>
                       <div className={`dot absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform ${showActiveTableOnly ? "transform translate-x-4" : ""}`}></div>
                     </div>
-                    <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Activos</span>
+                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Contratos Activos</span>
                   </label>
                 </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-transparent uppercase tracking-wider mb-1 block select-none">Glosario</label>
-                <button onClick={() => setShowGlossary(true)} className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium py-0.5" title="Ver configuración actual de horas extras">
+                <button onClick={() => setShowGlossary(true)} className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-semibold py-0.5" title="Ver configuración actual de horas extras">
                   <FontAwesomeIcon icon={faCircleInfo} />
                   Ver Glosario
                 </button>
+
+                <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-600 mx-2"></div>
+
+                <button 
+                  onClick={() => setShowStats(true)} 
+                  className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-semibold py-0.5"
+                  title="Ver resumen estadístico del período"
+                >
+                  <FontAwesomeIcon icon={faChartSimple} />
+                  Estadísticas
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800/50 px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Período</span>
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{formattedMonthLabel}</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800/50 px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Proyecto</span>
+                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{activeProjectName}</span>
+                </div>
+                {totalOvertime50 + totalOvertime100 > 0 && (
+                  <div className="text-[10px] font-medium text-gray-500 italic ml-2">
+                    Total hs: <span className="font-bold text-amber-600">{(totalOvertime50 + totalOvertime100).toFixed(1)}h</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Read-Only Glossary Modal */}
-          <Modal isOpen={showGlossary} onClose={() => setShowGlossary(false)} title="Glosario de Horas Extras" size="md">
+          <Modal isOpen={showGlossary} onClose={() => setShowGlossary(false)} title="Glosario de Horas Extras" size="md" zIndex={100}>
             <div className="space-y-6">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
                 <div className="flex gap-3">
@@ -789,73 +922,126 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             </div>
           </Modal>
 
-          {/* Summary KPIs Section Header */}
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Período</span>
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{formattedMonthLabel}</span>
+          {/* Calculation Info Modal */}
+          <Modal isOpen={showCalcInfo} onClose={() => setShowCalcInfo(false)} title="Componentes del Precio Hora Extra" size="md" zIndex={100}>
+            <div className="space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed font-medium">
+                  El cálculo se basa en el <span className="text-blue-600 dark:text-blue-400 font-bold">Sueldo Mano</span> del empleado y el divisor mensual configurado.
+                </p>
               </div>
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Proyecto</span>
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{activeProjectName}</span>
-              </div>
-            </div>
-            {totalOvertime50 + totalOvertime100 > 0 && (
-              <div className="text-[10px] font-medium text-gray-500 italic">
-                Total hs. extras registradas: <span className="font-bold text-amber-600">{(totalOvertime50 + totalOvertime100).toFixed(1)}h</span>
-              </div>
-            )}
-          </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pb-2">
-            {/* Empleados */}
-            <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-3 rounded-xl flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                <FontAwesomeIcon icon={faUser} className="text-base" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black text-blue-600/70 dark:text-blue-400/70 uppercase tracking-wider mb-0.5">Empleados</p>
-                <p className="text-2xl font-black text-blue-700 dark:text-blue-300 leading-none">{totalEmployees}</p>
-              </div>
-            </div>
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest leading-none">1. Precio Hora Base</h4>
+                  <div className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    Sueldo Mano / {glossary.salaryDivisorPercentage} (Divisor)
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-2 font-medium">Este es el valor unitario de la hora sobre el cual se aplican los recargos.</p>
+                </div>
 
-            {/* Ausencias */}
-            <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 p-3 rounded-xl flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
-                <FontAwesomeIcon icon={faUserSlash} className="text-base" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black text-red-600/70 dark:text-red-400/70 uppercase tracking-wider mb-0.5">Ausencias</p>
-                <p className="text-2xl font-black text-red-700 dark:text-red-300 leading-none">{totalAbsences}</p>
-              </div>
-            </div>
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                  <h4 className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase mb-3 tracking-widest leading-none">2. Precio Hora 50%</h4>
+                  <div className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    Hora Base × {1 + glossary.pct50 / 100}
+                  </div>
+                </div>
 
-            {/* Costo Hs. Extras */}
-            <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 p-3 rounded-xl flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                <FontAwesomeIcon icon={faClock} className="text-base" />
+                <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
+                  <h4 className="text-[10px] font-black text-red-600 dark:text-red-500 uppercase mb-3 tracking-widest leading-none">3. Precio Hora 100%</h4>
+                  <div className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    Hora Base × {1 + glossary.pct100 / 100}
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black text-amber-600/70 dark:text-amber-400/70 uppercase tracking-wider mb-0.5">Costo Hs. Extras</p>
-                <p className="text-2xl font-black text-amber-700 dark:text-amber-300 leading-none">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 0 })}</p>
-              </div>
-            </div>
 
-            {/* Monto Total Final */}
-            <div className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 p-3 rounded-xl flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
-                <FontAwesomeIcon icon={faMoneyBillWave} className="text-base" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black text-green-600/70 dark:text-green-400/70 uppercase tracking-wider mb-0.5">Total Final</p>
-                <p className="text-2xl font-black text-green-700 dark:text-green-300 leading-none">${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</p>
+              <div className="text-[10px] text-gray-400 dark:text-gray-500 italic p-2 leading-tight">
+                * Todos los porcentajes y el divisor se pueden modificar desde el Glosario de Extras en la configuración.
               </div>
             </div>
-          </div>
+          </Modal>
+
+          {/* Statistics Modal */}
+          <Modal isOpen={showStats} onClose={() => setShowStats(false)} title="Estadísticas de Novedades" size="md" zIndex={100}>
+            <div className="space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                <div className="flex gap-3">
+                  <FontAwesomeIcon icon={faChartSimple} className="text-blue-500 mt-1" />
+                  <p className="text-sm text-blue-800 dark:text-blue-300 leading-relaxed font-medium">Resumen consolidado para el período y filtros seleccionados.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Empleados y Ausencias */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+                   <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                      <FontAwesomeIcon icon={faUser} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider leading-none mb-1">Total Empleados</p>
+                      <p className="text-xl font-bold text-gray-900 dark:text-white leading-none">{totalEmployees}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 pt-2 border-t border-gray-50 dark:border-gray-700/50">
+                    <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                      <FontAwesomeIcon icon={faUserSlash} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider leading-none mb-1">Total Ausencias</p>
+                      <p className="text-xl font-bold text-gray-900 dark:text-white leading-none">{totalAbsences}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Costos */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                      <FontAwesomeIcon icon={faClock} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider leading-none mb-1">Costo Hs. Extras</p>
+                      <p className="text-xl font-bold text-amber-600 leading-none">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 0 })}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 pt-2 border-t border-gray-50 dark:border-gray-700/50">
+                    <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                      <FontAwesomeIcon icon={faMoneyBillWave} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider leading-none mb-1">Total Final</p>
+                      <p className="text-xl font-bold text-green-600 leading-none">${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-500 font-medium italic">Período seleccionado:</span>
+                  <span className="text-gray-900 dark:text-white font-bold">{formattedMonthLabel}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-500 font-medium italic">Proyecto filtros:</span>
+                  <span className="text-gray-900 dark:text-white font-bold truncate max-w-[200px]">{activeProjectName}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button onClick={() => setShowStats(false)} className="px-6 py-2 bg-gray-900 dark:bg-blue-600 hover:bg-black dark:hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg">
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+
+
+
 
           {/* Table */}
-          <div className="overflow-auto max-h-[calc(100vh-480px)] rounded border border-gray-200 dark:border-gray-700">
+          <div className="flex-1 overflow-auto rounded border border-gray-200 dark:border-gray-700 min-h-0">
             <table className="w-full text-sm text-left">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold shadow-sm">
                 <tr>
@@ -863,6 +1049,17 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Jornada</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Mano</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">P. Hora</th>
+                  <th className="py-2.5 px-3 text-right text-[10px] leading-tight whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex flex-col items-end">
+                        <span>P. Hora Extra</span>
+                        <span className="text-[8px] opacity-60">Base | 50% | 100%</span>
+                      </div>
+                      <button onClick={() => setShowCalcInfo(true)} className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors p-1" title="Ver detalle del cálculo">
+                        <FontAwesomeIcon icon={faCircleInfo} />
+                      </button>
+                    </div>
+                  </th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Jornadas</th>
                   <th className="py-2.5 px-3 text-left">Proyectos</th>
                   <th className="py-2.5 px-2 text-center text-[10px] leading-tight">
@@ -880,7 +1077,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   </th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Hs. 50%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Hs. 100%</th>
-                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight">Sueldo</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight whitespace-nowrap">$ Extras</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">Monto Total</th>
                   <th className="py-2.5 px-3 text-center w-8"></th>
@@ -888,11 +1084,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {statsByEmployee.map((s) => {
-                  const isExpanded = expandedEmployee === s.employeeId;
+                  const rowKey = `${s.employeeId}-${s.rowProjectId}`;
+                  const isExpanded = expandedEmployee === rowKey;
                   const absenceEntries = Object.entries(s.absenceDetails);
-                  const colCount = 15;
+                  const colCount = 18;
                   return (
-                    <React.Fragment key={s.employeeId}>
+                    <React.Fragment key={s.rowKey}>
                       <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                         {/* Empleado */}
                         <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
@@ -909,17 +1106,32 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                             return normalHora > 0 ? `$${normalHora.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>;
                           })()}
                         </td>
+                        {/* Precio Hora Extra 50/100 */}
+                        <td className="py-2.5 px-3 text-right text-[9px] font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap leading-tight">
+                          {(() => {
+                            const salaryDivisor = glossary.salaryDivisorPercentage || 150;
+                            const baseHour = s.sueldoMano / salaryDivisor;
+                            const v50 = baseHour * (1 + glossary.pct50 / 100);
+                            const v100 = baseHour * (1 + glossary.pct100 / 100);
+                            if (baseHour <= 0) return <span className="text-gray-300 dark:text-gray-600">-</span>;
+                            return (
+                              <div className="flex flex-col items-end gap-0.5">
+                                <span className="text-gray-500 dark:text-gray-500 font-normal">Base: ${baseHour.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
+                                <span>50%: ${v50.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
+                                <span>100%: ${v100.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
+                              </div>
+                            );
+                          })()}
+                        </td>
                         {/* Jornadas */}
                         <td className="py-2.5 px-3 text-center text-xs font-medium text-gray-600 dark:text-gray-400">{s.cantidadJornadasLaborales || <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* Proyectos */}
                         <td className="py-2.5 px-3">
                           <div className="flex flex-wrap gap-1 max-w-[160px]">
-                            {s.projectNames.length > 0 ? (
-                              s.projectNames.map((pn, idx) => (
-                                <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 truncate max-w-[120px]" title={pn}>
-                                  {pn}
-                                </span>
-                              ))
+                            {s.rowProjectName ? (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 truncate max-w-[120px]" title={s.rowProjectName}>
+                                {s.rowProjectName}
+                              </span>
                             ) : (
                               <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
                             )}
@@ -980,8 +1192,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         <td className="py-2.5 px-2 text-right font-medium text-gray-600 dark:text-gray-400">{s.overtime50 > 0 ? `${s.overtime50}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* Hs 100% */}
                         <td className="py-2.5 px-2 text-right font-medium text-amber-700 dark:text-amber-500">{s.overtime100 > 0 ? `${s.overtime100}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
-                        {/* Sueldo */}
-                        <td className="py-2.5 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.sueldoMano > 0 ? `$${s.sueldoMano.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* $ Extras */}
                         <td className="py-2.5 px-2 text-right font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
                           {(() => {
@@ -1007,7 +1217,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         {/* Expand */}
                         <td className="py-2.5 px-3 text-center">
                           {absenceEntries.length > 0 && (
-                            <button onClick={() => setExpandedEmployee(isExpanded ? null : s.employeeId)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                            <button onClick={() => setExpandedEmployee(isExpanded ? null : rowKey)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                               <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="text-xs" />
                             </button>
                           )}
@@ -1031,7 +1241,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 })}
                 {statsByEmployee.length === 0 && (
                   <tr>
-                    <td colSpan={15} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
+                    <td colSpan={18} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
                       No se encontraron registros para el mes y filtros seleccionados.
                     </td>
                   </tr>
@@ -1041,19 +1251,26 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 <tfoot className="bg-gray-50 dark:bg-gray-800 font-semibold text-gray-700 dark:text-gray-300 border-t-2 border-gray-200 dark:border-gray-600">
                   <tr>
                     <td className="py-2.5 px-3">Totales ({totalEmployees})</td>
-                    <td className="py-2.5 px-3"></td>
-                    <td className="py-2.5 px-3"></td>
-                    <td className="py-2.5 px-3"></td>
-                    <td className="py-2.5 px-3"></td>
-                    <td className="py-2.5 px-3"></td>
-                    <td className="py-2.5 px-3 text-center text-green-600 dark:text-green-400">{statsByEmployee.reduce((a, c) => a + c.daysPresent, 0)}</td>
-                    <td className="py-2.5 px-3 text-center text-red-600 dark:text-red-400">{totalAbsences}</td>
-                    <td className="py-2.5 px-3 text-center"></td>
-                    <td className="py-2.5 px-2 text-right text-xs">{totalOvertime50}h</td>
-                    <td className="py-2.5 px-2 text-right text-xs">{totalOvertime100}h</td>
-                    <td className="py-2.5 px-2 text-right text-xs font-semibold text-amber-600 dark:text-amber-400 border-x border-gray-100 dark:border-gray-700">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="py-2.5 px-3 text-right font-bold text-green-600 dark:text-green-400">{`$${(statsByEmployee.reduce((a, c) => a + c.sueldoJornada * c.daysPresent, 0) + totalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}</td>
-                    <td></td>
+                    <td className="py-2.5 px-3"></td> {/* S. Jornada */}
+                    <td className="py-2.5 px-3"></td> {/* S. Mano */}
+                    <td className="py-2.5 px-3"></td> {/* P. Hora */}
+                    <td className="py-2.5 px-3"></td> {/* P. Hora Extra */}
+                    <td className="py-2.5 px-3"></td> {/* Jornadas */}
+                    <td className="py-2.5 px-3"></td> {/* Proyectos */}
+                    <td className="py-2.5 px-3"></td> {/* Horario Base */}
+                    <td className="py-2.5 px-3"></td> {/* Contrato */}
+                    <td className="py-2.5 px-3 text-center text-green-600 dark:text-green-400 font-bold">{statsByEmployee.reduce((a, c) => a + c.daysPresent, 0)}</td>
+                    <td className="py-2.5 px-3 text-center text-red-600 dark:text-red-400 font-bold">{totalAbsences}</td>
+                    <td className="py-2.5 px-3 text-center"></td> {/* Horario Extra */}
+                    <td className="py-2.5 px-2 text-right text-xs font-bold">{totalOvertime50}h</td>
+                    <td className="py-2.5 px-2 text-right text-xs font-bold">{totalOvertime100}h</td>
+                    <td className="py-2.5 px-2 text-right text-xs font-bold text-amber-600 dark:text-amber-400 border-x border-gray-100 dark:border-gray-700">
+                      ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-green-600 dark:text-green-400">
+                      {`$${(statsByEmployee.reduce((a, c) => a + c.sueldoJornada * c.daysPresent, 0) + totalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                    </td>
+                    <td></td> {/* Expand */}
                   </tr>
                 </tfoot>
               )}
@@ -1063,7 +1280,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       </Modal>
 
       {/* Contract Detail Sub-Modal */}
-      <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ open: false, employeeName: "", data: [] })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} filterProjectId={projectFilter !== "all" ? projectFilter : undefined} />
+      <ContractDetailModal
+        isOpen={contractModal.open}
+        onClose={() => setContractModal({ ...contractModal, open: false })}
+        employeeName={contractModal.employeeName}
+        userProjectsData={contractModal.data}
+        filterProjectId={projectFilter !== "all" ? projectFilter : undefined}
+        zIndex={100}
+        periodStart={parseISO(dateFrom + "T00:00:00")}
+        periodEnd={parseISO(dateTo + "T23:59:59")}
+      />
     </>
   );
 };
