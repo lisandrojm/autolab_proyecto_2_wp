@@ -62,6 +62,9 @@ interface EmployeeStats {
   rowProjectId?: string;
   rowProjectName?: string;
   rowKey: string; // Unique identifier for the UI row
+  contractType?: string;
+  contractAlta?: string;
+  contractBaja?: string;
 }
 
 const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): number => {
@@ -423,6 +426,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           }
         });
 
+        let contractType = "";
+        let contractAlta = "";
+        let contractBaja = "";
+
         if (targetList.length > 0) {
           const last = targetList[targetList.length - 1]; // Latest contract
           sueldoJornada = last.sueldo_jornada || 0;
@@ -431,6 +438,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
           }
           cantidadJornadasLaborales = last.cantidad_jornadas_laborales || 0;
+          contractType = last.tipo_contrato || "";
+          contractAlta = last.fecha_alta_contrato || "";
+          contractBaja = last.fecha_baja_contrato || "";
         }
 
         employeeMap.set(mapKey, {
@@ -457,6 +467,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           rowProjectId: projectId,
           rowProjectName: originalName,
           rowKey: mapKey,
+          contractType,
+          contractAlta,
+          contractBaja,
         });
       });
     });
@@ -514,12 +527,19 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             }
           });
 
+          let contractType = "";
+          let contractAlta = "";
+          let contractBaja = "";
+
           if (targets.length > 0) {
             const last = targets[targets.length - 1];
             sueldoJornada = last.sueldo_jornada || 0;
             sueldoMano = last.sueldo_mano || 0;
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
             cantidadJornadasLaborales = last.cantidad_jornadas_laborales || 0;
+            contractType = last.tipo_contrato || "";
+            contractAlta = last.fecha_alta_contrato || "";
+            contractBaja = last.fecha_baja_contrato || "";
           }
 
           employeeMap.set(mapKey, {
@@ -546,6 +566,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             rowProjectId: report.projectIdRaw,
             rowProjectName: reportProjName,
             rowKey: mapKey,
+            contractType,
+            contractAlta,
+            contractBaja,
           });
         }
 
@@ -1152,15 +1175,34 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                           </div>
                         </td>
                         {/* Contrato */}
-                        <td className="py-2.5 px-3 text-center">
-                          {s.userProjectsData.length > 0 ? (
-                            <button onClick={() => handleOpenContract(s)} className="inline-flex items-center justify-center gap-1.5 mx-auto text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors px-2 py-1 flex-row rounded hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Ver detalle de contrato">
-                              <FontAwesomeIcon icon={faFileContract} />
-                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${s.activeContractsCount > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{s.activeContractsCount}</span>
-                            </button>
-                          ) : (
-                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
-                          )}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2">
+                            {s.userProjectsData.length > 0 ? (
+                              <>
+                                <button 
+                                  onClick={() => handleOpenContract(s)} 
+                                  className="inline-flex items-center justify-center gap-1.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20" 
+                                  title="Ver detalle de contrato"
+                                >
+                                  <FontAwesomeIcon icon={faFileContract} />
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.activeContractsCount > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{s.activeContractsCount}</span>
+                                </button>
+
+                                {/* Información adicional a la derecha */}
+                                {(s.contractType || s.contractAlta || s.contractBaja) && (
+                                  <div className="flex flex-col text-[7px] leading-tight text-gray-400 dark:text-gray-500 font-medium uppercase tracking-tighter border-l border-gray-200 dark:border-gray-700 pl-2">
+                                    {s.contractType && <span className="font-bold text-gray-500 dark:text-gray-400">{s.contractType}</span>}
+                                    <div className="flex flex-col">
+                                      {s.contractAlta && <span>A: {s.contractAlta.substring(0, 10).split("-").reverse().join("/")}</span>}
+                                      <span>B: {s.contractBaja ? s.contractBaja.substring(0, 10).split("-").reverse().join("/") : "-"}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-gray-300 dark:text-gray-600 text-xs pl-2">-</span>
+                            )}
+                          </div>
                         </td>
                         {/* Presente */}
                         <td className="py-2.5 px-3 text-center">
