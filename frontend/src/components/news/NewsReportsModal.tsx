@@ -770,7 +770,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     const cost100 = curr.overtime100 * baseHour * (1 + glossary.pct100 / 100);
     return acc + cost50 + cost100;
   }, 0);
-  const totalSalaries = statsByEmployee.reduce((acc, curr) => acc + curr.sueldoJornada * curr.daysPresent, 0);
+  const totalSalaries = statsByEmployee.reduce((acc, curr) => acc + curr.sueldoJornada * (curr.cantidadJornadasLaborales - curr.absences), 0);
   const grandTotal = totalSalaries + totalCost;
   const totalEmployees = statsByEmployee.length;
 
@@ -1397,6 +1397,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                               const salaryMonto = s.sueldoJornada * (s.cantidadJornadasLaborales - s.absences);
                               return `$${(salaryMonto + cost50 + cost100).toLocaleString(undefined, {
                                 minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
                               })}`;
                             })()}
                             <button 
@@ -1459,10 +1460,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <td className="py-2.5 px-2 text-right text-xs font-bold">{totalOvertime50}h</td>
                     <td className="py-2.5 px-2 text-right text-xs font-bold">{totalOvertime100}h</td>
                     <td className="py-2.5 px-2 text-right text-xs font-bold text-amber-600 dark:text-amber-400 border-x border-gray-100 dark:border-gray-700">
-                      ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="py-2.5 px-3 text-right font-black text-green-600 dark:text-green-400">
-                      {`$${(statsByEmployee.reduce((a, c) => a + c.sueldoJornada * c.daysPresent, 0) + totalCost).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                      ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td></td> {/* Expand */}
                   </tr>
