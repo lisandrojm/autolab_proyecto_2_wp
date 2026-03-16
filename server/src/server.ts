@@ -57,6 +57,8 @@ import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
 import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
 import { ProjectPdfConfigRoutes } from "./routes/projectPdfConfig.js";
+import { shiftRoutes } from "./routes/shifts.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -172,6 +174,8 @@ app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
 app.use("/api/v1/request-config", RequestConfigRoutes);
 app.use("/api/v1/activity-reports", RequestRoutes);
+app.use("/api/v1/shifts", shiftRoutes);
+
 
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);

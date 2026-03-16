@@ -49,6 +49,7 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
             <th className="py-3 px-4 text-center">Hs. Exts.</th>
             <th className="py-3 px-4 text-center">Entrada Exts.</th>
             <th className="py-3 px-4 text-center">Salida Exts.</th>
+            <th className="py-3 px-4 text-center">Reemplazo</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -73,6 +74,7 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
                 </td>
                 <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeEntryTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeEntryTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
                 <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeExitTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeExitTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
+                <td className="py-3 px-4 text-center text-xs font-medium text-gray-600 dark:text-gray-400">{record.replacementName || "-"}</td>
               </tr>
             );
           })}
@@ -103,17 +105,34 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
           {count > 0 ? (
             <div className="overflow-auto max-h-[calc(100vh-320px)]">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 shadow-sm text-xs uppercase text-gray-500 font-medium outline outline-1 outline-gray-100 dark:outline-gray-700 bg-white dark:bg-gray-800">
+                <thead className="sticky top-0 z-10 shadow-sm text-[9px] uppercase text-gray-500 font-medium outline outline-1 outline-gray-100 dark:outline-gray-700 bg-white dark:bg-gray-800">
+                  <tr className="border-b border-gray-100 dark:border-gray-700">
+                    <th rowSpan={2} className="py-2 px-4 text-left font-black text-gray-400 border-r border-gray-100 dark:border-gray-700 align-middle w-[180px]">Colaborador Ausente</th>
+                    <th colSpan={6} className="py-1 px-4 text-center font-black bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-b border-blue-100 dark:border-blue-900/30">
+                      Información del Reemplazo / Jornalero
+                    </th>
+                  </tr>
                   <tr>
-                    <th className="py-2 px-5 text-left w-1/2 font-semibold">Colaborador</th>
-                    <th className="py-2 px-5 text-left w-1/2 font-semibold">Reemplazo / Detalle</th>
+                    <th className="py-1.5 px-4 text-left font-semibold text-blue-500/80">Nombre / Detalle</th>
+                    <th className="py-1.5 px-2 text-center font-medium">Entrada</th>
+                    <th className="py-1.5 px-2 text-center font-medium">Salida</th>
+                    <th className="py-1.5 px-2 text-center font-medium">Hs. Exts.</th>
+                    <th className="py-1.5 px-2 text-center font-medium text-[8px]">Entr. Exts.</th>
+                    <th className="py-1.5 px-2 text-center font-medium text-[8px]">Sal. Exts.</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {relevantRecords.map((rec) => (
                     <tr key={rec.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                      <td className="py-2.5 px-5 font-medium text-red-600 dark:text-gray-300">{rec.employeeName}</td>
-                      <td className="py-2.5 px-5 text-gray-600 dark:text-gray-400">{rec.replacementName || "-"}</td>
+                      <td className="py-2 px-4 font-bold text-red-600 dark:text-red-400 whitespace-nowrap border-r border-gray-50 dark:border-gray-700/50">{rec.employeeName}</td>
+                      <td className="py-2 px-4 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap bg-blue-50/20 dark:bg-blue-900/5">{rec.replacementName || "-"}</td>
+                      <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.entryTime || "-"}</td>
+                      <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.exitTime || "-"}</td>
+                      <td className="py-2 px-2 text-center bg-blue-50/20 dark:bg-blue-900/5">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-black ${rec.overtimeHours > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500"}`}>{rec.overtimeHours}</span>
+                      </td>
+                      <td className="py-2 px-2 text-center text-[10px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.overtimeEntryTime || "-"}</td>
+                      <td className="py-2 px-2 text-center text-[10px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.overtimeExitTime || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -167,8 +186,6 @@ export const RequestsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
-
-
 
   const filteredReports = useMemo(() => {
     let result = reports;
@@ -559,7 +576,7 @@ export const RequestsPage: React.FC = () => {
               Asistencia del Personal ({mergedAttendance.length})
             </button>
             <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Ausentes ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
+              Ausentes | Reemplazos ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
             </button>
             <button onClick={() => setDetailTab("overtime")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "overtime" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Horas Extras ({selectedReport.attendance.filter((r) => (r.overtimeHours || 0) > 0).length})
@@ -826,13 +843,7 @@ export const RequestsPage: React.FC = () => {
         </div>
       </Modal>
 
-      <NewsReportsModal
-        isOpen={showReportsModal}
-        onClose={() => setShowReportsModal(false)}
-        reports={reports as any}
-        allUsers={allUsers}
-        allProjects={allProjects}
-      />
+      <NewsReportsModal isOpen={showReportsModal} onClose={() => setShowReportsModal(false)} reports={reports as any} allUsers={allUsers} allProjects={allProjects} />
     </PageLayout>
   );
 };

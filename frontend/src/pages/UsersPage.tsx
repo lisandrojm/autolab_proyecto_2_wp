@@ -15,7 +15,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faShieldHalved, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -82,7 +82,6 @@ export const UsersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
-  const [showSeniorityDetail, setShowSeniorityDetail] = useState(false);
 
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
@@ -127,7 +126,7 @@ export const UsersPage: React.FC = () => {
   const requestIdRef = useRef(0);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: any;
 
     const handleResize = () => {
       clearTimeout(timeoutId);
@@ -893,6 +892,10 @@ export const UsersPage: React.FC = () => {
           <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Areas</span>
+          </button>
+          <button onClick={() => navigate("/shifts")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="hidden lg:block">Turnos</span>
           </button>
         </div>
       }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuthStore } from "../stores/authStore";
-import { areasAPI, Area } from "../api/areas";
+import { shiftsAPI, Shift } from "../api/shifts";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -8,21 +8,21 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faPlus, faClock, faUserTie, faUserGraduate, faUserGear, faLayerGroup, faTable, faGrip, faUserShield } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 
-// const HELP_KEY = "areas" as const; // TODO: Add help content if needed
-
-interface AreaFormData {
+interface ShiftFormData {
   name: string;
+  startTime: string;
+  endTime: string;
   description: string;
 }
 
-export const AreasPage: React.FC = () => {
+export const ShiftsPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
 
-  const [areas, setAreas] = useState<Area[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,16 +30,17 @@ export const AreasPage: React.FC = () => {
   const [endDate, setEndDate] = useState("");
 
   const [showModal, setShowModal] = useState(false);
-  const [editingArea, setEditingArea] = useState<Area | null>(null);
-  const [formData, setFormData] = useState<AreaFormData>({
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [formData, setFormData] = useState<ShiftFormData>({
     name: "",
+    startTime: "09:00",
+    endTime: "18:00",
     description: "",
   });
 
   const [viewOpen, setViewOpen] = useState(false);
-  const [viewArea, setViewArea] = useState<Area | null>(null);
+  const [viewShift, setViewShift] = useState<Shift | null>(null);
 
-  // View Mode Logic
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
 
@@ -53,7 +54,7 @@ export const AreasPage: React.FC = () => {
     };
 
     if (window.innerWidth >= 1024) {
-      const saved = localStorage.getItem("areasViewMode");
+      const saved = localStorage.getItem("shiftsViewMode");
       if (saved === "table" || saved === "cards") {
         setViewMode(saved as "table" | "cards");
       }
@@ -65,104 +66,105 @@ export const AreasPage: React.FC = () => {
 
   useEffect(() => {
     if (isLarge) {
-      localStorage.setItem("areasViewMode", viewMode);
+      localStorage.setItem("shiftsViewMode", viewMode);
     }
   }, [viewMode, isLarge]);
 
-  // const [openInfo, setOpenInfo] = useState(false);
-  // const helpEntry = getHelp(HELP_KEY);
-
-  const canManage = hasPermission("admin_areas:view"); // Assuming same permission as users/positions for now
+  const canManage = hasPermission("admin_users:view");
 
   useEffect(() => {
-    fetchAreas();
+    fetchShifts();
   }, []);
 
-  const fetchAreas = async () => {
+  const fetchShifts = async () => {
     try {
       setLoading(true);
-      const response = await areasAPI.list({});
-      setAreas(response.areas);
+      const response = await shiftsAPI.list({});
+      setShifts(response.shifts);
     } catch (error) {
-      console.error("Error fetching areas:", error);
-      sweetAlert.error("Error", "No se pudieron cargar las áreas");
+      console.error("Error fetching shifts:", error);
+      sweetAlert.error("Error", "No se pudieron cargar los turnos");
     } finally {
       setLoading(false);
     }
   };
 
   const openCreate = () => {
-    setEditingArea(null);
+    setEditingShift(null);
     setFormData({
       name: "",
+      startTime: "09:00",
+      endTime: "18:00",
       description: "",
     });
     setShowModal(true);
   };
 
-  const openEdit = (area: Area) => {
-    setEditingArea(area);
+  const openEdit = (shift: Shift) => {
+    setEditingShift(shift);
     setFormData({
-      name: area.name,
-      description: area.description || "",
+      name: shift.name,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      description: shift.description || "",
     });
     setShowModal(true);
   };
 
-  const openView = (area: Area) => {
-    setViewArea(area);
+  const openView = (shift: Shift) => {
+    setViewShift(shift);
     setViewOpen(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setEditingArea(null);
+    setEditingShift(null);
   };
 
   const closeView = () => {
     setViewOpen(false);
-    setViewArea(null);
+    setViewShift(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (editingArea) {
-        await areasAPI.update(editingArea._id, formData);
-        sweetAlert.success("Área actualizada", "Los cambios se han guardado correctamente");
+      if (editingShift) {
+        await shiftsAPI.update(editingShift._id, formData);
+        sweetAlert.success("Turno actualizado", "Los cambios se han guardado correctamente");
       } else {
-        await areasAPI.create(formData);
-        sweetAlert.success("Área creada", "El área se ha creado correctamente");
+        await shiftsAPI.create(formData);
+        sweetAlert.success("Turno creado", "El turno se ha creado correctamente");
       }
       closeModal();
-      fetchAreas();
+      fetchShifts();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Error al guardar el área";
+      const message = error.response?.data?.error || "Error al guardar el turno";
       sweetAlert.error("Error", message);
     }
   };
 
-  const handleDelete = async (area: Area) => {
-    const result = await sweetAlert.confirm("¿Eliminar área?", `¿Estás seguro de que quieres eliminar el área "${area.name}"?`);
+  const handleDelete = async (shift: Shift) => {
+    const result = await sweetAlert.confirm("¿Eliminar turno?", `¿Estás seguro de que quieres eliminar el turno "${shift.name}"?`);
     if (result.isConfirmed) {
       try {
-        await areasAPI.remove(area._id);
-        sweetAlert.success("Área eliminada", "El área ha sido eliminada correctamente");
-        fetchAreas();
+        await shiftsAPI.remove(shift._id);
+        sweetAlert.success("Turno eliminado", "El turno ha sido eliminado correctamente");
+        fetchShifts();
       } catch (error: any) {
-        const message = error.response?.data?.error || "Error al eliminar el área";
+        const message = error.response?.data?.error || "Error al eliminar el turno";
         sweetAlert.error("Error", message);
       }
     }
   };
 
-  const filteredAreas = areas.filter((a) => {
+  const filteredShifts = shifts.filter((s) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || a.name.toLowerCase().includes(q) || (a.description || "").toLowerCase().includes(q);
+    const matchesSearch = q.length === 0 || s.name.toLowerCase().includes(q) || (s.description || "").toLowerCase().includes(q);
 
     let matchesDate = true;
     if (startDate || endDate) {
-      const createdAt = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdAt = s.createdAt ? new Date(s.createdAt).getTime() : 0;
       if (startDate) {
         const start = new Date(startDate).getTime();
         matchesDate = matchesDate && createdAt >= start;
@@ -178,10 +180,10 @@ export const AreasPage: React.FC = () => {
 
   return (
     <PageLayout
-      title="Áreas"
-      itemCount={filteredAreas.length}
-      subtitle="Gestiona las áreas de la organización"
-      faIcon={{ icon: faLayerGroup }}
+      title="Turnos"
+      itemCount={filteredShifts.length}
+      subtitle="Gestiona los turnos de la organización"
+      faIcon={{ icon: faClock }}
       shouldShowInfo={false}
       headerActions={
         <div className="flex items-center gap-3">
@@ -194,6 +196,10 @@ export const AreasPage: React.FC = () => {
             <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Usuarios</span>
           </button>
+          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <span className="hidden lg:block">Áreas</span>
+          </button>
           <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Cargos</span>
@@ -201,10 +207,6 @@ export const AreasPage: React.FC = () => {
           <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
             <span className="hidden lg:block">Niveles</span>
-          </button>
-          <button onClick={() => navigate("/shifts")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Turnos</span>
           </button>
           <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
@@ -218,7 +220,7 @@ export const AreasPage: React.FC = () => {
             <SearchAndFilters
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
-              searchPlaceholder="Buscar áreas..."
+              searchPlaceholder="Buscar turnos..."
               dateFilter={{
                 startDate,
                 endDate,
@@ -242,16 +244,16 @@ export const AreasPage: React.FC = () => {
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
-        title: viewArea ? viewArea.name : "Área",
-        subtitle: viewArea?.description,
+        title: viewShift ? viewShift.name : "Turno",
+        subtitle: viewShift?.description,
         size: "md",
         actions: [
           ...(canManage
             ? [
                 {
-                  label: "Editar área",
+                  label: "Editar turno",
                   onClick: () => {
-                    if (viewArea) openEdit(viewArea);
+                    if (viewShift) openEdit(viewShift);
                     closeView();
                   },
                   variant: "secondary",
@@ -264,23 +266,26 @@ export const AreasPage: React.FC = () => {
             variant: "ghost",
           },
         ],
-        content: viewArea ? (
+        content: viewShift ? (
           <div className="space-y-6">
-            {/* Tenant Badge */}
-            {viewArea.tenant?.name && (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewArea.tenant.name}</span>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Entrada</h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{viewShift.startTime} hs</p>
               </div>
-            )}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Salida</h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{viewShift.endTime} hs</p>
+              </div>
+            </div>
 
-            {/* Descripción */}
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{viewArea.description || "—"}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{viewShift.description || "—"}</p>
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Detalles</h4>
-              <p className="text-xs text-gray-500">Creado el: {viewArea.createdAt ? new Date(viewArea.createdAt).toLocaleDateString() : "-"}</p>
+              <p className="text-xs text-gray-500">Creado el: {viewShift.createdAt ? new Date(viewShift.createdAt).toLocaleDateString() : "-"}</p>
             </div>
           </div>
         ) : null,
@@ -288,14 +293,14 @@ export const AreasPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: editingArea ? "Editar Área" : "Nueva Área",
-        subtitle: "Define nombre y descripción",
+        title: editingShift ? "Editar Turno" : "Nuevo Turno",
+        subtitle: "Define nombre, horarios y descripción",
         size: "md",
         actions: [
           {
-            label: editingArea ? "Actualizar" : "Crear",
+            label: editingShift ? "Actualizar" : "Crear",
             onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#area-form");
+              const form = document.querySelector<HTMLFormElement>("#shift-form");
               form?.requestSubmit();
             },
             variant: "primary",
@@ -307,62 +312,62 @@ export const AreasPage: React.FC = () => {
           },
         ],
         content: (
-          <form id="area-form" onSubmit={handleSubmit}>
+          <form id="shift-form" onSubmit={handleSubmit}>
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Nombre del área" />
+                <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Ej: Mañana, Tarde, Noche" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Entrada *</label>
+                  <input type="time" required value={formData.startTime} onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))} className="input-field" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Salida *</label>
+                  <input type="time" required value={formData.endTime} onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))} className="input-field" />
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
-                <textarea value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del área" />
+                <textarea value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del turno" />
               </div>
             </div>
           </form>
         ),
       }}
     >
-      {/* Loading state */}
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <LoadingSpinner message="Cargando áreas..." />
+          <LoadingSpinner message="Cargando turnos..." />
         </div>
       ) : (
         <>
           {viewMode === "cards" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-              {filteredAreas.map((area) => {
+              {filteredShifts.map((shift) => {
                 return (
                   <Card
-                    key={area._id}
-                    onClick={() => openView(area)}
+                    key={shift._id}
+                    onClick={() => openView(shift)}
                     className="hover:scale-105 hover:shadow-lg transition-all duration-200"
                     header={{
-                      title: area.name,
-                      subtitle: area.description,
-                      icon: faLayerGroup,
-                      badges:
-                        area.tenant && area.tenant.name
-                          ? [
-                              {
-                                text: area.tenant.name,
-                                variant: "default" as const,
-                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                              },
-                            ]
-                          : [],
+                      title: shift.name,
+                      subtitle: `${shift.startTime} - ${shift.endTime}`,
+                      icon: faClock,
                     }}
                     footer={
                       canManage
                         ? {
-                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ""}</span>,
+                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{shift.createdAt ? new Date(shift.createdAt).toLocaleDateString() : ""}</span>,
                             actions: [
                               {
                                 icon: faEdit,
                                 onClick: (e) => {
                                   e.stopPropagation();
-                                  openEdit(area);
+                                  openEdit(shift);
                                 },
                                 title: "Editar",
                                 variant: "default",
@@ -371,7 +376,7 @@ export const AreasPage: React.FC = () => {
                                 icon: faTrash,
                                 onClick: (e) => {
                                   e.stopPropagation();
-                                  handleDelete(area);
+                                  handleDelete(shift);
                                 },
                                 title: "Eliminar",
                                 variant: "default",
@@ -388,9 +393,9 @@ export const AreasPage: React.FC = () => {
                   variant="create"
                   onClick={openCreate}
                   header={{
-                    title: "Nueva Área",
-                    subtitle: "Crear una nueva área para la organización",
-                    icon: faLayerGroup,
+                    title: "Nuevo Turno",
+                    subtitle: "Crear un nuevo turno para la organización",
+                    icon: faClock,
                   }}
                 />
               )}
@@ -402,30 +407,33 @@ export const AreasPage: React.FC = () => {
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                       <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entrada</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Salida</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
                       {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {filteredAreas.map((area) => (
-                      <tr key={area._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(area)}>
+                    {filteredShifts.map((shift) => (
+                      <tr key={shift._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(shift)}>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex items-center justify-center shrink-0">
-                              <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                              <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
-                              {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
+                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{shift.name}</span>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{area.description || "—"}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{shift.startTime} hs</span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : "—"}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{shift.endTime} hs</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{shift.createdAt ? new Date(shift.createdAt).toLocaleDateString() : "—"}</span>
                         </td>
                         {canManage && (
                           <td className="px-6 py-4 text-right">
@@ -433,7 +441,7 @@ export const AreasPage: React.FC = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openEdit(area);
+                                  openEdit(shift);
                                 }}
                                 className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
                                 title="Editar"
@@ -443,7 +451,7 @@ export const AreasPage: React.FC = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDelete(area);
+                                  handleDelete(shift);
                                 }}
                                 className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
                                 title="Eliminar"
@@ -461,15 +469,15 @@ export const AreasPage: React.FC = () => {
             </div>
           )}
 
-          {!loading && filteredAreas.length === 0 && (
+          {!loading && filteredShifts.length === 0 && (
             <EmptyState
-              icon={faShieldHalved}
-              title={startDate || endDate ? "No hay áreas en este rango de fechas" : "No hay áreas"}
-              description={startDate || endDate ? `No se encontraron áreas ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primera área para comenzar."}
+              icon={faClock}
+              title={startDate || endDate ? "No hay turnos en este rango de fechas" : "No hay turnos"}
+              description={startDate || endDate ? "No se encontraron turnos para los criterios seleccionados." : "Crea tu primer turno para comenzar."}
               action={
                 canManage
                   ? {
-                      label: "Nueva Área",
+                      label: "Nuevo Turno",
                       onClick: openCreate,
                       icon: faPlus,
                     }

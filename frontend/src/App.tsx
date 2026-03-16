@@ -13,6 +13,7 @@ import { RolesFramePage } from "./pages/RolesFramePage";
 import { PositionsPage } from "./pages/PositionsPage";
 import { LevelsPage } from "./pages/LevelsPage";
 import { AreasPage } from "./pages/AreasPage";
+import { ShiftsPage } from "./pages/ShiftsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { SedesPage } from "./pages/SedesPage";
@@ -303,6 +304,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AreasPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/shifts"
+                element={
+                  <ProtectedRoute>
+                    <ShiftsPage />
                   </ProtectedRoute>
                 }
               />

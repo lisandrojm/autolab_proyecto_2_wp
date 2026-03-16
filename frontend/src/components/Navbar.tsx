@@ -5,11 +5,9 @@ import { ClientSelector } from "./ClientSelector";
 import { ClientContextMenu } from "./ClientContextMenu";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faHouse, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faRocket, faChartLine, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faMoon, faSun, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTie, faUserGraduate, faBriefcase, faFileContract, faClock } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "../components/ui/Logo";
 import axios from "../api/axiosConfig";
-import { triggerVercelRedeploy, isDeployButtonVisible } from "../utils/vercelDeploy";
-import { sweetAlert } from "../utils/sweetAlert";
 import { SettingsModal } from "./SettingsModal";
 import { useClientContextStore } from "../stores/clientContextStore";
 
@@ -22,30 +20,6 @@ interface AdminCounts {
   positions: number;
   levels: number;
   projects: number;
-}
-
-type DeployMeta = {
-  shortSha?: string;
-  sha?: string;
-  createdAt?: number;
-  url?: string;
-  branch?: string;
-  commitMessage?: string;
-};
-
-function formatDateTime(epochMs?: number) {
-  if (!epochMs) return "";
-  try {
-    return new Date(epochMs).toLocaleString(undefined, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
 }
 
 export const MobileNavbar: React.FC = () => {
@@ -74,10 +48,6 @@ export const MobileNavbar: React.FC = () => {
     else localStorage.removeItem("adminOpenSection");
   };
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({ clients: 0, tenants: 0, roles: 0, users: 0, areas: 0, positions: 0, levels: 0, projects: 0 });
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [deployMeta, setDeployMeta] = useState<DeployMeta | null>(null);
-  const [deployMetaLoading, setDeployMetaLoading] = useState(false);
-  const [deployMetaError, setDeployMetaError] = useState<string | null>(null);
   const SHOW_MENU_COUNTS = false;
 
   useEffect(() => {
@@ -153,13 +123,14 @@ export const MobileNavbar: React.FC = () => {
     }> = [];
 
     if (isSuperAdminTenant) {
-      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
+      base.push({ path: "/tenants", icon: faBuilding, label: "Tenants", scope: "global", count: adminCounts.tenants }, { path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users }, { path: "/shifts", icon: faClock, label: "Turnos", scope: "global" }, { path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles }, { path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" }, { path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas }, { path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions }, { path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels }, { path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
     } else {
       if (hasPermission("admin_roles:view")) base.push({ path: "/roles", icon: faUserShield, label: "Roles", scope: "global", count: adminCounts.roles });
       if (hasPermission("admin_roles:view")) base.push({ path: "/admin/roles-frame", icon: faUserShield, label: "Roles Frame", scope: "global" });
       if (hasPermission("admin_areas:view")) base.push({ path: "/areas", icon: faLayerGroup, label: "Áreas", scope: "global", count: adminCounts.areas });
       if (hasPermission("admin_positions:view")) base.push({ path: "/positions", icon: faUserTie, label: "Cargos", scope: "global", count: adminCounts.positions });
       if (hasPermission("admin_levels:view")) base.push({ path: "/levels", icon: faUserGraduate, label: "Niveles", scope: "global", count: adminCounts.levels });
+      if (hasPermission("admin_users:view")) base.push({ path: "/shifts", icon: faClock, label: "Turnos", scope: "global" });
       if (hasPermission("admin_users:view")) base.push({ path: "/users", icon: faUserGear, label: "Usuarios", scope: "global", count: adminCounts.users });
 
       // Admin GENERAL Items
@@ -185,33 +156,6 @@ export const MobileNavbar: React.FC = () => {
   }, [hasPermission, adminCounts, user?.tenantSlug]);
 
   const handleMenuClick = () => {};
-
-  const handleRedeploy = async () => {
-    const result = await sweetAlert.confirm("Confirmar Redeploy", "¿Estás seguro de que deseas iniciar un nuevo despliegue en Vercel? Esto puede tomar varios minutos.", "Redeploy");
-    if (!result.isConfirmed) return;
-    setIsDeploying(true);
-    const response = await triggerVercelRedeploy();
-    setIsDeploying(false);
-    if (response.success) {
-      await sweetAlert.success("Redeploy Iniciado", response.message);
-    } else {
-      await sweetAlert.error("Error", response.message);
-    }
-  };
-
-  const loadDeployMeta = async () => {
-    if (deployMeta || deployMetaLoading) return;
-    try {
-      setDeployMetaLoading(true);
-      setDeployMetaError(null);
-      const { data } = await axios.get("/vercel/last-deploy");
-      setDeployMeta(data);
-    } catch (e: any) {
-      setDeployMetaError("No se pudo leer el último deploy");
-    } finally {
-      setDeployMetaLoading(false);
-    }
-  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -261,9 +205,7 @@ export const MobileNavbar: React.FC = () => {
     const isSuperAdminTenant = user?.tenantSlug === "superadmin";
 
     // Partición de items: Admin Usuarios, Admin General, Configuración y GESTIÓN
-    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/admin/roles-frame", "/areas", "/positions", "/levels"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/admin/roles-frame", "/areas", "/positions", "/levels", "/users"].includes(item.path));
-
-    const managementItems = adminItems.filter((item) => ["/projects"].includes(item.path));
+    const userAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/users", "/roles", "/admin/roles-frame", "/areas", "/positions", "/levels", "/shifts"].includes(item.path)) : adminItems.filter((item) => ["/roles", "/admin/roles-frame", "/areas", "/positions", "/levels", "/users", "/shifts"].includes(item.path));
 
     const generalAdminItems = isSuperAdminTenant ? adminItems.filter((item) => ["/tenants", "/clients"].includes(item.path)) : adminItems.filter((item) => ["/clients", "/admin/projects", "/admin/sedes", "/admin/contracts", "/orders", "/vacations", "/requests", "/calendar-events", "/employee-profiles", "/documents"].includes(item.path));
 
