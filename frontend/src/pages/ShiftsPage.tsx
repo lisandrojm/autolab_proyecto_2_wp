@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 
 // Helper para días
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Lunes a Domingo
 
 export const ShiftsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -265,11 +266,14 @@ export const ShiftsPage: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Días Laborales *</label>
               <div className="flex flex-wrap gap-2">
-                {DAYS.map((day, index) => (
-                  <button key={day} type="button" onClick={() => toggleDay(index)} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${formData.days.includes(index) ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
-                    {day}
-                  </button>
-                ))}
+                {DAY_ORDER.map((index) => {
+                  const day = DAYS[index];
+                  return (
+                    <button key={day} type="button" onClick={() => toggleDay(index)} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${formData.days.includes(index) ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                      {day}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -316,11 +320,12 @@ export const ShiftsPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {shift.days.map((d) => (
-                        <span key={d} className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md font-medium uppercase">
-                          {DAYS[d].slice(0, 3)}
-                        </span>
-                      ))}
+                        {/* Sort days based on DAY_ORDER before mapping */}
+                        {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
+                          <span key={d} className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md font-medium uppercase">
+                            {DAYS[d].slice(0, 3)}
+                          </span>
+                        ))}
                     </div>
                   </div>
                 </Card>
@@ -353,7 +358,7 @@ export const ShiftsPage: React.FC = () => {
                       </td>
                       <td>
                         <div className="flex gap-1 flex-wrap">
-                          {shift.days.map((d) => (
+                          {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
                             <span key={d} className="text-[10px] uppercase font-bold text-gray-400">
                               {DAYS[d].slice(0, 3)}
                             </span>
