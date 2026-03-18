@@ -11,6 +11,8 @@ const router = Router();
 
 const createShiftSchema = z.object({
   name: z.string().min(1).max(100),
+  type: z.string().min(1).max(50),
+  days: z.array(z.number().min(0).max(6)),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido (HH:mm)"),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido (HH:mm)"),
   description: z.string().optional(),

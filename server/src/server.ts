@@ -58,6 +58,7 @@ import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
 import { ProjectPdfConfigRoutes } from "./routes/projectPdfConfig.js";
 import { shiftRoutes } from "./routes/shifts.js";
+import { shiftConfigRoutes } from "./routes/shiftConfigs.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -175,6 +176,7 @@ app.use("/api/v1/vacations", vacationsRoutes);
 app.use("/api/v1/request-config", RequestConfigRoutes);
 app.use("/api/v1/activity-reports", RequestRoutes);
 app.use("/api/v1/shifts", shiftRoutes);
+app.use("/api/v1/shift-configs", shiftConfigRoutes);
 
 
 // ───────────────── 404 + errores (al final) ─────────────────

@@ -1,45 +1,45 @@
 import React, { useState, useEffect } from "react";
-import { useAuthStore } from "../stores/authStore";
-import { shiftsAPI, Shift } from "../api/shifts";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { EmptyState } from "../components/ui/EmptyState";
+import { shiftConfigsAPI, ShiftConfig } from "../api/shiftConfigs";
+import { Shift, ShiftFormData } from "../api/shifts";
+import { shiftsAPI } from "../api/shifts";
+import { useAuthStore } from "../stores/authStore";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus, faClock, faUserTie, faUserGraduate, faUserGear, faLayerGroup, faTable, faGrip, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faCalendarCheck, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 
-interface ShiftFormData {
-  name: string;
-  startTime: string;
-  endTime: string;
-  description: string;
-}
+// Helper para días
+const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 export const ShiftsPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuthStore();
+  const canManage = hasPermission("admin_users:view");
 
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [totalShifts, setTotalShifts] = useState(0);
   const [loading, setLoading] = useState(true);
-
   const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const [showModal, setShowModal] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [formData, setFormData] = useState<ShiftFormData>({
     name: "",
+    type: "",
+    days: [],
     startTime: "09:00",
     endTime: "18:00",
     description: "",
   });
 
-  const [viewOpen, setViewOpen] = useState(false);
-  const [viewShift, setViewShift] = useState<Shift | null>(null);
+  const [shiftConfigs, setShiftConfigs] = useState<ShiftConfig[]>([]);
 
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
@@ -48,44 +48,44 @@ export const ShiftsPage: React.FC = () => {
     const handleResize = () => {
       const isNowLarge = window.innerWidth >= 1024;
       setIsLarge(isNowLarge);
-      if (!isNowLarge) {
-        setViewMode("cards");
-      }
+      if (!isNowLarge) setViewMode("cards");
     };
-
     if (window.innerWidth >= 1024) {
       const saved = localStorage.getItem("shiftsViewMode");
-      if (saved === "table" || saved === "cards") {
-        setViewMode(saved as "table" | "cards");
-      }
+      if (saved === "table" || saved === "cards") setViewMode(saved);
     }
-
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
-    if (isLarge) {
-      localStorage.setItem("shiftsViewMode", viewMode);
-    }
+    if (isLarge) localStorage.setItem("shiftsViewMode", viewMode);
   }, [viewMode, isLarge]);
-
-  const canManage = hasPermission("admin_users:view");
 
   useEffect(() => {
     fetchShifts();
-  }, []);
+    fetchShiftConfigs();
+  }, [currentPage, searchTerm]);
 
   const fetchShifts = async () => {
     try {
       setLoading(true);
-      const response = await shiftsAPI.list({});
-      setShifts(response.shifts);
+      const resp = await shiftsAPI.getAll({ page: currentPage, limit: itemsPerPage, name: searchTerm });
+      setShifts(resp.data.shifts);
+      setTotalShifts(resp.data.pagination.total);
     } catch (error) {
-      console.error("Error fetching shifts:", error);
-      sweetAlert.error("Error", "No se pudieron cargar los turnos");
+      console.error("Error fetching shifts", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchShiftConfigs = async () => {
+    try {
+      const resp = await shiftConfigsAPI.getAll();
+      setShiftConfigs(resp.data);
+    } catch (error) {
+      console.error("Error fetching configs", error);
     }
   };
 
@@ -93,6 +93,8 @@ export const ShiftsPage: React.FC = () => {
     setEditingShift(null);
     setFormData({
       name: "",
+      type: shiftConfigs.length > 0 ? shiftConfigs[0].name : "",
+      days: [],
       startTime: "09:00",
       endTime: "18:00",
       description: "",
@@ -104,6 +106,8 @@ export const ShiftsPage: React.FC = () => {
     setEditingShift(shift);
     setFormData({
       name: shift.name,
+      type: shift.type,
+      days: shift.days,
       startTime: shift.startTime,
       endTime: shift.endTime,
       description: shift.description || "",
@@ -111,36 +115,24 @@ export const ShiftsPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const openView = (shift: Shift) => {
-    setViewShift(shift);
-    setViewOpen(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setEditingShift(null);
-  };
-
-  const closeView = () => {
-    setViewOpen(false);
-    setViewShift(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.days.length === 0) {
+      sweetAlert.error("Error", "Debes seleccionar al menos un día");
+      return;
+    }
     try {
       if (editingShift) {
         await shiftsAPI.update(editingShift._id, formData);
-        sweetAlert.success("Turno actualizado", "Los cambios se han guardado correctamente");
+        sweetAlert.success("Turno actualizado", "Los cambios se guardaron con éxito");
       } else {
         await shiftsAPI.create(formData);
-        sweetAlert.success("Turno creado", "El turno se ha creado correctamente");
+        sweetAlert.success("Turno creado", "El turno se creó con éxito");
       }
-      closeModal();
+      setShowModal(false);
       fetchShifts();
-    } catch (error: any) {
-      const message = error.response?.data?.error || "Error al guardar el turno";
-      sweetAlert.error("Error", message);
+    } catch (error) {
+      sweetAlert.error("Error", "Hubo un error al guardar el turno");
     }
   };
 
@@ -148,192 +140,114 @@ export const ShiftsPage: React.FC = () => {
     const result = await sweetAlert.confirm("¿Eliminar turno?", `¿Estás seguro de que quieres eliminar el turno "${shift.name}"?`);
     if (result.isConfirmed) {
       try {
-        await shiftsAPI.remove(shift._id);
-        sweetAlert.success("Turno eliminado", "El turno ha sido eliminado correctamente");
+        await shiftsAPI.delete(shift._id);
+        sweetAlert.success("Eliminado", "El turno fue eliminado");
         fetchShifts();
       } catch (error: any) {
-        const message = error.response?.data?.error || "Error al eliminar el turno";
-        sweetAlert.error("Error", message);
+        sweetAlert.error("Error", error.response?.data?.error || "Error al eliminar");
       }
     }
   };
 
-  const filteredShifts = shifts.filter((s) => {
-    const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || s.name.toLowerCase().includes(q) || (s.description || "").toLowerCase().includes(q);
-
-    let matchesDate = true;
-    if (startDate || endDate) {
-      const createdAt = s.createdAt ? new Date(s.createdAt).getTime() : 0;
-      if (startDate) {
-        const start = new Date(startDate).getTime();
-        matchesDate = matchesDate && createdAt >= start;
-      }
-      if (endDate) {
-        const end = new Date(endDate).setHours(23, 59, 59, 999);
-        matchesDate = matchesDate && createdAt <= end;
-      }
-    }
-
-    return matchesSearch && matchesDate;
-  });
+  const toggleDay = (dayIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      days: prev.days.includes(dayIndex) ? prev.days.filter((d) => d !== dayIndex) : [...prev.days, dayIndex],
+    }));
+  };
 
   return (
     <PageLayout
       title="Turnos"
-      itemCount={filteredShifts.length}
-      subtitle="Gestiona los turnos de la organización"
+      itemCount={totalShifts}
+      subtitle="Gestiona los horarios y días laborales de tu organización"
       faIcon={{ icon: faClock }}
-      shouldShowInfo={false}
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
-            <button onClick={openCreate} className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-              <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
+            <button onClick={openCreate} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm shadow-sm">
+              <FontAwesomeIcon icon={faPlus} />
+              <span>Nuevo Turno</span>
             </button>
           )}
-          <button onClick={() => navigate("/users")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserGear} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Usuarios</span>
-          </button>
-          <button onClick={() => navigate("/areas")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Áreas</span>
-          </button>
-          <button onClick={() => navigate("/positions")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Cargos</span>
-          </button>
-          <button onClick={() => navigate("/levels")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Niveles</span>
-          </button>
-          <button onClick={() => navigate("/roles")} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
-            <span className="hidden lg:block">Roles</span>
+          <button onClick={() => navigate("/shifts/config")} className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+            <FontAwesomeIcon icon={faCalendarCheck} />
+            <span className="hidden md:inline">Configurar Tipos</span>
           </button>
         </div>
       }
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
           <div className="flex-1 w-full">
-            <SearchAndFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              searchPlaceholder="Buscar turnos..."
-              dateFilter={{
-                startDate,
-                endDate,
-                onStartDateChange: setStartDate,
-                onEndDateChange: setEndDate,
-              }}
-            />
+            <SearchAndFilters searchTerm={searchTerm} onSearchChange={(val) => setSearchTerm(val)} searchPlaceholder="Buscar por nombre de turno..." />
           </div>
           {isLarge && (
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
               </button>
-              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
                 <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
               </button>
             </div>
           )}
         </div>
       }
-      viewModal={{
-        isOpen: viewOpen,
-        onClose: closeView,
-        title: viewShift ? viewShift.name : "Turno",
-        subtitle: viewShift?.description,
-        size: "md",
-        actions: [
-          ...(canManage
-            ? [
-                {
-                  label: "Editar turno",
-                  onClick: () => {
-                    if (viewShift) openEdit(viewShift);
-                    closeView();
-                  },
-                  variant: "secondary",
-                } as const,
-              ]
-            : []),
-          {
-            label: "Cancelar",
-            onClick: closeView,
-            variant: "ghost",
-          },
-        ],
-        content: viewShift ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Entrada</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{viewShift.startTime} hs</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Salida</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{viewShift.endTime} hs</p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Descripción</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{viewShift.description || "—"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Detalles</h4>
-              <p className="text-xs text-gray-500">Creado el: {viewShift.createdAt ? new Date(viewShift.createdAt).toLocaleDateString() : "-"}</p>
-            </div>
-          </div>
-        ) : null,
-      }}
       modal={{
         isOpen: showModal,
-        onClose: closeModal,
+        onClose: () => setShowModal(false),
         title: editingShift ? "Editar Turno" : "Nuevo Turno",
-        subtitle: "Define nombre, horarios y descripción",
-        size: "md",
+        subtitle: "Completa la información del horario laboral",
+        size: "lg",
         actions: [
-          {
-            label: editingShift ? "Actualizar" : "Crear",
-            onClick: () => {
-              const form = document.querySelector<HTMLFormElement>("#shift-form");
-              form?.requestSubmit();
-            },
-            variant: "primary",
-          },
-          {
-            label: "Cancelar",
-            onClick: closeModal,
-            variant: "ghost",
-          },
+          { label: editingShift ? "Actualizar" : "Crear", onClick: () => document.querySelector<HTMLFormElement>("#shift-form")?.requestSubmit(), variant: "primary" },
+          { label: "Cancelar", onClick: () => setShowModal(false), variant: "ghost" },
         ],
         content: (
-          <form id="shift-form" onSubmit={handleSubmit}>
-            <div className="space-y-6">
+          <form id="shift-form" onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Ej: Mañana, Tarde, Noche" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Entrada *</label>
-                  <input type="time" required value={formData.startTime} onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Salida *</label>
-                  <input type="time" required value={formData.endTime} onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))} className="input-field" />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre del Turno *</label>
+                <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Ej: Mañana 9-18" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
-                <textarea value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del turno" />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Turno *</label>
+                <select required value={formData.type} onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))} className="input-field">
+                  {shiftConfigs.length === 0 && <option value="">Cargando tipos...</option>}
+                  {shiftConfigs.map((t) => (
+                    <option key={t._id} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Entrada *</label>
+                <input type="time" required value={formData.startTime} onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))} className="input-field" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Salida *</label>
+                <input type="time" required value={formData.endTime} onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))} className="input-field" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Días Laborales *</label>
+              <div className="flex flex-wrap gap-2">
+                {DAYS.map((day, index) => (
+                  <button key={day} type="button" onClick={() => toggleDay(index)} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${formData.days.includes(index) ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
+              <textarea value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} rows={2} className="input-field resize-none" placeholder="Opcional..." />
             </div>
           </form>
         ),
@@ -346,144 +260,105 @@ export const ShiftsPage: React.FC = () => {
       ) : (
         <>
           {viewMode === "cards" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
-              {filteredShifts.map((shift) => {
-                return (
-                  <Card
-                    key={shift._id}
-                    onClick={() => openView(shift)}
-                    className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-                    header={{
-                      title: shift.name,
-                      subtitle: `${shift.startTime} - ${shift.endTime}`,
-                      icon: faClock,
-                    }}
-                    footer={
-                      canManage
-                        ? {
-                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{shift.createdAt ? new Date(shift.createdAt).toLocaleDateString() : ""}</span>,
-                            actions: [
-                              {
-                                icon: faEdit,
-                                onClick: (e) => {
-                                  e.stopPropagation();
-                                  openEdit(shift);
-                                },
-                                title: "Editar",
-                                variant: "default",
-                              },
-                              {
-                                icon: faTrash,
-                                onClick: (e) => {
-                                  e.stopPropagation();
-                                  handleDelete(shift);
-                                },
-                                title: "Eliminar",
-                                variant: "default",
-                              },
-                            ],
-                          }
-                        : undefined
-                    }
-                  />
-                );
-              })}
-              {canManage && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {shifts.map((shift) => (
                 <Card
-                  variant="create"
-                  onClick={openCreate}
+                  key={shift._id}
                   header={{
-                    title: "Nuevo Turno",
-                    subtitle: "Crear un nuevo turno para la organización",
+                    title: shift.name,
+                    subtitle: shift.type,
                     icon: faClock,
                   }}
-                />
-              )}
+                  footer={
+                    canManage
+                      ? {
+                          actions: [
+                            { icon: faEdit, onClick: () => openEdit(shift), title: "Editar" },
+                            { icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" },
+                          ],
+                        }
+                      : undefined
+                  }
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                      <FontAwesomeIcon icon={faClock} className="text-blue-500 dark:text-blue-400 w-4" />
+                      <span>
+                        {shift.startTime} — {shift.endTime} hs
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {shift.days.map((d) => (
+                        <span key={d} className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md font-medium uppercase">
+                          {DAYS[d].slice(0, 3)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              {canManage && <Card variant="create" onClick={openCreate} header={{ title: "Nuevo Turno", subtitle: "Definir horario", icon: faPlus }} />}
             </div>
           ) : (
-            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entrada</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Salida</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
-                      {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+            <div className="table-container">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Horario</th>
+                    <th>Días</th>
+                    <th className="text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shifts.map((shift) => (
+                    <tr key={shift._id}>
+                      <td className="font-semibold">{shift.name}</td>
+                      <td>
+                        <span className="badge badge-primary">{shift.type}</span>
+                      </td>
+                      <td>
+                        <span className="text-sm">
+                          {shift.startTime} - {shift.endTime}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex gap-1 flex-wrap">
+                          {shift.days.map((d) => (
+                            <span key={d} className="text-[10px] uppercase font-bold text-gray-400">
+                              {DAYS[d].slice(0, 3)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="text-right space-x-2">
+                        <button onClick={() => openEdit(shift)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded">
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                        <button onClick={() => handleDelete(shift)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {filteredShifts.map((shift) => (
-                      <tr key={shift._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(shift)}>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center shrink-0">
-                              <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{shift.name}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{shift.startTime} hs</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{shift.endTime} hs</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{shift.createdAt ? new Date(shift.createdAt).toLocaleDateString() : "—"}</span>
-                        </td>
-                        {canManage && (
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEdit(shift);
-                                }}
-                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                                title="Editar"
-                              >
-                                <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(shift);
-                                }}
-                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                                title="Eliminar"
-                              >
-                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
-          {!loading && filteredShifts.length === 0 && (
-            <EmptyState
-              icon={faClock}
-              title={startDate || endDate ? "No hay turnos en este rango de fechas" : "No hay turnos"}
-              description={startDate || endDate ? "No se encontraron turnos para los criterios seleccionados." : "Crea tu primer turno para comenzar."}
-              action={
-                canManage
-                  ? {
-                      label: "Nuevo Turno",
-                      onClick: openCreate,
-                      icon: faPlus,
-                    }
-                  : undefined
-              }
-            />
+          {!loading && shifts.length === 0 && <EmptyState icon={faClock} title="No hay turnos" description="No se encontraron turnos. Comienza creando el primero." action={canManage ? { label: "Crear Turno", onClick: openCreate, icon: faPlus } : undefined} />}
+
+          {/* Pagination */}
+          {totalShifts > itemsPerPage && (
+            <div className="flex justify-center mt-10 gap-2">
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">
+                Anterior
+              </button>
+              <button disabled={currentPage * itemsPerPage >= totalShifts} onClick={() => setCurrentPage((p) => p + 1)} className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">
+                Siguiente
+              </button>
+            </div>
           )}
         </>
       )}

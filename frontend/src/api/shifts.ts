@@ -4,6 +4,8 @@ export interface Shift {
   _id: string;
   tenantId: string;
   name: string;
+  type: string;
+  days: number[];
   startTime: string; // HH:mm
   endTime: string;   // HH:mm
   description?: string;
@@ -13,6 +15,8 @@ export interface Shift {
 
 export interface ShiftFormData {
   name: string;
+  type: string;
+  days: number[];
   startTime: string;
   endTime: string;
   description?: string;

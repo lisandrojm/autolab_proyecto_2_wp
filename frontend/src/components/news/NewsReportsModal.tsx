@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval, addMonths, subMonths, startOfWeek, addDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faChevronDown, faChevronUp, faChevronLeft, faChevronRight, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { User, UserProjectMetadata } from "../../api/users";
 import { overtimeUtils, OvertimeSettings } from "../../utils/overtimeUtils";
@@ -65,7 +65,16 @@ interface EmployeeStats {
   contractType?: string;
   contractAlta?: string;
   contractBaja?: string;
-  dailyAttendance: Record<string, { status: string; reason?: string }>;
+  dailyAttendance: Record<string, { 
+    status: string; 
+    reason?: string;
+    overtimeHours?: number;
+    h50?: number;
+    h100?: number;
+    pct?: number;
+    entryTime?: string;
+    exitTime?: string;
+  }>;
 }
 
 const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): number => {
@@ -369,134 +378,133 @@ const TotalDetailModal: React.FC<{
   );
 };
 
-// Attendance Calendar Sub-Modal
-const AttendanceCalendarModal: React.FC<{
+// --- DAILY DETALLE MODAL ---
+interface DailyDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   stats: EmployeeStats | null;
   dateFrom: string;
   dateTo: string;
   zIndex?: number;
-}> = ({ isOpen, onClose, stats, dateFrom, dateTo, zIndex }) => {
-  const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(new Date()));
+}
 
-  useEffect(() => {
-    if (isOpen && stats && stats.dailyAttendance) {
-      const start = startOfMonth(parseISO(dateFrom + "T00:00:00"));
-      setViewMonth(start);
-    }
-  }, [isOpen, dateFrom, stats]);
-
+const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, stats, dateFrom, dateTo, zIndex }) => {
   if (!isOpen || !stats) return null;
 
-  const startPeriod = parseISO(dateFrom + "T00:00:00");
-  const endPeriod = parseISO(dateTo + "T23:59:59");
-
-  const canPrev = subMonths(viewMonth, 1) >= startOfMonth(startPeriod);
-  const canNext = addMonths(viewMonth, 1) <= startOfMonth(endPeriod);
-
-  const handlePrevMonth = () => canPrev && setViewMonth((prev) => subMonths(prev, 1));
-  const handleNextMonth = () => canNext && setViewMonth((prev) => addMonths(prev, 1));
-
-  const weekDaysLabels = ["L", "M", "M", "J", "V", "S", "D"];
-  const calendarStart = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: calendarStart, end: addDays(calendarStart, 41) });
+  const dates = eachDayOfInterval({ start: parseISO(dateFrom), end: parseISO(dateTo) });
+  const daysMap: Record<string, string> = { Monday: "Lun", Tuesday: "Mar", Wednesday: "Mie", Thursday: "Jue", Friday: "Vie", Saturday: "Sab", Sunday: "Dom" };
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 animate-fade-in" style={{ zIndex: zIndex || 100 }} onClick={onClose}>
-      <div className="bg-[#121826] text-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-gray-800 flex flex-col" onClick={(e) => e.stopPropagation()}>
-        {/* Main Header */}
-        <div className="px-6 py-4 border-b border-gray-800/50">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-[10px] font-normal uppercase tracking-widest text-white/50">Registro de Asistencia</h3>
-              <p className="text-lg font-bold text-blue-500">{stats.employeeName}</p>
-            </div>
-            <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-1">
-              <FontAwesomeIcon icon={faTimes} className="text-xl" />
-            </button>
+      <div className="bg-[#121826] text-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden border border-gray-800 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-800/50 flex items-center justify-between bg-gray-900/50">
+          <div>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-500/70 mb-1">Detalle Diario de Asistencia</h3>
+            <p className="text-xl font-bold text-white">{stats.employeeName}</p>
+            <p className="text-xs text-gray-500 font-medium">{stats.rowProjectName || "Sin Proyecto"}</p>
           </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-2 bg-white/5 rounded-full">
+            <FontAwesomeIcon icon={faTimes} className="text-xl" />
+          </button>
+        </div>
 
-          <div className="space-y-2">
-            {/* Report Range Label - Independent */}
-            <div className="flex items-center justify-center gap-2 py-1 bg-white/5 rounded-lg border border-white/5">
-              <span className="text-[8px] font-black text-gray-500 uppercase tracking-tighter">Reporte del</span>
-              <span className="text-[10px] font-bold text-blue-400">
-                {format(startPeriod, "dd/MM/yyyy")} — {format(endPeriod, "dd/MM/yyyy")}
-              </span>
+        {/* Filters/Stats Bar */}
+        <div className="px-6 py-3 bg-[#1a2234] border-b border-gray-800/50 flex flex-wrap gap-4 items-center">
+          <div className="flex gap-4">
+            <div className="flex items-center gap-2 bg-gray-900/50 px-3 py-1.5 rounded-lg border border-gray-700/30">
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Pres:</span>
+              <span className="text-sm font-bold text-green-500">{stats.daysPresent}</span>
             </div>
-
-            {/* Month Navigation Section */}
-            <div className="bg-[#1a2234] rounded-xl p-2 border border-gray-800/50 flex items-center justify-between">
-              <h4 className="text-sm font-bold capitalize text-gray-100 pl-2">{new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(viewMonth)}</h4>
-              <div className="flex bg-[#121826] rounded-lg p-0.5 border border-gray-700/30">
-                <button onClick={handlePrevMonth} disabled={!canPrev} className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${canPrev ? "hover:bg-gray-700 text-white" : "text-gray-700 cursor-not-allowed"}`}>
-                  <FontAwesomeIcon icon={faChevronLeft} className="text-xs" />
-                </button>
-                <div className="w-[1px] h-3 bg-gray-700 mx-1 self-center opacity-30"></div>
-                <button onClick={handleNextMonth} disabled={!canNext} className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${canNext ? "hover:bg-gray-700 text-white" : "text-gray-700 cursor-not-allowed"}`}>
-                  <FontAwesomeIcon icon={faChevronRight} className="text-xs" />
-                </button>
-              </div>
+            <div className="flex items-center gap-2 bg-gray-900/50 px-3 py-1.5 rounded-lg border border-gray-700/30">
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Aus:</span>
+              <span className="text-sm font-bold text-red-500">{stats.absences}</span>
             </div>
+            <div className="flex items-center gap-2 bg-gray-900/50 px-3 py-1.5 rounded-lg border border-gray-700/30">
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Extra:</span>
+              <span className="text-sm font-bold text-amber-500">{stats.overtimeHours}h</span>
+            </div>
+          </div>
+          <div className="h-4 w-[1px] bg-gray-700 mx-2 hidden sm:block"></div>
+          <div className="text-[10px] text-gray-400 font-medium">
+            Período: <span className="text-blue-400 font-bold">{dateFrom.split("-").reverse().join("/")}</span> al <span className="text-blue-400 font-bold">{dateTo.split("-").reverse().join("/")}</span>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 px-5 pt-4 pb-1">
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 mb-2">
-            {weekDaysLabels.map((label, idx) => (
-              <div key={`${label}-${idx}`} className="text-center text-[9px] font-black text-gray-500 uppercase tracking-widest">
-                {label}
-              </div>
-            ))}
-          </div>
+        {/* Table Content */}
+        <div className="flex-1 overflow-auto bg-[#121826]">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 bg-[#121826] shadow-md z-10">
+              <tr className="bg-gray-800/50 text-[10px] uppercase tracking-wider text-gray-400 font-bold border-b border-gray-700">
+                <th className="py-3 px-6">Fecha / Día</th>
+                <th className="py-3 px-6 text-center">Estado de Asistencia</th>
+                <th className="py-3 px-6">Motivo / Detalle de Novedad</th>
+                <th className="py-3 px-6 text-right">Información de Hs. Extras</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {dates.map((date) => {
+                const dateKey = format(date, "yyyy-MM-dd");
+                const attendance = stats.dailyAttendance[dateKey];
+                const dayName = format(date, "EEEE");
+                const shortDay = daysMap[dayName] || format(date, "eee");
 
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-y-1">
-            {days.map((day) => {
-              const dateStr = format(day, "yyyy-MM-dd");
-              const attendance = stats.dailyAttendance[dateStr];
-              const isCurrentMonth = day.getMonth() === viewMonth.getMonth();
-              const isInPeriod = isWithinInterval(day, { start: startPeriod, end: endPeriod });
-
-              let textColor = isCurrentMonth ? (isInPeriod ? "text-gray-100" : "text-gray-600") : "text-gray-800";
-              let ring = "";
-
-              if (attendance && isInPeriod) {
-                if (attendance.status === "present" || attendance.status === "late") {
-                  ring = "ring-1 ring-inset ring-green-500/30 bg-green-500/5";
-                  textColor = "text-green-400 font-black";
-                } else if (attendance.status === "absent") {
-                  ring = "ring-1 ring-inset ring-red-500/30 bg-red-500/5";
-                  textColor = "text-red-400 font-black";
-                }
-              }
-
-              return (
-                <div key={dateStr} className={`h-9 flex items-center justify-center rounded-lg relative transition-all duration-200 ${ring} ${!isCurrentMonth ? "opacity-30" : ""}`}>
-                  <span className={`text-[12px] tracking-tight ${textColor}`}>{format(day, "d")}</span>
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <tr key={dateKey} className={`hover:bg-white/[0.02] transition-colors ${attendance?.status === "absent" ? "bg-red-500/[0.02]" : ""}`}>
+                    <td className="py-3 px-6">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-gray-200">{format(date, "dd/MM")}</span>
+                        <span className="text-[10px] font-medium text-gray-500 uppercase py-0.5 px-2 bg-gray-800 rounded">{shortDay}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-6 text-center">
+                      {attendance ? (
+                        <span
+                          className={`text-[9px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest border ${
+                            attendance.status === "present"
+                              ? "bg-green-500/10 text-green-500 border-green-500/20"
+                              : attendance.status === "absent"
+                                ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                          }`}
+                        >
+                          {attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza"}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold text-gray-700 uppercase italic opacity-20">Sin Registro</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-6">
+                      <span className="text-[11px] text-gray-400 italic">
+                        {attendance?.reason ? (
+                          <span className={`${attendance.status === "absent" ? "text-red-400 font-medium" : ""}`}>{attendance.reason}</span>
+                        ) : "-"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-6 text-right">
+                      {attendance?.overtimeHours ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-bold text-blue-400">+{attendance.overtimeHours} h</span>
+                          <span className="text-[9px] font-medium text-gray-500 uppercase tracking-tighter">
+                            {attendance.pct}% • {attendance.entryTime} - {attendance.exitTime}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-700 text-sm">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
-        {/* Footer info area */}
-        <div className="px-5 pb-5 pt-4 bg-[#1a2234] rounded-t-3xl mt-1">
-          {/* Counters boxes only */}
-          <div className="flex items-center justify-around py-3 bg-[#121826] rounded-xl border border-gray-800 shadow-inner">
-            <div className="text-center flex-1">
-              <span className="block text-[9px] uppercase font-black text-gray-500 mb-0.5 tracking-wider">Presentes</span>
-              <span className="text-lg font-black text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]">{Object.values(stats.dailyAttendance).filter((d) => d.status === "present" || d.status === "late").length}</span>
-            </div>
-            <div className="w-[1px] h-8 bg-gray-800"></div>
-            <div className="text-center flex-1">
-              <span className="block text-[9px] uppercase font-black text-gray-500 mb-0.5 tracking-wider">Ausencias</span>
-              <span className="text-lg font-black text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]">{Object.values(stats.dailyAttendance).filter((d) => d.status === "absent").length}</span>
-            </div>
-          </div>
+        {/* Footer */}
+        <div className="px-6 py-3 bg-[#1a2234] border-t border-gray-800/50 flex justify-end">
+          <button onClick={onClose} className="px-5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all">
+            Cerrar Detalle
+          </button>
         </div>
       </div>
     </div>
@@ -509,23 +517,37 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [projectFilter, setProjectFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
   const [contractModal, setContractModal] = useState<{ open: boolean; employeeName: string; data: UserProjectMetadata[] }>({ open: false, employeeName: "", data: [] });
   const [totalDetail, setTotalDetail] = useState<{ open: boolean; stats: EmployeeStats | null }>({ open: false, stats: null });
-  const [attendanceModal, setAttendanceModal] = useState<{ open: boolean; stats: EmployeeStats | null }>({ open: false, stats: null });
+  const [dailyDetailModal, setDailyDetailModal] = useState<{ open: boolean; stats: EmployeeStats | null }>({ open: false, stats: null });
   const [showGlossary, setShowGlossary] = useState(false);
   const [showCalcInfo, setShowCalcInfo] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showActiveTableOnly, setShowActiveTableOnly] = useState(true);
+  const [contractTypeFilter, setContractTypeFilter] = useState("all");
   const [glossary, setGlossary] = useState<OvertimeSettings>(overtimeUtils.getGlossary());
 
   useEffect(() => {
     if (isOpen) {
       setGlossary(overtimeUtils.getGlossary());
       setShowActiveTableOnly(true);
+      setContractTypeFilter("all");
       setShowStats(false);
     }
   }, [isOpen]);
+
+  const allContractTypes = useMemo(() => {
+    const typesSet = new Set<string>();
+    allUsers.forEach((u) => {
+      u.metadata?.projects?.forEach((up) => {
+        up.contracts?.forEach((c) => {
+          const type = c.nombre_contrato;
+          if (type && type.trim()) typesSet.add(type.trim());
+        });
+      });
+    });
+    return Array.from(typesSet).sort((a, b) => a.localeCompare(b));
+  }, [allUsers]);
 
   // Helper to check if a time is within a range (format "HH:mm")
   const isTimeInRange = (time: string, start: string, end: string) => {
@@ -678,6 +700,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         // STRICT: If switch is on, skip this project row if no active contracts overlap the period
         if (showActiveTableOnly && activeCount === 0) return;
 
+        // Contract Type Filter check
+        if (contractTypeFilter !== "all") {
+          const targetsForFilter = showActiveTableOnly ? activeContracts : allContracts;
+          const hasType = targetsForFilter.some((c) => c.nombre_contrato === contractTypeFilter);
+          if (!hasType) return;
+        }
+
         const mapKey = `${userIdStr}-${normName}`;
 
         // Pick best info from available contracts
@@ -707,7 +736,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           if (last.hora_inicio && last.hora_fin) {
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
           }
-          contractType = last.tipo_contrato || "";
+          contractType = last.nombre_contrato || "";
           contractAlta = last.fecha_alta_contrato || "";
           contractBaja = last.fecha_baja_contrato || "";
 
@@ -793,6 +822,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           // STRICT: Skip addition if filter is on and no active contract
           if (showActiveTableOnly && activeCount === 0) return;
 
+          // Contract Type Filter check
+          if (contractTypeFilter !== "all") {
+            const targetsForFilter = showActiveTableOnly ? activeContracts : matchContracts;
+            const hasType = targetsForFilter.some((c) => c.nombre_contrato === contractTypeFilter);
+            if (!hasType) return;
+          }
+
           const targets = showActiveTableOnly ? activeContracts : matchContracts;
           targets.forEach((c) => {
             if (c.hora_inicio && c.hora_fin) {
@@ -811,7 +847,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             sueldoJornada = last.sueldo_jornada || 0;
             sueldoMano = last.sueldo_mano || 0;
             contractHoursPerDay = getDailyHoursFromContract(last.hora_inicio, last.hora_fin);
-            contractType = last.tipo_contrato || "";
+            contractType = last.nombre_contrato || "";
             contractAlta = last.fecha_alta_contrato || "";
             contractBaja = last.fecha_baja_contrato || "";
 
@@ -865,14 +901,21 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
         // Track daily attendance with normalized key
         const dateKey = report.date.substring(0, 10);
+        const ot = record.overtimeHours || 0;
+        const { h50, h100, pct } = splitOvertime(report.date, record.overtimeEntryTime, record.overtimeExitTime, ot);
+
         stats.dailyAttendance[dateKey] = {
           status: record.status,
           reason: record.absenceReason || (record.status === "late" ? "Tardanza" : undefined),
+          overtimeHours: ot,
+          h50,
+          h100,
+          pct: pct || (h100 > 0 ? glossary.pct100 : glossary.pct50),
+          entryTime: record.overtimeEntryTime,
+          exitTime: record.overtimeExitTime,
         };
 
-        const ot = record.overtimeHours || 0;
         stats.overtimeHours += ot;
-        const { h50, h100, pct } = splitOvertime(report.date, record.overtimeEntryTime, record.overtimeExitTime, ot);
         stats.overtime50 += h50;
         stats.overtime100 += h100;
 
@@ -906,7 +949,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     }
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects]);
+  }, [reports, dateFrom, dateTo, projectFilter, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, contractTypeFilter]);
 
   const formattedMonthLabel = useMemo(() => {
     try {
@@ -1071,6 +1114,57 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     XLSX.writeFile(wb, `reporte_novedades_${dateFrom}_a_${dateTo}.xlsx`);
   };
 
+  const handleDailyExportXLS = () => {
+    if (statsByEmployee.length === 0) return;
+
+    const dates = eachDayOfInterval({ start: parseISO(dateFrom), end: parseISO(dateTo) });
+    const daysMap: Record<string, string> = { Monday: "Lun", Tuesday: "Mar", Wednesday: "Mie", Thursday: "Jue", Friday: "Vie", Saturday: "Sab", Sunday: "Dom" };
+
+    const headers = ["Empleado", "Proyecto", "Fecha", "Día", "Estado", "Motivo", "Hs Extras", "H. Entrada OT", "H. Salida OT", "% HS"];
+    const rows: any[] = [];
+
+    statsByEmployee.forEach((s) => {
+      dates.forEach((date) => {
+        const dateKey = format(date, "yyyy-MM-dd");
+        const attendance = s.dailyAttendance[dateKey];
+        const shortDay = daysMap[format(date, "EEEE")] || format(date, "eee");
+
+        rows.push([
+          s.employeeName,
+          s.rowProjectName || "S/P",
+          format(date, "dd/MM/yyyy"),
+          shortDay,
+          attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro",
+          attendance?.reason || "-",
+          attendance?.overtimeHours || 0,
+          attendance?.entryTime || "-",
+          attendance?.exitTime || "-",
+          attendance?.pct ? `${attendance.pct}%` : "-",
+        ]);
+      });
+      // Add divider row between employees
+      rows.push(Array(headers.length).fill(""));
+    });
+
+    const introRows = [
+      ["REPORTE CONSOLIDADO DIARIO", ""],
+      ["Periodo:", `${dateFrom} al ${dateTo}`],
+      ["Exportado el:", format(new Date(), "dd/MM/yyyy HH:mm")],
+      [],
+    ];
+
+    const wsData = [...introRows, headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Styling
+    const colWidths = [25, 20, 12, 8, 12, 25, 10, 12, 12, 8];
+    ws["!cols"] = colWidths.map((w) => ({ wch: w }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Detalle Diario");
+    XLSX.writeFile(wb, `detalle_diario_consolidado_${dateFrom}_a_${dateTo}.xlsx`);
+  };
+
   const handleOpenContract = (s: EmployeeStats) => {
     setContractModal({
       open: true,
@@ -1099,7 +1193,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             </button>
             <button onClick={handleExportXLS} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <FontAwesomeIcon icon={faFileExcel} />
-              Exportar Excel
+              Exportar Consolidado Mes
+            </button>
+            <button onClick={handleDailyExportXLS} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+              <FontAwesomeIcon icon={faClipboardList} />
+              Exportar Detalle Diario
             </button>
           </div>
         }
@@ -1159,6 +1257,18 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     </div>
                     <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Contratos Activos</span>
                   </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Tipo:</span>
+                  <select value={contractTypeFilter} onChange={(e) => setContractTypeFilter(e.target.value)} className="text-[10px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:ring-1 focus:ring-blue-500 text-gray-700 dark:text-gray-200 outline-none min-w-[120px]">
+                    <option value="all">Todos los tipos</option>
+                    {allContractTypes.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <button onClick={() => setShowGlossary(true)} className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-semibold py-0.5" title="Ver configuración actual de horas extras">
@@ -1357,6 +1467,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             <table className="w-full text-sm text-left">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold shadow-sm">
                 <tr>
+                  <th className="py-2.5 px-3 text-center w-8"></th>
                   <th className="py-2.5 px-3 text-left">Empleado</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Jornada</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Mano</th>
@@ -1379,25 +1490,26 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <br />
                     Base
                   </th>
-                  <th className="py-2.5 px-3 text-center whitespace-nowrap">Contrato: Cant | Fecha</th>
+                  <th className="py-2.5 px-3 text-center whitespace-nowrap">Contrato: Cant | Fecha | Tipo</th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Asistencias: Pres | Aus</th>
                   <th className="py-2.5 px-2 text-center text-[10px] leading-tight text-nowrap">Horario Extra</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 50%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 100%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight whitespace-nowrap">Extras Total</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">Monto Total</th>
-                  <th className="py-2.5 px-3 text-center w-8"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {statsByEmployee.map((s) => {
-                  const rowKey = `${s.employeeId}-${s.rowProjectId}`;
-                  const isExpanded = expandedEmployee === rowKey;
-                  const absenceEntries = Object.entries(s.absenceDetails);
-                  const colCount = 17;
                   return (
                     <React.Fragment key={s.rowKey}>
                       <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        {/* Modal Trigger */}
+                        <td className="py-2.5 px-3 text-center">
+                          <button onClick={() => setDailyDetailModal({ open: true, stats: s })} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Ver detalle diario en modal">
+                            <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
+                          </button>
+                        </td>
                         {/* Empleado */}
                         <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
                           <span className="truncate max-w-[140px]">{s.employeeName}</span>
@@ -1467,18 +1579,18 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                               </span>
                               <span className="text-gray-300 dark:text-gray-600">|</span>
 
-                              {/* Información adicional */}
-                              {s.contractType || s.contractAlta || s.contractBaja ? (
-                                <div className="flex flex-col text-[7px] leading-tight text-gray-400 dark:text-gray-500 font-medium uppercase tracking-tighter text-left">
-                                  {s.contractType && <span className="font-bold text-gray-500 dark:text-gray-400 leading-none">{s.contractType}</span>}
-                                  <div className="flex flex-col">
-                                    {s.contractAlta && <span>A: {s.contractAlta.substring(0, 10).split("-").reverse().join("/")}</span>}
-                                    <span>B: {s.contractBaja ? s.contractBaja.substring(0, 10).split("-").reverse().join("/") : "-"}</span>
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
-                              )}
+                              {/* Información adicional: Fechas */}
+                              <div className="flex flex-col text-[7px] leading-tight text-gray-400 dark:text-gray-500 font-medium uppercase tracking-tighter text-left">
+                                {s.contractAlta && <span>A: {s.contractAlta.substring(0, 10).split("-").reverse().join("/")}</span>}
+                                <span>B: {s.contractBaja ? s.contractBaja.substring(0, 10).split("-").reverse().join("/") : "-"}</span>
+                              </div>
+
+                              <span className="text-gray-300 dark:text-gray-600">|</span>
+
+                              {/* Información adicional: Tipo */}
+                              <span className="text-[7px] font-bold text-gray-500 dark:text-gray-400 leading-none uppercase tracking-tighter max-w-[80px] truncate" title={s.contractType}>
+                                {s.contractType || "-"}
+                              </span>
 
                               <span className="text-gray-300 dark:text-gray-600">|</span>
                               <button onClick={() => handleOpenContract(s)} className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="Ver detalle de contrato">
@@ -1500,9 +1612,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                               {s.absences}
                             </span>
                             <span className="text-gray-300 dark:text-gray-600">|</span>
-                            <button onClick={() => setAttendanceModal({ open: true, stats: s })} className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="Ver calendario de asistencia">
-                              <FontAwesomeIcon icon={faCalendarDays} className="text-xs" />
-                            </button>
+                            <button onClick={() => setDailyDetailModal({ open: true, stats: s })} className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="Ver detalle diario">
+                               <FontAwesomeIcon icon={faCalendarDays} className="text-xs" />
+                             </button>
                           </div>
                         </td>
                         {/* Horario Extra */}
@@ -1558,28 +1670,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                             </button>
                           </div>
                         </td>
-                        {/* Expand */}
-                        <td className="py-2.5 px-3 text-center">
-                          {absenceEntries.length > 0 && (
-                            <button onClick={() => setExpandedEmployee(isExpanded ? null : rowKey)} className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                              <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} className="text-xs" />
-                            </button>
-                          )}
-                        </td>
+
                       </tr>
-                      {isExpanded && absenceEntries.length > 0 && (
-                        <tr className="bg-gray-50/50 dark:bg-gray-800/50">
-                          <td colSpan={colCount} className="py-2 px-4 pl-14">
-                            <div className="flex flex-wrap gap-2">
-                              {absenceEntries.map(([reason, count]) => (
-                                <span key={reason} className="text-xs px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
-                                  {reason}: <strong>{count}</strong>
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
+                      {/* Sub-fila expansion eliminada a favor de Modal */}
                     </React.Fragment>
                   );
                 })}
@@ -1631,7 +1724,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       {/* Contract Detail Sub-Modal */}
       <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ ...contractModal, open: false })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} filterProjectId={projectFilter !== "all" ? projectFilter : undefined} zIndex={100} periodStart={parseISO(dateFrom + "T00:00:00")} periodEnd={parseISO(dateTo + "T23:59:59")} />
       <TotalDetailModal isOpen={totalDetail.open} onClose={() => setTotalDetail({ open: false, stats: null })} stats={totalDetail.stats} glossary={glossary} zIndex={110} />
-      <AttendanceCalendarModal isOpen={attendanceModal.open} onClose={() => setAttendanceModal({ open: false, stats: null })} stats={attendanceModal.stats} dateFrom={dateFrom} dateTo={dateTo} zIndex={120} />
+      <DailyDetailModal isOpen={dailyDetailModal.open} onClose={() => setDailyDetailModal({ open: false, stats: null })} stats={dailyDetailModal.stats} dateFrom={dateFrom} dateTo={dateTo} zIndex={120} />
     </>
   );
 };
