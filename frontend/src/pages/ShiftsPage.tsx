@@ -10,7 +10,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faCalendarCheck, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faPlus, faClock, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 
 // Helper para días
@@ -29,11 +29,12 @@ export const ShiftsPage: React.FC = () => {
   const itemsPerPage = 8;
 
   const [showModal, setShowModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [formData, setFormData] = useState<ShiftFormData>({
     name: "",
     type: "",
-    days: [],
+    days: [1, 2, 3, 4, 5],
     startTime: "09:00",
     endTime: "18:00",
     description: "",
@@ -70,9 +71,9 @@ export const ShiftsPage: React.FC = () => {
   const fetchShifts = async () => {
     try {
       setLoading(true);
-      const resp = await shiftsAPI.getAll({ page: currentPage, limit: itemsPerPage, name: searchTerm });
-      setShifts(resp.data.shifts);
-      setTotalShifts(resp.data.pagination.total);
+      const resp = await shiftsAPI.list({ page: currentPage, limit: itemsPerPage, name: searchTerm });
+      setShifts(resp.shifts);
+      setTotalShifts(resp.pagination.total);
     } catch (error) {
       console.error("Error fetching shifts", error);
     } finally {
@@ -94,7 +95,7 @@ export const ShiftsPage: React.FC = () => {
     setFormData({
       name: "",
       type: shiftConfigs.length > 0 ? shiftConfigs[0].name : "",
-      days: [],
+      days: [1, 2, 3, 4, 5],
       startTime: "09:00",
       endTime: "18:00",
       description: "",
@@ -140,7 +141,7 @@ export const ShiftsPage: React.FC = () => {
     const result = await sweetAlert.confirm("¿Eliminar turno?", `¿Estás seguro de que quieres eliminar el turno "${shift.name}"?`);
     if (result.isConfirmed) {
       try {
-        await shiftsAPI.delete(shift._id);
+        await shiftsAPI.remove(shift._id);
         sweetAlert.success("Eliminado", "El turno fue eliminado");
         fetchShifts();
       } catch (error: any) {
@@ -162,6 +163,31 @@ export const ShiftsPage: React.FC = () => {
       itemCount={totalShifts}
       subtitle="Gestiona los horarios y días laborales de tu organización"
       faIcon={{ icon: faClock }}
+      infoModal={{
+        isOpen: showInfoModal,
+        onOpen: () => setShowInfoModal(true),
+        onClose: () => setShowInfoModal(false),
+        title: "Guía de Turnos",
+        content: (
+          <div className="space-y-4 text-gray-400">
+            <p>
+              En esta sección puedes gestionar los <strong>horarios laborales</strong> de tu organización. Los turnos permiten definir cuándo debe trabajar cada colaborador.
+            </p>
+            <div className="space-y-2">
+              <h4 className="text-white font-medium">Tipos de Turno</h4>
+              <p className="text-sm">Utiliza los tipos (como Mañana, Tarde, Noche) para categorizar tus horarios. Puedes configurar más tipos desde el menú de configuración lateral.</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-white font-medium">Días Laborales</h4>
+              <p className="text-sm">Selecciona los días específicos en los que este turno está activo. Por defecto, los nuevos turnos se crean de Lunes a Viernes.</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-white font-medium">Horarios</h4>
+              <p className="text-sm">Define la hora de entrada y salida. Estos horarios se utilizarán para calcular el cumplimiento de la jornada en los reportes de novedades.</p>
+            </div>
+          </div>
+        ),
+      }}
       headerActions={
         <div className="flex items-center gap-3">
           {canManage && (
@@ -170,10 +196,10 @@ export const ShiftsPage: React.FC = () => {
               <span>Nuevo Turno</span>
             </button>
           )}
-          <button onClick={() => navigate("/shifts/config")} className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+          {/* <button onClick={() => navigate("/shifts/config")} className="px-4 py-2 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
             <FontAwesomeIcon icon={faCalendarCheck} />
             <span className="hidden md:inline">Configurar Tipos</span>
-          </button>
+          </button> */}
         </div>
       }
       searchAndFilters={
@@ -205,7 +231,7 @@ export const ShiftsPage: React.FC = () => {
         ],
         content: (
           <form id="shift-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre del Turno *</label>
                 <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Ej: Mañana 9-18" />
@@ -223,14 +249,16 @@ export const ShiftsPage: React.FC = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Entrada *</label>
-                <input type="time" required value={formData.startTime} onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))} className="input-field" />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Entrada *</label>
+                  <input type="time" required value={formData.startTime} onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))} className="input-field" />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Salida *</label>
-                <input type="time" required value={formData.endTime} onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))} className="input-field" />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hora Salida *</label>
+                  <input type="time" required value={formData.endTime} onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))} className="input-field" />
+                </div>
               </div>
             </div>
 

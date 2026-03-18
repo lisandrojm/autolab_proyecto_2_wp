@@ -147,7 +147,7 @@ export const MobileNavbar: React.FC = () => {
 
       // CONFIGURACION Items
       if (hasPermission("config_activity_logs:view")) base.push({ path: "/requests/config", icon: faFileText, label: "Novedades", scope: "global" });
-      if (hasPermission("admin_users:view")) base.push({ path: "/shifts/config", icon: faClock, label: "Turnos", scope: "global" });
+      if (hasPermission("admin_users:view")) base.push({ path: "/shifts/config", icon: faClock, label: "Turnos | Tipos", scope: "global" });
       if (hasPermission("config_orders:view")) base.push({ path: "/order-types", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("config_vacations:view")) base.push({ path: "/vacations-rules", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });
       if (hasPermission("config_pdf_templates:view")) base.push({ path: "/pdfs", icon: faFilePdf, label: "Plantillas PDF", scope: "global" });
