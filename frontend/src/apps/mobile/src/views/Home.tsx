@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faUmbrellaBeach, faFileAlt, faReceipt, faUsers, faChartBar, faBell, faSun, faMoon, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faUmbrellaBeach, faFileAlt, faReceipt, faUsers, faChartBar, faBell, faSun, faMoon, faSignOutAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -8,6 +9,7 @@ import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
 
 import { ProfileData } from "../../../../api/personnel";
+import { UserRegistrationModal } from "../components/UserRegistrationModal";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -18,6 +20,7 @@ export default function Home({ onNavigate }: HomeProps) {
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
   const { theme, toggleTheme } = useThemeStore();
   const { profile } = useProfile();
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   // FIX: Check permissions directly to avoid Admin global override
   const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
@@ -82,6 +85,16 @@ export default function Home({ onNavigate }: HomeProps) {
     disabled: true,
   };
 
+  const userCreateAction = {
+    icon: faUserPlus,
+    title: "Usuarios",
+    description: "Alta de usuarios",
+    view: "home" as ViewType,
+    roles: ["mobile-coordinador"],
+    disabled: false,
+    onClick: () => setShowRegistrationModal(true),
+  };
+
   const recibosAction = {
     icon: faReceipt,
     title: "Recibos",
@@ -143,6 +156,10 @@ export default function Home({ onNavigate }: HomeProps) {
     });
   }
 
+  if (isMobileCoordinator) {
+    quickActions.push(userCreateAction);
+  }
+
   quickActions.push(legajosAction);
   quickActions.push(recibosAction);
 
@@ -197,7 +214,14 @@ export default function Home({ onNavigate }: HomeProps) {
           return (
             <button
               key={index}
-              onClick={() => !action.disabled && onNavigate(action.view)}
+              onClick={() => {
+                if (action.disabled) return;
+                if ((action as any).onClick) {
+                  (action as any).onClick();
+                } else {
+                  onNavigate(action.view);
+                }
+              }}
               disabled={action.disabled}
               className={`relative flex flex-col gap-3 space-y-2 rounded-xl border p-4 text-left shadow-sm transition-transform
                 ${action.disabled ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-600" : "bg-white hover:scale-[1.02] active:scale-[0.98] dark:bg-slate-900/70 border-slate-200 dark:border-slate-600"}`}
@@ -219,6 +243,8 @@ export default function Home({ onNavigate }: HomeProps) {
           );
         })}
       </div>
+
+      <UserRegistrationModal isOpen={showRegistrationModal} onClose={() => setShowRegistrationModal(false)} onSuccess={() => setShowRegistrationModal(false)} />
     </div>
   );
 }

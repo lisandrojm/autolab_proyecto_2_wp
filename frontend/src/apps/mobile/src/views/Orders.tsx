@@ -687,16 +687,18 @@ export default function Orders({ onNavigate }: OrdersProps) {
                     </div>
                   )}
 
-                  <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                      Cancelar
-                    </button>
-                    <button type="submit" disabled={submitting} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
-                      {submitting ? "Enviando..." : "Enviar Pedido"}
-                    </button>
                   </div>
-                </div>
               </form>
+              <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={() => (window.document.querySelector('form button[type="submit"]') as HTMLButtonElement)?.click()} disabled={submitting} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
+                    {submitting ? "Enviando..." : "Enviar Pedido"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
