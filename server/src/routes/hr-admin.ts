@@ -92,7 +92,7 @@ router.get("/users", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(), User.countDocuments(filter)]);
+    const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").populate("turnos", "name startTime endTime type days").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(), User.countDocuments(filter)]);
 
     const userIds = users.map((u) => u._id);
     const profiles = await UserProfile.find({
@@ -141,7 +141,8 @@ router.get("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) 
     })
       .select("-password")
       .populate("roles", "name description")
-      .populate("projectIds", "name");
+      .populate("projectIds", "name")
+      .populate("turnos", "name startTime endTime type days");
 
     if (!user) {
       res.status(404).json({ error: "User not found" });

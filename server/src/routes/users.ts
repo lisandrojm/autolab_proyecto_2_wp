@@ -51,6 +51,7 @@ const createUserSchema = z
     extraVacationDays: z.number().default(0),
     clientIds: z.array(z.string()).default([]),
     projectIds: z.array(z.string()).default([]),
+    turnos: z.array(z.string()).optional(),
     name: z.string().optional(),
     metadata: z.any().optional(),
   })
@@ -86,6 +87,7 @@ const updateUserSchema = z
     extraVacationDays: z.number().optional(),
     clientIds: z.array(z.string()).optional(),
     projectIds: z.array(z.string()).optional(),
+    turnos: z.array(z.string()).optional(),
     name: z.string().optional(),
     metadata: z.any().optional(),
   })
@@ -176,6 +178,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       .populate({ path: "levelId", select: "name", model: Level })
       .populate({ path: "areaId", select: "name", model: Area })
       .populate({ path: "tenantId", select: "name", model: Tenant })
+      .populate({ path: "turnos", select: "name startTime endTime type days", model: "Shift" })
       .populate({
         path: "metadata.projects",
         model: UserProject,
@@ -320,7 +323,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
     });
 
     // Devolver usuario sin password y con roles poblados
-    const userResponse = await User.findById(user._id).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description");
+    const userResponse = await User.findById(user._id).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description").populate("turnos", "name startTime endTime type days");
 
     res.status(201).json(userResponse);
   } catch (error) {
@@ -396,7 +399,8 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
       .populate("projectIds", "name")
       .populate("positionId", "name description")
       .populate("levelId", "name description")
-      .populate("areaId", "name description");
+      .populate("areaId", "name description")
+      .populate("turnos", "name startTime endTime type days");
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -504,7 +508,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
     }
 
     // Actualizar usuario
-    const user = await User.findOneAndUpdate({ _id: userId, tenantId: targetTenantId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description");
+    const user = await User.findOneAndUpdate({ _id: userId, tenantId: targetTenantId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description").populate("turnos", "name startTime endTime type days");
 
     // Sincronizar proyectos si hubo cambio
     if (data.projectIds) {

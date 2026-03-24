@@ -218,7 +218,7 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
 
     // Opcional: Verificar si el turno está asignado a usuarios (si agregamos shiftId al User)
     const usersWithShift = await User.countDocuments({
-      shiftId: shiftId,
+      turnos: shiftId,
       tenantId: req.tenantObjectId,
     });
 

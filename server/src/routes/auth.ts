@@ -99,7 +99,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
     const { email, password, tenantSlug, clientId } = req.body;
 
     // Buscar usuarios con este email
-    const users = await User.find({ email, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
+    const users = await User.find({ email, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug").populate("turnos", "name startTime endTime type days");
 
     if (users.length === 0) {
       res.status(401).json({ error: "Invalid credentials" });
@@ -208,6 +208,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
         permissions,
         tenantId,
         tenantSlug: (user.tenantId as any).slug,
+        turnos: user.turnos || [],
         ...(clientId || (user.clientIds && user.clientIds.length > 0)
           ? {
               clientId: clientId || user.clientIds[0].toString(),
@@ -234,7 +235,7 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
       return;
     }
 
-    const user = await User.findOne({ _id: userId, tenantId, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
+    const user = await User.findOne({ _id: userId, tenantId, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug").populate("turnos", "name startTime endTime type days");
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -260,6 +261,7 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
         permissions,
         tenantId: (user.tenantId as any)._id,
         tenantSlug: (user.tenantId as any).slug,
+        turnos: user.turnos || [],
       },
     });
   } catch (err) {

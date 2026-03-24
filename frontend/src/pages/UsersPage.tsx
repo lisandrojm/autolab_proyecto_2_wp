@@ -8,6 +8,7 @@ import { areasAPI, Area } from "../api/areas";
 import { clientsAPI, Client } from "../api/clients";
 import { projectsAPI, Project } from "../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
+import { shiftsAPI, Shift } from "../api/shifts";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -36,6 +37,7 @@ interface UserFormData {
   extraVacationDays: number;
   clientIds: string[];
   projectIds: string[];
+  turnos: string[];
 }
 
 type ModalMode = "edit" | "password";
@@ -54,6 +56,7 @@ export const UsersPage: React.FC = () => {
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
+  const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
   const [totalUsers, setTotalUsers] = useState(0);
@@ -103,6 +106,7 @@ export const UsersPage: React.FC = () => {
     extraVacationDays: 0,
     clientIds: [],
     projectIds: [],
+    turnos: [],
   });
 
   // password modal fields (cuando modalMode === "password")
@@ -188,6 +192,7 @@ export const UsersPage: React.FC = () => {
         fetchAllClients();
         fetchAllProjects();
         fetchAllRoleFrames();
+        fetchAllShifts();
         fetchUserLookup(); // Fetch all users for name resolution
       }
     };
@@ -532,6 +537,15 @@ export const UsersPage: React.FC = () => {
       console.error("Error fetching role frames:", error);
     }
   };
+ 
+  const fetchAllShifts = async () => {
+    try {
+      const shifts = await shiftsAPI.getAll();
+      setAllShifts(shifts);
+    } catch (error) {
+      console.error("Error fetching shifts:", error);
+    }
+  };
 
   // Abrir modales
   const openCreate = () => {
@@ -561,6 +575,7 @@ export const UsersPage: React.FC = () => {
       extraVacationDays: 0,
       clientIds: [],
       projectIds: [],
+      turnos: [],
     });
     setShowPassword(false);
     setShowModal(true);
@@ -604,6 +619,7 @@ export const UsersPage: React.FC = () => {
       extraVacationDays: user.extraVacationDays || 0,
       clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
       projectIds: user.projectIds ? user.projectIds.map((p) => p._id) : [],
+      turnos: user.turnos ? user.turnos.map((t) => (typeof t === "string" ? t : t._id)) : [],
     });
     setShowPassword(false);
     setShowModal(true);
@@ -1061,6 +1077,25 @@ export const UsersPage: React.FC = () => {
                   Nivel
                 </label>
                 {typeof viewUser.levelId === "object" && viewUser.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.levelId.name}</span> : <span className="text-xs text-gray-500">Sin nivel</span>}
+              </div>
+
+              {/* Turno */}
+              <div className="flex flex-col">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                  <FontAwesomeIcon icon={faClock} className="h-3 w-3 text-gray-400" />
+                  Turno
+                </label>
+                {viewUser.turnos && viewUser.turnos.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {viewUser.turnos.map((turno) => (
+                      <span key={turno._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300 w-fit">
+                        {turno.name} ({turno.startTime} - {turno.endTime})
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">Sin turno</span>
+                )}
               </div>
             </div>
 
@@ -1557,12 +1592,46 @@ export const UsersPage: React.FC = () => {
                       </>
                     )}
                   </div>
-
-                  {/* NIVEL – SOLO SI HAY CARGO */}
-                  {formData.positionId && (
+                </div>
+ 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* TURNO */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
+ 
+                    {allShifts.length === 0 ? (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        No has creado ningún turno aún.{" "}
+                        <a href="/shifts" className="text-primary-600 dark:text-primary-400 hover:underline">
+                          Crear turno →
+                        </a>
+                      </p>
+                    ) : (
+                      <select
+                        value={formData.turnos[0] || ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            turnos: e.target.value ? [e.target.value] : [],
+                          }))
+                        }
+                        className="input-field"
+                      >
+                        <option value="">Sin turno</option>
+                        {allShifts.map((shift) => (
+                          <option key={shift._id} value={shift._id}>
+                            {shift.name} ({shift.startTime} - {shift.endTime})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+ 
+                  {/* NIVEL – SOLO SI HAY CARGO (Movido a esta grid para alineación) */}
+                  {formData.positionId ? (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
-
+ 
                       {levels.length === 0 ? (
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           No hay niveles disponibles para este cargo.{" "}
@@ -1615,6 +1684,8 @@ export const UsersPage: React.FC = () => {
                         </>
                       )}
                     </div>
+                  ) : (
+                    <div className="hidden sm:block"></div>
                   )}
                 </div>
 
@@ -1626,6 +1697,53 @@ export const UsersPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vacaciones (Días Extra Individuales)</label>
                     <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" placeholder="0" />
+                  </div>
+                </div>
+
+
+                {/* PROYECTOS */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proyectos</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded p-3 max-h-48 overflow-y-auto">
+                    {allProjects.length === 0 ? (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 p-2">No hay proyectos disponibles.</p>
+                    ) : (
+                      allProjects.map((project) => {
+                        let clientName = "";
+                        if (typeof project.clientId === "object" && (project.clientId as any).name) {
+                          clientName = (project.clientId as any).name;
+                        } else if (typeof project.clientId === "string") {
+                          const c = allClients.find((client) => client._id === project.clientId);
+                          if (c) clientName = c.name;
+                        }
+
+                        const isSelected = formData.projectIds.includes(project._id);
+
+                        return (
+                          <div key={project._id} className="p-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isSelected) {
+                                  setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
+                                } else {
+                                  setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
+                                }
+                              }}
+                              className={`w-full flex flex-col items-start px-3 py-2 rounded text-sm font-medium transition-colors shadow-sm text-left ${isSelected ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-300 ring-1 ring-blue-300 dark:ring-blue-700" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                            >
+                              <div className="flex items-center w-full">
+                                <FontAwesomeIcon icon={isSelected ? faToggleOn : faToggleOff} className={`mr-2.5 text-lg ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`} />
+                                <span className="flex-1 truncate">
+                                  {project.name} {clientName && <span className="ml-1 opacity-70 font-normal text-xs">({clientName})</span>}
+                                </span>
+                              </div>
+                              <span className={`text-xs ml-8 mt-1 block truncate max-w-full ${isSelected ? "text-blue-800/70 dark:text-blue-300/70" : "text-gray-500 font-normal"}`}>{isSelected ? "Asignado" : "No asignado"}</span>
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
 
@@ -1724,52 +1842,6 @@ export const UsersPage: React.FC = () => {
                             ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* PROYECTOS */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proyectos</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded p-3 max-h-48 overflow-y-auto">
-                    {allProjects.length === 0 ? (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 p-2">No hay proyectos disponibles.</p>
-                    ) : (
-                      allProjects.map((project) => {
-                        let clientName = "";
-                        if (typeof project.clientId === "object" && (project.clientId as any).name) {
-                          clientName = (project.clientId as any).name;
-                        } else if (typeof project.clientId === "string") {
-                          const c = allClients.find((client) => client._id === project.clientId);
-                          if (c) clientName = c.name;
-                        }
-
-                        const isSelected = formData.projectIds.includes(project._id);
-
-                        return (
-                          <div key={project._id} className="p-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isSelected) {
-                                  setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
-                                } else {
-                                  setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
-                                }
-                              }}
-                              className={`w-full flex flex-col items-start px-3 py-2 rounded text-sm font-medium transition-colors shadow-sm text-left ${isSelected ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-300 ring-1 ring-blue-300 dark:ring-blue-700" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                            >
-                              <div className="flex items-center w-full">
-                                <FontAwesomeIcon icon={isSelected ? faToggleOn : faToggleOff} className={`mr-2.5 text-lg ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`} />
-                                <span className="flex-1 truncate">
-                                  {project.name} {clientName && <span className="ml-1 opacity-70 font-normal text-xs">({clientName})</span>}
-                                </span>
-                              </div>
-                              <span className={`text-xs ml-8 mt-1 block truncate max-w-full ${isSelected ? "text-blue-800/70 dark:text-blue-300/70" : "text-gray-500 font-normal"}`}>{isSelected ? "Asignado" : "No asignado"}</span>
-                            </button>
-                          </div>
-                        );
-                      })
                     )}
                   </div>
                 </div>
@@ -1938,6 +2010,25 @@ export const UsersPage: React.FC = () => {
                           Nivel
                         </label>
                         {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
+                      </div>
+
+                      {/* Turno */}
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                          <FontAwesomeIcon icon={faClock} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+                          Turno
+                        </label>
+                        {user.turnos && user.turnos.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {user.turnos.map((turno) => (
+                              <span key={turno._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
+                                {turno.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin turno</span>
+                        )}
                       </div>
                     </div>
 

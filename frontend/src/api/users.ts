@@ -105,6 +105,14 @@ export interface User {
     projects?: UserProjectMetadata[];
     documento?: string;
   };
+  turnos?: {
+    _id: string;
+    name: string;
+    startTime: string;
+    endTime: string;
+    type: string;
+    days: number[];
+  }[];
 }
 
 export interface UsersListResponse {
@@ -256,6 +264,16 @@ function normalizeUser(raw: any): User {
     updatedAt: String(raw?.updatedAt ?? ""),
     externalInfo: raw?.externalInfo,
     metadata: raw?.metadata,
+    turnos: Array.isArray(raw?.turnos)
+      ? raw.turnos.map((t: any) => ({
+          _id: String(t?._id ?? t?.id ?? ""),
+          name: String(t?.name ?? ""),
+          startTime: String(t?.startTime ?? ""),
+          endTime: String(t?.endTime ?? ""),
+          type: String(t?.type ?? ""),
+          days: Array.isArray(t?.days) ? t.days : [],
+        }))
+      : undefined,
   };
 }
 
@@ -314,7 +332,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[] }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[]; turnos?: string[] }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -336,6 +354,7 @@ class UsersAPI {
       extraVacationDays?: number;
       clientIds?: string[];
       projectIds?: string[];
+      turnos?: string[];
     },
   ): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}`, data, { headers: this.getHeaders() });

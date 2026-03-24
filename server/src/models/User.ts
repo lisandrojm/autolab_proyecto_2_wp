@@ -102,6 +102,7 @@ export interface IUser extends Document {
   closeYear(maxDiasArrastre?: number): Promise<void>;
   name: string; // Keep name for backward compat if needed, or derived
   metadata?: IUserMetadata;
+  turnos?: Types.ObjectId[];
 }
 
 const userSchema = new Schema<IUser>(
@@ -172,6 +173,7 @@ const userSchema = new Schema<IUser>(
       informacionBancariaAdicional: String,
       projects: [{ type: Schema.Types.ObjectId, ref: "UserProject" }],
     },
+    turnos: { type: [Schema.Types.ObjectId], ref: "Shift", default: [] },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );

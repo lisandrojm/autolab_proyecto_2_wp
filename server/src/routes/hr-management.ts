@@ -249,8 +249,9 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
         .limit(Number(limit))
         .populate({
           path: "userId",
-          select: "firstName lastName email positionId metadata clientIds projectIds",
+          select: "firstName lastName email positionId metadata clientIds projectIds turnos",
           populate: [
+            { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
             { path: "positionId", select: "name" },
             { path: "clientIds", select: "name", model: "Client" },
             {
@@ -342,8 +343,9 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
         const populatedOrder = await Order.findById(order._id)
           .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds",
+            select: "firstName lastName email positionId metadata clientIds turnos",
             populate: [
+              { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
               { path: "positionId", select: "name" },
               { path: "clientIds", select: "name" },
               {
@@ -449,8 +451,9 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds",
+        select: "firstName lastName email positionId metadata clientIds turnos",
         populate: [
+          { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
           { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
@@ -760,8 +763,9 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds",
+        select: "firstName lastName email positionId metadata clientIds turnos",
         populate: [
+          { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
           { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
