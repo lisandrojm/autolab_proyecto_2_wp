@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart, faUmbrellaBeach, faFileAlt, faReceipt, faUsers, faChartBar, faBell, faSun, faMoon, faSignOutAlt, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
@@ -7,9 +6,7 @@ import { useNotifications } from "../hooks/useNotifications";
 import { useThemeStore } from "../../../../stores/themeStore";
 import UserHeader from "../components/UserHeader";
 import { useProfile } from "../hooks/useProfile";
-
 import { ProfileData } from "../../../../api/personnel";
-import { UserRegistrationModal } from "../components/UserRegistrationModal";
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -20,7 +17,6 @@ export default function Home({ onNavigate }: HomeProps) {
   const { notifications, unreadCount, loading: notifLoading } = useNotifications();
   const { theme, toggleTheme } = useThemeStore();
   const { profile } = useProfile();
-  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   // FIX: Check permissions directly to avoid Admin global override
   const isMobileCoordinator = user?.permissions?.includes("mobile_coordinator:view");
@@ -89,10 +85,9 @@ export default function Home({ onNavigate }: HomeProps) {
     icon: faUserPlus,
     title: "Usuarios",
     description: "Alta de usuarios",
-    view: "home" as ViewType,
+    view: "user_history" as ViewType,
     roles: ["mobile-coordinador"],
     disabled: false,
-    onClick: () => setShowRegistrationModal(true),
   };
 
   const recibosAction = {
@@ -243,8 +238,6 @@ export default function Home({ onNavigate }: HomeProps) {
           );
         })}
       </div>
-
-      <UserRegistrationModal isOpen={showRegistrationModal} onClose={() => setShowRegistrationModal(false)} onSuccess={() => setShowRegistrationModal(false)} />
     </div>
   );
 }

@@ -38,6 +38,7 @@ interface UserFormData {
   clientIds: string[];
   projectIds: string[];
   turnos: string[];
+  isSolicitud?: boolean;
 }
 
 type ModalMode = "edit" | "password";
@@ -77,6 +78,7 @@ export const UsersPage: React.FC = () => {
   const [filterRoleId, setFilterRoleId] = useState("");
   const [filterActiveContract, setFilterActiveContract] = useState(false);
   const [filterIsReplacement, setFilterIsReplacement] = useState(false);
+  const [filterIsSolicitud, setFilterIsSolicitud] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -208,7 +210,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -256,6 +258,7 @@ export const UsersPage: React.FC = () => {
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
       if (clientId) params.clientId = clientId;
+      if (filterIsSolicitud) params.isSolicitud = "true";
 
       // Reset client context if we're not filtering by client anymore (though normally we stay in the route)
       if (!clientId && selectedClient) setSelectedClient(null);
@@ -599,27 +602,42 @@ export const UsersPage: React.FC = () => {
     const positionId = typeof user.positionId === "string" ? user.positionId : typeof user.positionId === "object" && user.positionId?._id ? user.positionId._id : undefined;
 
     // Extraer levelId correctamente (puede ser string u objeto)
-    // Extraer levelId correctamente (puede ser string u objeto)
     const levelId = typeof user.levelId === "string" ? user.levelId : typeof user.levelId === "object" && user.levelId?._id ? user.levelId._id : undefined;
 
     // Extraer areaId correctamente
     const areaId = typeof user.areaId === "string" ? user.areaId : typeof user.areaId === "object" && user.areaId?._id ? user.areaId._id : undefined;
 
+    const isSolicitud = user.metadata?.isSolicitud;
+    let firstName = user.firstName || "";
+    let lastName = user.lastName || "";
+    let hireDate = user.hireDate ? new Date(user.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+
+    // Pre-fill from metadata if it's a solicitud
+    if (isSolicitud && user.metadata?.fullName) {
+      const parts = user.metadata.fullName.trim().split(" ");
+      firstName = parts[0] || "";
+      lastName = parts.slice(1).join(" ") || "";
+      if (user.metadata.startDate) {
+        hireDate = user.metadata.startDate;
+      }
+    }
+
     setFormData({
-      email: user.email,
+      email: user.email.startsWith("solicitud_") ? "" : user.email,
       password: "",
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
+      firstName,
+      lastName,
       isActive: user.isActive,
       roles: user.roles.map((r) => r._id),
       positionId,
       levelId,
       areaId,
-      hireDate: user.hireDate ? new Date(user.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      hireDate,
       extraVacationDays: user.extraVacationDays || 0,
       clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
       projectIds: user.projectIds ? user.projectIds.map((p) => p._id) : [],
       turnos: user.turnos ? user.turnos.map((t) => (typeof t === "string" ? t : t._id)) : [],
+      isSolicitud,
     });
     setShowPassword(false);
     setShowModal(true);
@@ -658,26 +676,35 @@ export const UsersPage: React.FC = () => {
     try {
       const submitData: any = { ...formData };
 
+      // Si es una solicitud que se está aprobando, quitar el flag
+      if (formData.isSolicitud) {
+        submitData.metadata = {
+          ...(editingUser?.metadata || {}),
+          isSolicitud: false,
+        };
+        // Forzamos isActive true si se está aprobando, a menos que el admin diga lo contrario
+        submitData.isActive = formData.isActive;
+      }
+
       // Enviar null explícitamente cuando se selecciona "Sin cargo" o "Sin nivel"
-      // Esto permite que el backend elimine el campo de la DB
       if (!submitData.positionId || submitData.positionId === "") {
         submitData.positionId = null;
-        // Si no hay cargo, no puede haber nivel
         submitData.levelId = null;
       } else if (!submitData.levelId || submitData.levelId === "") {
         submitData.levelId = null;
       }
 
-      // Validación adicional: no permitir levelId sin positionId
       if (submitData.levelId && !submitData.positionId) {
         submitData.levelId = null;
       }
 
       if (editingUser) {
-        // no enviar password vacío al editar
         delete submitData.password;
         await usersAPI.update(editingUser._id, submitData);
-        sweetAlert.success("Usuario actualizado", "Los cambios se han guardado correctamente");
+        sweetAlert.success(
+          formData.isSolicitud ? "Solicitud Aprobada" : "Usuario actualizado",
+          formData.isSolicitud ? "El usuario ha sido dado de alta correctamente" : "Los cambios se han guardado correctamente"
+        );
       } else {
         await usersAPI.create(submitData);
         sweetAlert.success("Usuario creado", "El usuario se ha creado correctamente");
@@ -962,6 +989,11 @@ export const UsersPage: React.FC = () => {
                   value: filterIsReplacement,
                   onChange: setFilterIsReplacement,
                   label: "Es Reemplazo",
+                },
+                {
+                  value: filterIsSolicitud,
+                  onChange: setFilterIsSolicitud,
+                  label: "Solicitudes",
                 },
               ]}
             />
@@ -1442,8 +1474,8 @@ export const UsersPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: modalMode === "password" ? "Cambiar Contraseña" : editingUser ? "Editar Usuario" : "Nuevo Usuario",
-        subtitle: modalMode === "password" ? undefined : "Define datos básicos y roles",
+        title: modalMode === "password" ? "Cambiar Contraseña" : formData.isSolicitud ? "Aprobar Solicitud de Alta" : editingUser ? "Editar Usuario" : "Nuevo Usuario",
+        subtitle: modalMode === "password" ? undefined : formData.isSolicitud ? "Completa los datos para dar de alta al usuario" : "Define datos básicos y roles",
         size: modalMode === "password" ? "sm" : "lg",
         actions:
           modalMode === "password"
@@ -1464,7 +1496,7 @@ export const UsersPage: React.FC = () => {
               ]
             : [
                 {
-                  label: editingUser ? "Actualizar" : "Crear",
+                  label: formData.isSolicitud ? "Aprobar y Crear" : editingUser ? "Actualizar" : "Crear",
                   onClick: () => {
                     const form = document.querySelector<HTMLFormElement>("#user-form");
                     form?.requestSubmit();
@@ -1500,9 +1532,11 @@ export const UsersPage: React.FC = () => {
                   <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
                 </div>
 
-                {!editingUser && (
+                {!editingUser || formData.isSolicitud ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contraseña *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {formData.isSolicitud ? "Asignar Contraseña (obligatorio)" : "Contraseña *"}
+                    </label>
                     <div className="relative">
                       <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
                       <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -1510,7 +1544,7 @@ export const UsersPage: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -1923,6 +1957,19 @@ export const UsersPage: React.FC = () => {
                       canManage
                         ? {
                             actions: [
+                              ...(user.metadata?.isSolicitud
+                                ? [
+                                    {
+                                      icon: faPlus,
+                                      onClick: (e: any) => {
+                                        e.stopPropagation();
+                                        openEdit(user);
+                                      },
+                                      title: "Aprobar",
+                                      variant: "success" as const,
+                                    },
+                                  ]
+                                : []),
                               {
                                 icon: faEdit,
                                 onClick: (e) => {

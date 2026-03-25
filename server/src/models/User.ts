@@ -75,6 +75,18 @@ export interface IUserMetadata {
   swift?: string | null;
   informacionBancariaAdicional?: string | null;
   projects?: Types.ObjectId[] | IExternalProject[] | any[];
+  
+  // Solicitud de alta fields
+  fullName?: string;
+  roleFrameId?: string;
+  categoriaSatId?: string;
+  startDate?: string;
+  dueDate?: string;
+  workdaysCount?: number;
+  schedule?: string;
+  dailyRate?: number;
+  isReplacement?: boolean;
+  isSolicitud?: boolean;
 }
 
 export interface IUser extends Document {
@@ -172,6 +184,18 @@ const userSchema = new Schema<IUser>(
       swift: String,
       informacionBancariaAdicional: String,
       projects: [{ type: Schema.Types.ObjectId, ref: "UserProject" }],
+      
+      // Solicitud de alta fields
+      fullName: String,
+      roleFrameId: String,
+      categoriaSatId: String,
+      startDate: String,
+      dueDate: String,
+      workdaysCount: Number,
+      schedule: String,
+      dailyRate: Number,
+      isReplacement: Boolean,
+      isSolicitud: { type: Boolean, default: false },
     },
     turnos: { type: [Schema.Types.ObjectId], ref: "Shift", default: [] },
   },

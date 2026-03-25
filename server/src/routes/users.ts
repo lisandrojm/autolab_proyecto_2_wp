@@ -12,6 +12,7 @@ import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
+import bcrypt from "bcryptjs";
 
 // Side-effect imports to be extra sure they are registered
 import "../models/User.js";
@@ -90,6 +91,7 @@ const updateUserSchema = z
     turnos: z.array(z.string()).optional(),
     name: z.string().optional(),
     metadata: z.any().optional(),
+    password: z.string().min(6).optional(),
   })
   .refine(
     (data) => {
@@ -152,6 +154,10 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
 
     if (isActive !== undefined) {
       filter.isActive = isActive === "true";
+    }
+
+    if (req.query.isSolicitud !== undefined) {
+      filter["metadata.isSolicitud"] = req.query.isSolicitud === "true";
     }
 
     const limitNum = Number(limit) || 50;
@@ -485,6 +491,12 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
     // Preparar updateData
     const updateData: any = { $set: {} };
     const fieldsToUnset: string[] = [];
+
+    // Si hay password, hashear antes de update
+    if (data.password) {
+      const salt = await bcrypt.genSalt(12);
+      data.password = await bcrypt.hash(data.password, salt);
+    }
 
     Object.keys(data).forEach((key) => {
       const value = data[key];

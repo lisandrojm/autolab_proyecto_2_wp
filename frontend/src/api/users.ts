@@ -104,6 +104,16 @@ export interface User {
   metadata?: {
     projects?: UserProjectMetadata[];
     documento?: string;
+    fullName?: string;
+    isSolicitud?: boolean;
+    roleFrameId?: string;
+    categoriaSatId?: string;
+    startDate?: string;
+    dueDate?: string;
+    workdaysCount?: number;
+    schedule?: string;
+    dailyRate?: number;
+    isReplacement?: boolean;
   };
   turnos?: {
     _id: string;

@@ -10,6 +10,7 @@ import Vacations from "./views/Vacations";
 import Orders from "./views/Orders";
 import Requests from "./views/Requests";
 import ActivityLogs from "./views/ActivityLogs";
+import UserHistory from "./views/UserHistory";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 
@@ -61,6 +62,8 @@ function App() {
         return <Requests onNavigate={setCurrentView} />;
       case "activity_logs":
         return <ActivityLogs onNavigate={setCurrentView} />;
+      case "user_history":
+        return <UserHistory onNavigate={setCurrentView} />;
       default:
         return <Home onNavigate={setCurrentView} />;
     }
