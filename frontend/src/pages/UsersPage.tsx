@@ -622,6 +622,18 @@ export const UsersPage: React.FC = () => {
       }
     }
 
+    const requestedProjectIds = user.metadata?.projectIds || [];
+    let projectIds = user.projectIds ? user.projectIds.map((p: any) => (typeof p === "string" ? p : p._id)) : [];
+    
+    // Si es una solicitud y tiene proyectos pedidos, los agregamos a la lista de prefijados
+    if (isSolicitud && requestedProjectIds.length > 0) {
+      requestedProjectIds.forEach(id => {
+        if (!projectIds.includes(id)) {
+          projectIds.push(id);
+        }
+      });
+    }
+
     setFormData({
       email: user.email.startsWith("solicitud_") ? "" : user.email,
       password: "",
@@ -635,7 +647,7 @@ export const UsersPage: React.FC = () => {
       hireDate,
       extraVacationDays: user.extraVacationDays || 0,
       clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
-      projectIds: user.projectIds ? user.projectIds.map((p) => p._id) : [],
+      projectIds,
       turnos: user.turnos ? user.turnos.map((t) => (typeof t === "string" ? t : t._id)) : [],
       isSolicitud,
     });

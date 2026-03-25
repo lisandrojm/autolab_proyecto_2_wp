@@ -15,8 +15,9 @@ import { Card } from "../components/ui/Card";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock, faGrip, faTable, faPlus, faEdit, faBuilding, faIdCard, faUser, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock, faGrip, faTable, faPlus, faEdit, faBuilding, faIdCard, faUser, faUmbrellaBeach, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
+import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -53,6 +54,8 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes">("equipo");
+  const [solicitudesCount, setSolicitudesCount] = useState(0);
 
   // Persistence for view mode
   useEffect(() => {
@@ -119,6 +122,21 @@ export const ProjectTeamPage: React.FC = () => {
 
     init();
   }, [projectId, token]);
+
+  // Fetch solicitudes count for this project
+  useEffect(() => {
+    if (!projectId) return;
+    const fetchCount = async () => {
+      try {
+        const solis = await usersAPI.listSolicitudes();
+        const count = solis.filter(u => u.metadata?.projectIds?.includes(projectId)).length;
+        setSolicitudesCount(count);
+      } catch (e) {
+        console.error("Error fetching solicitudes count:", e);
+      }
+    };
+    fetchCount();
+  }, [projectId]);
 
   /* ------------------------------- Logic --------------------------------- */
 
@@ -392,6 +410,39 @@ export const ProjectTeamPage: React.FC = () => {
       ) : project ? (
         <>
           <div className="flex flex-col gap-6">
+            {/* TABS */}
+            <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setActiveTab("equipo")}
+                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+                  activeTab === "equipo"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={faUsers} className="text-xs" />
+                Equipo
+              </button>
+              <button
+                onClick={() => setActiveTab("solicitudes")}
+                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+                  activeTab === "solicitudes"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
+                Solicitudes
+                {solicitudesCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">
+                    {solicitudesCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {activeTab === "equipo" && (
+            <>
             {/* Current Team Section - Full Width */}
             <div className="space-y-4">
               <div className="flex gap-4 items-center justify-between">
@@ -650,6 +701,31 @@ export const ProjectTeamPage: React.FC = () => {
                 );
               })()}
             </div>
+          </>
+          )}
+
+          {/* Solicitudes Tab */}
+          {activeTab === "solicitudes" && project && (
+            <div className="mt-0">
+              <TeamSolicitudesTab
+                projectId={projectId!}
+                project={project}
+                onApproved={async () => {
+                  // Re-fetch team data and solicitudes count
+                  const [projectData, usersData] = await Promise.all([
+                    projectsAPI.getProject(projectId!),
+                    usersAPI.list({ limit: 10000 }),
+                  ]);
+                  setProject(projectData);
+                  setTeamConfig(projectData.teamConfig || []);
+                  setAllUsers(usersData.users);
+                  // Update solicitudes count
+                  const solis = await usersAPI.listSolicitudes();
+                  setSolicitudesCount(solis.filter(u => u.metadata?.projectIds?.includes(projectId!)).length);
+                }}
+              />
+            </div>
+          )}
           </div>
 
           {/* Notifications Info Modal */}

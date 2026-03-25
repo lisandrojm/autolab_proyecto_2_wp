@@ -87,6 +87,7 @@ export interface IUserMetadata {
   dailyRate?: number;
   isReplacement?: boolean;
   isSolicitud?: boolean;
+  projectIds?: Types.ObjectId[];
 }
 
 export interface IUser extends Document {
@@ -196,6 +197,7 @@ const userSchema = new Schema<IUser>(
       dailyRate: Number,
       isReplacement: Boolean,
       isSolicitud: { type: Boolean, default: false },
+      projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
     },
     turnos: { type: [Schema.Types.ObjectId], ref: "Shift", default: [] },
   },

@@ -587,6 +587,169 @@ router.patch("/:id/password", requireTenant, authenticateToken, requirePermissio
   }
 });
 
+// PUT /users/:id/approve-solicitud - Aprobar solicitud de alta y convertir en miembro del equipo
+router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const userId = req.params.id;
+    const {
+      email,
+      password,
+      sueldo_jornada = 0,
+      sueldo_mano = 0,
+      nombre_contrato = "Tiempo Indeterminado",
+      nombre_sede = "",
+      observaciones = "",
+    } = req.body;
+
+    if (!email || !password) {
+      res.status(400).json({ error: "Email y contraseña son obligatorios." });
+      return;
+    }
+
+    // Find the solicitud user
+    const solicitudUser = await User.findOne({ _id: userId, tenantId: req.tenantObjectId });
+    if (!solicitudUser) {
+      res.status(404).json({ error: "Solicitud no encontrada." });
+      return;
+    }
+
+    if (!solicitudUser.metadata?.isSolicitud) {
+      res.status(400).json({ error: "Este usuario no es una solicitud pendiente." });
+      return;
+    }
+
+    // Check email uniqueness (excluding current user)
+    const existingEmail = await User.findOne({ email, tenantId: req.tenantObjectId, _id: { $ne: userId } });
+    if (existingEmail) {
+      res.status(409).json({ error: "Ya existe un usuario con ese email en este tenant." });
+      return;
+    }
+
+    const meta = solicitudUser.metadata;
+    const projectIds = meta?.projectIds || [];
+    const [horaInicio, horaFin] = (meta?.schedule || " - ").split(" - ").map(s => s.trim());
+
+    // Create UserProject documents + contracts for each requested project
+    const userProjectRefs: Types.ObjectId[] = [];
+
+    for (const projId of projectIds) {
+      // Fetch project name
+      const proj = await Project.findById(projId).lean();
+      const nombreProyecto = proj?.name || "";
+
+      const contractData = {
+        proyecto_id: 0,
+        empleado_id: 0,
+        estado_id: 1,
+        categoria_sat_id: 0,
+        fecha_alta_contrato: meta?.startDate || new Date().toISOString().split("T")[0],
+        fecha_baja_contrato: meta?.dueDate || "",
+        tipo_contrato_id: 0,
+        cantidad_jornadas_laborales: meta?.workdaysCount || 0,
+        sueldo_jornada,
+        sueldo_mano,
+        sueldo_mano_texto: `$${sueldo_mano}`,
+        reemplazo: meta?.isReplacement || false,
+        empleado_id_reemplezado: null,
+        observaciones,
+        sede_id: 0,
+        rol_frame_id: 0,
+        fecha_inicio_participacion: meta?.startDate || null,
+        fecha_fin_participacion: meta?.dueDate || null,
+        hora_inicio: horaInicio || "",
+        hora_fin: horaFin || "",
+        calificacion: null,
+        fecha_carga: new Date().toISOString().split("T")[0],
+        puede_renovar_contrato: true,
+        nombre_proyecto: nombreProyecto,
+        nombre_estado_empleado: "Activo",
+        nombre_categoria_sat: "",
+        nombre_contrato,
+        nombre_sede,
+        nombre_rol_frame: "",
+      };
+
+      // Resolve rol frame name if we have the id
+      if (meta?.roleFrameId) {
+        try {
+          const rf = await RoleFrame.findById(meta.roleFrameId).lean();
+          if (rf) {
+            contractData.nombre_rol_frame = (rf as any).name || "";
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      // Check if a UserProject already exists for this combination
+      let userProject = await UserProject.findOne({
+        projectId: new Types.ObjectId(projId.toString()),
+        externalEmployeeId: 0,
+        externalProjectId: 0,
+      });
+
+      if (!userProject) {
+        userProject = new UserProject({
+          projectId: new Types.ObjectId(projId.toString()),
+          externalProjectId: 0,
+          externalEmployeeId: 0,
+          nombre_proyecto: nombreProyecto,
+          nombre_rol_frame: contractData.nombre_rol_frame,
+          contracts: [contractData],
+        });
+        await userProject.save();
+      } else {
+        userProject.contracts.push(contractData as any);
+        await userProject.save();
+      }
+
+      userProjectRefs.push(userProject._id as Types.ObjectId);
+
+      // Add user to project assignedUsers
+      await Project.findByIdAndUpdate(projId, { $addToSet: { assignedUsers: userId } });
+    }
+
+    // Hash the new password
+    const bcryptModule = await import("bcryptjs");
+    const salt = await bcryptModule.default.genSalt(12);
+    const hashedPassword = await bcryptModule.default.hash(password, salt);
+
+    // Update the user: activate, set real email/password, link projects
+    const updatePayload: any = {
+      email,
+      password: hashedPassword,
+      isActive: true,
+      projectIds: projectIds.map((id: any) => new Types.ObjectId(id.toString())),
+      "metadata.isSolicitud": false,
+      "metadata.projects": userProjectRefs,
+    };
+
+    // Set firstName/lastName from fullName
+    if (meta?.fullName) {
+      const parts = meta.fullName.split(" ");
+      updatePayload.firstName = parts[0] || "Usuario";
+      updatePayload.lastName = parts.slice(1).join(" ") || "";
+    }
+
+    await User.findByIdAndUpdate(userId, { $set: updatePayload });
+
+    // Return the updated user
+    const updatedUser = await User.findById(userId)
+      .select("-password")
+      .populate("roles", "name description permissions")
+      .populate("clientIds", "name")
+      .populate("projectIds", "name")
+      .populate("positionId", "name description")
+      .populate("levelId", "name description")
+      .populate("areaId", "name description")
+      .populate("turnos", "name startTime endTime type days")
+      .populate({ path: "metadata.projects", model: UserProject });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error("Approve solicitud error:", error);
+    res.status(500).json({ error: "Error al aprobar la solicitud." });
+  }
+});
+
 // DELETE /users/:id - Eliminar usuario
 router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

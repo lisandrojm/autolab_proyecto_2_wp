@@ -114,6 +114,7 @@ export interface User {
     schedule?: string;
     dailyRate?: number;
     isReplacement?: boolean;
+    projectIds?: string[];
   };
   turnos?: {
     _id: string;
@@ -389,10 +390,33 @@ class UsersAPI {
 
   async getByArea(areaId: string): Promise<User[]> {
     const { data } = await axios.get(`/users/by-area/${areaId}`, { headers: this.getHeaders() });
-    // Normalize logic is expecting full object, but our endpoint returns subsets.
-    // However, normalizeUser is robust enough to handle missing fields.
-    // Let's use it to ensure consistent types.
     return Array.isArray(data) ? data.map(normalizeUser) : [];
+  }
+
+  async listSolicitudes(): Promise<User[]> {
+    const { data } = await axios.get(`/users?isSolicitud=true&limit=500`, { headers: this.getHeaders() });
+    const rows: any[] = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
+    return rows.map(normalizeUser);
+  }
+
+  async approveSolicitud(id: string, approvalData: {
+    email: string;
+    password: string;
+    sueldo_jornada: number;
+    sueldo_mano: number;
+    nombre_contrato: string;
+    nombre_sede: string;
+    observaciones?: string;
+  }): Promise<User> {
+    const { data } = await axios.put(`/users/${id}/approve-solicitud`, approvalData, { headers: this.getHeaders() });
+    const user = normalizeUser(data);
+    emitUsersChanged("update", user._id);
+    return user;
+  }
+
+  async rejectSolicitud(id: string): Promise<void> {
+    await axios.delete(`/users/${id}`, { headers: this.getHeaders() });
+    emitUsersChanged("delete", id);
   }
 }
 

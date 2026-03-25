@@ -4,6 +4,8 @@ import { faArrowLeft, faPlus, faUsers, faUserPlus, faEnvelope, faBriefcase, faBu
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
+import { UserRegistrationDetailModal } from "../components/UserRegistrationDetailModal";
+import { User } from "../../../../api/users";
 
 interface UserHistoryProps {
   onNavigate: (view: ViewType) => void;
@@ -12,10 +14,19 @@ interface UserHistoryProps {
 export default function UserHistory({ onNavigate }: UserHistoryProps) {
   const { users, loading, refetch } = useUserHistory();
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Helper to get initials
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase() || "U";
+  };
+
+  const handleEdit = (user: User) => {
+    setEditingUser(user);
+    setShowDetailModal(false);
+    setShowRegistrationModal(true);
   };
 
   return (
@@ -64,7 +75,11 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
                return (
                  <div
                    key={user._id}
-                   className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm"
+                   onClick={() => {
+                     setSelectedUser(user);
+                     setShowDetailModal(true);
+                   }}
+                   className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm active:bg-slate-50 dark:active:bg-slate-800 transition-colors cursor-pointer"
                  >
                    <div className="flex items-start gap-3 mb-3">
                      <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-sm ${isSolicitud ? 'bg-blue-100 text-blue-600' : 'bg-primary/10 text-primary'}`}>
@@ -123,7 +138,10 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
       {/* Floating Action Button */}
       <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
         <button
-          onClick={() => setShowRegistrationModal(true)}
+          onClick={() => {
+            setEditingUser(null);
+            setShowRegistrationModal(true);
+          }}
           className="pointer-events-auto flex items-center justify-center w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95"
           title="Nuevo Usuario"
         >
@@ -133,11 +151,26 @@ export default function UserHistory({ onNavigate }: UserHistoryProps) {
 
       <UserRegistrationModal
         isOpen={showRegistrationModal}
-        onClose={() => setShowRegistrationModal(false)}
+        onClose={() => {
+          setShowRegistrationModal(false);
+          setEditingUser(null);
+        }}
+        editingUser={editingUser}
         onSuccess={() => {
           setShowRegistrationModal(false);
+          setEditingUser(null);
           refetch();
         }}
+      />
+
+      <UserRegistrationDetailModal
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedUser(null);
+        }}
+        user={selectedUser}
+        onEdit={handleEdit}
       />
     </div>
   );

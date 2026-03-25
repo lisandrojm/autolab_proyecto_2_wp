@@ -7,20 +7,26 @@ import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
+import { projectsAPI, Project } from "../../../../api/projects";
+import { useProfile } from "../hooks/useProfile";
 
 interface UserRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editingUser?: any | null;
 }
 
-export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ isOpen, onClose, onSuccess, editingUser }) => {
+  const { profile } = useProfile();
   const [submitting, setSubmitting] = useState(false);
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const [formData, setFormData] = useState({
     fullName: "",
+    projectIds: [] as string[],
     roleFrameId: "",
     categoriaSatId: "",
     startDate: "",
@@ -51,19 +57,69 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     if (isOpen) {
       const loadData = async () => {
         try {
-          const [frames, cats] = await Promise.all([
+          const [frames, cats, projs] = await Promise.all([
             roleFrameAPI.list(),
-            categoriaSatAPI.list()
+            categoriaSatAPI.list(),
+            projectsAPI.listAll()
           ]);
           setRoleFrames(frames);
           setCategoriasSat(cats);
+          
+          // Filter projects by profile.projectIds (coordinator projects)
+          let activeProjects = projs.filter(p => p.status === 'active');
+          if (profile?.projectIds && profile.projectIds.length > 0) {
+            activeProjects = activeProjects.filter(p => profile.projectIds?.includes(p._id));
+          }
+          
+          setProjects(activeProjects);
         } catch (error) {
           console.error("Error loading form data:", error);
         }
       };
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, profile]);
+
+  useEffect(() => {
+    if (isOpen && editingUser) {
+      const meta = editingUser.metadata || {};
+      const [inTime, outTime] = (meta.schedule || " - ").split(" - ");
+      setFormData({
+        fullName: meta.fullName || `${editingUser.firstName} ${editingUser.lastName}`,
+        projectIds: meta.projectIds || [],
+        roleFrameId: meta.roleFrameId || "",
+        categoriaSatId: meta.categoriaSatId || "",
+        startDate: meta.startDate || editingUser.hireDate?.split("T")[0] || "",
+        dueDate: meta.dueDate || "",
+        workdaysCount: meta.workdaysCount?.toString() || "",
+        inTime: inTime || "",
+        outTime: outTime || "",
+        dailyRate: meta.dailyRate?.toString() || "",
+        isReplacement: meta.isReplacement || false,
+      });
+    } else if (isOpen && !editingUser) {
+      setFormData({
+        fullName: "",
+        projectIds: [],
+        roleFrameId: "",
+        categoriaSatId: "",
+        startDate: "",
+        dueDate: "",
+        workdaysCount: "",
+        inTime: "",
+        outTime: "",
+        dailyRate: "",
+        isReplacement: false,
+      });
+    }
+  }, [isOpen, editingUser]);
+
+  // Auto-select project if only one exists or when projects list changes
+  useEffect(() => {
+    if (projects.length > 0 && formData.projectIds.length === 0) {
+      setFormData(prev => ({ ...prev, projectIds: [projects[0]._id] }));
+    }
+  }, [projects, formData.projectIds.length]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -72,7 +128,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   };
 
   const handleSubmit = async () => {
-    if (!formData.fullName || !formData.roleFrameId || !formData.categoriaSatId) {
+    if (!formData.fullName || !formData.projectIds.length || !formData.roleFrameId || !formData.categoriaSatId) {
       sweetAlert.warning("Campos incompletos", "Por favor completa los campos obligatorios.");
       return;
     }
@@ -92,6 +148,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         hireDate: formData.startDate || new Date().toISOString(),
         metadata: {
           fullName: formData.fullName,
+          projectIds: formData.projectIds,
           roleFrameId: formData.roleFrameId,
           categoriaSatId: formData.categoriaSatId,
           startDate: formData.startDate,
@@ -104,12 +161,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         },
       };
 
-      await usersAPI.create(submitData as any);
-      sweetAlert.success("Solicitud enviada", "La solicitud de alta ha sido enviada correctamente.");
+      if (editingUser) {
+        await usersAPI.update(editingUser._id, submitData as any);
+        sweetAlert.success("Solicitud actualizada", "La solicitud de alta ha sido actualizada correctamente.");
+      } else {
+        await usersAPI.create(submitData as any);
+        sweetAlert.success("Solicitud enviada", "La solicitud de alta ha sido enviada correctamente.");
+      }
       onSuccess();
       onClose();
       setFormData({
         fullName: "",
+        projectIds: [],
         roleFrameId: "",
         categoriaSatId: "",
         startDate: "",
@@ -138,7 +201,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         <div className="flex flex-col flex-shrink-0 sticky top-0 z-50 shadow-sm border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="p-4 flex justify-between items-center ">
             <h3 className="font-bold text-lg text-slate-900 dark:text-white">
-              Solicitud de Alta
+              {editingUser ? "Editar Solicitud" : "Solicitud de Alta"}
             </h3>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
               <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
@@ -152,13 +215,50 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             Cancelar
           </button>
           <button onClick={handleSubmit} disabled={submitting} className="flex-1 rounded h-12 bg-blue-500 text-white font-medium shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-            {submitting ? "Enviando..." : "Enviar Solicitud"}
+            {submitting ? "Cargando..." : editingUser ? "Actualizar Solicitud" : "Enviar Solicitud"}
             <FontAwesomeIcon icon={faCheck} />
           </button>
         </div>
       }
     >
       <div className="p-4 space-y-6 overflow-y-auto max-h-[70vh]">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
+            Clientes | Proyectos* (Selecciona uno o más)
+          </label>
+          <div className="grid grid-cols-1 gap-2 border dark:border-slate-800 rounded-xl p-3 max-h-48 overflow-y-auto bg-white/50 dark:bg-slate-900/50">
+            {projects.map((p) => {
+              const isSelected = formData.projectIds.includes(p._id);
+              return (
+                <button
+                  key={p._id}
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      setFormData(prev => ({ ...prev, projectIds: prev.projectIds.filter(id => id !== p._id) }));
+                    } else {
+                      setFormData(prev => ({ ...prev, projectIds: [...prev.projectIds, p._id] }));
+                    }
+                  }}
+                  className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                    isSelected 
+                      ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" 
+                      : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 opacity-60"
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded flex items-center justify-center border ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
+                    {isSelected && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}
+                  </div>
+                  <span className="text-sm font-medium">
+                    {typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="space-y-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
             <FontAwesomeIcon icon={faCheck} className="text-blue-500 text-[10px]" />
