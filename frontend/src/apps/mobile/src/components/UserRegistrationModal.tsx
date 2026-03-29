@@ -23,6 +23,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [platformUsers, setPlatformUsers] = useState<any[]>([]);
+  const [showUserResults, setShowUserResults] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -57,13 +60,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     if (isOpen) {
       const loadData = async () => {
         try {
-          const [frames, cats, projs] = await Promise.all([
+          const [frames, cats, projs, usersRes] = await Promise.all([
             roleFrameAPI.list(),
             categoriaSatAPI.list(),
-            projectsAPI.listAll()
+            projectsAPI.listAll(),
+            usersAPI.list({ limit: 1000 })
           ]);
           setRoleFrames(frames);
           setCategoriasSat(cats);
+          setPlatformUsers(usersRes.users || []);
           
           // Filter projects by profile.projectIds (coordinator projects)
           let activeProjects = projs.filter(p => p.status === 'active');
@@ -111,6 +116,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         dailyRate: "",
         isReplacement: false,
       });
+      setUserSearchTerm("");
     }
   }, [isOpen, editingUser]);
 
@@ -259,18 +265,73 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           </div>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1 relative">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
             <FontAwesomeIcon icon={faCheck} className="text-blue-500 text-[10px]" />
             Nombre Completo*
           </label>
-          <input 
-            name="fullName" 
-            value={formData.fullName} 
-            onChange={handleChange} 
-            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white" 
-            placeholder="Ej: Juan Pérez" 
-          />
+          <div className="relative">
+            <input 
+              name="fullName" 
+              value={formData.fullName} 
+              onChange={(e) => {
+                const val = e.target.value;
+                setFormData(prev => ({ ...prev, fullName: val }));
+                setUserSearchTerm(val);
+                setShowUserResults(val.length > 0);
+              }} 
+              onFocus={() => {
+                if (formData.fullName.length > 0) setShowUserResults(true);
+              }}
+              autoComplete="off"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white" 
+              placeholder="Ej: Juan Pérez" 
+            />
+            {showUserResults && (
+              <div className="absolute z-[100] left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto overflow-x-hidden divide-y divide-slate-100 dark:divide-slate-700">
+                {(() => {
+                  const filtered = platformUsers.filter(u => {
+                    const full = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
+                    const search = userSearchTerm.toLowerCase();
+                    return full.includes(search) || (u.email || '').toLowerCase().includes(search);
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="px-4 py-3 text-xs text-slate-400 italic">
+                        Sin coincidencias (escribe para crear uno nuevo)
+                      </div>
+                    );
+                  }
+
+                  return filtered.slice(0, 10).map(user => {
+                    const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+                    return (
+                      <button
+                        key={user._id}
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, fullName: userFullName }));
+                          setUserSearchTerm(userFullName);
+                          setShowUserResults(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex flex-col"
+                      >
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">{userFullName}</span>
+                        <span className="text-xs text-slate-500">{user.email}</span>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </div>
+          {showUserResults && (
+            <div 
+              className="fixed inset-0 z-[90]" 
+              onClick={() => setShowUserResults(false)}
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
