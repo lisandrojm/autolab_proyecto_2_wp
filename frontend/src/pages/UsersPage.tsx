@@ -76,6 +76,7 @@ export const UsersPage: React.FC = () => {
   const [filterProjectId, setFilterProjectId] = useState("");
   const [filterRoleFrameId, setFilterRoleFrameId] = useState("");
   const [filterRoleId, setFilterRoleId] = useState("");
+  const [filterTurnoId, setFilterTurnoId] = useState("");
   const [filterActiveContract, setFilterActiveContract] = useState(false);
   const [filterIsReplacement, setFilterIsReplacement] = useState(false);
   const [filterIsSolicitud, setFilterIsSolicitud] = useState(false);
@@ -210,7 +211,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud, filterTurnoId]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -245,7 +246,7 @@ export const UsersPage: React.FC = () => {
       const currentId = ++requestIdRef.current;
 
       // If filtering by client or using additional filters, fetch ALL users to filter client-side
-      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || !!filterRoleId || filterActiveContract || filterIsReplacement;
+      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || !!filterRoleId || !!filterTurnoId || filterActiveContract || filterIsReplacement;
       const isClientSideFilterNeeded = !!clientId || hasAdditionalFilters;
       const effectiveLimit = isClientSideFilterNeeded ? 10000 : limit;
       const effectivePage = isClientSideFilterNeeded ? 1 : page;
@@ -314,8 +315,8 @@ export const UsersPage: React.FC = () => {
           console.log(`[UsersPage] Client Filter done. Result: ${workingList.length} users.`);
         }
 
-        // 2. ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, Role, ActiveContract)
-        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterRoleId || filterActiveContract || filterIsReplacement;
+        // 2. ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, Role, Turno, ActiveContract)
+        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterRoleId || filterTurnoId || filterActiveContract || filterIsReplacement;
 
         if (hasAdditionalFilters) {
           console.log(`[UsersPage] Applying Additional Filters to ${workingList.length} users...`);
@@ -350,6 +351,12 @@ export const UsersPage: React.FC = () => {
               });
 
               if (!hasRole) return false;
+            }
+
+            // Turno filter
+            if (filterTurnoId) {
+              const userTurnoIds = u.turnos?.map((t: any) => (typeof t === "string" ? t : t._id)) || [];
+              if (!userTurnoIds.includes(filterTurnoId)) return false;
             }
 
             // Active Contract filter - match logic from getActiveContractType
@@ -989,6 +996,13 @@ export const UsersPage: React.FC = () => {
                   options: roles.map((r) => ({ value: r._id, label: r.name })),
                   label: "Rol Sistema",
                   placeholder: "Todos los roles",
+                },
+                {
+                  value: filterTurnoId,
+                  onChange: setFilterTurnoId,
+                  options: allShifts.map((s) => ({ value: s._id, label: s.name })),
+                  label: "Turno",
+                  placeholder: "Todos los turnos",
                 },
               ]}
               switchFilters={[

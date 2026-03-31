@@ -17,26 +17,7 @@ export interface Client {
   name: string;
 }
 
-export interface WorkScheduleDay {
-  startTime: string;
-  endTime: string;
-  isWorkDay: boolean;
-}
-
-export interface WorkSchedule {
-  mode: "weekdays" | "all_week" | "per_day";
-  weekdays?: WorkScheduleDay;
-  weekend?: WorkScheduleDay;
-  days?: {
-    monday?: WorkScheduleDay;
-    tuesday?: WorkScheduleDay;
-    wednesday?: WorkScheduleDay;
-    thursday?: WorkScheduleDay;
-    friday?: WorkScheduleDay;
-    saturday?: WorkScheduleDay;
-    sunday?: WorkScheduleDay;
-  };
-}
+// Removed WorkSchedule types
 
 export interface Project {
   _id: string;
@@ -81,7 +62,7 @@ export interface Project {
     startTime?: string;
     endTime?: string;
   }[];
-  workSchedule?: WorkSchedule;
+  shifts?: string[];
   metadata?: any;
   metadataResolutions?: {
     responsable?: any;
@@ -136,7 +117,7 @@ function normalizeProject(raw: any): Project {
     updatedAt: String(raw?.updatedAt ?? ""),
     vacationConfig: raw?.vacationConfig,
     activityLogConfig: raw?.activityLogConfig,
-    workSchedule: raw?.workSchedule,
+    shifts: Array.isArray(raw?.shifts) ? raw.shifts : [],
     teamConfig: raw?.teamConfig,
     metadata: raw?.metadata,
     metadataResolutions: raw?.metadataResolutions,
@@ -252,7 +233,7 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
-      workSchedule?: WorkSchedule;
+      shifts?: string[];
     },
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {
@@ -293,7 +274,7 @@ class ProjectsAPI {
           days: number[];
         };
       };
-      workSchedule?: WorkSchedule;
+      shifts?: string[];
     },
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {

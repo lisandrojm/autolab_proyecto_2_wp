@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 // Si necesitás i18n, usá: import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../stores/authStore";
 import { projectsAPI, Project } from "../api/projects";
+import { shiftsAPI, Shift } from "../api/shifts";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
@@ -25,6 +26,7 @@ export const ClientProjectsPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [client, setClient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
 
   // búsqueda, fechas y paginación
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,6 +43,10 @@ export const ClientProjectsPage: React.FC = () => {
   useEffect(() => {
     const handleResize = () => setIsLg(window.innerWidth >= 1024);
     window.addEventListener("resize", handleResize);
+    
+    // Fetch shifts once on component mount
+    shiftsAPI.getAll().then(setAvailableShifts).catch(console.error);
+    
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -60,20 +66,7 @@ export const ClientProjectsPage: React.FC = () => {
     endDate: "",
     objectives: [] as string[],
     targetAudience: "",
-    workSchedule: {
-      mode: "weekdays" as "weekdays" | "all_week" | "per_day",
-      weekdays: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-      weekend: { startTime: "", endTime: "", isWorkDay: false },
-      days: {
-        monday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-        tuesday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-        wednesday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-        thursday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-        friday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-        saturday: { startTime: "", endTime: "", isWorkDay: false },
-        sunday: { startTime: "", endTime: "", isWorkDay: false },
-      },
-    },
+    shifts: [] as string[],
   });
 
   // ⓘ estado del modal de información
@@ -154,20 +147,7 @@ export const ClientProjectsPage: React.FC = () => {
     });
   }, [projects, startDate, endDate]);
 
-  const defaultWorkSchedule = {
-    mode: "weekdays" as "weekdays" | "all_week" | "per_day",
-    weekdays: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-    weekend: { startTime: "", endTime: "", isWorkDay: false },
-    days: {
-      monday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-      tuesday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-      wednesday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-      thursday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-      friday: { startTime: "09:00", endTime: "18:00", isWorkDay: true },
-      saturday: { startTime: "", endTime: "", isWorkDay: false },
-      sunday: { startTime: "", endTime: "", isWorkDay: false },
-    },
-  };
+  // Removed defaultWorkSchedule
 
   const handleOpenCreate = () => {
     setModalMode("create");
@@ -180,7 +160,7 @@ export const ClientProjectsPage: React.FC = () => {
       endDate: "",
       objectives: [],
       targetAudience: "",
-      workSchedule: defaultWorkSchedule,
+      shifts: [],
     });
     setShowModal(true);
   };
@@ -196,13 +176,7 @@ export const ClientProjectsPage: React.FC = () => {
       endDate: project.endDate ? project.endDate.split("T")[0] : "",
       objectives: project.objectives || [],
       targetAudience: project.targetAudience || "",
-      workSchedule: {
-        ...defaultWorkSchedule,
-        ...project.workSchedule,
-        weekdays: { ...defaultWorkSchedule.weekdays, ...project.workSchedule?.weekdays },
-        weekend: { ...defaultWorkSchedule.weekend, ...project.workSchedule?.weekend },
-        days: { ...defaultWorkSchedule.days, ...project.workSchedule?.days },
-      },
+      shifts: project.shifts || [],
     });
     setShowModal(true);
   };
@@ -388,149 +362,53 @@ export const ClientProjectsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Horario de Trabajo */}
+                    {/* Turnos */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                      <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">Horario de Trabajo</label>
+                      <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">Turnos</label>
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                        {availableShifts.length === 0 ? (
+                          <p className="text-sm text-gray-500">No hay turnos disponibles.</p>
+                        ) : (
+                          availableShifts.map((shift) => {
+                            const isSelected = formData.shifts.includes(shift._id);
+                            
+                            // Formatear los días del turno
+                            const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+                            const shiftDays = shift.days?.map(d => dayNames[d]).join(", ") || "Días no definidos";
 
-                      {/* Mode Selector - 3 buttons */}
-                      <div className="flex gap-2 mb-4">
-                        <button type="button" onClick={() => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, mode: "weekdays" as any } }))} className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${(formData.workSchedule.mode as string) === "weekdays" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
-                          L a V
-                        </button>
-                        <button type="button" onClick={() => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, mode: "all_week" as any } }))} className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${(formData.workSchedule.mode as string) === "all_week" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
-                          L a D
-                        </button>
-                        <button type="button" onClick={() => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, mode: "per_day" } }))} className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${formData.workSchedule.mode === "per_day" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
-                          Por Día
-                        </button>
-                      </div>
-
-                      {/* Lunes a Viernes */}
-                      {(formData.workSchedule.mode as string) === "weekdays" && (
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                          <div className="text-sm font-medium mb-2 text-center">Lunes a Viernes</div>
-                          <div className="flex gap-2 items-center">
-                            <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.weekdays.startTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, startTime: e.target.value } } }))} />
-                            <span className="text-gray-400">a</span>
-                            <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.weekdays.endTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, endTime: e.target.value } } }))} />
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2 text-center">Sábado y Domingo: No laboral</p>
-                        </div>
-                      )}
-
-                      {/* Lunes a Domingo - 3 horarios separados */}
-                      {(formData.workSchedule.mode as string) === "all_week" && (
-                        <div className="space-y-3">
-                          {/* Lunes a Viernes */}
-                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                            <div className="text-xs font-medium mb-2 text-gray-600 dark:text-gray-400">Lunes a Viernes</div>
-                            <div className="flex gap-2 items-center">
-                              <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.weekdays.startTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, startTime: e.target.value } } }))} />
-                              <span className="text-gray-400">a</span>
-                              <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.weekdays.endTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, weekdays: { ...p.workSchedule.weekdays, endTime: e.target.value } } }))} />
-                            </div>
-                          </div>
-                          {/* Sábado */}
-                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Sábado</span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setFormData((p) => {
-                                    const newIsWorkDay = !p.workSchedule.days.saturday.isWorkDay;
-                                    const newData = { ...p.workSchedule.days.saturday, isWorkDay: newIsWorkDay };
-                                    if (newIsWorkDay && (!newData.startTime || newData.startTime === "")) {
-                                      newData.startTime = "09:00";
-                                      newData.endTime = "18:00";
-                                    }
-                                    return { ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, saturday: newData } } };
-                                  })
-                                }
-                                className={`px-2 py-0.5 rounded text-[10px] font-medium ${formData.workSchedule.days.saturday.isWorkDay ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}
-                              >
-                                {formData.workSchedule.days.saturday.isWorkDay ? "Laboral" : "No Laboral"}
-                              </button>
-                            </div>
-                            {formData.workSchedule.days.saturday.isWorkDay && (
-                              <div className="flex gap-2 items-center">
-                                <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.days.saturday.startTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, saturday: { ...p.workSchedule.days.saturday, startTime: e.target.value } } } }))} />
-                                <span className="text-gray-400">a</span>
-                                <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.days.saturday.endTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, saturday: { ...p.workSchedule.days.saturday, endTime: e.target.value } } } }))} />
-                              </div>
-                            )}
-                          </div>
-                          {/* Domingo */}
-                          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Domingo</span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setFormData((p) => {
-                                    const newIsWorkDay = !p.workSchedule.days.sunday.isWorkDay;
-                                    const newData = { ...p.workSchedule.days.sunday, isWorkDay: newIsWorkDay };
-                                    if (newIsWorkDay && (!newData.startTime || newData.startTime === "")) {
-                                      newData.startTime = "09:00";
-                                      newData.endTime = "18:00";
-                                    }
-                                    return { ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, sunday: newData } } };
-                                  })
-                                }
-                                className={`px-2 py-0.5 rounded text-[10px] font-medium ${formData.workSchedule.days.sunday.isWorkDay ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}
-                              >
-                                {formData.workSchedule.days.sunday.isWorkDay ? "Laboral" : "No Laboral"}
-                              </button>
-                            </div>
-                            {formData.workSchedule.days.sunday.isWorkDay && (
-                              <div className="flex gap-2 items-center">
-                                <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.days.sunday.startTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, sunday: { ...p.workSchedule.days.sunday, startTime: e.target.value } } } }))} />
-                                <span className="text-gray-400">a</span>
-                                <input type="time" className="input-field text-sm flex-1" value={formData.workSchedule.days.sunday.endTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, sunday: { ...p.workSchedule.days.sunday, endTime: e.target.value } } } }))} />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Por Día */}
-                      {formData.workSchedule.mode === "per_day" && (
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const).map((day) => {
-                            const dayLabels: Record<string, string> = { monday: "Lunes", tuesday: "Martes", wednesday: "Miércoles", thursday: "Jueves", friday: "Viernes", saturday: "Sábado", sunday: "Domingo" };
-                            const dayData = formData.workSchedule.days[day];
                             return (
-                              <div key={day} className="bg-gray-50 dark:bg-gray-800 p-2 rounded flex items-center gap-2">
-                                <span className="text-xs font-medium w-20">{dayLabels[day]}</span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFormData((p) => {
-                                      const newIsWorkDay = !p.workSchedule.days[day].isWorkDay;
-                                      const newData = { ...p.workSchedule.days[day], isWorkDay: newIsWorkDay };
-                                      if (newIsWorkDay && (!newData.startTime || newData.startTime === "")) {
-                                        newData.startTime = "09:00";
-                                        newData.endTime = "18:00";
-                                      }
-                                      return { ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, [day]: newData } } };
-                                    })
-                                  }
-                                  className={`px-2 py-1 rounded text-[10px] font-medium ${dayData.isWorkDay ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}
-                                >
-                                  {dayData.isWorkDay ? "Sí" : "No"}
-                                </button>
-                                {dayData.isWorkDay && (
-                                  <>
-                                    <input type="time" className="input-field text-xs flex-1 py-1" value={dayData.startTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, [day]: { ...p.workSchedule.days[day], startTime: e.target.value } } } }))} />
-                                    <span className="text-gray-400 text-xs">-</span>
-                                    <input type="time" className="input-field text-xs flex-1 py-1" value={dayData.endTime} onChange={(e) => setFormData((p) => ({ ...p, workSchedule: { ...p.workSchedule, days: { ...p.workSchedule.days, [day]: { ...p.workSchedule.days[day], endTime: e.target.value } } } }))} />
-                                  </>
-                                )}
-                              </div>
+                              <label key={shift._id} className="cursor-pointer">
+                                <div className={`flex items-start p-3 rounded-lg border transition-all ${isSelected ? "bg-blue-50/50 border-blue-500/50 dark:bg-blue-900/20 dark:border-blue-500/30" : "bg-white border-gray-200 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600"}`}>
+                                  <div className="flex-shrink-0 mt-0.5">
+                                    <input 
+                                      type="checkbox" 
+                                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4" 
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          shifts: e.target.checked 
+                                            ? [...prev.shifts, shift._id] 
+                                            : prev.shifts.filter(id => id !== shift._id)
+                                        }));
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="ml-3 flex-1">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                      {shift.name} 
+                                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-normal">({shift.startTime} a {shift.endTime})</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      {shiftDays}
+                                    </div>
+                                  </div>
+                                </div>
+                              </label>
                             );
-                          })}
-                        </div>
-                      )}
+                          })
+                        )}
+                      </div>
                     </div>
 
                     {/* Estado - al final */}
