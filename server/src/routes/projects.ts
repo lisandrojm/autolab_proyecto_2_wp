@@ -64,6 +64,7 @@ const createProjectSchema = z.object({
     })
     .optional()
     .nullable(),
+  turnos: z.array(z.string()).optional(),
 });
 
 const updateTeamConfigSchema = z.object({
@@ -75,6 +76,7 @@ const updateTeamConfigSchema = z.object({
       useProjectSchedule: z.boolean().optional(),
       startTime: z.string().optional(),
       endTime: z.string().optional(),
+      shiftId: z.string().optional(),
     }),
   ),
 });
@@ -108,7 +110,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
 
     const skip = (page - 1) * limit;
 
-    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").lean(), Project.countDocuments(filter)]);
+    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").lean(), Project.countDocuments(filter)]);
 
     // 2. Resolver clientes para proyectos que no tienen clientId pero sí metadata.clienteId
     const projectsToResolve = projects.filter((p) => !p.clientId && p.metadata?.clienteId);
@@ -345,7 +347,7 @@ router.get(
 
       const skip = (page - 1) * limit;
 
-      const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").lean(), Project.countDocuments(filter)]);
+      const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").lean(), Project.countDocuments(filter)]);
 
       // Bulk Sede Resolution
       const sedeIds = new Set<string>();
@@ -468,7 +470,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
       filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email").lean();
+    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email").populate("turnos").lean();
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });

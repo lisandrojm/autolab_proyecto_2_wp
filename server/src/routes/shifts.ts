@@ -14,8 +14,8 @@ const createShiftSchema = z.object({
   type: z.string().min(1).max(50),
   days: z.array(z.number().min(0).max(6)),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido (HH:mm)"),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido (HH:mm)"),
   description: z.string().optional(),
+  order: z.number().optional(),
 });
 
 const updateShiftSchema = createShiftSchema.partial();
@@ -66,7 +66,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
     const skip = (Number(page) - 1) * Number(limit);
 
     const [shifts, total] = await Promise.all([
-      Shift.find(filter).sort({ name: 1 }).skip(skip).limit(Number(limit)),
+      Shift.find(filter).sort({ order: 1, name: 1 }).skip(skip).limit(Number(limit)),
       Shift.countDocuments(filter),
     ]);
 
@@ -100,8 +100,15 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
       return;
     }
 
+    let newOrder = data.order;
+    if (newOrder === undefined) {
+      const lastItem = await Shift.findOne({ tenantId: req.tenantObjectId }).sort({ order: -1 });
+      newOrder = (lastItem?.order || 0) + 1;
+    }
+
     const shift = new Shift({
       ...data,
+      order: newOrder,
       tenantId: req.tenantObjectId,
     });
 
@@ -155,6 +162,29 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
     res.json(shift);
   } catch (error) {
     console.error("Get shift error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /shifts/reorder - Actualizar orden
+router.patch("/reorder", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: "Se requiere un array de items" });
+    }
+
+    const ops = items.map((item: any) => ({
+      updateOne: {
+        filter: { _id: item.id, tenantId: req.tenantObjectId },
+        update: { $set: { order: item.order } },
+      },
+    }));
+
+    await Shift.bulkWrite(ops);
+    res.json({ message: "Orden actualizado correctamente" });
+  } catch (error) {
+    console.error("Reorder shifts error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

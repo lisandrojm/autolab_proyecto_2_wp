@@ -10,8 +10,11 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus, faClock, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faGripVertical, faCheck, faMultiply } from "@fortawesome/free-solid-svg-icons";
 
 // Helper para días
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -42,6 +45,10 @@ export const ShiftsPage: React.FC = () => {
   });
 
   const [shiftConfigs, setShiftConfigs] = useState<ShiftConfig[]>([]);
+
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
 
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isLarge, setIsLarge] = useState(window.innerWidth >= 1024);
@@ -151,6 +158,39 @@ export const ShiftsPage: React.FC = () => {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReorderMode(true);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReorderMode(false);
+    fetchShifts();
+  };
+
+  const handleSaveReorder = async () => {
+    const reorderedItems = shifts.map((shift, index) => ({ id: shift._id, order: index + 1 }));
+    try {
+      await shiftsAPI.reorder(reorderedItems);
+      setIsReorderMode(false);
+      sweetAlert.success("Orden Guardado", "El nuevo orden ha sido guardado.");
+      fetchShifts();
+    } catch (error) {
+      sweetAlert.error("Error", "No se pudo guardar el orden");
+      fetchShifts();
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setShifts((items) => {
+        const oldIndex = items.findIndex((item) => item._id === active.id);
+        const newIndex = items.findIndex((item) => item._id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
   const toggleDay = (dayIndex: number) => {
     setFormData((prev) => ({
       ...prev,
@@ -208,16 +248,39 @@ export const ShiftsPage: React.FC = () => {
           <div className="flex-1 w-full">
             <SearchAndFilters searchTerm={searchTerm} onSearchChange={(val) => setSearchTerm(val)} searchPlaceholder="Buscar por nombre de turno..." />
           </div>
-          {isLarge && (
-            <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
-                <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-              </button>
-              <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
-                <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {canManage && (
+              <>
+                {isReorderMode ? (
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleCancelReorder} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all text-sm flex items-center gap-2">
+                      <FontAwesomeIcon icon={faMultiply} />
+                      Cancelar
+                    </button>
+                    <button onClick={handleSaveReorder} className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-all text-sm flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCheck} />
+                      Guardar Orden
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={handleStartReorder} disabled={shifts.length < 2} className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm">
+                    <FontAwesomeIcon icon={faGripVertical} />
+                    <span>Ordenar</span>
+                  </button>
+                )}
+              </>
+            )}
+            {isLarge && !isReorderMode && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                  <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                </button>
+                <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "table" ? "bg-blue-500 text-white border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                  <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       }
       modal={{
@@ -290,111 +353,190 @@ export const ShiftsPage: React.FC = () => {
           <LoadingSpinner message="Cargando turnos..." />
         </div>
       ) : (
-        <>
-          {viewMode === "cards" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {shifts.map((shift) => (
-                <Card
-                  key={shift._id}
-                  header={{
-                    title: shift.name,
-                    subtitle: shift.type,
-                    icon: faClock,
-                  }}
-                  footer={
-                    canManage
-                      ? {
-                          actions: [
-                            { icon: faEdit, onClick: () => openEdit(shift), title: "Editar" },
-                            { icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" },
-                          ],
-                        }
-                      : undefined
-                  }
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                      <FontAwesomeIcon icon={faClock} className="text-blue-500 dark:text-blue-400 w-4" />
-                      <span>
-                        {shift.startTime} — {shift.endTime} hs
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                        {/* Sort days based on DAY_ORDER before mapping */}
-                        {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
-                          <span key={d} className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md font-medium uppercase">
-                            {DAYS[d].slice(0, 3)}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-              {canManage && <Card variant="create" onClick={openCreate} header={{ title: "Nuevo Turno", subtitle: "Definir horario", icon: faPlus }} />}
-            </div>
-          ) : (
-            <div className="table-container">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Tipo</th>
-                    <th>Horario</th>
-                    <th>Días</th>
-                    <th className="text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <>
+            {viewMode === "cards" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <SortableContext items={shifts.map((s) => s._id)}>
                   {shifts.map((shift) => (
-                    <tr key={shift._id}>
-                      <td className="font-semibold">{shift.name}</td>
-                      <td>
-                        <span className="badge badge-primary">{shift.type}</span>
-                      </td>
-                      <td>
-                        <span className="text-sm">
-                          {shift.startTime} - {shift.endTime}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex gap-1 flex-wrap">
-                          {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
-                            <span key={d} className="text-[10px] uppercase font-bold text-gray-400">
-                              {DAYS[d].slice(0, 3)}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="text-right space-x-2">
-                        <button onClick={() => openEdit(shift)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded">
-                          <FontAwesomeIcon icon={faEdit} />
-                        </button>
-                        <button onClick={() => handleDelete(shift)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
-                      </td>
-                    </tr>
+                    <SortableShiftCard key={shift._id} shift={shift} isReorderMode={isReorderMode} canManage={canManage} openEdit={openEdit} handleDelete={handleDelete} />
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </SortableContext>
+                {canManage && !isReorderMode && <Card variant="create" onClick={openCreate} header={{ title: "Nuevo Turno", subtitle: "Definir horario", icon: faPlus }} />}
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded border dark:border-slate-800">
+                <table className="w-full dark:bg-slate-800/80 table-auto">
+                  <thead>
+                    <tr className="border-b dark:border-slate-700">
+                      {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Ordenar</th>}
+                      {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>}
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Horario</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días</th>
+                      <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
+                    </tr>
+                  </thead>
+                  <SortableContext items={shifts.map((s) => s._id)} strategy={verticalListSortingStrategy}>
+                    <tbody>
+                      {shifts.map((shift, index) => (
+                        <SortableShiftRow key={shift._id} shift={shift} index={index} isReorderMode={isReorderMode} canManage={canManage} openEdit={openEdit} handleDelete={handleDelete} />
+                      ))}
+                    </tbody>
+                  </SortableContext>
+                </table>
+              </div>
+            )}
 
-          {!loading && shifts.length === 0 && <EmptyState icon={faClock} title="No hay turnos" description="No se encontraron turnos. Comienza creando el primero." action={canManage ? { label: "Crear Turno", onClick: openCreate, icon: faPlus } : undefined} />}
+            {!loading && shifts.length === 0 && <EmptyState icon={faClock} title="No hay turnos" description="No se encontraron turnos. Comienza creando el primero." action={canManage ? { label: "Crear Turno", onClick: openCreate, icon: faPlus } : undefined} />}
 
-          {/* Pagination */}
-          {totalShifts > itemsPerPage && (
-            <div className="flex justify-center mt-10 gap-2">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">
-                Anterior
-              </button>
-              <button disabled={currentPage * itemsPerPage >= totalShifts} onClick={() => setCurrentPage((p) => p + 1)} className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">
-                Siguiente
-              </button>
-            </div>
-          )}
-        </>
+            {/* Pagination */}
+            {totalShifts > itemsPerPage && !isReorderMode && (
+              <div className="flex justify-center mt-10 gap-2">
+                <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)} className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">
+                  Anterior
+                </button>
+                <button disabled={currentPage * itemsPerPage >= totalShifts} onClick={() => setCurrentPage((p) => p + 1)} className="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </>
+        </DndContext>
       )}
     </PageLayout>
+  );
+};
+
+interface SortableShiftRowProps {
+  shift: Shift;
+  index: number;
+  isReorderMode: boolean;
+  canManage: boolean;
+  openEdit: (shift: Shift) => void;
+  handleDelete: (shift: Shift) => void;
+}
+
+const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReorderMode, canManage, openEdit, handleDelete }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: shift._id,
+    disabled: !isReorderMode,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className={`border-b border-gray-100 dark:border-gray-700 transition-colors ${isReorderMode ? "bg-blue-50/50 dark:bg-blue-900/10 cursor-grab" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}>
+      {isReorderMode && (
+        <td className="py-3 px-4 text-center">
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-blue-500 hover:text-blue-600">
+            <FontAwesomeIcon icon={faGripVertical} />
+          </div>
+        </td>
+      )}
+      {isReorderMode && <td className="py-3 px-4 text-center font-bold text-blue-600">{index + 1}</td>}
+      <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{shift.name}</td>
+      <td className="py-3 px-4">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
+          {shift.type}
+        </span>
+      </td>
+      <td className="py-3 px-4">
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          {shift.startTime} - {shift.endTime}
+        </span>
+      </td>
+      <td className="py-3 px-4">
+        <div className="flex gap-1 flex-wrap">
+          {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
+            <span key={d} className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+              {DAYS[d].slice(0, 3)}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="py-3 px-4 text-right space-x-2">
+        <div className={`flex items-center justify-end gap-2 ${isReorderMode ? "opacity-20 pointer-events-none" : ""}`}>
+          <button onClick={() => openEdit(shift)} className="p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors" title="Editar">
+            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+          </button>
+          <button onClick={() => handleDelete(shift)} className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Eliminar">
+            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
+interface SortableShiftCardProps {
+  shift: Shift;
+  isReorderMode: boolean;
+  canManage: boolean;
+  openEdit: (shift: Shift) => void;
+  handleDelete: (shift: Shift) => void;
+}
+
+const SortableShiftCard: React.FC<SortableShiftCardProps> = ({ shift, isReorderMode, canManage, openEdit, handleDelete }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: shift._id,
+    disabled: !isReorderMode,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group">
+      {isReorderMode && (
+        <div {...attributes} {...listeners} className="absolute -top-2 -left-2 z-10 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg">
+          <FontAwesomeIcon icon={faGrip} size="sm" />
+        </div>
+      )}
+      <Card
+        header={{
+          title: shift.name,
+          subtitle: shift.type,
+          icon: faClock,
+        }}
+        className={isReorderMode ? "border-2 border-blue-500/50 shadow-blue-500/10" : ""}
+        footer={
+          canManage && !isReorderMode
+            ? {
+                actions: [
+                  { icon: faEdit, onClick: () => openEdit(shift), title: "Editar" },
+                  { icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" },
+                ],
+              }
+            : undefined
+        }
+      >
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+            <FontAwesomeIcon icon={faClock} className="text-blue-500 dark:text-blue-400 w-4" />
+            <span>
+              {shift.startTime} — {shift.endTime} hs
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {[...shift.days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => (
+              <span key={d} className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-md font-medium uppercase">
+                {DAYS[d].slice(0, 3)}
+              </span>
+            ))}
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 };

@@ -66,7 +66,7 @@ export const ClientProjectsPage: React.FC = () => {
     endDate: "",
     objectives: [] as string[],
     targetAudience: "",
-    shifts: [] as string[],
+    turnos: [] as string[],
   });
 
   // ⓘ estado del modal de información
@@ -160,7 +160,7 @@ export const ClientProjectsPage: React.FC = () => {
       endDate: "",
       objectives: [],
       targetAudience: "",
-      shifts: [],
+      turnos: [],
     });
     setShowModal(true);
   };
@@ -176,7 +176,7 @@ export const ClientProjectsPage: React.FC = () => {
       endDate: project.endDate ? project.endDate.split("T")[0] : "",
       objectives: project.objectives || [],
       targetAudience: project.targetAudience || "",
-      shifts: project.shifts || [],
+      turnos: (project.turnos || []).map((t: any) => (typeof t === "string" ? t : t._id)),
     });
     setShowModal(true);
   };
@@ -370,7 +370,7 @@ export const ClientProjectsPage: React.FC = () => {
                           <p className="text-sm text-gray-500">No hay turnos disponibles.</p>
                         ) : (
                           availableShifts.map((shift) => {
-                            const isSelected = formData.shifts.includes(shift._id);
+                            const isSelected = formData.turnos.includes(shift._id);
                             
                             // Formatear los días del turno
                             const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -387,9 +387,9 @@ export const ClientProjectsPage: React.FC = () => {
                                       onChange={(e) => {
                                         setFormData(prev => ({
                                           ...prev,
-                                          shifts: e.target.checked 
-                                            ? [...prev.shifts, shift._id] 
-                                            : prev.shifts.filter(id => id !== shift._id)
+                                          turnos: e.target.checked 
+                                            ? [...prev.turnos, shift._id] 
+                                            : prev.turnos.filter(id => id !== shift._id)
                                         }));
                                       }}
                                     />
@@ -452,6 +452,7 @@ export const ClientProjectsPage: React.FC = () => {
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Responsable</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Turnos</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fechas</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
               </tr>
@@ -482,6 +483,23 @@ export const ClientProjectsPage: React.FC = () => {
                     </td>
                     <td className="py-4 px-6">
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${p.status === "active" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : p.status === "on_hold" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : p.status === "completed" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{p.status === "active" ? "Activo" : p.status === "on_hold" ? "En Espera" : p.status === "completed" ? "Completado" : "Archivado"}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex flex-wrap gap-2 max-w-[200px]">
+                        {(p.turnos || []).map((turno: any, i: number) => (
+                          <div key={i} className="flex flex-col items-center">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold uppercase tracking-wider">
+                              {typeof turno === "object" ? turno.name : "..."}
+                            </span>
+                            {typeof turno === "object" && (
+                              <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-nowrap">
+                                {turno.startTime}-{turno.endTime}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        {(!p.turnos || p.turnos.length === 0) && <span className="text-gray-400">—</span>}
+                      </div>
                     </td>
                     <td className="py-4 px-6 text-xs text-gray-500 dark:text-gray-400">
                       <div>{p.startDate ? new Date(p.startDate).toLocaleDateString() : "—"}</div>
@@ -581,6 +599,30 @@ export const ClientProjectsPage: React.FC = () => {
                     Sede
                   </label>
                   <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
+                </div>
+              )}
+
+              {/* Turnos dentro del cuerpo de la card */}
+              {project.turnos && project.turnos.length > 0 && (
+                <div className="flex flex-col mt-4">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <FontAwesomeIcon icon={faTable} className="h-3 w-3 text-gray-400" />
+                    Turnos
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {project.turnos.map((turno: any, i: number) => (
+                      <div key={i} className="flex flex-col items-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
+                          {typeof turno === "object" ? turno.name : "..."}
+                        </span>
+                        {typeof turno === "object" && (
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-1 font-medium italic">
+                            {turno.startTime}-{turno.endTime}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </Card>

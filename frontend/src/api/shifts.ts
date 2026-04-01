@@ -8,6 +8,7 @@ export interface Shift {
   days: number[];
   startTime: string; // HH:mm
   endTime: string;   // HH:mm
+  order: number;
   description?: string;
   createdAt: string;
   updatedAt: string;
@@ -60,5 +61,8 @@ export const shiftsAPI = {
 
   remove: async (id: string): Promise<void> => {
     await axios.delete(`/shifts/${id}`);
+  },
+  reorder: async (items: { id: string; order: number }[]): Promise<void> => {
+    await axios.patch("/shifts/reorder", { items });
   },
 };

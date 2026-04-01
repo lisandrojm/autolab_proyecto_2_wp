@@ -15,7 +15,7 @@ import { Card } from "../components/ui/Card";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faUserPlus, faTrash, faBriefcase, faBell, faInfoCircle, faClock, faGrip, faTable, faPlus, faEdit, faBuilding, faIdCard, faUser, faUmbrellaBeach, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faBell, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 
@@ -48,6 +48,7 @@ export const ProjectTeamPage: React.FC = () => {
     useProjectSchedule: true,
     startTime: "09:00",
     endTime: "18:00",
+    shiftId: "",
   });
 
   // UI States
@@ -214,6 +215,16 @@ export const ProjectTeamPage: React.FC = () => {
     return members;
   }, [assignedUserIds, allUsers, searchTermTeam]);
 
+  const formatShiftDays = (days: number[]) => {
+    const dayNames = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
+    if (!days || days.length === 0) return "";
+    return days
+      .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)) 
+      .map((d) => dayNames[d] || "")
+      .filter((n) => n !== "")
+      .join(", ");
+  };
+
   // Check Is Coordinator Helper
   const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
 
@@ -272,37 +283,54 @@ export const ProjectTeamPage: React.FC = () => {
     setEditingScheduleUser(user);
     setUserScheduleData({
       useProjectSchedule: existing ? (existing.useProjectSchedule !== undefined ? existing.useProjectSchedule : true) : true,
-      startTime: existing?.startTime || project?.workSchedule?.weekdays?.startTime || "09:00",
-      endTime: existing?.endTime || project?.workSchedule?.weekdays?.endTime || "18:00",
+      startTime: existing?.startTime || (project?.turnos && project.turnos.length > 0 && typeof project.turnos[0] === "object" ? project.turnos[0].startTime : "09:00"),
+      endTime: existing?.endTime || (project?.turnos && project.turnos.length > 0 && typeof project.turnos[0] === "object" ? project.turnos[0].endTime : "18:00"),
+      shiftId: (user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : existing?.shiftId) || "",
     });
   };
 
-  const handleSaveUserSchedule = () => {
+  const handleSaveUserSchedule = async () => {
     if (!editingScheduleUser) return;
 
-    const newConfig = teamMembers.map((member) => {
-      const existing = teamConfig.find((c) => c.userId === member._id);
-      if (member._id === editingScheduleUser._id) {
+    try {
+      // 1. Update Project Team Config
+      const newConfig = teamMembers.map((member) => {
+        const existing = teamConfig.find((c) => c.userId === member._id);
+        if (member._id === editingScheduleUser._id) {
+          return {
+            userId: member._id,
+            isNotifier: existing ? existing.isNotifier : false,
+            canRegister: existing ? existing.canRegister : true,
+            ...userScheduleData,
+          };
+        }
         return {
           userId: member._id,
           isNotifier: existing ? existing.isNotifier : false,
           canRegister: existing ? existing.canRegister : true,
-          ...userScheduleData,
+          useProjectSchedule: existing?.useProjectSchedule ?? true,
+          startTime: existing?.startTime || "09:00",
+          endTime: existing?.endTime || "18:00",
+          shiftId: existing?.shiftId,
         };
-      }
-      return {
-        userId: member._id,
-        isNotifier: existing ? existing.isNotifier : false,
-        canRegister: existing ? existing.canRegister : true,
-        useProjectSchedule: existing?.useProjectSchedule ?? true,
-        startTime: existing?.startTime || "09:00",
-        endTime: existing?.endTime || "18:00",
-      };
-    });
+      });
 
-    updateTeamConfig(newConfig);
-    setEditingScheduleUser(null);
-    sweetAlert.success("Horario Actualizado", `El horario de ${editingScheduleUser.firstName} ha sido actualizado.`);
+      await updateTeamConfig(newConfig);
+
+      // 2. Update User Collection (Persist shift in users/turnos)
+      const shiftIds = userScheduleData.shiftId ? [userScheduleData.shiftId] : [];
+      await usersAPI.update(editingScheduleUser._id, { turnos: shiftIds });
+
+      setEditingScheduleUser(null);
+      sweetAlert.success("Horario Actualizado", `El horario y turno de ${editingScheduleUser.firstName} han sido actualizados.`);
+
+      // Refresh users to show updated turnos in the table
+      const usersData = await usersAPI.list({ limit: 10000 });
+      setAllUsers(usersData.users);
+    } catch (err) {
+      console.error("Error saving user schedule/shift:", err);
+      sweetAlert.error("Error", "No se pudo guardar la configuración.");
+    }
   };
 
   // Ensure Default Notifier
@@ -527,8 +555,36 @@ export const ProjectTeamPage: React.FC = () => {
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${user.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.isActive ? "ACTIVO" : "INACTIVO"}</span>
                       </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+                          const finalShiftId = shiftIdFromUser || userConfig?.shiftId;
+                          const shift = (project?.turnos || []).find((t: any) => (typeof t === "object" ? t._id : t) === finalShiftId);
+                          return shift ? (
+                            <div className="flex flex-col">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 uppercase tracking-wider w-fit">
+                                {typeof shift === "object" ? shift.name : "..."}
+                              </span>
+                              <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium ml-0.5 mt-0.5 italic tracking-tight">
+                                {shift.startTime} - {shift.endTime}
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {(shift.days || [])
+                                  .sort((a: number, b: number) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
+                                  .map((d: number) => (
+                                    <span key={d} className="text-[9px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded px-1.5 py-0.25 font-bold border border-gray-200 dark:border-gray-600">
+                                      {formatShiftDays([d])}
+                                    </span>
+                                  ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">No asignado</span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{horario}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">{horario}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {isCoord && (
@@ -537,7 +593,11 @@ export const ProjectTeamPage: React.FC = () => {
                             </button>
                           )}
 
-                          <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 rounded transition-colors" title="Retirar del equipo">
+                          <button onClick={() => handleOpenScheduleModal(user)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded transition-colors" title="Editar Horario">
+                            <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+                          </button>
+
+                          <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors" title="Retirar del equipo">
                             <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -559,8 +619,6 @@ export const ProjectTeamPage: React.FC = () => {
                     return false;
                   });
                   const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "Sin rol frame");
-                  const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
-                  const sede = activeContract?.nombre_sede || user.externalInfo?.sedes?.[0] || "Sin sede";
 
                   return (
                     <Card
@@ -642,9 +700,41 @@ export const ProjectTeamPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Schedule if exists */}
-                        {userConfig && userConfig.useProjectSchedule === false && userConfig.startTime && (
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 mt-1">
+                        {/* Turno Display */}
+                        <div className="flex flex-col mt-1">
+                          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Turno</label>
+                          <div>
+                            {(() => {
+                              const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+                              const finalShiftId = shiftIdFromUser || userConfig?.shiftId;
+                              const shift = (project?.turnos || []).find((t: any) => (typeof t === "object" ? t._id : t) === finalShiftId);
+                              return shift ? (
+                                <div className="flex flex-col">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 uppercase tracking-wider w-fit">
+                                    {typeof shift === "object" ? shift.name : "..."}
+                                  </span>
+                                  <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium ml-0.5 mt-0.5 italic tracking-tight">
+                                    {shift.startTime} - {shift.endTime}
+                                  </span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {(shift.days || [])
+                                      .sort((a: number, b: number) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
+                                      .map((d: number) => (
+                                        <span key={d} className="text-[9px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded px-1.5 py-0.25 font-bold border border-gray-200 dark:border-gray-600">
+                                          {formatShiftDays([d])}
+                                        </span>
+                                      ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 italic">No asignado</span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        {userConfig && (userConfig.useProjectSchedule === false || (userConfig.startTime && userConfig.endTime)) && (
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded w-fit">
                             <FontAwesomeIcon icon={faClock} /> {userConfig.startTime} - {userConfig.endTime}
                           </div>
                         )}
@@ -677,6 +767,7 @@ export const ProjectTeamPage: React.FC = () => {
                                     <th className="px-4 py-3 font-semibold">Rol/es</th>
                                     <th className="px-4 py-3 font-semibold">Rol Frame</th>
                                     <th className="px-4 py-3 font-semibold">Estado</th>
+                                    <th className="px-4 py-3 font-semibold">Turno</th>
                                     <th className="px-4 py-3 font-semibold">Contrato</th>
                                     <th className="px-4 py-3 font-semibold">Horario</th>
                                     <th className="px-4 py-3 font-semibold text-right">Acciones</th>
@@ -798,6 +889,22 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+                {/* Selección de Turno en el Modal */}
+                <div className="space-y-1.5 pt-2">
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Turno Asignado</label>
+                  <select
+                    className="input-field w-full"
+                    value={userScheduleData.shiftId}
+                    onChange={(e) => setUserScheduleData((prev) => ({ ...prev, shiftId: e.target.value }))}
+                  >
+                    <option value="">Sin turno</option>
+                    {(project?.turnos || []).map((t: any) => (
+                      <option key={typeof t === "object" ? t._id : t} value={typeof t === "object" ? t._id : t}>
+                        {typeof t === "object" ? `${t.name} (${t.startTime} - ${t.endTime}) [${formatShiftDays(t.days)}]` : "..."}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">

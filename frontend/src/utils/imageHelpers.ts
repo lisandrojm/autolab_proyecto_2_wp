@@ -20,7 +20,6 @@ const SERVER_BASE = getServerBase();
  */
 export function getImageUrl(imageUrl: string | undefined | null): string | undefined {
   if (!imageUrl) {
-    console.log('[getImageUrl] No URL provided');
     return undefined;
   }
 

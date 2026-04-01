@@ -58,7 +58,7 @@ export const ProjectDetailPage: React.FC = () => {
     endDate: "",
     objectives: [""],
     targetAudience: "",
-    shifts: [] as string[],
+    turnos: [] as string[],
     vacationConfig: {
       useGlobalConfig: true,
       permiteFraccionadas: true,
@@ -91,7 +91,7 @@ export const ProjectDetailPage: React.FC = () => {
         endDate: data.endDate ? data.endDate.split("T")[0] : "",
         objectives: data.objectives?.length ? data.objectives : [""],
         targetAudience: data.targetAudience || "",
-        shifts: data.shifts || [],
+        turnos: (data.turnos || []).map((t: any) => (typeof t === "string" ? t : (t as any)._id)),
         vacationConfig: {
           useGlobalConfig: data.vacationConfig?.useGlobalConfig ?? true,
           permiteFraccionadas: data.vacationConfig?.permiteFraccionadas ?? true,
@@ -345,7 +345,7 @@ export const ProjectDetailPage: React.FC = () => {
                       <p className="text-sm text-gray-500">No hay turnos disponibles.</p>
                     ) : (
                       availableShifts.map((shift) => {
-                        const isSelected = projectForm.shifts.includes(shift._id);
+                        const isSelected = projectForm.turnos.includes(shift._id);
                         
                         // Formatear los días del turno
                         const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -362,9 +362,9 @@ export const ProjectDetailPage: React.FC = () => {
                                   onChange={(e) => {
                                     setProjectForm(prev => ({
                                       ...prev,
-                                      shifts: e.target.checked 
-                                        ? [...prev.shifts, shift._id] 
-                                        : prev.shifts.filter(id => id !== shift._id)
+                                      turnos: e.target.checked 
+                                        ? [...prev.turnos, shift._id] 
+                                        : prev.turnos.filter(id => id !== shift._id)
                                     }));
                                   }}
                                 />
@@ -614,6 +614,20 @@ export const ProjectDetailPage: React.FC = () => {
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fecha Alta</span>
                       <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadata?.fechaAlta ? new Date(project.metadata.fechaAlta).toLocaleDateString() : "—"}</span>
+                    </div>
+
+                    {/* Turnos */}
+                    <div className="flex flex-col gap-1 col-span-1 md:col-span-2 mt-2">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Turnos Asignados</span>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {(project.turnos || []).map((turno: any, i: number) => (
+                          <div key={i} className="flex flex-col px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
+                            <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{typeof turno === "object" ? turno.name : "..."}</span>
+                            <span className="text-[10px] text-blue-600 dark:text-blue-500 mt-0.5">{typeof turno === "object" ? `${turno.startTime} a ${turno.endTime}` : ""}</span>
+                          </div>
+                        ))}
+                        {(!project.turnos || project.turnos.length === 0) && <span className="text-sm text-gray-500">No hay turnos asignados.</span>}
+                      </div>
                     </div>
                   </div>
                 )}

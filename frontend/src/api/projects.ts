@@ -61,8 +61,9 @@ export interface Project {
     useProjectSchedule?: boolean;
     startTime?: string;
     endTime?: string;
+    shiftId?: string;
   }[];
-  shifts?: string[];
+  turnos?: (string | any)[];
   metadata?: any;
   metadataResolutions?: {
     responsable?: any;
@@ -117,7 +118,7 @@ function normalizeProject(raw: any): Project {
     updatedAt: String(raw?.updatedAt ?? ""),
     vacationConfig: raw?.vacationConfig,
     activityLogConfig: raw?.activityLogConfig,
-    shifts: Array.isArray(raw?.shifts) ? raw.shifts : [],
+    turnos: Array.isArray(raw?.turnos) ? raw.turnos : [],
     teamConfig: raw?.teamConfig,
     metadata: raw?.metadata,
     metadataResolutions: raw?.metadataResolutions,
@@ -233,7 +234,7 @@ class ProjectsAPI {
       description?: string;
       objectives?: string[];
       targetAudience?: string;
-      shifts?: string[];
+      turnos?: string[];
     },
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {
@@ -274,7 +275,7 @@ class ProjectsAPI {
           days: number[];
         };
       };
-      shifts?: string[];
+      turnos?: string[];
     },
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {

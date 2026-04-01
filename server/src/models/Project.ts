@@ -78,6 +78,7 @@ export interface IProject extends Document {
   externalId?: number;
   metadata?: IProjectMetadata;
   workSchedule?: IWorkSchedule;
+  turnos: Types.ObjectId[];
 }
 
 const projectSchema = new Schema<IProject>(
@@ -174,6 +175,7 @@ const projectSchema = new Schema<IProject>(
       activo: { type: Boolean },
       centroCostoId: { type: Number },
     },
+    turnos: [{ type: Schema.Types.ObjectId, ref: "Shift", index: true }],
   },
   { timestamps: true },
 );
