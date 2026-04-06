@@ -4,10 +4,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { projectsAPI, Project } from "../api/projects";
 import { shiftsAPI, Shift } from "../api/shifts";
+import { areasAPI, Area } from "../api/areas";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faPlus, faEdit, faTrash, faBriefcase, faBuilding, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBriefcase, faBuilding, faTable, faGrip, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { Card } from "../components/ui/Card";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -27,6 +28,10 @@ export const ClientProjectsPage: React.FC = () => {
   const [client, setClient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
+  const [availableAreas, setAvailableAreas] = useState<Area[]>([]);
+  const [availableSedes, setAvailableSedes] = useState<any[]>([]);
+  const [availableCostCenters, setAvailableCostCenters] = useState<any[]>([]);
+  const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
 
   // búsqueda, fechas y paginación
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,6 +51,7 @@ export const ClientProjectsPage: React.FC = () => {
     
     // Fetch shifts once on component mount
     shiftsAPI.getAll().then(setAvailableShifts).catch(console.error);
+    areasAPI.listAll().then(setAvailableAreas).catch(console.error);
     
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -67,7 +73,18 @@ export const ClientProjectsPage: React.FC = () => {
     objectives: [] as string[],
     targetAudience: "",
     turnos: [] as string[],
+    areasConfig: [] as { areaId: string; shiftIds: string[] }[],
+    metadata: {
+      centroCostoId: undefined as number | undefined,
+      sedeId: undefined as number | undefined,
+      responsableId: undefined as number | undefined,
+      clienteId: undefined as number | undefined,
+    },
   });
+
+  const [selectedAreaId, setSelectedAreaId] = useState("");
+  const [isAddingArea, setIsAddingArea] = useState(false);
+  const [configuringAreaId, setConfiguringAreaId] = useState<string | null>(null);
 
   // ⓘ estado del modal de información
   const [openInfo, setOpenInfo] = useState(false);
@@ -86,6 +103,7 @@ export const ClientProjectsPage: React.FC = () => {
   useEffect(() => {
     if (!clientId) return;
     fetchProjects();
+    fetchAuxData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, page, searchTerm, startDate, endDate]);
 
@@ -114,7 +132,6 @@ export const ClientProjectsPage: React.FC = () => {
         q: searchTerm || undefined,
         page,
         limit: 12,
-        // Si tu API ya soporta estos, viajarán:
         dateFrom: startDate || undefined,
         dateTo: endDate || undefined,
       };
@@ -125,6 +142,27 @@ export const ClientProjectsPage: React.FC = () => {
       console.error("Error fetching projects:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAuxData = async () => {
+    try {
+      const { token, tenantId } = useAuthStore.getState();
+      const headers = { Authorization: `Bearer ${token}`, "X-Tenant-Id": tenantId };
+
+      const [sedesRes, ccRes, responsablesRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/info?type=centro-costo`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers }),
+      ]);
+
+      if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
+      if (ccRes.ok) setAvailableCostCenters(await ccRes.json());
+      if (responsablesRes.ok) {
+        setAvailableCoordinators(await responsablesRes.json());
+      }
+    } catch (err) {
+      console.error("Error fetching aux data:", err);
     }
   };
 
@@ -161,7 +199,17 @@ export const ClientProjectsPage: React.FC = () => {
       objectives: [],
       targetAudience: "",
       turnos: [],
+      areasConfig: [],
+      metadata: {
+        centroCostoId: undefined,
+        sedeId: undefined,
+        responsableId: undefined,
+        clienteId: parseInt(client?.metadata?.clienteId) || undefined,
+      },
     });
+    setSelectedAreaId("");
+    setIsAddingArea(false);
+    setConfiguringAreaId(null);
     setShowModal(true);
   };
 
@@ -177,7 +225,20 @@ export const ClientProjectsPage: React.FC = () => {
       objectives: project.objectives || [],
       targetAudience: project.targetAudience || "",
       turnos: (project.turnos || []).map((t: any) => (typeof t === "string" ? t : t._id)),
+      areasConfig: (project.areasConfig || []).map((ac: any) => ({
+        areaId: typeof ac.areaId === "string" ? ac.areaId : ac.areaId._id,
+        shiftIds: ac.shiftIds.map((s: any) => (typeof s === "string" ? s : s._id)),
+      })),
+      metadata: {
+        centroCostoId: project.metadata?.centroCostoId,
+        sedeId: project.metadata?.sedeId,
+        responsableId: project.metadata?.responsableId,
+        clienteId: project.metadata?.clienteId,
+      },
     });
+    setSelectedAreaId("");
+    setIsAddingArea(false);
+    setConfiguringAreaId(null);
     setShowModal(true);
   };
 
@@ -289,7 +350,7 @@ export const ClientProjectsPage: React.FC = () => {
             onEndDateChange: setEndDate,
           }}
           extraActions={
-            <div className="flex items-center gap-2 hidden lg:flex">
+            <div className="items-center gap-2 hidden lg:flex">
               <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de Tarjetas">
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
               </button>
@@ -351,6 +412,52 @@ export const ClientProjectsPage: React.FC = () => {
                       />
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo</label>
+                        <select
+                          className="input-field py-2.5"
+                          value={formData.metadata?.centroCostoId || ""}
+                          onChange={(e) => setFormData(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: parseInt(e.target.value) || undefined } }))}
+                        >
+                          <option value="">Seleccionar del sistema...</option>
+                          {availableCostCenters.map(cc => (
+                            <option key={cc._id} value={cc.data?.id}>{cc.name || cc.data?.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Sede *</label>
+                        <select
+                          className="input-field py-2.5"
+                          required
+                          value={formData.metadata?.sedeId || ""}
+                          onChange={(e) => setFormData(p => ({ ...p, metadata: { ...p.metadata, sedeId: parseInt(e.target.value) || undefined } }))}
+                        >
+                          <option value="">Seleccionar del sistema...</option>
+                          {availableSedes.map(s => (
+                            <option key={s._id} value={s.data?.id}>{s.name || s.data?.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Responsable del Proyecto *</label>
+                      <select
+                        className="input-field py-2.5"
+                        required
+                        value={formData.metadata?.responsableId || ""}
+                        onChange={(e) => setFormData(p => ({ ...p, metadata: { ...p.metadata, responsableId: parseInt(e.target.value) || undefined } }))}
+                      >
+                        <option value="">Seleccionar del sistema...</option>
+                        {availableCoordinators.map(c => (
+                          <option key={c._id} value={c.metadata?.id}>{c.firstName} {c.lastName}</option>
+                        ))}
+                      </select>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Inicio</label>
@@ -360,55 +467,208 @@ export const ClientProjectsPage: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Fin</label>
                         <input type="date" className="input-field" value={formData.endDate} onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))} />
                       </div>
-                    </div>
+                                {/* Áreas y Turnos */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Configuración por Área</label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingArea(true)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border border-blue-100 dark:border-blue-800 transition-all shadow-sm"
+                        >
+                          <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+                          Agregar Área
+                        </button>
+                      </div>
 
-                    {/* Turnos */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                      <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">Turnos</label>
-                      <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                        {availableShifts.length === 0 ? (
-                          <p className="text-sm text-gray-500">No hay turnos disponibles.</p>
+                      <div className="space-y-2">
+                        {formData.areasConfig.length === 0 ? (
+                          <div className="text-center py-10 bg-gray-50/30 dark:bg-gray-900/10 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
+                            <FontAwesomeIcon icon={faLayerGroup} className="h-8 w-8 text-gray-200 dark:text-gray-700 mb-3" />
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sin Áreas Integradas</p>
+                          </div>
                         ) : (
-                          availableShifts.map((shift) => {
-                            const isSelected = formData.turnos.includes(shift._id);
-                            
-                            // Formatear los días del turno
-                            const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-                            const shiftDays = shift.days?.map(d => dayNames[d]).join(", ") || "Días no definidos";
+                          formData.areasConfig.map((ac) => {
+                            const area = availableAreas.find(a => a._id === ac.areaId);
+                            if (!area) return null;
 
                             return (
-                              <label key={shift._id} className="cursor-pointer">
-                                <div className={`flex items-start p-3 rounded-lg border transition-all ${isSelected ? "bg-blue-50/50 border-blue-500/50 dark:bg-blue-900/20 dark:border-blue-500/30" : "bg-white border-gray-200 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600"}`}>
-                                  <div className="flex-shrink-0 mt-0.5">
-                                    <input 
-                                      type="checkbox" 
-                                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4" 
-                                      checked={isSelected}
-                                      onChange={(e) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          turnos: e.target.checked 
-                                            ? [...prev.turnos, shift._id] 
-                                            : prev.turnos.filter(id => id !== shift._id)
-                                        }));
-                                      }}
-                                    />
+                              <div key={ac.areaId} className="flex items-center justify-between p-3 rounded-xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
+                                    <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5" />
                                   </div>
-                                  <div className="ml-3 flex-1">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                      {shift.name} 
-                                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-normal">({shift.startTime} a {shift.endTime})</span>
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                      {shiftDays}
+                                  <div>
+                                    <div className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">{area.name}</div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${ac.shiftIds.length > 0 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"}`}>
+                                        {ac.shiftIds.length} {ac.shiftIds.length === 1 ? 'Turno' : 'Turnos'}
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
-                              </label>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfiguringAreaId(ac.areaId)}
+                                    className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
+                                    title="Configurar Turnos"
+                                  >
+                                    <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        areasConfig: prev.areasConfig.filter(item => item.areaId !== ac.areaId)
+                                      }));
+                                    }}
+                                    className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                                    title="Quitar"
+                                  >
+                                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
                             );
                           })
                         )}
                       </div>
+                    </div>
+
+                    {/* MODAL: Agregar Área */}
+                    {isAddingArea && (
+                      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden">
+                          <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+                              <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">Agregar Nueva Área</h3>
+                              <p className="text-[10px] text-gray-500 uppercase font-medium">Selecciona el área para integrarla</p>
+                            </div>
+                          </div>
+                          
+                          <div className="p-6 space-y-6">
+                            <div>
+                              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Áreas Disponibles</label>
+                              <select
+                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
+                                value={selectedAreaId}
+                                autoFocus
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (!val) return;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    areasConfig: [...prev.areasConfig, { areaId: val, shiftIds: [] }]
+                                  }));
+                                  setSelectedAreaId("");
+                                  setIsAddingArea(false);
+                                  setConfiguringAreaId(val);
+                                }}
+                              >
+                                <option value="">Seleccionar del sistema...</option>
+                                {availableAreas
+                                  .filter(a => !formData.areasConfig.some(ac => ac.areaId === a._id))
+                                  .map(a => (
+                                    <option key={a._id} value={a._id}>{a.name}</option>
+                                  ))
+                                }
+                              </select>
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsAddingArea(false);
+                                  setSelectedAreaId("");
+                                }}
+                                className="px-6 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors uppercase tracking-widest border border-gray-100 dark:border-gray-800 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MODAL: Configurar Turnos */}
+                    {configuringAreaId && (
+                      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[80vh]">
+                          <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                <FontAwesomeIcon icon={faTable} className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">
+                                  {availableAreas.find(a => a._id === configuringAreaId)?.name}
+                                </h3>
+                                <p className="text-[10px] text-gray-500 uppercase font-medium">Habilitar turnos para esta área</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => setConfiguringAreaId(null)}
+                              className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-all flex items-center justify-center"
+                            >
+                              <FontAwesomeIcon icon={faPlus} className="h-4 w-4 rotate-45" />
+                            </button>
+                          </div>
+                          
+                          <div className="p-4 overflow-y-auto space-y-3">
+                            {availableShifts.map((shift) => {
+                              const areaConfigIndex = formData.areasConfig.findIndex(ac => ac.areaId === configuringAreaId);
+                              const isShiftSelected = areaConfigIndex !== -1 && formData.areasConfig[areaConfigIndex].shiftIds.includes(shift._id);
+                              
+                              return (
+                                <div 
+                                  key={shift._id} 
+                                  onClick={() => {
+                                    if (areaConfigIndex === -1) return;
+                                    const newAreasConfig = [...formData.areasConfig];
+                                    const currentArea = newAreasConfig[areaConfigIndex];
+                                    if (isShiftSelected) {
+                                      currentArea.shiftIds = currentArea.shiftIds.filter(id => id !== shift._id);
+                                    } else {
+                                      currentArea.shiftIds = [...currentArea.shiftIds, shift._id];
+                                    }
+                                    setFormData(prev => ({ ...prev, areasConfig: newAreasConfig }));
+                                  }}
+                                  className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${isShiftSelected ? "bg-emerald-50/50 border-emerald-500/30 dark:bg-emerald-900/10" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600"}`}
+                                >
+                                  <div>
+                                    <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{shift.name}</div>
+                                    <div className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-wider">{shift.startTime} — {shift.endTime}</div>
+                                  </div>
+                                  <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${isShiftSelected ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-700"}`}>
+                                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xl ring-0 transition duration-200 ease-in-out ${isShiftSelected ? "translate-x-5" : "translate-x-0"}`} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setConfiguringAreaId(null)}
+                              className="px-8 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl text-xs font-bold shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest"
+                            >
+                              Listo
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     </div>
 
                     {/* Estado - al final */}
@@ -452,7 +712,7 @@ export const ClientProjectsPage: React.FC = () => {
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Responsable</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Turnos</th>
+                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Áreas y Turnos</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fechas</th>
                 <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
               </tr>
@@ -485,20 +745,13 @@ export const ClientProjectsPage: React.FC = () => {
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${p.status === "active" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : p.status === "on_hold" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : p.status === "completed" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{p.status === "active" ? "Activo" : p.status === "on_hold" ? "En Espera" : p.status === "completed" ? "Completado" : "Archivado"}</span>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex flex-wrap gap-2 max-w-[200px]">
-                        {(p.turnos || []).map((turno: any, i: number) => (
-                          <div key={i} className="flex flex-col items-center">
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold uppercase tracking-wider">
-                              {typeof turno === "object" ? turno.name : "..."}
-                            </span>
-                            {typeof turno === "object" && (
-                              <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-nowrap">
-                                {turno.startTime}-{turno.endTime}
-                              </span>
-                            )}
-                          </div>
+                      <div className="flex flex-wrap gap-2 max-w-[250px]">
+                        {(p.areasConfig || []).map((ac: any, i: number) => (
+                          <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-700">
+                            {typeof ac.areaId === "object" ? ac.areaId.name : "..."}
+                          </span>
                         ))}
-                        {(!p.turnos || p.turnos.length === 0) && <span className="text-gray-400">—</span>}
+                        {(!p.areasConfig || p.areasConfig.length === 0) && <span className="text-gray-400">—</span>}
                       </div>
                     </td>
                     <td className="py-4 px-6 text-xs text-gray-500 dark:text-gray-400">
@@ -602,25 +855,18 @@ export const ClientProjectsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Turnos dentro del cuerpo de la card */}
-              {project.turnos && project.turnos.length > 0 && (
+              {/* Áreas Configuradas dentro del cuerpo de la card */}
+              {project.areasConfig && project.areasConfig.length > 0 && (
                 <div className="flex flex-col mt-4">
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faTable} className="h-3 w-3 text-gray-400" />
-                    Turnos
+                    <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
+                    Áreas Configuradas
                   </label>
-                  <div className="flex flex-wrap gap-3">
-                    {project.turnos.map((turno: any, i: number) => (
-                      <div key={i} className="flex flex-col items-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
-                          {typeof turno === "object" ? turno.name : "..."}
-                        </span>
-                        {typeof turno === "object" && (
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 mt-1 font-medium italic">
-                            {turno.startTime}-{turno.endTime}
-                          </span>
-                        )}
-                      </div>
+                  <div className="flex flex-wrap gap-2">
+                    {project.areasConfig.map((ac: any, i: number) => (
+                      <span key={i} className="inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                        {typeof ac.areaId === "object" ? ac.areaId.name : "..."}
+                      </span>
                     ))}
                   </div>
                 </div>

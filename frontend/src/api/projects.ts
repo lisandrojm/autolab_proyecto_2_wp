@@ -56,7 +56,6 @@ export interface Project {
   };
   teamConfig?: {
     userId: string;
-    isNotifier: boolean;
     canRegister: boolean;
     useProjectSchedule?: boolean;
     startTime?: string;
@@ -64,6 +63,10 @@ export interface Project {
     shiftId?: string;
   }[];
   turnos?: (string | any)[];
+  areasConfig?: {
+    areaId: string | any;
+    shiftIds: string[] | any[];
+  }[];
   metadata?: any;
   metadataResolutions?: {
     responsable?: any;
@@ -120,6 +123,7 @@ function normalizeProject(raw: any): Project {
     activityLogConfig: raw?.activityLogConfig,
     turnos: Array.isArray(raw?.turnos) ? raw.turnos : [],
     teamConfig: raw?.teamConfig,
+    areasConfig: Array.isArray(raw?.areasConfig) ? raw.areasConfig : [],
     metadata: raw?.metadata,
     metadataResolutions: raw?.metadataResolutions,
   };
@@ -227,7 +231,7 @@ class ProjectsAPI {
     return all;
   }
 
-  async createProject(
+   async createProject(
     clientId: string,
     data: {
       name: string;
@@ -235,6 +239,10 @@ class ProjectsAPI {
       objectives?: string[];
       targetAudience?: string;
       turnos?: string[];
+      areasConfig?: {
+        areaId: string;
+        shiftIds: string[];
+      }[];
     },
   ): Promise<Project> {
     const resp = await axios.post(`/clients/${clientId}/projects`, data, {
@@ -276,6 +284,10 @@ class ProjectsAPI {
         };
       };
       turnos?: string[];
+      areasConfig?: {
+        areaId: string;
+        shiftIds: string[];
+      }[];
     },
   ): Promise<Project> {
     const resp = await axios.patch(`/projects/${projectId}`, data, {

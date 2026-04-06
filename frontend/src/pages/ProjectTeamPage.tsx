@@ -8,14 +8,13 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
-import { InfoModal } from "../components/ui/InfoModal";
 import { Modal } from "../components/ui/Modal";
 import { Card } from "../components/ui/Card";
 
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faBell, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 
@@ -29,9 +28,6 @@ export const ProjectTeamPage: React.FC = () => {
   // Help
   const [openInfo, setOpenInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
-
-  // Notifications Info Modal
-  const [showNotifInfo, setShowNotifInfo] = useState(false);
 
   // Data
   const [project, setProject] = useState<Project | null>(null);
@@ -258,26 +254,6 @@ export const ProjectTeamPage: React.FC = () => {
       sweetAlert.error("Error", "No se pudo guardar la configuración del equipo.");
     }
   };
-  const handleToggleNotifier = (userId: string) => {
-    // Logic: Single Selection. Set target true, others false.
-    const newConfig = teamMembers.map((member) => {
-      const existing = teamConfig.find((c) => c.userId === member._id);
-      const isActivating = member._id === userId;
-
-      return {
-        userId: member._id,
-        canRegister: existing ? existing.canRegister : true,
-        isNotifier: isActivating,
-        // Preserve other fields with defaults if missing
-        useProjectSchedule: existing?.useProjectSchedule ?? true,
-        startTime: existing?.startTime || "09:00",
-        endTime: existing?.endTime || "18:00",
-      };
-    });
-
-    updateTeamConfig(newConfig);
-  };
-
   const handleOpenScheduleModal = (user: User) => {
     const existing = teamConfig.find((c) => c.userId === user._id);
     setEditingScheduleUser(user);
@@ -299,14 +275,12 @@ export const ProjectTeamPage: React.FC = () => {
         if (member._id === editingScheduleUser._id) {
           return {
             userId: member._id,
-            isNotifier: existing ? existing.isNotifier : false,
             canRegister: existing ? existing.canRegister : true,
             ...userScheduleData,
           };
         }
         return {
           userId: member._id,
-          isNotifier: existing ? existing.isNotifier : false,
           canRegister: existing ? existing.canRegister : true,
           useProjectSchedule: existing?.useProjectSchedule ?? true,
           startTime: existing?.startTime || "09:00",
@@ -332,21 +306,6 @@ export const ProjectTeamPage: React.FC = () => {
       sweetAlert.error("Error", "No se pudo guardar la configuración.");
     }
   };
-
-  // Ensure Default Notifier
-  useEffect(() => {
-    if (!loading && teamMembers.length > 0) {
-      const coords = teamMembers.filter(checkIsCoordinator);
-      if (coords.length > 0) {
-        // Check if any coordinator is notifier
-        const hasNotifier = teamConfig.some((c) => c.isNotifier && coords.some((u) => u._id === c.userId));
-        if (!hasNotifier) {
-          // Set first coord as notifier
-          handleToggleNotifier(coords[0]._id);
-        }
-      }
-    }
-  }, [teamMembers, loading]);
 
   /* ------------------------------- Actions -------------------------------- */
 
@@ -496,9 +455,8 @@ export const ProjectTeamPage: React.FC = () => {
                 const members = teamMembers.filter((u) => !checkIsCoordinator(u));
 
                 // Render function for Table Row
-                const renderUserRow = (user: User, isCoord: boolean) => {
+                const renderUserRow = (user: User) => {
                   const userConfig = teamConfig.find((c) => c.userId === user._id);
-                  const isNotifier = userConfig ? userConfig.isNotifier : false;
 
                   // Metadata extraction
                   const projectMeta = user.metadata?.projects?.find((p) => {
@@ -587,12 +545,6 @@ export const ProjectTeamPage: React.FC = () => {
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">{horario}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {isCoord && (
-                            <button onClick={() => handleToggleNotifier(user._id)} title={isNotifier ? "Recibe notificaciones" : "Activar notificaciones"} className={`p-1.5 rounded transition-all ${isNotifier ? "text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" : "text-gray-300 dark:text-gray-600 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
-                              <FontAwesomeIcon icon={faBell} className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-
                           <button onClick={() => handleOpenScheduleModal(user)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded transition-colors" title="Editar Horario">
                             <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
                           </button>
@@ -606,9 +558,8 @@ export const ProjectTeamPage: React.FC = () => {
                   );
                 };
 
-                const renderUserCard = (user: User, isCoord: boolean) => {
+                const renderUserCard = (user: User) => {
                   const userConfig = teamConfig.find((c) => c.userId === user._id);
-                  const isNotifier = userConfig ? userConfig.isNotifier : false;
 
                   // Metadata extraction
                   const projectMeta = user.metadata?.projects?.find((p) => {
@@ -642,16 +593,6 @@ export const ProjectTeamPage: React.FC = () => {
                             : []),
                         ],
                         badgesPosition: "top",
-                        actions: isCoord
-                          ? [
-                              {
-                                icon: faBell,
-                                title: isNotifier ? "Es notificador" : "Hacer notificador",
-                                onClick: () => handleToggleNotifier(user._id),
-                                variant: isNotifier ? "warning" : "default",
-                              },
-                            ]
-                          : undefined,
                       }}
                       footer={{
                         actions: [
@@ -774,16 +715,16 @@ export const ProjectTeamPage: React.FC = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {coordinators.map((u) => renderUserRow(u, true))}
-                                  {members.map((u) => renderUserRow(u, false))}
+                                  {coordinators.map((u) => renderUserRow(u))}
+                                  {members.map((u) => renderUserRow(u))}
                                 </tbody>
                               </table>
                             </div>
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {coordinators.map((u) => renderUserCard(u, true))}
-                            {members.map((u) => renderUserCard(u, false))}
+                            {coordinators.map((u) => renderUserCard(u))}
+                            {members.map((u) => renderUserCard(u))}
                           </div>
                         )}
                       </>
@@ -818,42 +759,6 @@ export const ProjectTeamPage: React.FC = () => {
             </div>
           )}
           </div>
-
-          {/* Notifications Info Modal */}
-          <InfoModal isOpen={showNotifInfo} onClose={() => setShowNotifInfo(false)} title="Coordinadores">
-            <div className="space-y-6 text-sm text-gray-600 dark:text-gray-300">
-              {/* Coordinadores Section */}
-              <div className="space-y-3">
-                <p>
-                  Los <strong className="text-gray-900 dark:text-white">Coordinadores</strong> son los miembros del equipo responsables de generar el <strong className="text-gray-900 dark:text-white">Reporte Diario de Novedades</strong> para este proyecto.
-                </p>
-                <p>Cada día, el coordinador designado deberá completar el registro de asistencia, horas trabajadas y cualquier novedad relevante del personal asignado.</p>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-gray-200 dark:border-gray-700"></div>
-
-              {/* Gestión de Notificaciones Subsection */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Gestión de Notificaciones</h3>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-yellow-600 dark:text-yellow-400 shrink-0">
-                    <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-900 dark:text-white block mb-1">Notificador Principal</span>
-                    El coordinador seleccionado con la campana activa (icono amarillo) será el responsable de recibir todas las notificaciones importantes del proyecto.
-                  </div>
-                </div>
-                <p className="pl-[3.25rem]">
-                  Solo puede haber <strong>un único coordinador</strong> activo como notificador por proyecto. Al activar uno, se desactivará automáticamente cualquier otro que estuviera seleccionado.
-                </p>
-                <div className="pl-[3.25rem] pt-2">
-                  <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-500 border border-gray-200 dark:border-gray-600">Nota: Si no seleccionas a ninguno, el sistema asignará uno por defecto.</span>
-                </div>
-              </div>
-            </div>
-          </InfoModal>
 
           {/* User Schedule Modal */}
           <Modal isOpen={!!editingScheduleUser} onClose={() => setEditingScheduleUser(null)} title={`Horario de ${editingScheduleUser?.firstName || "Usuario"}`} size="sm">

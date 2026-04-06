@@ -52,7 +52,6 @@ export interface IProject extends Document {
   assignedUsers: Types.ObjectId[];
   teamConfig?: {
     userId: Types.ObjectId;
-    isNotifier: boolean;
     canRegister: boolean;
     // Individual work schedule for this user in this project
     useProjectSchedule?: boolean; // If true, use project's workSchedule. Default true.
@@ -79,6 +78,10 @@ export interface IProject extends Document {
   metadata?: IProjectMetadata;
   workSchedule?: IWorkSchedule;
   turnos: Types.ObjectId[];
+  areasConfig?: {
+    areaId: Types.ObjectId;
+    shiftIds: Types.ObjectId[];
+  }[];
 }
 
 const projectSchema = new Schema<IProject>(
@@ -110,7 +113,6 @@ const projectSchema = new Schema<IProject>(
     teamConfig: [
       {
         userId: { type: Schema.Types.ObjectId, ref: "User" },
-        isNotifier: { type: Boolean, default: false }, // Recibe notificaciones
         canRegister: { type: Boolean, default: true }, // Puede registrar novedades
         // Individual work schedule
         useProjectSchedule: { type: Boolean, default: true }, // Use project's schedule by default
@@ -176,6 +178,12 @@ const projectSchema = new Schema<IProject>(
       centroCostoId: { type: Number },
     },
     turnos: [{ type: Schema.Types.ObjectId, ref: "Shift", index: true }],
+    areasConfig: [
+      {
+        areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
+        shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift", required: true }],
+      },
+    ],
   },
   { timestamps: true },
 );

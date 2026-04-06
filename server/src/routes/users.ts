@@ -365,6 +365,36 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
   }
 });
 
+// GET /users/eligible-responsables - Listar usuarios elegibles como responsables de proyecto
+// Busca roles que tengan el permiso "project_responsible:eligible" y devuelve los usuarios con esos roles
+router.get("/eligible-responsables", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    // 1. Encontrar todos los roles del tenant que incluyen el permiso
+    const eligibleRoles = await Role.find({
+      tenantId: req.tenantObjectId,
+      permissions: "project_responsible:eligible",
+    }).select("_id");
+
+    const eligibleRoleIds = eligibleRoles.map(r => r._id);
+
+    // 2. Encontrar usuarios activos que tengan alguno de esos roles
+    const users = await User.find({
+      tenantId: req.tenantObjectId,
+      isActive: true,
+      roles: { $in: eligibleRoleIds },
+    })
+      .select("firstName lastName email metadata")
+      .populate("roles", "name")
+      .sort({ firstName: 1, lastName: 1 });
+
+    res.json(users);
+  } catch (error) {
+    console.error("Get eligible responsables error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 // GET /users/by-area/:areaId - Listar usuarios por área (Endpoint dedicado)
 router.get("/by-area/:areaId", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {

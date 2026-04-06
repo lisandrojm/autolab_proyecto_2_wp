@@ -65,13 +65,20 @@ const createProjectSchema = z.object({
     .optional()
     .nullable(),
   turnos: z.array(z.string()).optional(),
+  areasConfig: z
+    .array(
+      z.object({
+        areaId: z.string(),
+        shiftIds: z.array(z.string()),
+      }),
+    )
+    .optional(),
 });
 
 const updateTeamConfigSchema = z.object({
   config: z.array(
     z.object({
       userId: z.string(),
-      isNotifier: z.boolean(),
       canRegister: z.boolean(),
       useProjectSchedule: z.boolean().optional(),
       startTime: z.string().optional(),
@@ -110,7 +117,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
 
     const skip = (page - 1) * limit;
 
-    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").lean(), Project.countDocuments(filter)]);
+    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").populate("areasConfig.areaId").populate("areasConfig.shiftIds").lean(), Project.countDocuments(filter)]);
 
     // 2. Resolver clientes para proyectos que no tienen clientId pero sí metadata.clienteId
     const projectsToResolve = projects.filter((p) => !p.clientId && p.metadata?.clienteId);
@@ -347,7 +354,7 @@ router.get(
 
       const skip = (page - 1) * limit;
 
-      const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").lean(), Project.countDocuments(filter)]);
+      const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").populate("areasConfig.areaId").populate("areasConfig.shiftIds").lean(), Project.countDocuments(filter)]);
 
       // Bulk Sede Resolution
       const sedeIds = new Set<string>();
@@ -470,7 +477,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
       filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email").populate("turnos").lean();
+    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email").populate("turnos").populate("areasConfig.areaId").populate("areasConfig.shiftIds").lean();
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });

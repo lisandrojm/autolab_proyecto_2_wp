@@ -9,7 +9,7 @@ import { Card } from "../components/ui/Card";
 import { InfoModal } from "../components/ui/InfoModal";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faUserShield, faEdit, faPlus, faShieldHalved, faSquareCheck, faBuilding, faUserGear, faInfoCircle, faLock, faEye, faMobileAlt, faUsers, faUsersGear, faCog, faUserGraduate, faTable, faGrip, faUserTie, faLayerGroup, faClock, faBriefcase } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate } from "react-router-dom";
 
@@ -34,7 +34,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     label: "Admin GENERAL",
     icon: faUsersGear,
     description: "Gestión general de RRHH y administración",
-    permissions: ["admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view"],
+    permissions: ["admin_clients:view", "admin_projects:view", "admin_sedes:view", "admin_contracts:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view"],
   },
   admin_users: {
     label: "Admin USUARIOS",
@@ -54,14 +54,24 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     description: "Acceso a la aplicación móvil",
     permissions: ["mobile_collaborator:view", "mobile_coordinator:view"],
   },
+  proyectos: {
+    label: "Proyectos",
+    icon: faBriefcase,
+    description: "Capacidades relacionadas con la gestión de proyectos",
+    permissions: ["project_responsible:eligible"],
+  },
 };
 
 const MODULE_LABELS: Record<string, string> = {
   "client:view": "Cliente (Ver/Select)",
   "admin_clients:view": "Clientes",
+  "admin_projects:view": "Proyectos",
+  "admin_sedes:view": "Sedes",
+  "admin_contracts:view": "Contratos",
   "admin_orders:view": "Pedidos",
   "admin_vacations:view": "Vacaciones",
   "admin_activity_logs:view": "Novedades",
+  "project_responsible:eligible": "Responsable de Proyecto",
   "admin_areas:view": "Areas",
   "admin_positions:view": "Cargos",
   "admin_levels:view": "Niveles",

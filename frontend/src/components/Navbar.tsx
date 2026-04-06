@@ -76,7 +76,10 @@ export const MobileNavbar: React.FC = () => {
         if (hasPermission("admin_users:view")) promises.push(axios.get("/users/count").catch(() => ({ data: { count: 0 } })));
         else promises.push(Promise.resolve({ data: { count: 0 } }));
 
-        const [clientsRes, tenantsRes, rolesRes, areasRes, positionsRes, levelsRes, usersRes] = await Promise.all(promises);
+        if (hasPermission("admin_projects:view")) promises.push(axios.get("/projects/count").catch(() => ({ data: { count: 0 } })));
+        else promises.push(Promise.resolve({ data: { count: 0 } }));
+
+        const [clientsRes, tenantsRes, rolesRes, areasRes, positionsRes, levelsRes, usersRes, projectsRes] = await Promise.all(promises);
 
         setAdminCounts({
           clients: clientsRes?.data?.count || 0,
@@ -85,7 +88,7 @@ export const MobileNavbar: React.FC = () => {
           areas: areasRes?.data?.count || 0,
           positions: positionsRes?.data?.count || 0,
           levels: levelsRes?.data?.count || 0,
-          projects: 0,
+          projects: projectsRes?.data?.count || 0,
           users: usersRes?.data?.count || 0,
         });
       } catch (error) {
@@ -135,9 +138,9 @@ export const MobileNavbar: React.FC = () => {
 
       // Admin GENERAL Items
       if (hasPermission("admin_clients:view")) base.push({ path: "/clients", icon: faUsers, label: "Clientes", scope: "global", count: adminCounts.clients });
-      if (hasPermission("admin_clients:view")) base.push({ path: "/admin/projects", icon: faBriefcase, label: "Proyectos", scope: "global", count: adminCounts.projects });
-      if (hasPermission("admin_clients:view")) base.push({ path: "/admin/sedes", icon: faBuilding, label: "Sedes", scope: "global" });
-      if (hasPermission("admin_clients:view")) base.push({ path: "/admin/contracts", icon: faFileContract, label: "Contratos", scope: "global" });
+      if (hasPermission("admin_projects:view")) base.push({ path: "/admin/projects", icon: faBriefcase, label: "Proyectos", scope: "global", count: adminCounts.projects });
+      if (hasPermission("admin_sedes:view")) base.push({ path: "/admin/sedes", icon: faBuilding, label: "Sedes", scope: "global" });
+      if (hasPermission("admin_contracts:view")) base.push({ path: "/admin/contracts", icon: faFileContract, label: "Contratos", scope: "global" });
       if (hasPermission("admin_activity_logs:view")) base.push({ path: "/requests", icon: faFileText, label: "Novedades", scope: "global", dividerTop: true });
       if (hasPermission("admin_orders:view")) base.push({ path: "/orders", icon: faShoppingCart, label: "Pedidos", scope: "global" });
       if (hasPermission("admin_vacations:view")) base.push({ path: "/vacations", icon: faUmbrellaBeach, label: "Vacaciones", scope: "global" });

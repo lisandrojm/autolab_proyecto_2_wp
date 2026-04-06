@@ -2,12 +2,18 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
+import { shiftsAPI, Shift } from "../api/shifts";
+import { areasAPI, Area } from "../api/areas";
+import { useAuthStore } from "../stores/authStore";
 import { useClientContextStore } from "../stores/clientContextStore";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { faBriefcase, faBuilding, faTable, faGrip } from "@fortawesome/free-solid-svg-icons";
+import { sweetAlert } from "../utils/sweetAlert";
+import { emitProjectsChanged } from "../utils/navbarEvents";
+import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -28,6 +34,32 @@ export const ProjectsPage: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
+
+  // Create modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [selectedClientId, setSelectedClientIdLocal] = useState("");
+  const [availableSedes, setAvailableSedes] = useState<any[]>([]);
+  const [availableCostCenters, setAvailableCostCenters] = useState<any[]>([]);
+  const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
+  const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
+  const [availableAreas, setAvailableAreas] = useState<Area[]>([]);
+  const [selectedAreaId, setSelectedAreaId] = useState("");
+  const [isAddingArea, setIsAddingArea] = useState(false);
+  const [configuringAreaId, setConfiguringAreaId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    status: "active" as "active" | "completed" | "on_hold" | "archived",
+    startDate: "",
+    endDate: "",
+    areasConfig: [] as { areaId: string; shiftIds: string[] }[],
+    metadata: {
+      centroCostoId: undefined as number | undefined,
+      sedeId: undefined as number | undefined,
+      responsableId: undefined as number | undefined,
+    },
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -52,20 +84,45 @@ export const ProjectsPage: React.FC = () => {
   }, [viewMode, isXXL]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [projectsData, clientsData] = await Promise.all([projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll()]);
-        setProjects(projectsData);
-        setClients(clientsData);
-      } catch (error) {
-        console.error("Error fetching projects data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [projectsData, clientsData] = await Promise.all([projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll()]);
+      setProjects(projectsData);
+      setClients(clientsData);
+    } catch (error) {
+      console.error("Error fetching projects data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch aux data for the create modal
+  const fetchAuxData = async () => {
+    try {
+      const { token, tenantId } = useAuthStore.getState();
+      const headers = { Authorization: `Bearer ${token}`, "X-Tenant-Id": tenantId };
+
+      const [sedesRes, ccRes, responsablesRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/info?type=sede`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/info?type=centro-costo`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/users/eligible-responsables`, { headers }),
+      ]);
+
+      if (sedesRes.ok) setAvailableSedes(await sedesRes.json());
+      if (ccRes.ok) setAvailableCostCenters(await ccRes.json());
+      if (responsablesRes.ok) setAvailableCoordinators(await responsablesRes.json());
+
+      // Also fetch shifts and areas
+      shiftsAPI.getAll().then(setAvailableShifts).catch(console.error);
+      areasAPI.listAll().then(setAvailableAreas).catch(console.error);
+    } catch (err) {
+      console.error("Error fetching aux data:", err);
+    }
+  };
 
   const clientMap = useMemo(() => {
     const map = new Map<string, Client>();
@@ -90,12 +147,66 @@ export const ProjectsPage: React.FC = () => {
     navigate(`/projects/${project._id}`);
   };
 
+  const handleOpenCreate = () => {
+    setSelectedClientIdLocal("");
+    setSelectedAreaId("");
+    setIsAddingArea(false);
+    setConfiguringAreaId(null);
+    setFormData({
+      name: "",
+      description: "",
+      status: "active",
+      startDate: "",
+      endDate: "",
+      areasConfig: [],
+      metadata: {
+        centroCostoId: undefined,
+        sedeId: undefined,
+        responsableId: undefined,
+      },
+    });
+    setShowCreateModal(true);
+    fetchAuxData();
+  };
+
+  const handleCreateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClientId) {
+      sweetAlert.error("Error", "Seleccioná un cliente para el proyecto");
+      return;
+    }
+    try {
+      setCreating(true);
+      await projectsAPI.createProject(selectedClientId, {
+        ...formData,
+      } as any);
+      sweetAlert.success("Proyecto creado", "El proyecto se ha creado correctamente");
+      setShowCreateModal(false);
+      emitProjectsChanged("create", "", selectedClientId);
+      fetchData();
+    } catch (error) {
+      console.error("Error creating project:", error);
+      sweetAlert.error("Error", "No se pudo crear el proyecto");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <PageLayout
       title="Proyectos"
       subtitle="Todos los proyectos del sistema"
       itemCount={filteredProjects.length}
       faIcon={{ icon: faBriefcase }}
+      headerActions={
+        <button
+          onClick={handleOpenCreate}
+          className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary-600 hover:bg-primary-700 text-white transition-all duration-200 shadow-sm hover:shadow-md"
+          title="Nuevo Proyecto"
+        >
+          <FontAwesomeIcon icon={faPlus} className="h-4 w-4" />
+        </button>
+      }
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
@@ -244,6 +355,351 @@ export const ProjectsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Create Project Modal */}
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Nuevo Proyecto" subtitle="Seleccioná el cliente y completá los datos" size="lg">
+        <form onSubmit={handleCreateProject}>
+          <div className="space-y-6">
+            {/* Client selector - first field */}
+            <div>
+              <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Cliente *</label>
+              <select
+                className="input-field py-2.5"
+                required
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientIdLocal(e.target.value)}
+              >
+                <option value="">Seleccionar cliente...</option>
+                {clients.map((c) => (
+                  <option key={c._id} value={c._id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre del Proyecto *</label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                className="input-field"
+                placeholder="Ej: Campaña Verano 2024"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+                rows={3}
+                className="input-field resize-none"
+                placeholder="Descripción del proyecto..."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo</label>
+                <select
+                  className="input-field py-2.5"
+                  value={formData.metadata?.centroCostoId || ""}
+                  onChange={(e) => setFormData(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: parseInt(e.target.value) || undefined } }))}
+                >
+                  <option value="">Seleccionar del sistema...</option>
+                  {availableCostCenters.map(cc => (
+                    <option key={cc._id} value={cc.data?.id}>{cc.name || cc.data?.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Sede *</label>
+                <select
+                  className="input-field py-2.5"
+                  required
+                  value={formData.metadata?.sedeId || ""}
+                  onChange={(e) => setFormData(p => ({ ...p, metadata: { ...p.metadata, sedeId: parseInt(e.target.value) || undefined } }))}
+                >
+                  <option value="">Seleccionar del sistema...</option>
+                  {availableSedes.map(s => (
+                    <option key={s._id} value={s.data?.id}>{s.name || s.data?.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Responsable del Proyecto *</label>
+              <select
+                className="input-field py-2.5"
+                required
+                value={formData.metadata?.responsableId || ""}
+                onChange={(e) => setFormData(p => ({ ...p, metadata: { ...p.metadata, responsableId: parseInt(e.target.value) || undefined } }))}
+              >
+                <option value="">Seleccionar del sistema...</option>
+                {availableCoordinators.map(c => (
+                  <option key={c._id} value={c.metadata?.id}>{c.firstName} {c.lastName}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Inicio</label>
+                <input type="date" className="input-field" value={formData.startDate} onChange={(e) => setFormData((p) => ({ ...p, startDate: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha Fin</label>
+                <input type="date" className="input-field" value={formData.endDate} onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))} />
+              </div>
+
+            {/* Áreas y Turnos */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6 col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Configuración por Área</label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingArea(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border border-blue-100 dark:border-blue-800 transition-all shadow-sm"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+                  Agregar Área
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {formData.areasConfig.length === 0 ? (
+                  <div className="text-center py-10 bg-gray-50/30 dark:bg-gray-900/10 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
+                    <FontAwesomeIcon icon={faLayerGroup} className="h-8 w-8 text-gray-200 dark:text-gray-700 mb-3" />
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sin Áreas Integradas</p>
+                  </div>
+                ) : (
+                  formData.areasConfig.map((ac) => {
+                    const area = availableAreas.find(a => a._id === ac.areaId);
+                    if (!area) return null;
+
+                    return (
+                      <div key={ac.areaId} className="flex items-center justify-between p-3 rounded-xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
+                            <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">{area.name}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${ac.shiftIds.length > 0 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"}`}>
+                                {ac.shiftIds.length} {ac.shiftIds.length === 1 ? 'Turno' : 'Turnos'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfiguringAreaId(ac.areaId)}
+                            className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
+                            title="Configurar Turnos"
+                          >
+                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                areasConfig: prev.areasConfig.filter(item => item.areaId !== ac.areaId)
+                              }));
+                            }}
+                            className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                            title="Quitar"
+                          >
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* MODAL: Agregar Área */}
+            {isAddingArea && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden">
+                  <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+                      <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">Agregar Nueva Área</h3>
+                      <p className="text-[10px] text-gray-500 uppercase font-medium">Selecciona el área para integrarla</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 space-y-6">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Áreas Disponibles</label>
+                      <select
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
+                        value={selectedAreaId}
+                        autoFocus
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) return;
+                          setFormData(prev => ({
+                            ...prev,
+                            areasConfig: [...prev.areasConfig, { areaId: val, shiftIds: [] }]
+                          }));
+                          setSelectedAreaId("");
+                          setIsAddingArea(false);
+                          setConfiguringAreaId(val);
+                        }}
+                      >
+                        <option value="">Seleccionar del sistema...</option>
+                        {availableAreas
+                          .filter(a => !formData.areasConfig.some(ac => ac.areaId === a._id))
+                          .map(a => (
+                            <option key={a._id} value={a._id}>{a.name}</option>
+                          ))
+                        }
+                      </select>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingArea(false);
+                          setSelectedAreaId("");
+                        }}
+                        className="px-6 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors uppercase tracking-widest border border-gray-100 dark:border-gray-800 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: Configurar Turnos */}
+            {configuringAreaId && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[80vh]">
+                  <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <FontAwesomeIcon icon={faTable} className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">
+                          {availableAreas.find(a => a._id === configuringAreaId)?.name}
+                        </h3>
+                        <p className="text-[10px] text-gray-500 uppercase font-medium">Habilitar turnos para esta área</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setConfiguringAreaId(null)}
+                      className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-all flex items-center justify-center"
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="h-4 w-4 rotate-45" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-4 overflow-y-auto space-y-3">
+                    {availableShifts.map((shift) => {
+                      const areaConfigIndex = formData.areasConfig.findIndex(ac => ac.areaId === configuringAreaId);
+                      const isShiftSelected = areaConfigIndex !== -1 && formData.areasConfig[areaConfigIndex].shiftIds.includes(shift._id);
+                      
+                      return (
+                        <div 
+                          key={shift._id} 
+                          onClick={() => {
+                            if (areaConfigIndex === -1) return;
+                            const newAreasConfig = [...formData.areasConfig];
+                            const currentArea = newAreasConfig[areaConfigIndex];
+                            if (isShiftSelected) {
+                              currentArea.shiftIds = currentArea.shiftIds.filter(id => id !== shift._id);
+                            } else {
+                              currentArea.shiftIds = [...currentArea.shiftIds, shift._id];
+                            }
+                            setFormData(prev => ({ ...prev, areasConfig: newAreasConfig }));
+                          }}
+                          className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${isShiftSelected ? "bg-emerald-50/50 border-emerald-500/30 dark:bg-emerald-900/10" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600"}`}
+                        >
+                          <div>
+                            <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{shift.name}</div>
+                            <div className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-wider">{shift.startTime} — {shift.endTime}</div>
+                          </div>
+                          <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${isShiftSelected ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-700"}`}>
+                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xl ring-0 transition duration-200 ease-in-out ${isShiftSelected ? "translate-x-5" : "translate-x-0"}`} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setConfiguringAreaId(null)}
+                      className="px-8 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl text-xs font-bold shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest"
+                    >
+                      Listo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Estado - al final */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 col-span-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      status: p.status === "active" ? "on_hold" : "active",
+                    }))
+                  }
+                  className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${formData.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-400"}`}
+                >
+                  <svg data-prefix="fas" data-icon={formData.status === "active" ? "toggle-on" : "toggle-off"} className="svg-inline--fa mr-1 h-4 w-4" role="img" viewBox="0 0 576 512" aria-hidden="true">
+                    <path fill="currentColor" d={formData.status === "active" ? "M192 64C86 64 0 150 0 256S86 448 192 448l192 0c106 0 192-86 192-192S490 64 384 64L192 64zm192 96a96 96 0 1 1 0 192 96 96 0 1 1 0-192z" : "M384 64l-192 0C86 64 0 150 0 256s86 192 192 192l192 0c106 0 192-86 192-192S490 64 384 64M192 352a96 96 0 1 1 0-192 96 96 0 1 1 0 192z"}></path>
+                  </svg>
+                  {formData.status === "active" ? "Activo" : "En Espera"}
+                </button>
+              </div>
+            </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="submit"
+              disabled={creating}
+              className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+            >
+              {creating ? "Creando..." : "Crear"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </Modal>
     </PageLayout>
   );
 };
