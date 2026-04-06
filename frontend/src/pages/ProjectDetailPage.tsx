@@ -988,7 +988,7 @@ export const ProjectDetailPage: React.FC = () => {
           <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[80vh]">
             <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
                   <FontAwesomeIcon icon={faTable} className="h-5 w-5" />
                 </div>
                 <div>
@@ -1043,7 +1043,7 @@ export const ProjectDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setConfiguringAreaId(null)}
-                className="px-8 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl text-xs font-bold shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest"
+                className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
               >
                 Listo
               </button>
