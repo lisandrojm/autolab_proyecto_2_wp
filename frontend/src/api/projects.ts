@@ -67,6 +67,11 @@ export interface Project {
     areaId: string | any;
     shiftIds: string[] | any[];
   }[];
+  coordinatorAssignments?: {
+    areaId: string | any;
+    shiftId: string | any;
+    userId: string | any;
+  }[];
   metadata?: any;
   metadataResolutions?: {
     responsable?: any;
@@ -124,6 +129,7 @@ function normalizeProject(raw: any): Project {
     turnos: Array.isArray(raw?.turnos) ? raw.turnos : [],
     teamConfig: raw?.teamConfig,
     areasConfig: Array.isArray(raw?.areasConfig) ? raw.areasConfig : [],
+    coordinatorAssignments: Array.isArray(raw?.coordinatorAssignments) ? raw.coordinatorAssignments : [],
     metadata: raw?.metadata,
     metadataResolutions: raw?.metadataResolutions,
   };
@@ -287,6 +293,11 @@ class ProjectsAPI {
       areasConfig?: {
         areaId: string;
         shiftIds: string[];
+      }[];
+      coordinatorAssignments?: {
+        areaId: string;
+        shiftId: string;
+        userId: string;
       }[];
     },
   ): Promise<Project> {

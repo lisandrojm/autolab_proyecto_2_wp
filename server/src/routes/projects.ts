@@ -73,6 +73,15 @@ const createProjectSchema = z.object({
       }),
     )
     .optional(),
+  coordinatorAssignments: z
+    .array(
+      z.object({
+        areaId: z.string(),
+        shiftId: z.string(),
+        userId: z.string(),
+      })
+    )
+    .optional(),
 });
 
 const updateTeamConfigSchema = z.object({

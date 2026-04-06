@@ -82,6 +82,11 @@ export interface IProject extends Document {
     areaId: Types.ObjectId;
     shiftIds: Types.ObjectId[];
   }[];
+  coordinatorAssignments?: {
+    areaId: Types.ObjectId;
+    shiftId: Types.ObjectId;
+    userId: Types.ObjectId;
+  }[];
 }
 
 const projectSchema = new Schema<IProject>(
@@ -182,6 +187,13 @@ const projectSchema = new Schema<IProject>(
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
         shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift", required: true }],
+      },
+    ],
+    coordinatorAssignments: [
+      {
+        areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
+        shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
+        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
       },
     ],
   },

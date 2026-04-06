@@ -14,9 +14,10 @@ import { Card } from "../components/ui/Card";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
+import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -51,7 +52,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes">("equipo");
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("coordinadores");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
 
   // Persistence for view mode
@@ -400,6 +401,17 @@ export const ProjectTeamPage: React.FC = () => {
             {/* TABS */}
             <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
               <button
+                onClick={() => setActiveTab("coordinadores")}
+                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+                  activeTab === "coordinadores"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={faUserTie} className="text-xs" />
+                Coordinadores
+              </button>
+              <button
                 onClick={() => setActiveTab("equipo")}
                 className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
                   activeTab === "equipo"
@@ -734,6 +746,23 @@ export const ProjectTeamPage: React.FC = () => {
               })()}
             </div>
           </>
+          )}
+
+          {/* Coordinadores Tab */}
+          {activeTab === "coordinadores" && project && (
+            <div className="mt-0">
+              <TeamCoordinadoresTab
+                projectId={projectId!}
+                project={project}
+                allUsers={allUsers}
+                teamMembers={teamMembers}
+                onUpdated={async () => {
+                  const updatedProject = await projectsAPI.getProject(projectId!);
+                  setProject(updatedProject);
+                  setTeamConfig(updatedProject.teamConfig || []);
+                }}
+              />
+            </div>
           )}
 
           {/* Solicitudes Tab */}
