@@ -213,6 +213,18 @@ const formatToAMPM = (timeStr: string | null | undefined) => {
   const hours12 = hours % 12 || 12;
   return `${hours12}:${minutes} ${ampm}`;
 };
+
+const getDurationText = (start: string | null | undefined, end: string | null | undefined) => {
+  if (!start || !end || start === "—" || end === "—") return null;
+  const [sH, sM] = start.split(":").map(Number);
+  const [eH, eM] = end.split(":").map(Number);
+  let totalMins = (eH * 60 + eM) - (sH * 60 + sM);
+  if (totalMins < 0) totalMins += 24 * 60;
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h === 0 && m === 0) return "0h";
+  return `${h > 0 ? h + 'h' : ''} ${m > 0 ? m + 'm' : ''}`.trim();
+};
 const TIME_OPTIONS = (() => {
   const options = [];
   for (let h = 0; h < 24; h++) {
@@ -469,45 +481,33 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const startTime = selectedEmployee ? getEmployeeStartTime(project, selectedEmployee.id, reportDate, selectedEmployee) : getProjectStartTime(project, reportDate);
 
         let totalOvertime = 0;
-        let startTotal = 0;
-        if (startTime) {
+        let contractedMinutes = 0;
+
+        if (startTime && endTime) {
           const [sH, sM] = startTime.split(":").map(Number);
-          startTotal = sH * 60 + sM;
-        }
-
-        // 1. Entry Overtime (Early Start)
-        let inTotal = 0;
-        if (draftInTime) {
-          const [inH, inM] = draftInTime.split(":").map(Number);
-          inTotal = inH * 60 + inM;
-
-          if (startTime) {
-            // If came in BEFORE start time
-            let diff = (startTotal - inTotal) / 60;
-            if (diff > 0) totalOvertime += diff;
-          }
-        }
-
-        // 2. Exit Overtime
-        if (draftOutTime && endTime) {
-          const [outH, outM] = draftOutTime.split(":").map(Number);
-          const [endH, endM] = endTime.split(":").map(Number);
-          let outTotal = outH * 60 + outM;
-          let endTotal = endH * 60 + endM;
-
-          // Adjust endTotal if shift spans midnight
-          if (startTime && endTotal < startTotal) {
+          let startTotal = sH * 60 + sM;
+          const [eH, eM] = endTime.split(":").map(Number);
+          let endTotal = eH * 60 + eM;
+          if (endTotal < startTotal) {
             endTotal += 24 * 60;
           }
+          contractedMinutes = endTotal - startTotal;
+        }
 
-          if (draftInTime && outTotal < inTotal) {
-            outTotal += 24 * 60; // Next day
-          } else if (!draftInTime && outTotal < endTotal && outTotal < 12 * 60) {
-            outTotal += 24 * 60; // Fallback heuristic
+        if (draftInTime && draftOutTime) {
+          const [inH, inM] = draftInTime.split(":").map(Number);
+          let inTotal = inH * 60 + inM;
+          const [outH, outM] = draftOutTime.split(":").map(Number);
+          let outTotal = outH * 60 + outM;
+
+          if (outTotal < inTotal) {
+            outTotal += 24 * 60;
           }
 
-          let diff = (outTotal - endTotal) / 60;
-          if (diff > 0) totalOvertime += diff;
+          let workedMinutes = outTotal - inTotal;
+          if (workedMinutes > contractedMinutes) {
+            totalOvertime = (workedMinutes - contractedMinutes) / 60;
+          }
         }
 
         setDraftOvertimeHours(parseFloat(totalOvertime.toFixed(2)));
@@ -524,41 +524,33 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const startTime = getEmployeeStartTime(project, draftReplacementId, reportDate);
 
         let totalOvertime = 0;
-        let startTotal = 0;
-        if (startTime) {
+        let contractedMinutes = 0;
+
+        if (startTime && endTime) {
           const [sH, sM] = startTime.split(":").map(Number);
-          startTotal = sH * 60 + sM;
-        }
-
-        let inTotal = 0;
-        if (draftReplacementInTime) {
-          const [inH, inM] = draftReplacementInTime.split(":").map(Number);
-          inTotal = inH * 60 + inM;
-
-          if (startTime) {
-            let diff = (startTotal - inTotal) / 60;
-            if (diff > 0) totalOvertime += diff;
-          }
-        }
-
-        if (draftReplacementOutTime && endTime) {
-          const [outH, outM] = draftReplacementOutTime.split(":").map(Number);
-          const [endH, endM] = endTime.split(":").map(Number);
-          let outTotal = outH * 60 + outM;
-          let endTotal = endH * 60 + endM;
-
-          // Adjust endTotal if shift spans midnight
-          if (startTime && endTotal < startTotal) {
+          let startTotal = sH * 60 + sM;
+          const [eH, eM] = endTime.split(":").map(Number);
+          let endTotal = eH * 60 + eM;
+          if (endTotal < startTotal) {
             endTotal += 24 * 60;
           }
+          contractedMinutes = endTotal - startTotal;
+        }
 
-          if (draftReplacementInTime && outTotal < inTotal) {
-            outTotal += 24 * 60;
-          } else if (!draftReplacementInTime && outTotal < endTotal && outTotal < 12 * 60) {
+        if (draftReplacementInTime && draftReplacementOutTime) {
+          const [inH, inM] = draftReplacementInTime.split(":").map(Number);
+          let inTotal = inH * 60 + inM;
+          const [outH, outM] = draftReplacementOutTime.split(":").map(Number);
+          let outTotal = outH * 60 + outM;
+
+          if (outTotal < inTotal) {
             outTotal += 24 * 60;
           }
-          let diff = (outTotal - endTotal) / 60;
-          if (diff > 0) totalOvertime += diff;
+
+          let workedMinutes = outTotal - inTotal;
+          if (workedMinutes > contractedMinutes) {
+            totalOvertime = (workedMinutes - contractedMinutes) / 60;
+          }
         }
         setDraftReplacementOvertimeHours(parseFloat(totalOvertime.toFixed(2)));
       }
@@ -594,44 +586,33 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       const startTime = getEmployeeStartTime(selectedProject, currentEmp.id, reportDate, currentEmp);
 
       let totalOvertime = 0;
-      let startTotal = 0;
-      if (startTime) {
+      let contractedMinutes = 0;
+
+      if (startTime && endTime) {
         const [sH, sM] = startTime.split(":").map(Number);
-        startTotal = sH * 60 + sM;
-      }
-
-      // 1. Entry OT
-      let inTotal = 0;
-      if (data.inTime) {
-        const [inH, inM] = data.inTime.split(":").map(Number);
-        inTotal = inH * 60 + inM;
-
-        if (startTime) {
-          let diff = (startTotal - inTotal) / 60;
-          if (diff > 0) totalOvertime += diff;
-        }
-      }
-
-      // 2. Exit OT
-      if (data.outTime && endTime) {
-        const [outH, outM] = data.outTime.split(":").map(Number);
-        const [endH, endM] = endTime.split(":").map(Number);
-        let outTotal = outH * 60 + outM;
-        let endTotal = endH * 60 + endM;
-
-        // Adjust endTotal if shift spans midnight
-        if (startTime && endTotal < startTotal) {
+        let startTotal = sH * 60 + sM;
+        const [eH, eM] = endTime.split(":").map(Number);
+        let endTotal = eH * 60 + eM;
+        if (endTotal < startTotal) {
           endTotal += 24 * 60;
         }
+        contractedMinutes = endTotal - startTotal;
+      }
 
-        if (data.inTime && outTotal < inTotal) {
-          outTotal += 24 * 60; // Next day
-        } else if (!data.inTime && outTotal < endTotal && outTotal < 12 * 60) {
-          outTotal += 24 * 60; // Fallback heuristic
+      if (data.inTime && data.outTime) {
+        const [inH, inM] = data.inTime.split(":").map(Number);
+        let inTotal = inH * 60 + inM;
+        const [outH, outM] = data.outTime.split(":").map(Number);
+        let outTotal = outH * 60 + outM;
+
+        if (outTotal < inTotal) {
+          outTotal += 24 * 60;
         }
 
-        let diff = (outTotal - endTotal) / 60;
-        if (diff > 0) totalOvertime += diff;
+        let workedMinutes = outTotal - inTotal;
+        if (workedMinutes > contractedMinutes) {
+          totalOvertime = (workedMinutes - contractedMinutes) / 60;
+        }
       }
 
       const finalVal = parseFloat(totalOvertime.toFixed(2));
@@ -647,36 +628,33 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       const startTime = getEmployeeStartTime(selectedProject, data.replacementId, reportDate, replacement);
 
       let totalOvertime = 0;
-      let inTotal = 0;
-      if (data.replacementInTime) {
-        const [inH, inM] = data.replacementInTime.split(":").map(Number);
-        inTotal = inH * 60 + inM;
+      let contractedMinutes = 0;
 
-        if (startTime) {
-          let diff = (startTotal - inTotal) / 60;
-          if (diff > 0) totalOvertime += diff;
-        }
-      }
-
-      if (data.replacementOutTime && endTime) {
-        const [outH, outM] = data.replacementOutTime.split(":").map(Number);
-        const [endH, endM] = endTime.split(":").map(Number);
-        let outTotal = outH * 60 + outM;
-        let endTotal = endH * 60 + endM;
-
-        // Adjust endTotal if shift spans midnight
-        if (startTime && endTotal < startTotal) {
+      if (startTime && endTime) {
+        const [sH, sM] = startTime.split(":").map(Number);
+        let startTotal = sH * 60 + sM;
+        const [eH, eM] = endTime.split(":").map(Number);
+        let endTotal = eH * 60 + eM;
+        if (endTotal < startTotal) {
           endTotal += 24 * 60;
         }
+        contractedMinutes = endTotal - startTotal;
+      }
 
-        if (data.replacementInTime && outTotal < inTotal) {
-          outTotal += 24 * 60; // Next day
-        } else if (!data.replacementInTime && outTotal < endTotal && outTotal < 12 * 60) {
-          outTotal += 24 * 60; // Fallback heuristic
+      if (data.replacementInTime && data.replacementOutTime) {
+        const [inH, inM] = data.replacementInTime.split(":").map(Number);
+        let inTotal = inH * 60 + inM;
+        const [outH, outM] = data.replacementOutTime.split(":").map(Number);
+        let outTotal = outH * 60 + outM;
+
+        if (outTotal < inTotal) {
+          outTotal += 24 * 60;
         }
 
-        let diff = (outTotal - endTotal) / 60;
-        if (diff > 0) totalOvertime += diff;
+        let workedMinutes = outTotal - inTotal;
+        if (workedMinutes > contractedMinutes) {
+          totalOvertime = (workedMinutes - contractedMinutes) / 60;
+        }
       }
 
       const finalVal = parseFloat(totalOvertime.toFixed(2));
@@ -2240,25 +2218,40 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               const data = wizardData[currentEmp.id];
               return (
                 <div className="space-y-4 pt-2">
-                  <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
-                    <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                        {(() => {
-                          const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? formatToAMPM(getEmployeeStartTime(proj, currentEmp.id, reportDate, currentEmp)) : "—";
-                        })()}
-                      </span>
+                  <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                      <div className="text-center">
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                          {(() => {
+                            const proj = userProjects.find((p) => p._id === selectedProjectId);
+                            return proj ? formatToAMPM(getEmployeeStartTime(proj, currentEmp.id, reportDate, currentEmp)) : "—";
+                          })()}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                          {(() => {
+                            const proj = userProjects.find((p) => p._id === selectedProjectId);
+                            return proj ? formatToAMPM(getEmployeeEndTime(proj, currentEmp.id, reportDate, currentEmp)) : "—";
+                          })()}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                        {(() => {
-                          const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? formatToAMPM(getEmployeeEndTime(proj, currentEmp.id, reportDate, currentEmp)) : "—";
-                        })()}
-                      </span>
-                    </div>
+                    {(() => {
+                      const proj = userProjects.find((p) => p._id === selectedProjectId);
+                      if (!proj) return null;
+                      const sT = getEmployeeStartTime(proj, currentEmp.id, reportDate, currentEmp);
+                      const eT = getEmployeeEndTime(proj, currentEmp.id, reportDate, currentEmp);
+                      const dur = getDurationText(sT, eT);
+                      if (!dur) return null;
+                      return (
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Duración Contrato: {dur}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div>
@@ -2293,6 +2286,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <FontAwesomeIcon icon={faClock} />
                       </div>
                     </div>
+                    {data?.inTime && data?.outTime && (
+                      <div className="mt-2 text-right">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
+                          <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Tiempo Registrado: {getDurationText(data.inTime, data.outTime)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -2309,25 +2309,40 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             ? (() => {
                 return (
                   <div className="space-y-4 pt-2">
-                    <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
-                      <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                          {(() => {
-                            const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeStartTime(proj, selectedEmployee.id, reportDate, selectedEmployee)) : "—";
-                          })()}
-                        </span>
+                    <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                      <div className="grid grid-cols-2 gap-4 w-full">
+                        <div className="text-center">
+                          <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            {(() => {
+                              const proj = userProjects.find((p) => p._id === selectedProjectId);
+                              return proj ? formatToAMPM(getEmployeeStartTime(proj, selectedEmployee.id, reportDate, selectedEmployee)) : "—";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            {(() => {
+                              const proj = userProjects.find((p) => p._id === selectedProjectId);
+                              return proj ? formatToAMPM(getEmployeeEndTime(proj, selectedEmployee.id, reportDate, selectedEmployee)) : "—";
+                            })()}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                          {(() => {
-                            const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeEndTime(proj, selectedEmployee.id, reportDate, selectedEmployee)) : "—";
-                          })()}
-                        </span>
-                      </div>
+                      {(() => {
+                        const proj = userProjects.find((p) => p._id === selectedProjectId);
+                        if (!proj) return null;
+                        const sT = getEmployeeStartTime(proj, selectedEmployee.id, reportDate, selectedEmployee);
+                        const eT = getEmployeeEndTime(proj, selectedEmployee.id, reportDate, selectedEmployee);
+                        const dur = getDurationText(sT, eT);
+                        if (!dur) return null;
+                        return (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Duración Contrato: {dur}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div>
@@ -2362,6 +2377,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           <FontAwesomeIcon icon={faClock} />
                         </div>
                       </div>
+                      {draftInTime && draftOutTime && (
+                        <div className="mt-2 text-right">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
+                            <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Tiempo Registrado: {getDurationText(draftInTime, draftOutTime)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -2391,25 +2413,40 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               if (!data?.replacementId) return null;
               return (
                 <div className="space-y-4 pt-2">
-                  <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
-                    <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                        {(() => {
-                          const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? formatToAMPM(getEmployeeStartTime(proj, data.replacementId, reportDate)) : "—";
-                        })()}
-                      </span>
+                  <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                      <div className="text-center">
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                          {(() => {
+                            const proj = userProjects.find((p) => p._id === selectedProjectId);
+                            return proj ? formatToAMPM(getEmployeeStartTime(proj, data.replacementId, reportDate)) : "—";
+                          })()}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                          {(() => {
+                            const proj = userProjects.find((p) => p._id === selectedProjectId);
+                            return proj ? formatToAMPM(getEmployeeEndTime(proj, data.replacementId, reportDate)) : "—";
+                          })()}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                        {(() => {
-                          const proj = userProjects.find((p) => p._id === selectedProjectId);
-                          return proj ? formatToAMPM(getEmployeeEndTime(proj, data.replacementId, reportDate)) : "—";
-                        })()}
-                      </span>
-                    </div>
+                    {(() => {
+                      const proj = userProjects.find((p) => p._id === selectedProjectId);
+                      if (!proj) return null;
+                      const sT = getEmployeeStartTime(proj, data.replacementId, reportDate);
+                      const eT = getEmployeeEndTime(proj, data.replacementId, reportDate);
+                      const dur = getDurationText(sT, eT);
+                      if (!dur) return null;
+                      return (
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                          <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Duración Contrato: {dur}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div>
@@ -2444,6 +2481,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <FontAwesomeIcon icon={faClock} />
                       </div>
                     </div>
+                    {data?.replacementInTime && data?.replacementOutTime && (
+                      <div className="mt-2 text-right">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
+                          <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Tiempo Registrado: {getDurationText(data.replacementInTime, data.replacementOutTime)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -2460,25 +2504,40 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             ? (() => {
                 return (
                   <div className="space-y-4 pt-2">
-                    <div className="grid grid-cols-2 gap-4 pb-2 border-b border-slate-100 dark:border-slate-700">
-                      <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                          {(() => {
-                            const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeStartTime(proj, draftReplacementId, reportDate)) : "—";
-                          })()}
-                        </span>
+                    <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                      <div className="grid grid-cols-2 gap-4 w-full">
+                        <div className="text-center">
+                          <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            {(() => {
+                              const proj = userProjects.find((p) => p._id === selectedProjectId);
+                              return proj ? formatToAMPM(getEmployeeStartTime(proj, draftReplacementId, reportDate)) : "—";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            {(() => {
+                              const proj = userProjects.find((p) => p._id === selectedProjectId);
+                              return proj ? formatToAMPM(getEmployeeEndTime(proj, draftReplacementId, reportDate)) : "—";
+                            })()}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                          {(() => {
-                            const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeEndTime(proj, draftReplacementId, reportDate)) : "—";
-                          })()}
-                        </span>
-                      </div>
+                      {(() => {
+                        const proj = userProjects.find((p) => p._id === selectedProjectId);
+                        if (!proj) return null;
+                        const sT = getEmployeeStartTime(proj, draftReplacementId, reportDate);
+                        const eT = getEmployeeEndTime(proj, draftReplacementId, reportDate);
+                        const dur = getDurationText(sT, eT);
+                        if (!dur) return null;
+                        return (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Duración Contrato: {dur}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div>
@@ -2513,6 +2572,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           <FontAwesomeIcon icon={faClock} />
                         </div>
                       </div>
+                      {draftReplacementInTime && draftReplacementOutTime && (
+                        <div className="mt-2 text-right">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
+                            <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Tiempo Registrado: {getDurationText(draftReplacementInTime, draftReplacementOutTime)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div>

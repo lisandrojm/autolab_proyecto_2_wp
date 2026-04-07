@@ -570,24 +570,54 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     // Sundays are always 100%
     if (dayOfWeek === 0) return { h50: 0, h100: totalHours };
 
-    // For other days, we look at the start/end times if available
-    if (startTime && endTime) {
-      // Very simplified logic: if start time is in "day" range, we assume 50% for now
-      // A more robust logic would calculate overlap with ranges
-      let isDay = false;
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        isDay = isTimeInRange(startTime, glossary.weekdayDayStart, glossary.weekdayDayEnd);
-      } else if (dayOfWeek === 6) {
-        isDay = isTimeInRange(startTime, glossary.satDayStart, glossary.satDayEnd);
-      }
-
-      if (isDay) return { h50: totalHours, h100: 0 };
-      return { h50: 0, h100: totalHours };
+    if (!startTime || !endTime || totalHours <= 0) {
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) return { h50: totalHours, h100: 0, pct: glossary.pct50 };
+      return { h50: 0, h100: totalHours, pct: glossary.pct100 };
     }
 
-    // Default fallback if no times: Mon-Fri 50%, Sat/Sun 100% (or adjust as needed)
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) return { h50: totalHours, h100: 0, pct: glossary.pct50 };
-    return { h50: 0, h100: totalHours, pct: glossary.pct100 };
+    const timeToMinutes = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + (m || 0);
+    };
+
+    let p50Start = 0;
+    let p50End = 0;
+
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      p50Start = timeToMinutes(glossary.weekdayDayStart);
+      p50End = timeToMinutes(glossary.weekdayDayEnd);
+    } else if (dayOfWeek === 6) {
+      p50Start = timeToMinutes(glossary.satDayStart);
+      p50End = timeToMinutes(glossary.satDayEnd);
+    }
+
+    if (p50End % 60 === 59) p50End += 1;
+
+    let otStart = timeToMinutes(startTime);
+    let otEnd = timeToMinutes(endTime);
+    if (otEnd < otStart) {
+      otEnd += 24 * 60; // Next day
+    }
+
+    const overlap1 = Math.max(0, Math.min(otEnd, p50End) - Math.max(otStart, p50Start));
+    const overlap2 = Math.max(0, Math.min(otEnd, p50End + 1440) - Math.max(otStart, p50Start + 1440));
+    const mins50 = overlap1 + overlap2;
+
+    const computedTotalMins = otEnd - otStart;
+    if (computedTotalMins <= 0) {
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) return { h50: totalHours, h100: 0, pct: glossary.pct50 };
+      return { h50: 0, h100: totalHours, pct: glossary.pct100 };
+    }
+
+    const ratio50 = mins50 / computedTotalMins;
+    const h50 = totalHours * ratio50;
+    const h100 = totalHours - h50;
+
+    return {
+      h50: parseFloat(h50.toFixed(2)),
+      h100: parseFloat(h100.toFixed(2)),
+      pct: h100 > h50 ? glossary.pct100 : glossary.pct50
+    };
   };
 
   // Build a map of userId -> User for quick lookup
