@@ -14,10 +14,11 @@ import { Card } from "../components/ui/Card";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
+import { Area, areasAPI } from "../api/areas";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -36,16 +37,15 @@ export const ProjectTeamPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
+  const [allAreas, setAllAreas] = useState<Area[]>([]);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
   const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
   const [editingScheduleUser, setEditingScheduleUser] = useState<User | null>(null);
   const [userScheduleData, setUserScheduleData] = useState({
-    useProjectSchedule: true,
-    startTime: "09:00",
-    endTime: "18:00",
     shiftId: "",
+    areaId: "",
   });
 
   // UI States
@@ -83,10 +83,11 @@ export const ProjectTeamPage: React.FC = () => {
     const init = async () => {
       try {
         setLoading(true);
-        const [projectData, usersData, vacationsData] = await Promise.all([
+        const [projectData, usersData, vacationsData, areasData] = await Promise.all([
           projectsAPI.getProject(projectId),
           usersAPI.list({ limit: 10000 }), // Get all users (no limit)
           vacationsAPI.getAll(),
+          areasAPI.listAll(),
         ]);
 
         // Auto-cleanup orphaned user IDs from assignedUsers
@@ -110,6 +111,7 @@ export const ProjectTeamPage: React.FC = () => {
 
         setAllUsers(usersData.users);
         setVacations(vacationsData);
+        setAllAreas(areasData);
       } catch (error) {
         console.error("Error loading data:", error);
         sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
@@ -243,6 +245,31 @@ export const ProjectTeamPage: React.FC = () => {
     });
   };
 
+  const calculateDuration = (start: string, end: string) => {
+    if (!start || !end) return "";
+    try {
+      const [startH, startM] = start.split(":").map(Number);
+      const [endH, endM] = end.split(":").map(Number);
+      if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return "";
+
+      let startTotal = startH * 60 + startM;
+      let endTotal = endH * 60 + endM;
+
+      if (endTotal <= startTotal) {
+        endTotal += 24 * 60; // Cruza la medianoche
+      }
+
+      const diff = endTotal - startTotal;
+      const hours = Math.floor(diff / 60);
+      const mins = diff % 60;
+
+      if (mins === 0) return `${hours}hs`;
+      return `${hours}h ${mins}m`;
+    } catch (e) {
+      return "";
+    }
+  };
+
   /* --------------------------- Notifications Logic ------------------------- */
 
   const updateTeamConfig = async (newConfig: any[]) => {
@@ -257,12 +284,13 @@ export const ProjectTeamPage: React.FC = () => {
   };
   const handleOpenScheduleModal = (user: User) => {
     const existing = teamConfig.find((c) => c.userId === user._id);
+    const areaId = (typeof user.areaId === "object" ? user.areaId?._id : user.areaId) || "";
+    const shiftId = (user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : existing?.shiftId) || "";
+
     setEditingScheduleUser(user);
     setUserScheduleData({
-      useProjectSchedule: existing ? (existing.useProjectSchedule !== undefined ? existing.useProjectSchedule : true) : true,
-      startTime: existing?.startTime || (project?.turnos && project.turnos.length > 0 && typeof project.turnos[0] === "object" ? project.turnos[0].startTime : "09:00"),
-      endTime: existing?.endTime || (project?.turnos && project.turnos.length > 0 && typeof project.turnos[0] === "object" ? project.turnos[0].endTime : "18:00"),
-      shiftId: (user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : existing?.shiftId) || "",
+      shiftId,
+      areaId,
     });
   };
 
@@ -270,6 +298,11 @@ export const ProjectTeamPage: React.FC = () => {
     if (!editingScheduleUser) return;
 
     try {
+      // Find selected shift to get times
+      const selectedShift = (project?.turnos || []).find(t => (typeof t === 'object' ? t._id : t) === userScheduleData.shiftId);
+      const startTime = typeof selectedShift === 'object' ? selectedShift.startTime : "09:00";
+      const endTime = typeof selectedShift === 'object' ? selectedShift.endTime : "18:00";
+
       // 1. Update Project Team Config
       const newConfig = teamMembers.map((member) => {
         const existing = teamConfig.find((c) => c.userId === member._id);
@@ -277,7 +310,10 @@ export const ProjectTeamPage: React.FC = () => {
           return {
             userId: member._id,
             canRegister: existing ? existing.canRegister : true,
-            ...userScheduleData,
+            shiftId: userScheduleData.shiftId,
+            useProjectSchedule: true,
+            startTime,
+            endTime
           };
         }
         return {
@@ -292,12 +328,15 @@ export const ProjectTeamPage: React.FC = () => {
 
       await updateTeamConfig(newConfig);
 
-      // 2. Update User Collection (Persist shift in users/turnos)
+      // 2. Update User Collection (Persist shift in users/turnos and areaId)
       const shiftIds = userScheduleData.shiftId ? [userScheduleData.shiftId] : [];
-      await usersAPI.update(editingScheduleUser._id, { turnos: shiftIds });
+      await usersAPI.update(editingScheduleUser._id, { 
+        turnos: shiftIds,
+        areaId: userScheduleData.areaId || null
+      });
 
       setEditingScheduleUser(null);
-      sweetAlert.success("Horario Actualizado", `El horario y turno de ${editingScheduleUser.firstName} han sido actualizados.`);
+      sweetAlert.success("Perfil Actualizado", `El horario, turno y área de ${editingScheduleUser.firstName} han sido actualizados.`);
 
       // Refresh users to show updated turnos in the table
       const usersData = await usersAPI.list({ limit: 10000 });
@@ -525,6 +564,9 @@ export const ProjectTeamPage: React.FC = () => {
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${user.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.isActive ? "ACTIVO" : "INACTIVO"}</span>
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
+                        {typeof user.areaId === "object" && user.areaId?.name ? user.areaId.name : "-"}
+                      </td>
                       <td className="px-4 py-3">
                         {(() => {
                           const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
@@ -536,7 +578,7 @@ export const ProjectTeamPage: React.FC = () => {
                                 {typeof shift === "object" ? shift.name : "..."}
                               </span>
                               <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium ml-0.5 mt-0.5 italic tracking-tight">
-                                {shift.startTime} - {shift.endTime}
+                                {shift.startTime} - {shift.endTime} | {calculateDuration(shift.startTime, shift.endTime)}
                               </span>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {(shift.days || [])
@@ -554,7 +596,14 @@ export const ProjectTeamPage: React.FC = () => {
                         })()}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">{horario}</td>
+                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        {horario}
+                        {activeContract?.hora_inicio && activeContract?.hora_fin && (
+                          <span className="ml-1.5 opacity-60 text-[10px] font-bold">
+                            | {calculateDuration(activeContract.hora_inicio, activeContract.hora_fin)}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => handleOpenScheduleModal(user)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded transition-colors" title="Editar Horario">
@@ -651,6 +700,16 @@ export const ProjectTeamPage: React.FC = () => {
                             </label>
                             <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{rolFrame}</span>
                           </div>
+
+                          {/* Área */}
+                          <div className="flex flex-col">
+                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" /> Área
+                            </label>
+                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                              {typeof user.areaId === "object" && user.areaId?.name ? user.areaId.name : "Sin área"}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Turno Display */}
@@ -688,7 +747,8 @@ export const ProjectTeamPage: React.FC = () => {
 
                         {userConfig && (userConfig.useProjectSchedule === false || (userConfig.startTime && userConfig.endTime)) && (
                           <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded w-fit">
-                            <FontAwesomeIcon icon={faClock} /> {userConfig.startTime} - {userConfig.endTime}
+                            <FontAwesomeIcon icon={faClock} /> {userConfig.startTime} - {userConfig.endTime} 
+                            <span className="opacity-70 ml-1 text-[10px]">({calculateDuration(userConfig.startTime, userConfig.endTime)})</span>
                           </div>
                         )}
                       </div>
@@ -720,6 +780,7 @@ export const ProjectTeamPage: React.FC = () => {
                                     <th className="px-4 py-3 font-semibold">Rol/es</th>
                                     <th className="px-4 py-3 font-semibold">Rol Frame</th>
                                     <th className="px-4 py-3 font-semibold">Estado</th>
+                                    <th className="px-4 py-3 font-semibold">Area</th>
                                     <th className="px-4 py-3 font-semibold">Turno</th>
                                     <th className="px-4 py-3 font-semibold">Contrato</th>
                                     <th className="px-4 py-3 font-semibold">Horario</th>
@@ -790,63 +851,79 @@ export const ProjectTeamPage: React.FC = () => {
           </div>
 
           {/* User Schedule Modal */}
-          <Modal isOpen={!!editingScheduleUser} onClose={() => setEditingScheduleUser(null)} title={`Horario de ${editingScheduleUser?.firstName || "Usuario"}`} size="sm">
+          <Modal isOpen={!!editingScheduleUser} onClose={() => setEditingScheduleUser(null)} title={`Configurar Miembro: ${editingScheduleUser?.firstName || "Usuario"}`} size="sm">
             <div className="space-y-6 py-2">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 flex gap-3">
-                <FontAwesomeIcon icon={faClock} className="text-blue-500 mt-1" />
+                <FontAwesomeIcon icon={faIdCard} className="text-blue-500 mt-1" />
                 <div className="text-sm">
-                  <p className="font-semibold text-blue-900 dark:text-blue-200">Configurar Horario Laboral</p>
-                  <p className="text-blue-700 dark:text-blue-400 opacity-80 mt-0.5 leading-relaxed">Este horario se usará como base para el cálculo automático de horas extras en el reporte diario.</p>
+                  <p className="font-semibold text-blue-900 dark:text-blue-200">Asignar Área y Turno</p>
+                  <p className="text-blue-700 dark:text-blue-400 opacity-80 mt-0.5 leading-relaxed">Define el área de trabajo y el turno correspondiente para este proyecto.</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Usar Horario del Proyecto</p>
-                    <p className="text-xs text-gray-500">Usa el horario definido en la configuración general.</p>
-                  </div>
-                  <button onClick={() => setUserScheduleData((prev) => ({ ...prev, useProjectSchedule: !prev.useProjectSchedule }))} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${userScheduleData.useProjectSchedule ? "bg-primary-600" : "bg-gray-200 dark:bg-gray-700"}`}>
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${userScheduleData.useProjectSchedule ? "translate-x-5" : "translate-x-0"}`} />
-                  </button>
+                {/* AREA */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Área de Trabajo</label>
+                  <select
+                    className="input-field w-full text-sm font-medium"
+                    value={userScheduleData.areaId}
+                    onChange={(e) => {
+                      const newAreaId = e.target.value;
+                      setUserScheduleData(prev => ({ ...prev, areaId: newAreaId, shiftId: "" })); // Clear shift when area changes
+                    }}
+                  >
+                    <option value="">Sin área asignada</option>
+                    {allAreas.map(a => (
+                      <option key={a._id} value={a._id}>{a.name}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {!userScheduleData.useProjectSchedule && (
-                  <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-1">Entrada</label>
-                      <input type="time" className="input-field w-full" value={userScheduleData.startTime} onChange={(e) => setUserScheduleData((prev) => ({ ...prev, startTime: e.target.value }))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-1">Salida</label>
-                      <input type="time" className="input-field w-full" value={userScheduleData.endTime} onChange={(e) => setUserScheduleData((prev) => ({ ...prev, endTime: e.target.value }))} />
-                    </div>
-                  </div>
-                )}
-                {/* Selección de Turno en el Modal */}
+                {/* TURNO */}
                 <div className="space-y-1.5 pt-2">
-                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Turno Asignado</label>
+                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Turno Asignado</label>
                   <select
-                    className="input-field w-full"
+                    className="input-field w-full text-sm font-medium"
                     value={userScheduleData.shiftId}
                     onChange={(e) => setUserScheduleData((prev) => ({ ...prev, shiftId: e.target.value }))}
+                    disabled={!userScheduleData.areaId}
                   >
-                    <option value="">Sin turno</option>
-                    {(project?.turnos || []).map((t: any) => (
-                      <option key={typeof t === "object" ? t._id : t} value={typeof t === "object" ? t._id : t}>
-                        {typeof t === "object" ? `${t.name} (${t.startTime} - ${t.endTime}) [${formatShiftDays(t.days)}]` : "..."}
-                      </option>
-                    ))}
+                    <option value="">{userScheduleData.areaId ? "Selecciona un turno" : "Primero elige un área"}</option>
+                    {(() => {
+                      if (!project || !userScheduleData.areaId) return null;
+                      
+                      const areaCfg = project.areasConfig?.find(ac => {
+                        const acId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
+                        return String(acId) === String(userScheduleData.areaId);
+                      });
+                      
+                      // Map populated shiftIds to strings for comparison
+                      const allowedShiftIds = (areaCfg?.shiftIds || []).map((s: any) => 
+                        typeof s === 'object' ? s._id : s
+                      );
+                      
+                      return (project.turnos || [])
+                        .filter(t => {
+                          const sid = typeof t === "object" ? t._id : t;
+                          return allowedShiftIds.some(id => String(id) === String(sid));
+                        })
+                        .map((t: any) => (
+                          <option key={typeof t === "object" ? t._id : t} value={typeof t === "object" ? t._id : t}>
+                            {typeof t === "object" ? `${t.name} (${t.startTime} - ${t.endTime})` : "..."}
+                          </option>
+                        ));
+                    })()}
                   </select>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4">
                 <button onClick={() => setEditingScheduleUser(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   Cancelar
                 </button>
                 <button onClick={handleSaveUserSchedule} className="flex-1 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all active:scale-95">
-                  Guardar Horario
+                  Guardar Cambios
                 </button>
               </div>
             </div>
