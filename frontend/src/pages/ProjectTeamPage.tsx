@@ -19,6 +19,9 @@ import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
 import { Area, areasAPI } from "../api/areas";
+import { positionsAPI, Position } from "../api/positions";
+import { levelsAPI, Level } from "../api/levels";
+import { userProjectsAPI } from "../api/userProjects";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -38,6 +41,8 @@ export const ProjectTeamPage: React.FC = () => {
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
   const [allAreas, setAllAreas] = useState<Area[]>([]);
+  const [allPositions, setAllPositions] = useState<Position[]>([]);
+  const [allLevels, setAllLevels] = useState<Level[]>([]);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
@@ -46,6 +51,8 @@ export const ProjectTeamPage: React.FC = () => {
   const [userScheduleData, setUserScheduleData] = useState({
     shiftId: "",
     areaId: "",
+    positionId: "",
+    levelId: "",
   });
 
   // UI States
@@ -83,12 +90,17 @@ export const ProjectTeamPage: React.FC = () => {
     const init = async () => {
       try {
         setLoading(true);
-        const [projectData, usersData, vacationsData, areasData] = await Promise.all([
+        const [projectData, usersData, vacationsData, areasData, positionsData, levelsData] = await Promise.all([
           projectsAPI.getProject(projectId),
           usersAPI.list({ limit: 10000 }), // Get all users (no limit)
           vacationsAPI.getAll(),
           areasAPI.listAll(),
+          positionsAPI.listAll(),
+          levelsAPI.listAll(),
         ]);
+
+        setAllPositions(positionsData);
+        setAllLevels(levelsData);
 
         // Auto-cleanup orphaned user IDs from assignedUsers
         try {
@@ -284,13 +296,24 @@ export const ProjectTeamPage: React.FC = () => {
   };
   const handleOpenScheduleModal = (user: User) => {
     const existing = teamConfig.find((c) => c.userId === user._id);
-    const areaId = (typeof user.areaId === "object" ? user.areaId?._id : user.areaId) || "";
+    
+    // Find project-specific assignment (UserProject)
+    const userProject = (user.metadata?.projects as any[])?.find((p: any) => 
+      (typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === project?._id
+    );
+
+    const areaId = (userProject?.areaId?._id || userProject?.areaId || (typeof user.areaId === "object" ? user.areaId?._id : user.areaId)) || "";
+    const positionId = (userProject?.positionId?._id || userProject?.positionId || (typeof user.positionId === "object" ? user.positionId?._id : user.positionId)) || "";
+    const levelId = (userProject?.levelId?._id || userProject?.levelId || (typeof user.levelId === "object" ? user.levelId?._id : user.levelId)) || "";
+    
     const shiftId = (user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : existing?.shiftId) || "";
 
     setEditingScheduleUser(user);
     setUserScheduleData({
       shiftId,
       areaId,
+      positionId,
+      levelId,
     });
   };
 
@@ -328,17 +351,32 @@ export const ProjectTeamPage: React.FC = () => {
 
       await updateTeamConfig(newConfig);
 
-      // 2. Update User Collection (Persist shift in users/turnos and areaId)
+      // 2. Update Global User Info (Turnos & Fallback Area)
       const shiftIds = userScheduleData.shiftId ? [userScheduleData.shiftId] : [];
       await usersAPI.update(editingScheduleUser._id, { 
         turnos: shiftIds,
-        areaId: userScheduleData.areaId || null
+        areaId: userScheduleData.areaId || null,
+        positionId: userScheduleData.positionId || null,
+        levelId: userScheduleData.levelId || null
       });
 
-      setEditingScheduleUser(null);
-      sweetAlert.success("Perfil Actualizado", `El horario, turno y área de ${editingScheduleUser.firstName} han sido actualizados.`);
+      // 3. Update Project-Specific Assignment (UserProject)
+      const userProject = (editingScheduleUser.metadata?.projects as any[])?.find((p: any) => 
+        (typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === project._id
+      );
 
-      // Refresh users to show updated turnos in the table
+      if (userProject?._id) {
+        await userProjectsAPI.update(userProject._id, {
+          areaId: userScheduleData.areaId || null,
+          positionId: userScheduleData.positionId || null,
+          levelId: userScheduleData.levelId || null,
+        });
+      }
+
+      setEditingScheduleUser(null);
+      sweetAlert.success("Perfil Actualizado", `El cargo, nivel y área de ${editingScheduleUser.firstName} han sido personalizados para este proyecto.`);
+
+      // Refresh users to show updated data
       const usersData = await usersAPI.list({ limit: 10000 });
       setAllUsers(usersData.users);
     } catch (err) {
@@ -863,7 +901,7 @@ export const ProjectTeamPage: React.FC = () => {
 
               <div className="space-y-4">
                 {/* AREA */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-left">
                   <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Área de Trabajo</label>
                   <select
                     className="input-field w-full text-sm font-medium"
@@ -880,8 +918,46 @@ export const ProjectTeamPage: React.FC = () => {
                   </select>
                 </div>
 
+                {/* CARGO (Position) */}
+                <div className="space-y-1.5 pt-1 text-left">
+                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Cargo</label>
+                  <select
+                    className="input-field w-full text-sm font-medium"
+                    value={userScheduleData.positionId}
+                    onChange={(e) => {
+                      setUserScheduleData(prev => ({ ...prev, positionId: e.target.value, levelId: "" }));
+                    }}
+                  >
+                    <option value="">Sin cargo asignado</option>
+                    {allPositions.map(p => (
+                      <option key={p._id} value={p._id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* NIVEL (Level) */}
+                <div className="space-y-1.5 pt-1 text-left">
+                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nivel</label>
+                  <select
+                    className="input-field w-full text-sm font-medium"
+                    value={userScheduleData.levelId}
+                    onChange={(e) => setUserScheduleData(prev => ({ ...prev, levelId: e.target.value }))}
+                    disabled={!userScheduleData.positionId}
+                  >
+                    <option value="">{userScheduleData.positionId ? "Sin nivel asignado" : "Primero elige un cargo"}</option>
+                    {allLevels
+                      .filter(l => {
+                        const lPosId = typeof l.positionId === 'object' ? (l.positionId as any)?._id : l.positionId;
+                        return String(lPosId) === String(userScheduleData.positionId);
+                      })
+                      .map(l => (
+                        <option key={l._id} value={l._id}>{l.name}</option>
+                      ))}
+                  </select>
+                </div>
+
                 {/* TURNO */}
-                <div className="space-y-1.5 pt-2">
+                <div className="space-y-1.5 pt-1 text-left">
                   <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Turno Asignado</label>
                   <select
                     className="input-field w-full text-sm font-medium"
@@ -893,7 +969,7 @@ export const ProjectTeamPage: React.FC = () => {
                     {(() => {
                       if (!project || !userScheduleData.areaId) return null;
                       
-                      const areaCfg = project.areasConfig?.find(ac => {
+                      const areaCfg = project.areasConfig?.find((ac: any) => {
                         const acId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
                         return String(acId) === String(userScheduleData.areaId);
                       });
@@ -946,38 +1022,120 @@ export const ProjectTeamPage: React.FC = () => {
                     <p className="text-sm">No se encontraron usuarios disponibles</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {filteredCandidates.map((user) => {
-                      const isCoordinator = checkIsCoordinator(user);
-                      return (
-                        <div key={user._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="flex items-center justify-center shrink-0">
-                              <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs text-gray-500">{user.email}</span>
-                                {isCoordinator && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Coordinador</span>}
-                                {user.roles?.map((r: any) => {
-                                  const isCoord = r.name.toLowerCase().includes("coordinador");
-                                  return (
-                                    <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] ${isCoord ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-800"}`}>
-                                      {r.name}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
+                      <thead>
+                        <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                          <th className="px-4 py-3">Nombre</th>
+                          <th className="px-4 py-3">Rol</th>
+                          <th className="px-4 py-3">Rol Frame</th>
+                          <th className="px-4 py-3">Proyecto/s</th>
+                          <th className="px-4 py-3">Turnos asociados</th>
+                          <th className="px-4 py-3 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
+                        {filteredCandidates.map((user) => {
+                          const isCoordinator = checkIsCoordinator(user);
+                          const metadataProjects = user.metadata?.projects || [];
+                          const rolFrame = metadataProjects[0]?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
+                          
+                          // Projects with active contracts
+                          const now = new Date().getTime();
+                          const activeProjects = Array.from(new Set(
+                            metadataProjects
+                              .filter(p => !p.contracts || p.contracts.length === 0 || p.contracts.some(c => {
+                                const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+                                if (endDate) endDate.setHours(23, 59, 59, 999);
+                                return !endDate || endDate.getTime() >= now;
+                              }))
+                              .map(p => p.nombre_proyecto)
+                          )).filter(Boolean);
+
+                          return (
+                            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                    {user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
+                                    {user.email}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                  {isCoordinator && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
+                                      Coord.
                                     </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                          <button onClick={() => handleAddUser(user._id)} className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-2 group-hover:bg-primary-50 group-hover:text-primary-700 group-hover:border-primary-200 dark:group-hover:bg-primary-900/20 dark:group-hover:text-primary-400 dark:group-hover:border-primary-800">
-                            <FontAwesomeIcon icon={faPlus} />
-                            Agregar
-                          </button>
-                        </div>
-                      );
-                    })}
+                                  )}
+                                  {(user.roles || []).map(r => {
+                                    const isCoord = r.name?.toLowerCase().includes("coordinador");
+                                    return (
+                                      <span 
+                                        key={r._id} 
+                                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${isCoord ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800"}`}
+                                      >
+                                        {r.name}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="font-medium text-gray-700 dark:text-gray-300">
+                                  {rolFrame}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col gap-0.5">
+                                  {activeProjects.length > 0 ? (
+                                    activeProjects.map((p, idx) => (
+                                      <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
+                                        {p}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col gap-1.5">
+                                  {user.turnos && user.turnos.length > 0 ? (
+                                    user.turnos.map(t => (
+                                      <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">
+                                          {typeof t === 'object' ? t.name : "Turno"}
+                                        </span>
+                                        {typeof t === 'object' && t.startTime && t.endTime && (
+                                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
+                                            {t.startTime} - {t.endTime}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <button 
+                                  onClick={() => handleAddUser(user._id)} 
+                                  className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold"
+                                >
+                                  <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                  Agregar
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

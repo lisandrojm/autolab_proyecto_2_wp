@@ -40,6 +40,9 @@ export interface IUserProject extends Document {
   nombre_proyecto: string;
   nombre_rol_frame: string;
   contracts: IContract[];
+  areaId?: Types.ObjectId;
+  positionId?: Types.ObjectId;
+  levelId?: Types.ObjectId;
 }
 
 const contractSchema = new Schema<IContract>(
@@ -85,6 +88,9 @@ const userProjectSchema = new Schema<IUserProject>(
     nombre_proyecto: { type: String }, // User requested convenience field
     nombre_rol_frame: { type: String }, // User requested convenience field
     contracts: [contractSchema],
+    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
+    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
   },
   {
     timestamps: true,

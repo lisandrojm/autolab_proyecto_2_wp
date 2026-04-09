@@ -188,6 +188,11 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       .populate({
         path: "metadata.projects",
         model: UserProject,
+        populate: [
+          { path: "positionId", select: "name description", model: Position },
+          { path: "levelId", select: "name description", model: Level },
+          { path: "areaId", select: "name description", model: Area },
+        ],
       })
       .sort({ _id: -1 })
       .skip(skip)
@@ -355,6 +360,11 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
       .populate({
         path: "metadata.projects",
         model: UserProject,
+        populate: [
+          { path: "positionId", select: "name description", model: Position },
+          { path: "levelId", select: "name description", model: Level },
+          { path: "areaId", select: "name description", model: Area },
+        ],
       })
       .sort({ firstName: 1, lastName: 1 });
 
@@ -436,7 +446,16 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
       .populate("positionId", "name description")
       .populate("levelId", "name description")
       .populate("areaId", "name description")
-      .populate("turnos", "name startTime endTime type days");
+      .populate("turnos", "name startTime endTime type days")
+      .populate({
+        path: "metadata.projects",
+        model: UserProject,
+        populate: [
+          { path: "positionId", select: "name description", model: Position },
+          { path: "levelId", select: "name description", model: Level },
+          { path: "areaId", select: "name description", model: Area },
+        ],
+      });
 
     if (!user) {
       res.status(404).json({ error: "User not found" });

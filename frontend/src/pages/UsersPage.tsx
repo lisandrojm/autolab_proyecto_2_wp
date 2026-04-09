@@ -36,7 +36,6 @@ interface UserFormData {
   hireDate: string;
   extraVacationDays: number;
   clientIds: string[];
-  projectIds: string[];
   turnos: string[];
   isSolicitud?: boolean;
 }
@@ -108,7 +107,6 @@ export const UsersPage: React.FC = () => {
     hireDate: new Date().toISOString().split("T")[0],
     extraVacationDays: 0,
     clientIds: [],
-    projectIds: [],
     turnos: [],
   });
 
@@ -584,7 +582,6 @@ export const UsersPage: React.FC = () => {
       hireDate: new Date().toISOString().split("T")[0],
       extraVacationDays: 0,
       clientIds: [],
-      projectIds: [],
       turnos: [],
     });
     setShowPassword(false);
@@ -629,17 +626,8 @@ export const UsersPage: React.FC = () => {
       }
     }
 
-    const requestedProjectIds = user.metadata?.projectIds || [];
-    let projectIds = user.projectIds ? user.projectIds.map((p: any) => (typeof p === "string" ? p : p._id)) : [];
-    
-    // Si es una solicitud y tiene proyectos pedidos, los agregamos a la lista de prefijados
-    if (isSolicitud && requestedProjectIds.length > 0) {
-      requestedProjectIds.forEach(id => {
-        if (!projectIds.includes(id)) {
-          projectIds.push(id);
-        }
-      });
-    }
+    // No longer handling projectIds specifically in this form as it's being removed
+
 
     setFormData({
       email: user.email.startsWith("solicitud_") ? "" : user.email,
@@ -654,7 +642,6 @@ export const UsersPage: React.FC = () => {
       hireDate,
       extraVacationDays: user.extraVacationDays || 0,
       clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
-      projectIds,
       turnos: user.turnos ? user.turnos.map((t) => (typeof t === "string" ? t : t._id)) : [],
       isSolicitud,
     });
@@ -1761,51 +1748,6 @@ export const UsersPage: React.FC = () => {
                 </div>
 
 
-                {/* PROYECTOS */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proyectos</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 dark:border-gray-600 rounded p-3 max-h-48 overflow-y-auto">
-                    {allProjects.length === 0 ? (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 p-2">No hay proyectos disponibles.</p>
-                    ) : (
-                      allProjects.map((project) => {
-                        let clientName = "";
-                        if (typeof project.clientId === "object" && (project.clientId as any).name) {
-                          clientName = (project.clientId as any).name;
-                        } else if (typeof project.clientId === "string") {
-                          const c = allClients.find((client) => client._id === project.clientId);
-                          if (c) clientName = c.name;
-                        }
-
-                        const isSelected = formData.projectIds.includes(project._id);
-
-                        return (
-                          <div key={project._id} className="p-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isSelected) {
-                                  setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== project._id) }));
-                                } else {
-                                  setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, project._id] }));
-                                }
-                              }}
-                              className={`w-full flex flex-col items-start px-3 py-2 rounded text-sm font-medium transition-colors shadow-sm text-left ${isSelected ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-300 ring-1 ring-blue-300 dark:ring-blue-700" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                            >
-                              <div className="flex items-center w-full">
-                                <FontAwesomeIcon icon={isSelected ? faToggleOn : faToggleOff} className={`mr-2.5 text-lg ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`} />
-                                <span className="flex-1 truncate">
-                                  {project.name} {clientName && <span className="ml-1 opacity-70 font-normal text-xs">({clientName})</span>}
-                                </span>
-                              </div>
-                              <span className={`text-xs ml-8 mt-1 block truncate max-w-full ${isSelected ? "text-blue-800/70 dark:text-blue-300/70" : "text-gray-500 font-normal"}`}>{isSelected ? "Asignado" : "No asignado"}</span>
-                            </button>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
 
                 {/* ROLES */}
                 <div>
@@ -2212,16 +2154,45 @@ export const UsersPage: React.FC = () => {
                         {user.projectIds && user.projectIds.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {user.projectIds.map((p: any) => {
+                              const pId = p._id || p;
                               const pName = p.name;
                               const clientName = p.clientId?.name;
+
+                              // Find project-specific info in metadata.projects
+                              const userProject = (user.metadata?.projects as any[])?.find((up: any) => 
+                                (up.projectId?._id || up.projectId) === pId
+                              );
 
                               if (!pName) return null;
 
                               return (
-                                <span key={p._id || p} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                                  {pName}
-                                  {clientName && <span className="ml-1 text-[10px] opacity-70">({clientName})</span>}
-                                </span>
+                                <div key={pId} className="flex flex-col gap-1.5 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 w-full lg:w-[calc(50%-0.375rem)] xl:w-full">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 uppercase tracking-tight truncate">
+                                      {pName}
+                                      {clientName && <span className="ml-1 opacity-60 text-[9px] font-normal">({clientName})</span>}
+                                    </span>
+                                  </div>
+                                  {userProject && (userProject.areaId || userProject.positionId || userProject.levelId) && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      {userProject.areaId && (
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-primary-100/40 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border border-primary-200/30 dark:border-primary-800/20 font-bold uppercase">
+                                          {userProject.areaId.name}
+                                        </span>
+                                      )}
+                                      {userProject.positionId && (
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-blue-100/40 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200/30 dark:border-blue-800/20 font-bold uppercase">
+                                          {userProject.positionId.name}
+                                        </span>
+                                      )}
+                                      {userProject.levelId && (
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-100/40 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200/30 dark:border-indigo-800/20 font-bold uppercase">
+                                          {userProject.levelId.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
@@ -2339,10 +2310,28 @@ export const UsersPage: React.FC = () => {
                               user.projectIds.map((p: any) => {
                                 const pId = typeof p === "string" ? p : p._id;
                                 const pName = typeof p !== "string" && p.name ? p.name : allProjects.find((proj) => proj._id === pId)?.name || "P";
+                                
+                                // Find project-specific info
+                                const userProject = (user.metadata?.projects as any[])?.find((up: any) => 
+                                  (up.projectId?._id || up.projectId) === pId
+                                );
+
                                 return (
-                                  <span key={pId} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 shadow-sm truncate max-w-full">
-                                    {pName}
-                                  </span>
+                                  <div key={pId} className="flex flex-col gap-0.5 mb-1 last:mb-0 w-full">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 shadow-sm truncate max-w-full uppercase">
+                                      {pName}
+                                    </span>
+                                    {userProject && (userProject.areaId || userProject.positionId || userProject.levelId) && (
+                                      <div className="flex flex-wrap gap-0.5 opacity-80">
+                                        {userProject.areaId && <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase">{userProject.areaId.name}</span>}
+                                        {(userProject.positionId || userProject.levelId) && (
+                                          <span className="text-[8px] text-gray-400 dark:text-gray-500">•</span>
+                                        )}
+                                        {userProject.positionId && <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase">{userProject.positionId.name}</span>}
+                                        {userProject.levelId && <span className="text-[8px] text-gray-400 dark:text-gray-500 italic ml-0.5">({userProject.levelId.name})</span>}
+                                      </div>
+                                    )}
+                                  </div>
                                 );
                               })
                             ) : (
@@ -2362,7 +2351,7 @@ export const UsersPage: React.FC = () => {
                                   e.stopPropagation();
                                   handleDelete(user);
                                 }}
-                                className="p-2 text-gray-500 hover:text-gray-300 dark:text-gray-400 dark:hover:text-gray-300 hover:text-gray-800 dark:hover:text-gray-300 rounded"
+                                className="p-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 rounded transition-colors"
                                 title="Eliminar"
                               >
                                 <FontAwesomeIcon icon={faTrash} />
