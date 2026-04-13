@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Project, projectsAPI } from "../../api/projects";
 import { User } from "../../api/users";
 import { Area, areasAPI } from "../../api/areas";
@@ -179,19 +180,21 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     return <div className="p-8 text-center text-sm text-gray-500">Cargando datos de áreas y turnos...</div>;
   }
 
+  const actionPortalTarget = document.getElementById("tab-actions-portal");
+
   return (
     <div className="space-y-6 pt-4">
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 flex gap-3">
-        <FontAwesomeIcon icon={faInfoCircle} className="text-blue-500 mt-1" />
-        <div className="text-sm">
-          <p className="font-semibold text-blue-900 dark:text-blue-200">Asignación de Coordinadores</p>
-          <p className="text-blue-700 dark:text-blue-400 opacity-80 mt-0.5 leading-relaxed">
-            Asigna un coordinador designado para cada combinación de Área y Turno del proyecto. 
-            Todas las combinaciones deben estar cubiertas.
-          </p>
-        </div>
-      </div>
-
+      {actionPortalTarget && createPortal(
+        <button
+          onClick={saveAssignments}
+          disabled={isSaving || validationItems.unassignedCount > 0}
+          className={`flex items-center gap-2 px-4 py-1.5 text-sm rounded-md w-full sm:w-auto justify-center ${isSaving || validationItems.unassignedCount > 0 ? "btn-disabled bg-gray-200 text-gray-500 cursor-not-allowed" : "btn-primary"}`}
+        >
+          <FontAwesomeIcon icon={faSave} />
+          {isSaving ? "Guardando..." : "Guardar Roles"}
+        </button>,
+        actionPortalTarget
+      )}
       {groupedCombinations.length === 0 ? (
         <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
           <FontAwesomeIcon icon={faUserTie} className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
@@ -201,29 +204,6 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Global Actions Bar - Sticky Top */}
-          <div className="sticky top-[144px] z-[50] p-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all">
-            <div>
-              {validationItems.unassignedCount > 0 ? (
-                <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                  Faltan {validationItems.unassignedCount} combinaciones por asignar
-                </span>
-              ) : (
-                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                  Todas las combinaciones tienen coordinador
-                </span>
-              )}
-            </div>
-            <button
-              onClick={saveAssignments}
-              disabled={isSaving || validationItems.unassignedCount > 0}
-              className={`flex items-center gap-2 px-6 w-full sm:w-auto justify-center ${isSaving || validationItems.unassignedCount > 0 ? "btn-disabled" : "btn-primary"}`}
-            >
-              <FontAwesomeIcon icon={faSave} />
-              {isSaving ? "Guardando..." : "Guardar Roles"}
-            </button>
-          </div>
-
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             {groupedCombinations.map(({ area, shifts }, idx) => (
               <div key={area._id} className={idx > 0 ? "border-t-[8px] border-gray-100 dark:border-gray-900" : ""}>

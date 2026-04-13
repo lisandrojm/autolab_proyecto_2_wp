@@ -219,9 +219,19 @@ export const UserCard: React.FC<UserCardProps> = ({
         ) : (
           <div className="flex flex-wrap gap-1">
             {user.roles.slice(0, 3).map((role) => {
-              const isCoord = role.name.toLowerCase().includes("coordinador");
+              const lower = role.name.toLowerCase();
+              const isCoord = lower.includes("coordinador");
+              const isResponsable = lower.includes("responsable");
+              
+              let classes = "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300";
+              if (isCoord) {
+                classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800";
+              } else if (isResponsable) {
+                classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800";
+              }
+              
               return (
-                <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300"}`}>
+                <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${classes}`}>
                   {role.name}
                 </span>
               );
@@ -348,12 +358,12 @@ export const UserCard: React.FC<UserCardProps> = ({
           {currentProjectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames && user.externalInfo.rolFrames.length > 0) ? (
             <div className="flex flex-wrap gap-1">
               {currentProjectMeta?.nombre_rol_frame ? (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${currentProjectMeta.nombre_rol_frame.toLowerCase().includes("responsable") ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800" : "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"}`}>
                   {currentProjectMeta.nombre_rol_frame}
                 </span>
               ) : (
                 user.externalInfo?.rolFrames?.map((rf: any, idx: number) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
+                  <span key={idx} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${rf.toLowerCase().includes("responsable") ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800" : "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"}`}>
                     {rf}
                   </span>
                 ))

@@ -15,7 +15,7 @@ import { Modal } from "../components/ui/Modal";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
@@ -35,7 +35,9 @@ export const ProjectTeamPage: React.FC = () => {
   const { token } = useAuthStore();
 
   // Help
+  // Help
   const [openInfo, setOpenInfo] = useState(false);
+  const [openCoordinadoresInfo, setOpenCoordinadoresInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
   // Data
@@ -634,11 +636,19 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
-            {user.roles.slice(0, 2).map((r) => (
-              <span key={r._id} className="text-[10px] px-2 py-0.5 rounded font-medium border bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                {r.name}
-              </span>
-            ))}
+            {user.roles.slice(0, 2).map((r) => {
+              const isCoordinador = r.name.toLowerCase().includes("coordinador");
+              
+              const badgeClasses = isCoordinador
+                ? "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400"
+                : "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
+                
+              return (
+                <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
+                  {r.name}
+                </span>
+              );
+            })}
           </div>
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
@@ -670,12 +680,12 @@ export const ProjectTeamPage: React.FC = () => {
           {activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}
         </td>
         <td className="px-4 py-3 text-right">
-          <div className="flex items-center justify-end gap-2">
-            <button onClick={() => handleOpenScheduleModal(user)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Editar horario/área">
-              <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+          <div className="flex items-center justify-end gap-1">
+            <button onClick={() => handleOpenScheduleModal(user)} className="p-1 text-gray-400 hover:text-blue-500 transition-colors" title="Editar horario/área">
+              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
             </button>
-            <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Retirar del proyecto">
-              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+            <button onClick={() => handleRemoveUser(user._id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors ml-1" title="Retirar del proyecto">
+              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
             </button>
           </div>
         </td>
@@ -737,6 +747,14 @@ export const ProjectTeamPage: React.FC = () => {
         title: helpEntry?.title || "Información",
         content: helpEntry?.content,
       }}
+      modal={
+        openCoordinadoresInfo ? {
+          isOpen: true,
+          onClose: () => setOpenCoordinadoresInfo(false),
+          title: "Asignación de Coordinadores",
+          content: <p className="text-gray-600 dark:text-gray-300">Asigna un coordinador designado para cada combinación de Área y Turno del proyecto. Todas las combinaciones deben estar cubiertas.</p>,
+        } : undefined
+      }
       headerActions={
         <button onClick={() => setShowAddModal(true)} className="btn-primary flex items-center justify-center text-sm p-2 gap-2">
           <FontAwesomeIcon icon={faPlus} className="h-3 w-3 lg:h-4 lg:w-4" />
@@ -752,45 +770,60 @@ export const ProjectTeamPage: React.FC = () => {
       ) : project ? (
         <div className="flex flex-col gap-6">
           {/* TABS */}
-          <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setActiveTab("coordinadores")}
-              className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-                activeTab === "coordinadores"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
-            >
-              <FontAwesomeIcon icon={faUserTie} className="text-xs" />
-              Coordinadores
-            </button>
-            <button
-              onClick={() => setActiveTab("solicitudes")}
-              className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-                activeTab === "solicitudes"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
-            >
-              <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
-              Solicitudes
-              {solicitudesCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">
-                  {solicitudesCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("equipo")}
-              className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-                activeTab === "equipo"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
-            >
-              <FontAwesomeIcon icon={faUsers} className="text-xs" />
-              Equipo
-            </button>
+          <div className="sticky top-[144px] pb-1 pt-3 z-[40] bg-[#f3f4f6] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 flex items-center justify-between shadow-sm lg:shadow-none hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar flex-nowrap">
+              <button
+                onClick={() => setActiveTab("coordinadores")}
+                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "coordinadores"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={faUserTie} className="text-xs" />
+                Coordinadores
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenCoordinadoresInfo(true);
+                  }}
+                  className={`ml-0.5 text-gray-400 hover:text-blue-500 transition-colors ${activeTab === "coordinadores" ? "text-blue-400" : ""}`}
+                  title="Información de asignación"
+                >
+                  <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                </button>
+              </button>
+              <button
+                onClick={() => setActiveTab("solicitudes")}
+                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "solicitudes"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
+                Solicitudes
+                {solicitudesCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">
+                    {solicitudesCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("equipo")}
+                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "equipo"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={faUsers} className="text-xs" />
+                Equipo
+              </button>
+            </div>
+            {/* The right side portal target */}
+            <div id="tab-actions-portal" className="shrink-0 mb-1 lg:mb-0"></div>
           </div>
 
           {/* Tab Content */}
@@ -1063,7 +1096,7 @@ export const ProjectTeamPage: React.FC = () => {
           </Modal>
 
           {/* Wizard Modal */}
-          <Modal isOpen={!!selectedUserForWizard} onClose={() => setSelectedUserForWizard(null)} title="Edición integrante" subtitle={project?.name} size="xl">
+          <Modal isOpen={!!selectedUserForWizard} onClose={() => setSelectedUserForWizard(null)} title="Agregar Miembro" subtitle={project?.name} size="xl">
             <div className="space-y-6">
               {/* Stepper Header */}
               <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
@@ -1096,16 +1129,13 @@ export const ProjectTeamPage: React.FC = () => {
                   
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Rol a desempeñar</label>
-                    <select 
-                      className="input-field w-full" 
-                      value={wizardData.rol_frame_id} 
-                      onChange={e => setWizardData(prev => ({ ...prev, rol_frame_id: e.target.value }))}
-                    >
-                      <option value="">Selecciona rol...</option>
-                      {allRoleFrames.map(rf => (
-                        <option key={rf._id} value={rf.data.rol.id}>{rf.name}</option>
-                      ))}
-                    </select>
+                    <input 
+                      type="text" 
+                      className="input-field w-full bg-gray-50 dark:bg-gray-800/50 text-gray-500 cursor-not-allowed" 
+                      value={allRoleFrames.find(rf => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || "Sin role frame asignado"} 
+                      disabled 
+                      readOnly 
+                    />
                   </div>
                   
                   <div className="space-y-1.5">
