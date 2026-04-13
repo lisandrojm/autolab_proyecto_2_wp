@@ -373,6 +373,15 @@ class ProjectsAPI {
     });
     return resp.data as Client;
   }
+
+  async assignMember(projectId: string, data: { userId: string; contract: any }): Promise<void> {
+    await axios.post(`/projects/${projectId}/assign-member`, data, {
+      headers: this.getHeaders(),
+    });
+    const project = await this.getProject(projectId);
+    const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
+    emitProjectsChanged("update", projectId, clientId);
+  }
 }
 
 export const projectsAPI = new ProjectsAPI();

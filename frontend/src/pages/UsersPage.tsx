@@ -9,10 +9,12 @@ import { clientsAPI, Client } from "../api/clients";
 import { projectsAPI, Project } from "../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { shiftsAPI, Shift } from "../api/shifts";
+import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { UserCard } from "../components/users/UserCard";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -57,6 +59,7 @@ export const UsersPage: React.FC = () => {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
+  const [allVacations, setAllVacations] = useState<VacationRequest[]>([]);
   const [initialLoading, setInitialLoading] = useState(true); // solo primer render
   const [isFetching, setIsFetching] = useState(false); // búsquedas/filtrado
   const [totalUsers, setTotalUsers] = useState(0);
@@ -195,11 +198,21 @@ export const UsersPage: React.FC = () => {
         fetchAllRoleFrames();
         fetchAllShifts();
         fetchUserLookup(); // Fetch all users for name resolution
+        fetchVacations();
       }
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchVacations = async () => {
+    try {
+      const vacationsList = await vacationsAPI.getAll();
+      setAllVacations(vacationsList);
+    } catch (error) {
+      console.error("Error fetching vacations:", error);
+    }
+  };
 
   // Debounce para refrescar la lista cuando cambian searchTerm / filterActive / fechas
   useEffect(() => {
@@ -626,9 +639,6 @@ export const UsersPage: React.FC = () => {
       }
     }
 
-    // No longer handling projectIds specifically in this form as it's being removed
-
-
     setFormData({
       email: user.email.startsWith("solicitud_") ? "" : user.email,
       password: "",
@@ -676,7 +686,6 @@ export const UsersPage: React.FC = () => {
     setViewUser(null);
   };
 
-  // Submit create/edit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -723,7 +732,6 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  // Submit password
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -750,27 +758,6 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const getActiveSedes = (user: User): string[] => {
-    const activeSedes = new Set<string>();
-    if (user.metadata?.projects) {
-      user.metadata.projects.forEach((p: any) => {
-        if (p.contracts) {
-          p.contracts.forEach((c: any) => {
-            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-            const isActive = !endDate || endDate >= new Date();
-            if (isActive && c.nombre_sede) {
-              activeSedes.add(c.nombre_sede);
-            }
-          });
-        }
-      });
-    }
-    if (activeSedes.size === 0 && user.externalInfo?.sedes) {
-      return user.externalInfo.sedes;
-    }
-    return Array.from(activeSedes);
-  };
-
   const getActiveContractType = (user: User): string | null => {
     let contractType: string | null = null;
     if (user.metadata?.projects) {
@@ -791,11 +778,9 @@ export const UsersPage: React.FC = () => {
       });
     }
 
-    // Fallback similar to Profile.tsx
     if (!contractType && user.externalInfo && (user.externalInfo as any).contracts && (user.externalInfo as any).contracts.length > 0) {
       contractType = (user.externalInfo as any).contracts[0];
     }
-
     return contractType;
   };
 
@@ -822,77 +807,7 @@ export const UsersPage: React.FC = () => {
     return schedule;
   };
 
-  // Get replacement info from active contract (returns boolean)
-  const isReplacement = (user: User): boolean => {
-    if (user.metadata?.projects) {
-      for (const p of user.metadata.projects as any[]) {
-        if (p.contracts) {
-          for (const c of p.contracts) {
-            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-            if (endDate) endDate.setHours(23, 59, 59, 999);
-
-            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
-
-            if (isActive && c.reemplazo) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
-  };
-
-  // Get replaced employee info from active contract
-  const getReplacedEmployee = (user: User): string | number | null => {
-    let replacedEmployee: string | number | null = null;
-    if (user.metadata?.projects) {
-      user.metadata.projects.forEach((p: any) => {
-        if (p.contracts) {
-          p.contracts.forEach((c: any) => {
-            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-            if (endDate) endDate.setHours(23, 59, 59, 999);
-
-            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
-
-            // Note: Field is 'empleado_id_reemplezado' (with 'e' not 'a' - typo in source data)
-            if (isActive && c.empleado_id_reemplezado) {
-              replacedEmployee = c.empleado_id_reemplezado;
-            }
-          });
-        }
-      });
-    }
-    return replacedEmployee;
-  };
-
-  // Memoizar mapas para búsquedas O(1) en el renderizado de cards
   const projectMap = React.useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
-  const clientMap = React.useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
-
-  // Mapa de empleado_id (metadata.id) -> nombre completo del usuario
-  const empleadoIdToNameMap = React.useMemo(() => {
-    const map = new Map<number | string, string>();
-    users.forEach((user) => {
-      // Get the user's metadata.id (this is the empleado_id in external system)
-      const metadataId = (user.metadata as any)?.id;
-      if (metadataId) {
-        const fullName = user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0];
-        map.set(metadataId, fullName);
-      }
-    });
-    return map;
-  }, [users]);
-
-  // Helper function to get employee name by ID (using the global lookup map)
-  const getEmployeeNameById = (empleadoId: number | string): string => {
-    // First try the lookup map (contains all users)
-    if (userLookup.has(empleadoId)) {
-      return userLookup.get(empleadoId)!;
-    }
-    // Fallback to searching in current users list (though lookup should cover it)
-    return empleadoIdToNameMap.get(empleadoId) || `ID: ${empleadoId}`;
-  };
 
   return (
     <PageLayout
@@ -948,7 +863,6 @@ export const UsersPage: React.FC = () => {
           </button>
         </div>
       }
-      // Igual que RolesPage: SearchAndFilters directo (sin botón Buscar)
       searchAndFilters={
         <div className="flex flex-col md:flex-row gap-4 items-start">
           <div className="flex-1 w-full">
@@ -1023,7 +937,6 @@ export const UsersPage: React.FC = () => {
           )}
         </div>
       }
-      // Ver (solo lectura)
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
@@ -1074,7 +987,6 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Roles */}
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                 <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 text-gray-400" />
@@ -1097,7 +1009,6 @@ export const UsersPage: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              {/* Área */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
@@ -1106,7 +1017,6 @@ export const UsersPage: React.FC = () => {
                 {typeof viewUser.areaId === "object" && viewUser.areaId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300 w-fit">{viewUser.areaId.name}</span> : <span className="text-xs text-gray-500">Sin área</span>}
               </div>
 
-              {/* Cargo */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 text-gray-400" />
@@ -1115,7 +1025,6 @@ export const UsersPage: React.FC = () => {
                 {typeof viewUser.positionId === "object" && viewUser.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.positionId.name}</span> : <span className="text-xs text-gray-500">Sin cargo</span>}
               </div>
 
-              {/* Nivel */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 text-gray-400" />
@@ -1124,7 +1033,6 @@ export const UsersPage: React.FC = () => {
                 {typeof viewUser.levelId === "object" && viewUser.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.levelId.name}</span> : <span className="text-xs text-gray-500">Sin nivel</span>}
               </div>
 
-              {/* Turno */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faClock} className="h-3 w-3 text-gray-400" />
@@ -1145,7 +1053,6 @@ export const UsersPage: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              {/* Sede */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
@@ -1159,46 +1066,34 @@ export const UsersPage: React.FC = () => {
                         p.contracts.forEach((c: any) => {
                           const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
                           const isActive = !endDate || endDate >= new Date();
-
-                          if (isActive && c.nombre_sede) {
-                            activeSedes.add(c.nombre_sede);
-                          }
+                          if (isActive && c.nombre_sede) activeSedes.add(c.nombre_sede);
                         });
                       }
                     });
                   }
-
                   const sedesList = Array.from(activeSedes);
-
                   if (sedesList.length > 0) {
                     return (
                       <div className="flex flex-wrap gap-1">
                         {sedesList.map((sede, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
-                            {sede}
-                          </span>
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{sede}</span>
                         ))}
                       </div>
                     );
                   }
-
                   if (viewUser.externalInfo?.sedes && viewUser.externalInfo.sedes.length > 0) {
                     return (
                       <div className="flex flex-wrap gap-1">
                         {viewUser.externalInfo.sedes.map((sede, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
-                            {sede}
-                          </span>
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{sede}</span>
                         ))}
                       </div>
                     );
                   }
-
                   return <span className="text-xs text-gray-500">Sin sede</span>;
                 })()}
               </div>
 
-              {/* Rol Frame */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" />
@@ -1207,9 +1102,7 @@ export const UsersPage: React.FC = () => {
                 {viewUser.externalInfo?.rolFrames && viewUser.externalInfo.rolFrames.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {viewUser.externalInfo.rolFrames.map((rf, idx) => (
-                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 w-fit">
-                        {rf}
-                      </span>
+                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 w-fit">{rf}</span>
                     ))}
                   </div>
                 ) : (
@@ -1219,7 +1112,6 @@ export const UsersPage: React.FC = () => {
             </div>
 
             <div className="flex flex-col gap-4">
-              {/* Clientes */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
@@ -1227,14 +1119,9 @@ export const UsersPage: React.FC = () => {
                 </label>
                 {(() => {
                   const clientSet = new Set<string>();
-                  // 1. From direct clientIds
                   if (viewUser.clientIds && viewUser.clientIds.length > 0) {
-                    viewUser.clientIds.forEach((c) => {
-                      const cId = typeof c === "string" ? c : c._id;
-                      clientSet.add(cId);
-                    });
+                    viewUser.clientIds.forEach((c) => clientSet.add(typeof c === "string" ? c : c._id));
                   }
-                  // 2. From projects
                   if (viewUser.projectIds && viewUser.projectIds.length > 0) {
                     viewUser.projectIds.forEach((p) => {
                       const pId = typeof p === "string" ? p : p._id;
@@ -1245,23 +1132,12 @@ export const UsersPage: React.FC = () => {
                       }
                     });
                   }
-
-                  const uniqueClients = Array.from(clientSet)
-                    .map((cid) => {
-                      // Try to find in allClients/clientMap
-                      // Note: allClients is available in scope
-                      const client = allClients.find((c) => c._id === cid);
-                      return client ? client.name : null;
-                    })
-                    .filter(Boolean);
-
+                  const uniqueClients = Array.from(clientSet).map((cid) => allClients.find((c) => c._id === cid)?.name).filter(Boolean);
                   if (uniqueClients.length > 0) {
                     return (
                       <div className="flex flex-wrap gap-1">
                         {uniqueClients.map((name, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 w-fit border border-cyan-200 dark:border-cyan-800">
-                            {name}
-                          </span>
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 w-fit border border-cyan-200 dark:border-cyan-800">{name}</span>
                         ))}
                       </div>
                     );
@@ -1270,7 +1146,6 @@ export const UsersPage: React.FC = () => {
                 })()}
               </div>
 
-              {/* Proyectos */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" />
@@ -1283,7 +1158,6 @@ export const UsersPage: React.FC = () => {
                       const projectName = typeof project === "object" && "name" in project ? project.name : null;
                       const fullProject = allProjects.find((p) => p._id === projectId);
                       const displayName = projectName || fullProject?.name || "Proyecto desconocido";
-
                       let clientName = "";
                       if (fullProject) {
                         if (typeof fullProject.clientId === "object" && fullProject.clientId.name) {
@@ -1293,7 +1167,6 @@ export const UsersPage: React.FC = () => {
                           if (client) clientName = client.name;
                         }
                       }
-
                       return (
                         <span key={projectId} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 shadow-sm">
                           {displayName}
@@ -1308,9 +1181,7 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Employment Info */}
             <div className="space-y-4">
-              {/* Fecha de ingreso */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faCalendar} className="h-3 w-3 text-gray-400" />
@@ -1347,7 +1218,6 @@ export const UsersPage: React.FC = () => {
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.email}</span>
               </div>
 
-              {/* Documento */}
               {viewUser.metadata?.documento && (
                 <div className="flex flex-col">
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
@@ -1358,7 +1228,6 @@ export const UsersPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Antigüedad Total */}
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                   <FontAwesomeIcon icon={faHourglassHalf} className="h-3 w-3 text-gray-400" />
@@ -1366,34 +1235,23 @@ export const UsersPage: React.FC = () => {
                 </label>
                 {(() => {
                   const totalDays = (viewUser.metadata?.projects || []).reduce(
-                    (acc, p) =>
-                      acc +
-                      (p.contracts || []).reduce((cAcc, c) => {
+                    (acc, p) => acc + (p.contracts || []).reduce((cAcc, c) => {
                         const start = new Date(c.fecha_alta_contrato);
                         const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
                         return cAcc + Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                      }, 0),
-                    0,
+                      }, 0), 0
                   );
-
                   if (totalDays === 0) return <span className="text-xs text-gray-500">—</span>;
-
-                  // Calcular años, meses y días
                   const years = Math.floor(totalDays / 365);
-                  const remainingAfterYears = totalDays % 365;
-                  const months = Math.floor(remainingAfterYears / 30);
-                  const remainingDays = remainingAfterYears % 30;
-
+                  const months = Math.floor((totalDays % 365) / 30);
+                  const days = (totalDays % 365) % 30;
                   const parts = [];
                   if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
                   if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
-                  if (remainingDays > 0) parts.push(`${remainingDays} ${remainingDays === 1 ? "día" : "días"}`);
-
-                  const formattedSeniority = parts.length === 0 ? "0 días" : parts.length === 1 ? parts[0] : parts.length === 2 ? `${parts[0]} y ${parts[1]}` : `${parts[0]}, ${parts[1]} y ${parts[2]}`;
-
+                  if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
                   return (
                     <div className="flex flex-col gap-1">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 w-fit shadow-sm">{formattedSeniority}</span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 w-fit shadow-sm">{parts.join(", ")}</span>
                       <span className="text-[10px] text-gray-400 ml-1">({totalDays} días en total)</span>
                     </div>
                   );
@@ -1401,40 +1259,25 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Historial y Antigüedad Unificados */}
             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <button onClick={() => setIsHistoryExpanded(!isHistoryExpanded)} className="flex items-center justify-between w-full text-xs font-medium text-gray-500 dark:text-gray-400 group hover:text-gray-800 dark:hover:text-gray-200 transition-colors" aria-expanded={isHistoryExpanded}>
+              <button onClick={() => setIsHistoryExpanded(!isHistoryExpanded)} className="flex items-center justify-between w-full text-xs font-medium text-gray-500 dark:text-gray-400 group hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                 <div className="flex gap-1 items-center">
                   <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-gray-400 group-hover:text-primary-500 transition-colors" />
                   Historial y Antigüedad Detallada
                 </div>
-                <FontAwesomeIcon icon={isHistoryExpanded ? faChevronUp : faChevronDown} className={`h-3 w-3 transition-transform duration-300`} />
+                <FontAwesomeIcon icon={isHistoryExpanded ? faChevronUp : faChevronDown} className="h-3 w-3" />
               </button>
-
-              <div className={`mt-3 overflow-hidden transition-all duration-300 ease-in-out ${isHistoryExpanded ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"}`}>
+              <div className={`mt-3 overflow-hidden transition-all duration-300 ${isHistoryExpanded ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"}`}>
                 {(() => {
-                  const allRecords = (viewUser.metadata?.projects || []).flatMap((p) =>
-                    (p.contracts || []).map((c) => {
-                      const start = new Date(c.fecha_alta_contrato);
-                      const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
-                      const days = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                      return {
-                        ...c,
-                        projectName: p.nombre_proyecto || c.nombre_proyecto,
-                        days,
-                      };
-                    }),
-                  );
-
-                  if (allRecords.length === 0) {
-                    return <span className="text-xs text-gray-500 italic block mt-2">No hay registros disponibles.</span>;
-                  }
-
-                  // Sort by start date (descending)
+                  const allRecords = (viewUser.metadata?.projects || []).flatMap((p) => (p.contracts || []).map((c) => ({
+                    ...c,
+                    projectName: p.nombre_proyecto || c.nombre_proyecto,
+                    days: Math.max(0, Math.ceil(((c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date()).getTime() - new Date(c.fecha_alta_contrato).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+                  })));
+                  if (allRecords.length === 0) return <span className="text-xs text-gray-500 italic block mt-2">No hay registros.</span>;
                   allRecords.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
-
                   return (
-                    <div className="mt-2 overflow-x-auto overflow-y-auto max-h-[400px] custom-scrollbar border border-gray-100 dark:border-gray-800 rounded-lg">
+                    <div className="mt-2 overflow-x-auto max-h-[400px] custom-scrollbar border border-gray-100 dark:border-gray-800 rounded-lg">
                       <table className="w-full text-left border-collapse min-w-[700px]">
                         <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                           <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -1448,7 +1291,7 @@ export const UsersPage: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                           {allRecords.map((record, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group">
+                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
                               <td className="px-3 py-2.5">
                                 <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
                                 <div className="text-[9px] text-gray-400 mt-0.5">{record.nombre_contrato}</div>
@@ -1483,880 +1326,247 @@ export const UsersPage: React.FC = () => {
           </div>
         ) : null,
       }}
-      // Crear/Editar o Cambiar contraseña
       modal={{
         isOpen: showModal,
         onClose: closeModal,
         title: modalMode === "password" ? "Cambiar Contraseña" : formData.isSolicitud ? "Aprobar Solicitud de Alta" : editingUser ? "Editar Usuario" : "Nuevo Usuario",
         subtitle: modalMode === "password" ? undefined : formData.isSolicitud ? "Completa los datos para dar de alta al usuario" : "Define datos básicos y roles",
         size: modalMode === "password" ? "sm" : "lg",
-        actions:
-          modalMode === "password"
-            ? [
-                {
-                  label: "Actualizar",
-                  onClick: () => {
-                    const form = document.querySelector<HTMLFormElement>("#password-form");
-                    form?.requestSubmit();
-                  },
-                  variant: "primary",
-                },
-                {
-                  label: "Cancelar",
-                  onClick: closeModal,
-                  variant: "ghost",
-                },
-              ]
-            : [
-                {
-                  label: formData.isSolicitud ? "Aprobar y Crear" : editingUser ? "Actualizar" : "Crear",
-                  onClick: () => {
-                    const form = document.querySelector<HTMLFormElement>("#user-form");
-                    form?.requestSubmit();
-                  },
-                  variant: "primary",
-                },
-                {
-                  label: "Cancelar",
-                  onClick: closeModal,
-                  variant: "ghost",
-                },
-              ],
-        content:
-          modalMode === "password" ? (
-            <form id="password-form" onSubmit={handlePasswordSubmit}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nueva Contraseña *</label>
-                  <div className="relative">
-                    <input type={showNewPassword ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                    <button type="button" onClick={() => setShowNewPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </form>
-          ) : (
-            <form id="user-form" onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email *</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
-                </div>
-
-                {!editingUser || formData.isSolicitud ? (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {formData.isSolicitud ? "Asignar Contraseña (obligatorio)" : "Contraseña *"}
-                    </label>
-                    <div className="relative">
-                      <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                      <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                        <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
-                    <input type="text" value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" placeholder="Nombre" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Apellido</label>
-                    <input type="text" value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" placeholder="Apellido" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* AREA (antes de cargo) */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Area</label>
-
-                    {areas.length === 0 ? (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        No has creado ninguna area aún.{" "}
-                        <a href="/areas" className="text-primary-600 dark:text-primary-400 hover:underline">
-                          Crear area →
-                        </a>
-                      </p>
-                    ) : (
-                      <select
-                        value={formData.areaId || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            areaId: e.target.value || undefined,
-                          }))
-                        }
-                        className="input-field"
-                      >
-                        <option value="">Sin area</option>
-                        {areas.map((area) => (
-                          <option key={area._id} value={area._id}>
-                            {area.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  {/* CARGO */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>
-
-                    {positions.length === 0 ? (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        No has creado ningún cargo aún.{" "}
-                        <a href="/positions" className="text-primary-600 dark:text-primary-400 hover:underline">
-                          Crear cargo →
-                        </a>
-                      </p>
-                    ) : (
-                      <>
-                        <select
-                          value={formData.positionId || ""}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              positionId: e.target.value || undefined,
-                              levelId: undefined, // resetea nivel cuando cambia cargo
-                            }))
-                          }
-                          className="input-field"
-                        >
-                          <option value="">Sin cargo</option>
-                          {positions.map((position) => (
-                            <option key={position._id} value={position._id}>
-                              {position.name}
-                            </option>
-                          ))}
-                        </select>
-
-                        {!formData.positionId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un cargo para poder asignar un nivel</p>}
-                      </>
-                    )}
-                  </div>
-                </div>
- 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* TURNO */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
- 
-                    {allShifts.length === 0 ? (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        No has creado ningún turno aún.{" "}
-                        <a href="/shifts" className="text-primary-600 dark:text-primary-400 hover:underline">
-                          Crear turno →
-                        </a>
-                      </p>
-                    ) : (
-                      <select
-                        value={formData.turnos[0] || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            turnos: e.target.value ? [e.target.value] : [],
-                          }))
-                        }
-                        className="input-field"
-                      >
-                        <option value="">Sin turno</option>
-                        {allShifts.map((shift) => (
-                          <option key={shift._id} value={shift._id}>
-                            {shift.name} ({shift.startTime} - {shift.endTime})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
- 
-                  {/* NIVEL – SOLO SI HAY CARGO (Movido a esta grid para alineación) */}
-                  {formData.positionId ? (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
- 
-                      {levels.length === 0 ? (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          No hay niveles disponibles para este cargo.{" "}
-                          <a href="/levels" className="text-primary-600 dark:text-primary-400 hover:underline">
-                            Crear nivel →
-                          </a>
-                        </p>
-                      ) : (
-                        <>
-                          <select
-                            value={formData.levelId || ""}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                levelId: e.target.value || undefined,
-                              }))
-                            }
-                            className="input-field"
-                          >
-                            <option value="">Sin nivel</option>
-
-                            {/* Generales */}
-                            {levels.filter((l) => l.type === "general").length > 0 && (
-                              <optgroup label="Niveles Generales">
-                                {levels
-                                  .filter((l) => l.type === "general")
-                                  .map((level) => (
-                                    <option key={level._id} value={level._id}>
-                                      {level.name}
-                                    </option>
-                                  ))}
-                              </optgroup>
-                            )}
-
-                            {/* Específicos */}
-                            {levels.filter((l) => l.type === "position-specific").length > 0 && (
-                              <optgroup label="Niveles Específicos del Cargo">
-                                {levels
-                                  .filter((l) => l.type === "position-specific")
-                                  .map((level) => (
-                                    <option key={level._id} value={level._id}>
-                                      {level.name}
-                                    </option>
-                                  ))}
-                              </optgroup>
-                            )}
-                          </select>
-
-                          {!formData.levelId && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selecciona un nivel para completar el perfil</p>}
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="hidden sm:block"></div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Ingreso *</label>
-                    <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vacaciones (Días Extra Individuales)</label>
-                    <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" placeholder="0" />
-                  </div>
-                </div>
-
-
-
-                {/* ROLES */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
-                  <div className="border border-gray-300 dark:border-gray-600 rounded p-3 max-h-64 overflow-y-auto space-y-4">
-                    {/* System Roles */}
-                    <div>
-                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sistema</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {roles
-                          .filter((role) => role.name.toLowerCase() !== "superadmin" && !role.name.toLowerCase().includes("mobile"))
-                          .map((role) => (
-                            <label key={role._id} className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
-                              <input
-                                type="checkbox"
-                                checked={formData.roles.includes(role._id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    let newRoles = [...formData.roles, role._id];
-                                    const roleName = role.name.toLowerCase();
-
-                                    // Regla: User y Admin son mutuamente excluyentes
-                                    if (roleName === "admin") {
-                                      const conflictRole = roles.find((r) => r.name.toLowerCase() === "user");
-                                      if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
-                                    } else if (roleName === "user") {
-                                      const conflictRole = roles.find((r) => r.name.toLowerCase() === "admin");
-                                      if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
-                                    }
-
-                                    setFormData((prev) => ({ ...prev, roles: newRoles }));
-                                  } else {
-                                    setFormData((prev) => ({ ...prev, roles: prev.roles.filter((r) => r !== role._id) }));
-                                  }
-                                }}
-                                className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{role.name}</span>
-                                {role.description && <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
-                              </div>
-                            </label>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Mobile Roles */}
-                    {roles.some((r) => r.name.toLowerCase().includes("mobile")) && (
-                      <div>
-                        <h4 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">Mobile (App)</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {roles
-                            .filter((role) => role.name.toLowerCase().includes("mobile"))
-                            .map((role) => (
-                              <label key={role._id} className="flex items-start space-x-3 p-2 rounded bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-colors border border-indigo-100 dark:border-indigo-800/30">
-                                <input
-                                  type="checkbox"
-                                  checked={formData.roles.includes(role._id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      let newRoles = [...formData.roles, role._id];
-                                      const roleName = role.name.toLowerCase();
-                                      // Regla: Mobile-Coordinador y Mobile-Colaborador son mutuamente excluyentes
-                                      if (roleName.includes("mobile-coordinador")) {
-                                        const conflictRole = roles.find((r) => r.name.toLowerCase().includes("mobile-colaborador"));
-                                        if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
-                                      } else if (roleName.includes("mobile-colaborador")) {
-                                        const conflictRole = roles.find((r) => r.name.toLowerCase().includes("mobile-coordinador"));
-                                        if (conflictRole) newRoles = newRoles.filter((id) => id !== conflictRole._id);
-                                      }
-                                      setFormData((prev) => ({ ...prev, roles: newRoles }));
-                                    } else {
-                                      // Validar que no se quede sin rol mobile
-                                      const remainingRoles = formData.roles.filter((r) => r !== role._id);
-                                      const hasMobile = remainingRoles.some((rId) => {
-                                        const r = roles.find((item) => item._id === rId);
-                                        return r && r.name.toLowerCase().includes("mobile");
-                                      });
-
-                                      if (!hasMobile) {
-                                        sweetAlert.warningAlert("Atención", "El usuario debe tener al menos un rol Mobile asignado (Colaborador o Coordinador).");
-                                        return;
-                                      }
-                                      setFormData((prev) => ({ ...prev, roles: remainingRoles }));
-                                    }
-                                  }}
-                                  className="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{role.name}</span>
-                                  {role.description && <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</p>}
-                                </div>
-                              </label>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
-                  <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
-                    <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
-                    {formData.isActive ? "Activo" : "Inactivo"}
+        actions: modalMode === "password" ? [
+          { label: "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#password-form")?.requestSubmit(), variant: "primary" },
+          { label: "Cancelar", onClick: closeModal, variant: "ghost" }
+        ] : [
+          { label: formData.isSolicitud ? "Aprobar y Crear" : editingUser ? "Actualizar" : "Crear", onClick: () => document.querySelector<HTMLFormElement>("#user-form")?.requestSubmit(), variant: "primary" },
+          { label: "Cancelar", onClick: closeModal, variant: "ghost" }
+        ],
+        content: modalMode === "password" ? (
+          <form id="password-form" onSubmit={handlePasswordSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nueva Contraseña *</label>
+                <div className="relative">
+                  <input type={showNewPassword ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={6} />
+                  <button type="button" onClick={() => setShowNewPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
                   </button>
                 </div>
               </div>
-            </form>
-          ),
-      }}
-    >
-      {/* Loading state */}
-      {initialLoading || !hasLoaded ? (
-        <div className="flex justify-center items-center py-20">
-          <LoadingSpinner message="Cargando usuarios..." />
-        </div>
-      ) : (
-        <>
-          {/* Contenedor de lista */}
-          <div className="relative">
-            {/* Overlay de carga cuando se pagina o busca */}
-            {isFetching && (
-              <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 rounded-xl backdrop-blur-[1px]">
-                <div className="sticky top-[40vh] flex justify-center w-full">
-                  <LoadingSpinner message="Actualizando lista..." />
+            </div>
+          </form>
+        ) : (
+          <form id="user-form" onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email *</label>
+                <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
+              </div>
+              {(!editingUser || formData.isSolicitud) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{formData.isSolicitud ? "Asignar Contraseña (obligatorio)" : "Contraseña *"}</label>
+                  <div className="relative">
+                    <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
+                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
+                  <input type="text" value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Apellido</label>
+                  <input type="text" value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" />
                 </div>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Area</label>
+                  <select value={formData.areaId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, areaId: e.target.value || undefined }))} className="input-field">
+                    <option value="">Sin area</option>
+                    {areas.map((area) => (
+                      <option key={area._id} value={area._id}>{area.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>
+                  <select value={formData.positionId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined, levelId: undefined }))} className="input-field">
+                    <option value="">Sin cargo</option>
+                    {positions.map((position) => (
+                      <option key={position._id} value={position._id}>{position.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
+                  <select value={formData.turnos[0] || ""} onChange={(e) => setFormData((prev) => ({ ...prev, turnos: e.target.value ? [e.target.value] : [] }))} className="input-field">
+                    <option value="">Sin turno</option>
+                    {allShifts.map((shift) => (
+                      <option key={shift._id} value={shift._id}>{shift.name} ({shift.startTime} - {shift.endTime})</option>
+                    ))}
+                  </select>
+                </div>
+                {formData.positionId && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
+                    <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field">
+                      <option value="">Sin nivel</option>
+                      {levels.filter((l) => l.type === "general").length > 0 && (
+                        <optgroup label="Generales">{levels.filter((l) => l.type === "general").map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}</optgroup>
+                      )}
+                      {levels.filter((l) => l.type === "position-specific").length > 0 && (
+                        <optgroup label="Específicos">{levels.filter((l) => l.type === "position-specific").map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}</optgroup>
+                      )}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Ingreso *</label>
+                  <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vacaciones (Días Extra)</label>
+                  <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
+                <div className="border border-gray-300 dark:border-gray-600 rounded p-3 max-h-64 overflow-y-auto space-y-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Sistema</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {roles.filter((r) => r.name.toLowerCase() !== "superadmin" && !r.name.toLowerCase().includes("mobile")).map((r) => (
+                        <label key={r._id} className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer border border-transparent">
+                          <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={(e) => {
+                            let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
+                            const name = r.name.toLowerCase();
+                            if (e.target.checked) {
+                              if (name === "admin") newRoles = newRoles.filter(id => roles.find(ro => ro._id === id)?.name.toLowerCase() !== "user");
+                              else if (name === "user") newRoles = newRoles.filter(id => roles.find(ro => ro._id === id)?.name.toLowerCase() !== "admin");
+                            }
+                            setFormData(prev => ({ ...prev, roles: newRoles }));
+                          }} className="mt-1 rounded border-gray-300 text-primary-600" />
+                          <div><span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span></div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {roles.some(r => r.name.toLowerCase().includes("mobile")) && (
+                    <div>
+                      <h4 className="text-xs font-bold text-indigo-500 uppercase mb-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">Mobile (App)</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {roles.filter(r => r.name.toLowerCase().includes("mobile")).map(r => (
+                          <label key={r._id} className="flex items-start space-x-3 p-2 rounded bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-colors">
+                            <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={(e) => {
+                              let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter(id => id !== r._id);
+                              const name = r.name.toLowerCase();
+                              if (e.target.checked) {
+                                if (name.includes("coordinador")) newRoles = newRoles.filter(id => !roles.find(ro => ro._id === id)?.name.toLowerCase().includes("colaborador"));
+                                else if (name.includes("colaborador")) newRoles = newRoles.filter(id => !roles.find(ro => ro._id === id)?.name.toLowerCase().includes("coordinador"));
+                              } else {
+                                if (!newRoles.some(id => roles.find(ro => ro._id === id)?.name.toLowerCase().includes("mobile"))) {
+                                  sweetAlert.warningAlert("Atención", "Debe tener al menos un rol Mobile.");
+                                  return;
+                                }
+                              }
+                              setFormData(prev => ({ ...prev, roles: newRoles }));
+                            }} className="mt-1 rounded border-gray-300 text-indigo-600" />
+                            <div><span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span></div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
+                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
+                  <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
+                  {formData.isActive ? "Activo" : "Inactivo"}
+                </button>
+              </div>
+            </div>
+          </form>
+        ),
+      }}
+    >
+      {initialLoading || !hasLoaded ? (
+        <div className="flex justify-center items-center py-20"><LoadingSpinner message="Cargando usuarios..." /></div>
+      ) : (
+        <>
+          <div className="relative">
+            {isFetching && (
+              <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 rounded-xl backdrop-blur-[1px]"><div className="sticky top-[40vh] flex justify-center w-full"><LoadingSpinner message="Actualizando..." /></div></div>
             )}
-
             {users.length === 0 && !isFetching ? (
-              <EmptyState
-                icon={faUser}
-                title="No se encontraron usuarios"
-                description="Intenta ajustar tus filtros de búsqueda."
-                action={{
-                  label: "Limpiar filtros",
-                  onClick: () => {
-                    setSearchTerm("");
-                    setStartDate("");
-                    setEndDate("");
-                  },
-                }}
-              />
+              <EmptyState icon={faUser} title="No se encontraron usuarios" description="Ajusta los filtros." action={{ label: "Limpiar", onClick: () => { setSearchTerm(""); setStartDate(""); setEndDate(""); } }} />
             ) : viewMode === "cards" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-0.5 lg:mx-0">
                 {users.map((user) => (
-                  <Card
+                  <UserCard
                     key={user._id}
+                    user={user}
+                    allProjects={allProjects}
+                    allClients={allClients}
+                    vacations={allVacations}
                     onClick={() => openView(user)}
-                    className="hover:scale-105 hover:shadow-lg transition-all duration-200"
-                    header={{
-                      title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0],
-                      subtitle: user.email,
-                      icon: faUser,
-                      iconClassName: "text-blue-600", // Added this line
-                      badges: [
-                        ...(user.tenant && user.tenant.name
-                          ? [
-                              {
-                                text: user.tenant.name,
-                                variant: "default" as const,
-                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-                              },
-                            ]
-                          : []),
-                        {
-                          text: user.isActive ? "Activo" : "Inactivo",
-                          variant: user.isActive ? "green" : "destructive",
-                        },
-                      ],
-                      badgesPosition: "top",
-                    }}
-                    footer={
-                      canManage
-                        ? {
-                            actions: [
-                              ...(user.metadata?.isSolicitud
-                                ? [
-                                    {
-                                      icon: faPlus,
-                                      onClick: (e: any) => {
-                                        e.stopPropagation();
-                                        openEdit(user);
-                                      },
-                                      title: "Aprobar",
-                                      variant: "success" as const,
-                                    },
-                                  ]
-                                : []),
-                              {
-                                icon: faEdit,
-                                onClick: (e) => {
-                                  e.stopPropagation();
-                                  openEdit(user);
-                                },
-                                title: "Editar",
-                                variant: "default",
-                              },
-                              {
-                                icon: faKey,
-                                onClick: (e) => {
-                                  e.stopPropagation();
-                                  openPassword(user._id);
-                                },
-                                title: "Cambiar contraseña",
-                                variant: "default",
-                              },
-                              {
-                                icon: faTrash,
-                                onClick: (e) => {
-                                  e.stopPropagation();
-                                  handleDelete(user);
-                                },
-                                title: "Eliminar",
-                                variant: "default",
-                              },
-                            ],
-                          }
-                        : undefined
-                    }
-                  >
-                    {/* Roles */}
-                    <div className="mb-3">
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                        <FontAwesomeIcon icon={faUserShield} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                        Rol/es
-                      </label>
-                      {user.roles.length === 0 ? (
-                        <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {user.roles.slice(0, 3).map((role) => {
-                            const isCoord = role.name.toLowerCase().includes("coordinador");
-                            return (
-                              <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300"}`}>
-                                {role.name}
-                              </span>
-                            );
-                          })}
-                          {user.roles.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{user.roles.length - 3} más</span>}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-3">
-                      {/* Área */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Área
-                        </label>
-                        {typeof user.areaId === "object" && user.areaId?.name ? (
-                          <div className="flex flex-wrap gap-1">
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin área asignada</span>
-                        )}
-                      </div>
-
-                      {/* Cargo - Separado e independiente */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Cargo
-                        </label>
-                        {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin cargo asignado</span>}
-                      </div>
-
-                      {/* Nivel - Separado e independiente */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Nivel
-                        </label>
-                        {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-500 dark:text-gray-500">Sin nivel asignado</span>}
-                      </div>
-
-                      {/* Turno */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faClock} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Turno
-                        </label>
-                        {user.turnos && user.turnos.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {user.turnos.map((turno) => (
-                              <span key={turno._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
-                                {turno.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin turno</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 mt-3">
-                      {/* Sede */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faBuilding} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Sede
-                        </label>
-                        {(() => {
-                          const sedes = getActiveSedes(user);
-                          return sedes.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {sedes.map((sede, idx) => (
-                                <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
-                                  {sede}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-500 dark:text-gray-500">Sin sede</span>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Rol Frame */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faIdCard} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Rol Frame
-                        </label>
-                        {user.externalInfo?.rolFrames && user.externalInfo.rolFrames.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {user.externalInfo.rolFrames.map((rf, idx) => (
-                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
-                                {rf}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin rol frame</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-3 mt-3">
-                      {/* Clientes */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Clientes
-                        </label>
-                        {(() => {
-                          const uniqueClients = new Set<string>();
-
-                          // 1. Direct assignments
-                          if (user.clientIds && user.clientIds.length > 0) {
-                            user.clientIds.forEach((c: any) => {
-                              const cId = typeof c === "string" ? c : c._id;
-                              if (cId) uniqueClients.add(cId);
-                            });
-                          }
-
-                          // 2. Inferred from projects (using projectMap for better data)
-                          if (user.projectIds && user.projectIds.length > 0) {
-                            user.projectIds.forEach((p: any) => {
-                              const pId = typeof p === "string" ? p : p._id;
-                              // Try to get full project from map (likely has populated clientId)
-                              const pFull = projectMap.get(pId) || (typeof p === "object" ? p : null);
-
-                              if (pFull) {
-                                const c = pFull.clientId;
-                                if (c) {
-                                  const cId = typeof c === "object" ? c._id : c;
-                                  if (cId) uniqueClients.add(cId);
-                                }
-                              }
-                            });
-                          }
-
-                          const clientList = Array.from(uniqueClients)
-                            .map((cid) => {
-                              const client = clientMap.get(cid);
-                              return client ? client.name : null;
-                            })
-                            .filter(Boolean);
-
-                          if (clientList.length > 0) {
-                            return (
-                              <div className="flex flex-wrap gap-1">
-                                {clientList.map((name, idx) => (
-                                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
-                                    {name}
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          }
-                          return <span className="text-xs text-gray-500 dark:text-gray-500">Sin clientes</span>;
-                        })()}
-                      </div>
-                      {/* Proyectos */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Proyectos
-                        </label>
-                        {user.projectIds && user.projectIds.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {user.projectIds.map((p: any) => {
-                              const pId = p._id || p;
-                              const pName = p.name;
-                              const clientName = p.clientId?.name;
-
-                              // Find project-specific info in metadata.projects
-                              const userProject = (user.metadata?.projects as any[])?.find((up: any) => 
-                                (up.projectId?._id || up.projectId) === pId
-                              );
-
-                              if (!pName) return null;
-
-                              return (
-                                <div key={pId} className="flex flex-col gap-1.5 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 w-full lg:w-[calc(50%-0.375rem)] xl:w-full">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 uppercase tracking-tight truncate">
-                                      {pName}
-                                      {clientName && <span className="ml-1 opacity-60 text-[9px] font-normal">({clientName})</span>}
-                                    </span>
-                                  </div>
-                                  {userProject && (userProject.areaId || userProject.positionId || userProject.levelId) && (
-                                    <div className="flex flex-wrap gap-1 mt-0.5">
-                                      {userProject.areaId && (
-                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-primary-100/40 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border border-primary-200/30 dark:border-primary-800/20 font-bold uppercase">
-                                          {userProject.areaId.name}
-                                        </span>
-                                      )}
-                                      {userProject.positionId && (
-                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-blue-100/40 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200/30 dark:border-blue-800/20 font-bold uppercase">
-                                          {userProject.positionId.name}
-                                        </span>
-                                      )}
-                                      {userProject.levelId && (
-                                        <span className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-100/40 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200/30 dark:border-indigo-800/20 font-bold uppercase">
-                                          {userProject.levelId.name}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin proyectos</span>
-                        )}
-                      </div>
-                      {/* Tipo de Contrato */}
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                          <FontAwesomeIcon icon={faFileContract} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                          Tipo Contrato
-                        </label>
-                        {getActiveContractType(user) ? (
-                          <div className="flex gap-2 items-center flex-wrap">
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(user)}</span>
-                            {getActiveSchedule(user) && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 w-fit border border-gray-200 dark:border-gray-600">
-                                <FontAwesomeIcon icon={faClock} className="mr-1 h-3 w-3" />
-                                {getActiveSchedule(user)}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-500">Sin contrato activo</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Reemplazo y Empleado Reemplazado (solo mostrar si tienen valor) */}
-                    {(isReplacement(user) || getReplacedEmployee(user)) && (
-                      <div className="flex flex-wrap gap-6">
-                        {/* Reemplazo */}
-                        {isReplacement(user) && (
-                          <div className="flex flex-col">
-                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                              <FontAwesomeIcon icon={faUser} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                              Reemplazo
-                            </label>
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300 w-fit">Sí</span>
-                          </div>
-                        )}
-                        {/* Empleado Reemplazado */}
-                        {getReplacedEmployee(user) && (
-                          <div className="flex flex-col">
-                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                              <FontAwesomeIcon icon={faUser} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                              Reemplaza a
-                            </label>
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{getEmployeeNameById(getReplacedEmployee(user)!)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Card>
-                ))}
-                {canManage && (
-                  <Card
-                    variant="create"
-                    onClick={openCreate}
-                    header={{
-                      title: "Nuevo Usuario",
-                      subtitle: "Crear un nuevo usuario del sistema",
-                      icon: faUser,
-                    }}
+                    userLookup={userLookup}
+                    actions={canManage ? [
+                      ...(user.metadata?.isSolicitud ? [{ icon: faPlus, onClick: (e: any) => { e.stopPropagation(); openEdit(user); }, title: "Aprobar", className: "text-green-500" }] : []),
+                      { icon: faEdit, onClick: (e) => { e.stopPropagation(); openEdit(user); }, title: "Editar" },
+                      { icon: faKey, onClick: (e) => { e.stopPropagation(); openPassword(user._id); }, title: "Password" },
+                      { icon: faTrash, onClick: (e) => { e.stopPropagation(); handleDelete(user); }, title: "Eliminar", className: "text-red-500" }
+                    ] : undefined}
                   />
-                )}
+                ))}
+                {canManage && <Card variant="create" onClick={openCreate} header={{ title: "Nuevo Usuario", subtitle: "Crear un nuevo usuario", icon: faUser }} />}
               </div>
             ) : (
-              /* Vista de Tabla */
               <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Usuario</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Roles</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell text-center">Contratos</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden md:table-cell">Proyectos</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest hidden lg:table-cell">Rol frame</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest">Usuario</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell">Roles</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell text-center">Contratos</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest">Estado</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                     {users.map((user) => (
-                      <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors group cursor-pointer" onClick={() => openView(user)}>
+                      <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors cursor-pointer" onClick={() => openView(user)}>
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center shrink-0">
-                              <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
+                            <FontAwesomeIcon icon={faUser} className="text-blue-600" />
                             <div>
-                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500">{user.email}</p>
+                              <p className="text-sm font-semibold">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</p>
+                              <p className="text-xs text-gray-500">{user.email}</p>
                             </div>
                           </div>
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell">
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {user.roles?.map((role) => {
-                              const isCoord = role.name.toLowerCase().includes("coordinador");
-                              return (
-                                <span key={role._id} className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${isCoord ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-100 dark:border-amber-800" : "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-100 dark:border-blue-800"}`}>
-                                  {role.name}
-                                </span>
-                              );
-                            })}
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles.map((r) => <span key={r._id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 border border-blue-100">{r.name}</span>)}
                           </div>
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell text-center">
-                          <span className="text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
+                          <span className="text-xs font-bold bg-gray-100 px-2 py-0.5 rounded">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
                         </td>
-                        <td className="py-4 px-6 hidden md:table-cell">
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {user.projectIds && user.projectIds.length > 0 ? (
-                              user.projectIds.map((p: any) => {
-                                const pId = typeof p === "string" ? p : p._id;
-                                const pName = typeof p !== "string" && p.name ? p.name : allProjects.find((proj) => proj._id === pId)?.name || "P";
-                                
-                                // Find project-specific info
-                                const userProject = (user.metadata?.projects as any[])?.find((up: any) => 
-                                  (up.projectId?._id || up.projectId) === pId
-                                );
-
-                                return (
-                                  <div key={pId} className="flex flex-col gap-0.5 mb-1 last:mb-0 w-full">
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 shadow-sm truncate max-w-full uppercase">
-                                      {pName}
-                                    </span>
-                                    {userProject && (userProject.areaId || userProject.positionId || userProject.levelId) && (
-                                      <div className="flex flex-wrap gap-0.5 opacity-80">
-                                        {userProject.areaId && <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase">{userProject.areaId.name}</span>}
-                                        {(userProject.positionId || userProject.levelId) && (
-                                          <span className="text-[8px] text-gray-400 dark:text-gray-500">•</span>
-                                        )}
-                                        {userProject.positionId && <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase">{userProject.positionId.name}</span>}
-                                        {userProject.levelId && <span className="text-[8px] text-gray-400 dark:text-gray-500 italic ml-0.5">({userProject.levelId.name})</span>}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <span className="text-xs text-gray-400">—</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 hidden lg:table-cell">{user.externalInfo?.rolFrames?.[0] ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">{user.externalInfo.rolFrames[0]}</span> : <span className="text-xs text-gray-400">—</span>}</td>
                         <td className="py-4 px-6">
-                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${user.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{user.isActive ? "Activo" : "Inactivo"}</span>
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{user.isActive ? "Activo" : "Inactivo"}</span>
                         </td>
                         <td className="py-4 px-6 text-right">
-                          <div className="flex justify-end gap-1 transition-opacity">
-                            {canManage && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(user);
-                                }}
-                                className="p-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 rounded transition-colors"
-                                title="Eliminar"
-                              >
-                                <FontAwesomeIcon icon={faTrash} />
-                              </button>
-                            )}
+                          <div className="flex justify-end gap-1">
+                            {canManage && <button onClick={(e) => { e.stopPropagation(); handleDelete(user); }} className="p-2 text-gray-400 hover:text-red-500"><FontAwesomeIcon icon={faTrash} /></button>}
                           </div>
                         </td>
                       </tr>
@@ -2366,62 +1576,26 @@ export const UsersPage: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-6 pb-8 gap-4">
               <div className="flex-1 flex justify-between sm:hidden w-full">
-                <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                  Anterior
-                </button>
-                <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                  Siguiente
-                </button>
+                <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white disabled:opacity-50">Anterior</button>
+                <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white disabled:opacity-50">Siguiente</button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between w-full">
-                <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Mostrando <span className="font-semibold text-primary-600 dark:text-primary-400">{users.length}</span> usuarios (
-                    <span className="font-semibold text-primary-600 dark:text-primary-400">
-                      {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, totalUsers)}
-                    </span>
-                    ) de <span className="font-semibold text-primary-600 dark:text-primary-400">{totalUsers}</span>
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                      <span className="sr-only">Anterior</span>
-                      <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
-                    </button>
-
-                    {/* Page Numbers */}
-                    {Array.from({ length: totalPages }).map((_, i) => {
-                      const pageNum = i + 1;
-                      // Only show first, last, and pages around current
-                      if (pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)) {
-                        return (
-                          <button key={pageNum} onClick={() => setCurrentPage(pageNum)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold transition-all ${currentPage === pageNum ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}>
-                            {pageNum}
-                          </button>
-                        );
-                      }
-                      if ((pageNum === 2 && currentPage > 4) || (pageNum === totalPages - 1 && currentPage < totalPages - 3)) {
-                        return (
-                          <span key={`dots-${pageNum}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
-                            ...
-                          </span>
-                        );
-                      }
-                      return null;
-                    })}
-
-                    <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                      <span className="sr-only">Siguiente</span>
-                      <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
-                    </button>
-                  </nav>
-                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">Mostrando <span className="font-semibold text-primary-600">{users.length}</span> de <span className="font-semibold text-primary-600">{totalUsers}</span></p>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                  <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"><FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" /></button>
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const p = i + 1;
+                    if (p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)) {
+                      return <button key={p} onClick={() => setCurrentPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold ${currentPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"}`}>{p}</button>;
+                    }
+                    if ((p === 2 && currentPage > 4) || (p === totalPages - 1 && currentPage < totalPages - 3)) return <span key={`dots-${p}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700">...</span>;
+                    return null;
+                  })}
+                  <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"><FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" /></button>
+                </nav>
               </div>
             </div>
           )}

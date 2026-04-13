@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "../api/axiosConfig";
 import { projectsAPI, Project } from "../api/projects";
 import { usersAPI, User } from "../api/users";
 import { useAuthStore } from "../stores/authStore";
@@ -8,13 +9,13 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
+import { UserCard } from "../components/users/UserCard";
 import { Modal } from "../components/ui/Modal";
-import { Card } from "../components/ui/Card";
 
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
@@ -22,6 +23,9 @@ import { Area, areasAPI } from "../api/areas";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
 import { userProjectsAPI } from "../api/userProjects";
+import { clientsAPI } from "../api/clients";
+import { infoAPI, InfoItem } from "../api/info";
+import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 
 const HELP_KEY = "projectTeam" as const;
 
@@ -43,6 +47,14 @@ export const ProjectTeamPage: React.FC = () => {
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allPositions, setAllPositions] = useState<Position[]>([]);
   const [allLevels, setAllLevels] = useState<Level[]>([]);
+  const [allClients, setAllClients] = useState<any[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allSedes, setAllSedes] = useState<InfoItem[]>([]);
+  const [allCategoriasSat, setAllCategoriasSat] = useState<InfoItem[]>([]);
+  const [allEstados, setAllEstados] = useState<InfoItem[]>([]);
+  const [allTiposContrato, setAllTiposContrato] = useState<InfoItem[]>([]);
+  const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
+  const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
   // Filters
   const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
@@ -53,6 +65,31 @@ export const ProjectTeamPage: React.FC = () => {
     areaId: "",
     positionId: "",
     levelId: "",
+  });
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+  const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
+  const [wizardData, setWizardData] = useState({
+    // Step 1: Contrato
+    rol_frame_id: "",
+    categoria_sat_id: "",
+    tipo_contrato_id: "",
+    estado_id: "",
+    hora_inicio: "09:00",
+    hora_fin: "18:00",
+    fecha_alta_contrato: new Date().toISOString().split("T")[0],
+    fecha_baja_contrato: "",
+    // Step 2: Sueldo
+    cantidad_jornadas_laborales: 5,
+    sueldo_jornada: 0,
+    sueldo_mano: 0,
+    sueldo_mano_texto: "",
+    sueldo_neto: 0,
+    sueldo_bruto: 0,
+    // Step 3: Extras
+    sede_id: "",
+    reemplazo: false,
+    empleado_id_reemplezado: "",
+    observaciones: "",
   });
 
   // UI States
@@ -124,6 +161,46 @@ export const ProjectTeamPage: React.FC = () => {
         setAllUsers(usersData.users);
         setVacations(vacationsData);
         setAllAreas(areasData);
+
+        // Fetch additional data for user cards
+        const [allClientsData, allProjectsResponse] = await Promise.all([
+          clientsAPI.listAll(),
+          projectsAPI.listAll({ limit: 500 })
+        ]);
+        
+        setAllClients(allClientsData);
+        setAllProjects(allProjectsResponse);
+
+        // Fetch Metadata Info
+        const [sedes, cats, estados, tipos, rf] = await Promise.all([
+          infoAPI.listByType("sede"),
+          infoAPI.listByType("categoria-sat"),
+          infoAPI.listByType("estado-empleado"),
+          infoAPI.listByType("tipo-contrato"),
+          roleFrameAPI.list(),
+        ]);
+        setAllSedes(sedes);
+        setAllCategoriasSat(cats);
+        setAllEstados(estados);
+        setAllTiposContrato(tipos);
+        setAllRoleFrames(rf);
+
+        // Default sede from project if available
+        if (projectData.metadata?.sedeId) {
+          const sId = String(projectData.metadata.sedeId);
+          setWizardData(prev => ({ ...prev, sede_id: sId }));
+        }
+
+        // Build user lookup map
+        const lookupMap = new Map<number | string, string>();
+        usersData.users.forEach((u: User) => {
+          const metaId = (u.metadata as any)?.id;
+          if (metaId) {
+            const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email.split("@")[0];
+            lookupMap.set(metaId, name);
+          }
+        });
+        setUserLookup(lookupMap);
       } catch (error) {
         console.error("Error loading data:", error);
         sweetAlert.error("Error", "No se pudieron cargar los datos del equipo.");
@@ -160,6 +237,9 @@ export const ProjectTeamPage: React.FC = () => {
     }
     return "";
   }, [project]);
+
+  const projectMap = useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
+  const clientMap = useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
 
   const sedeName = useMemo(() => {
     if (!project) return null;
@@ -226,16 +306,6 @@ export const ProjectTeamPage: React.FC = () => {
     return members;
   }, [assignedUserIds, allUsers, searchTermTeam]);
 
-  const formatShiftDays = (days: number[]) => {
-    const dayNames = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
-    if (!days || days.length === 0) return "";
-    return days
-      .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)) 
-      .map((d) => dayNames[d] || "")
-      .filter((n) => n !== "")
-      .join(", ");
-  };
-
   // Check Is Coordinator Helper
   const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
 
@@ -299,7 +369,7 @@ export const ProjectTeamPage: React.FC = () => {
     
     // Find project-specific assignment (UserProject)
     const userProject = (user.metadata?.projects as any[])?.find((p: any) => 
-      (typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === project?._id
+      String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id)
     );
 
     const areaId = (userProject?.areaId?._id || userProject?.areaId || (typeof user.areaId === "object" ? user.areaId?._id : user.areaId)) || "";
@@ -322,7 +392,7 @@ export const ProjectTeamPage: React.FC = () => {
 
     try {
       // Find selected shift to get times
-      const selectedShift = (project?.turnos || []).find(t => (typeof t === 'object' ? t._id : t) === userScheduleData.shiftId);
+      const selectedShift = (project?.turnos || []).find(t => String(typeof t === 'object' ? t._id : t) === String(userScheduleData.shiftId));
       const startTime = typeof selectedShift === 'object' ? selectedShift.startTime : "09:00";
       const endTime = typeof selectedShift === 'object' ? selectedShift.endTime : "18:00";
 
@@ -362,7 +432,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       // 3. Update Project-Specific Assignment (UserProject)
       const userProject = (editingScheduleUser.metadata?.projects as any[])?.find((p: any) => 
-        (typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === project._id
+        String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id)
       );
 
       if (userProject?._id) {
@@ -387,23 +457,118 @@ export const ProjectTeamPage: React.FC = () => {
 
   /* ------------------------------- Actions -------------------------------- */
 
-  const handleAddUser = async (userId: string) => {
-    if (!project) return;
+  const handleAddUser = (userId: string) => {
+    const user = allUsers.find(u => u._id === userId);
+    if (!user) return;
+    
+    // Attempt to find existing data to pre-fill from user history
+    const metadataProjects = user.metadata?.projects || [];
+    const lastProject = metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null;
+    const lastContract = lastProject?.contracts?.length ? lastProject.contracts[lastProject.contracts.length - 1] : null;
 
-    const result = await sweetAlert.confirm("¿Agregar al equipo?", "El usuario será agregado al proyecto.", "Sí, agregar");
-    if (!result.isConfirmed) return;
+    // Default statuses and IDs
+    const activoEstado = allEstados.find(e => e.name.toLowerCase().includes("activo"));
+    
+    // Try to map names from last contract to current IDs
+    let initialCatId = "";
+    if (lastContract?.nombre_categoria_sat) {
+      initialCatId = String(allCategoriasSat.find(c => c.name === lastContract.nombre_categoria_sat)?.data.id || "");
+    } else if (user.metadata?.categoriaSatId) {
+      initialCatId = String(user.metadata.categoriaSatId);
+    }
+
+    let initialTipoContratoId = "";
+    if (lastContract?.nombre_contrato) {
+      initialTipoContratoId = String(allTiposContrato.find(t => t.name === lastContract.nombre_contrato)?.data.id || "");
+    }
+
+    let initialEstadoId = String(activoEstado?.data.id || "");
+    if (lastContract?.nombre_estado_empleado) {
+      const foundEstado = allEstados.find(e => e.name === lastContract.nombre_estado_empleado);
+      if (foundEstado) initialEstadoId = String(foundEstado.data.id);
+    }
+
+    let initialSedeId = project?.metadata?.sedeId ? String(project.metadata.sedeId) : "";
+    if (lastContract?.nombre_sede) {
+      const foundSede = allSedes.find(s => s.name === lastContract.nombre_sede);
+      if (foundSede) initialSedeId = String(foundSede.data.id);
+    }
+
+    let initialRolFrameId = "";
+    if (lastProject?.nombre_rol_frame) {
+      // Find role frame by name
+      const foundRF = allRoleFrames.find(rf => rf.name === lastProject.nombre_rol_frame);
+      if (foundRF) initialRolFrameId = String(foundRF.data.rol.id);
+    } else if (user.metadata?.roleFrameId) {
+      initialRolFrameId = String(user.metadata.roleFrameId);
+    }
+
+    setSelectedUserForWizard(user);
+    setWizardStep(1);
+    
+    // Reset wizard data with pulled data or defaults
+    setWizardData({
+      rol_frame_id: initialRolFrameId,
+      categoria_sat_id: initialCatId,
+      tipo_contrato_id: initialTipoContratoId,
+      estado_id: initialEstadoId,
+      hora_inicio: lastContract?.hora_inicio || "09:00",
+      hora_fin: lastContract?.hora_fin || "18:00",
+      fecha_alta_contrato: new Date().toISOString().split("T")[0],
+      fecha_baja_contrato: "",
+      cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
+      sueldo_jornada: lastContract?.sueldo_jornada || 0,
+      sueldo_mano: lastContract?.sueldo_mano || 0,
+      sueldo_mano_texto: lastContract?.sueldo_mano_texto || "",
+      sueldo_neto: 0,
+      sueldo_bruto: 0,
+      sede_id: initialSedeId,
+      reemplazo: false,
+      empleado_id_reemplezado: "",
+      observaciones: "",
+    });
+  };
+
+  const handleSaveWizard = async () => {
+    if (!selectedUserForWizard || !project) return;
 
     try {
-      const newAssigned = [...assignedUserIds, userId];
-      await projectsAPI.updateProject(project._id, { assignedUsers: newAssigned });
+      setLoading(true);
+      // Construct the data to send to specific assignment endpoint
+      // backend will handle UserProject and internal assignedUsers
+      await projectsAPI.assignMember(project._id, {
+        userId: selectedUserForWizard._id,
+        contract: {
+          ...wizardData,
+          externalEmployeeId: (selectedUserForWizard.metadata as any)?.id,
+          externalProjectId: (project.metadata as any)?.id || project.externalId,
+          // Convert string IDs to numbers as required by IContract
+          sede_id: Number(wizardData.sede_id),
+          estado_id: Number(wizardData.estado_id),
+          categoria_sat_id: Number(wizardData.categoria_sat_id),
+          tipo_contrato_id: Number(wizardData.tipo_contrato_id),
+          rol_frame_id: Number(wizardData.rol_frame_id),
+          empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null
+        }
+      });
 
+      sweetAlert.success("Miembro Agregado", `${selectedUserForWizard.firstName} ha sido incorporado al equipo.`);
+      
+      // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id);
       setProject(updatedProject);
+      setTeamConfig(updatedProject.teamConfig || []);
+      
+      const usersData = await usersAPI.list({ limit: 10000 });
+      setAllUsers(usersData.users);
 
-      sweetAlert.success("Usuario Agregado", "El usuario ha sido añadido al equipo.");
-    } catch (error) {
-      console.error("Error adding user:", error);
-      sweetAlert.error("Error", "No se pudo agregar al usuario.");
+      setSelectedUserForWizard(null);
+      setShowAddModal(false);
+    } catch (error: any) {
+      console.error("Error assigning member:", error);
+      sweetAlert.error("Error", error.response?.data?.error || "No se pudo agregar al miembro.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -434,6 +599,118 @@ export const ProjectTeamPage: React.FC = () => {
   if (!project && !loading) {
     return <EmptyState icon={faBriefcase} title="Proyecto no encontrado" description="El proyecto no existe o no tienes acceso." action={{ label: "volver", onClick: () => navigate(-1) }} />;
   }
+
+  // Render function for Table Row
+  const renderUserRow = (user: User) => {
+    const userConfig = teamConfig.find((c) => c.userId === user._id);
+    const projectMeta = user.metadata?.projects?.find((p: any) => {
+      const pId = p.projectId;
+      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+      return String(idToCheck) === String(projectId);
+    });
+    const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
+    const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+
+    return (
+      <tr key={user._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center shrink-0">
+              <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                {getUserVacationStatus(user._id) && (
+                  <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                    <FontAwesomeIcon icon={faUmbrellaBeach} className="mr-1" />
+                    VC
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex flex-wrap gap-1">
+            {user.roles.slice(0, 2).map((r) => (
+              <span key={r._id} className="text-[10px] px-2 py-0.5 rounded font-medium border bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                {r.name}
+              </span>
+            ))}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
+        <td className="px-4 py-3">
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.isActive ? "ACTIVO" : "INACTIVO"}</span>
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
+          {typeof user.areaId === "object" ? user.areaId?.name : "-"}
+        </td>
+        <td className="px-4 py-3">
+          {(() => {
+            const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+            const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
+            const shift = (project?.turnos || []).find((t: any) => String(typeof t === "object" ? t._id : t) === String(finalShiftId));
+            return shift ? (
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase">{typeof shift === "object" ? shift.name : "..."}</span>
+                <span className="text-[9px] text-gray-500 italic">{shift.startTime} - {shift.endTime}</span>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">-</span>
+            );
+          })()}
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
+          {activeContract?.nombre_contrato || "-"}
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
+          {activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}
+        </td>
+        <td className="px-4 py-3 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <button onClick={() => handleOpenScheduleModal(user)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Editar horario/área">
+              <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Retirar del proyecto">
+              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  const renderUserCard = (user: User) => {
+    const userConfig = teamConfig.find((c) => c.userId === user._id);
+    return (
+      <UserCard
+        key={user._id}
+        user={user}
+        allProjects={allProjects}
+        allClients={allClients}
+        vacations={vacations as any}
+        projectContext={project!}
+        userConfig={userConfig}
+        userLookup={userLookup}
+        actions={[
+          {
+            icon: faEdit,
+            title: "Editar Horario",
+            onClick: () => handleOpenScheduleModal(user),
+          },
+          {
+            icon: faTrash,
+            title: "Retirar del equipo",
+            onClick: () => handleRemoveUser(user._id),
+            className: "text-red-500 hover:text-red-700",
+          },
+        ]}
+      />
+    );
+  };
 
   return (
     <PageLayout
@@ -473,383 +750,120 @@ export const ProjectTeamPage: React.FC = () => {
           <LoadingSpinner message="Cargando equipo..." />
         </div>
       ) : project ? (
-        <>
-          <div className="flex flex-col gap-6">
-            {/* TABS */}
-            <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setActiveTab("coordinadores")}
-                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-                  activeTab === "coordinadores"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <FontAwesomeIcon icon={faUserTie} className="text-xs" />
-                Coordinadores
-              </button>
-              <button
-                onClick={() => setActiveTab("equipo")}
-                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-                  activeTab === "equipo"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <FontAwesomeIcon icon={faUsers} className="text-xs" />
-                Equipo
-              </button>
-              <button
-                onClick={() => setActiveTab("solicitudes")}
-                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
-                  activeTab === "solicitudes"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
-                Solicitudes
-                {solicitudesCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">
-                    {solicitudesCount}
-                  </span>
-                )}
-              </button>
-            </div>
+        <div className="flex flex-col gap-6">
+          {/* TABS */}
+          <div className="flex items-center border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab("coordinadores")}
+              className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+                activeTab === "coordinadores"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              <FontAwesomeIcon icon={faUserTie} className="text-xs" />
+              Coordinadores
+            </button>
+            <button
+              onClick={() => setActiveTab("solicitudes")}
+              className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+                activeTab === "solicitudes"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              <FontAwesomeIcon icon={faClipboardList} className="text-xs" />
+              Solicitudes
+              {solicitudesCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1">
+                  {solicitudesCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("equipo")}
+              className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+                activeTab === "equipo"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              <FontAwesomeIcon icon={faUsers} className="text-xs" />
+              Equipo
+            </button>
+          </div>
 
+          {/* Tab Content */}
+          <div className="mt-0">
             {activeTab === "equipo" && (
-            <>
-            {/* Current Team Section - Full Width */}
-            <div className="space-y-4">
-              <div className="flex gap-4 items-center justify-between">
-                <div className="relative w-full">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <FontAwesomeIcon icon={faSearch} />
-                  </span>
-                  <input type="text" className="input-field pl-10 h-10" placeholder="Buscar en equipo actual..." value={searchTermTeam} onChange={(e) => setSearchTermTeam(e.target.value)} />
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                  <div className="relative w-full">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <FontAwesomeIcon icon={faSearch} />
+                    </span>
+                    <input type="text" className="input-field pl-10 h-10" placeholder="Buscar en equipo actual..." value={searchTermTeam} onChange={(e) => setSearchTermTeam(e.target.value)} />
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => setViewMode("cards")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
+                      <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => setViewMode("table")} className={`px-3 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
+                      <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="items-center gap-2 shrink-0 hidden sm:flex">
-                  <button onClick={() => setViewMode("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas">
-                    <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => setViewMode("table")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${effectiveViewMode === "table" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tabla">
-                    <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+                {(() => {
+                  const coordinators = teamMembers.filter(checkIsCoordinator);
+                  const members = teamMembers.filter((u) => !checkIsCoordinator(u));
 
-              {(() => {
-                const coordinators = teamMembers.filter(checkIsCoordinator);
-                const members = teamMembers.filter((u) => !checkIsCoordinator(u));
-
-                // Render function for Table Row
-                const renderUserRow = (user: User) => {
-                  const userConfig = teamConfig.find((c) => c.userId === user._id);
-
-                  // Metadata extraction
-                  const projectMeta = user.metadata?.projects?.find((p) => {
-                    const pId = p.projectId;
-                    const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-                    if (idToCheck === projectId) return true;
-                    if (project && p.nombre_proyecto && p.nombre_proyecto.toLowerCase().trim() === project.name.toLowerCase().trim()) return true;
-                    return false;
-                  });
-                  const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
-
-                  const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
-                  const contrato = activeContract?.nombre_contrato || "-";
-                  const horario = activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-";
-
-                  return (
-                    <tr key={user._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center shrink-0">
-                            <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium text-gray-900 dark:text-white text-sm">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</div>
-                              {getUserVacationStatus(user._id) && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 animate-pulse">
-                                  <FontAwesomeIcon icon={faUmbrellaBeach} className="mr-1" />
-                                  DE VACACIONES
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500">{user.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {user.roles && user.roles.length > 0 ? (
-                            user.roles.map((r) => {
-                              const isCoord = r.name.toLowerCase().includes("coordinador");
-                              return (
-                                <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"}`}>
-                                  {r.name}
-                                </span>
-                              );
-                            })
-                          ) : (
-                            <span className="text-xs text-gray-400">Sin roles</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{rolFrame}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${user.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.isActive ? "ACTIVO" : "INACTIVO"}</span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
-                        {typeof user.areaId === "object" && user.areaId?.name ? user.areaId.name : "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
-                          const finalShiftId = shiftIdFromUser || userConfig?.shiftId;
-                          const shift = (project?.turnos || []).find((t: any) => (typeof t === "object" ? t._id : t) === finalShiftId);
-                          return shift ? (
-                            <div className="flex flex-col">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 uppercase tracking-wider w-fit">
-                                {typeof shift === "object" ? shift.name : "..."}
-                              </span>
-                              <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium ml-0.5 mt-0.5 italic tracking-tight">
-                                {shift.startTime} - {shift.endTime} | {calculateDuration(shift.startTime, shift.endTime)}
-                              </span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {(shift.days || [])
-                                  .sort((a: number, b: number) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
-                                  .map((d: number) => (
-                                    <span key={d} className="text-[9px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded px-1.5 py-0.25 font-bold border border-gray-200 dark:border-gray-600">
-                                      {formatShiftDays([d])}
-                                    </span>
-                                  ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400 italic">No asignado</span>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato}</td>
-                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-medium">
-                        {horario}
-                        {activeContract?.hora_inicio && activeContract?.hora_fin && (
-                          <span className="ml-1.5 opacity-60 text-[10px] font-bold">
-                            | {calculateDuration(activeContract.hora_inicio, activeContract.hora_fin)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleOpenScheduleModal(user)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded transition-colors" title="Editar Horario">
-                            <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
-                          </button>
-
-                          <button onClick={() => handleRemoveUser(user._id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors" title="Retirar del equipo">
-                            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                };
-
-                const renderUserCard = (user: User) => {
-                  const userConfig = teamConfig.find((c) => c.userId === user._id);
-
-                  // Metadata extraction
-                  const projectMeta = user.metadata?.projects?.find((p) => {
-                    const pId = p.projectId;
-                    const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-                    if (idToCheck === projectId) return true;
-                    if (project && p.nombre_proyecto && p.nombre_proyecto.toLowerCase().trim() === project.name.toLowerCase().trim()) return true;
-                    return false;
-                  });
-                  const rolFrame = projectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "Sin rol frame");
-
-                  return (
-                    <Card
-                      key={user._id}
-                      className="h-full"
-                      header={{
-                        title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email,
-                        subtitle: user.email,
-                        icon: faUser,
-                        iconClassName: "text-blue-600",
-                        badges: [
-                          { text: user.isActive ? "Activo" : "Inactivo", variant: user.isActive ? "green" : "destructive" },
-                          ...(getUserVacationStatus(user._id)
-                            ? [
-                                {
-                                  text: "DE VACACIONES",
-                                  variant: "warning" as const,
-                                  icon: faUmbrellaBeach,
-                                },
-                              ]
-                            : []),
-                        ],
-                        badgesPosition: "top",
-                      }}
-                      footer={{
-                        actions: [
-                          {
-                            icon: faEdit,
-                            title: "Editar Horario",
-                            onClick: () => handleOpenScheduleModal(user),
-                          },
-                          {
-                            icon: faTrash,
-                            title: "Retirar del equipo",
-                            onClick: () => handleRemoveUser(user._id),
-                          },
-                        ],
-                      }}
-                    >
-                      <div className="flex flex-col gap-3">
-                        {/* Roles */}
-                        <div className="flex flex-col">
-                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
-                            <FontAwesomeIcon icon={faUsers} className="h-3 w-3" /> Rol/es
-                          </label>
-                          <div className="flex flex-wrap gap-1">
-                            {user.roles && user.roles.length > 0 ? (
-                              user.roles.map((r) => {
-                                const isCoord = r.name.toLowerCase().includes("coordinador");
-                                return (
-                                  <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"}`}>
-                                    {r.name}
-                                  </span>
-                                );
-                              })
-                            ) : (
-                              <span className="text-xs text-gray-400">Sin roles</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-4">
-                          {/* Rol Frame */}
-                          <div className="flex flex-col">
-                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
-                              <FontAwesomeIcon icon={faIdCard} className="h-3 w-3" /> Rol Frame
-                            </label>
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{rolFrame}</span>
-                          </div>
-
-                          {/* Área */}
-                          <div className="flex flex-col">
-                            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
-                              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" /> Área
-                            </label>
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                              {typeof user.areaId === "object" && user.areaId?.name ? user.areaId.name : "Sin área"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Turno Display */}
-                        <div className="flex flex-col mt-1">
-                          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Turno</label>
-                          <div>
-                            {(() => {
-                              const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
-                              const finalShiftId = shiftIdFromUser || userConfig?.shiftId;
-                              const shift = (project?.turnos || []).find((t: any) => (typeof t === "object" ? t._id : t) === finalShiftId);
-                              return shift ? (
-                                <div className="flex flex-col">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 uppercase tracking-wider w-fit">
-                                    {typeof shift === "object" ? shift.name : "..."}
-                                  </span>
-                                  <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium ml-0.5 mt-0.5 italic tracking-tight">
-                                    {shift.startTime} - {shift.endTime}
-                                  </span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {(shift.days || [])
-                                      .sort((a: number, b: number) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
-                                      .map((d: number) => (
-                                        <span key={d} className="text-[9px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded px-1.5 py-0.25 font-bold border border-gray-200 dark:border-gray-600">
-                                          {formatShiftDays([d])}
-                                        </span>
-                                      ))}
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-gray-400 italic">No asignado</span>
-                              );
-                            })()}
-                          </div>
-                        </div>
-
-                        {userConfig && (userConfig.useProjectSchedule === false || (userConfig.startTime && userConfig.endTime)) && (
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-2 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded w-fit">
-                            <FontAwesomeIcon icon={faClock} /> {userConfig.startTime} - {userConfig.endTime} 
-                            <span className="opacity-70 ml-1 text-[10px]">({calculateDuration(userConfig.startTime, userConfig.endTime)})</span>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                };
-
-                return (
-                  <div className="bg-transparent">
-                    {teamMembers.length === 0 ? (
+                  if (teamMembers.length === 0) {
+                    return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
                         <p className="text-base font-medium">Aún no hay miembros en el equipo</p>
                         <p className="text-sm mt-1">Usa el botón "Agregar Miembro" para comenzar.</p>
-                        <button onClick={() => setShowAddModal(true)} className="mt-4 btn-primary px-4 py-2 text-sm flex items-center gap-2">
-                          <FontAwesomeIcon icon={faPlus} />
-                          Agregar Miembro
-                        </button>
                       </div>
-                    ) : (
-                      <>
-                        {effectiveViewMode === "table" ? (
-                          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    <th className="px-4 py-3 font-semibold">Usuario</th>
-                                    <th className="px-4 py-3 font-semibold">Rol/es</th>
-                                    <th className="px-4 py-3 font-semibold">Rol Frame</th>
-                                    <th className="px-4 py-3 font-semibold">Estado</th>
-                                    <th className="px-4 py-3 font-semibold">Area</th>
-                                    <th className="px-4 py-3 font-semibold">Turno</th>
-                                    <th className="px-4 py-3 font-semibold">Contrato</th>
-                                    <th className="px-4 py-3 font-semibold">Horario</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Acciones</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {coordinators.map((u) => renderUserRow(u))}
-                                  {members.map((u) => renderUserRow(u))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {coordinators.map((u) => renderUserCard(u))}
-                            {members.map((u) => renderUserCard(u))}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          </>
-          )}
+                    );
+                  }
 
-          {/* Coordinadores Tab */}
-          {activeTab === "coordinadores" && project && (
-            <div className="mt-0">
+                  return effectiveViewMode === "table" ? (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              <th className="px-4 py-3 font-semibold">Usuario</th>
+                              <th className="px-4 py-3 font-semibold">Rol/es</th>
+                              <th className="px-4 py-3 font-semibold">Rol Frame</th>
+                              <th className="px-4 py-3 font-semibold">Estado</th>
+                              <th className="px-4 py-3 font-semibold">Area</th>
+                              <th className="px-4 py-3 font-semibold">Turno</th>
+                              <th className="px-4 py-3 font-semibold">Contrato</th>
+                              <th className="px-4 py-3 font-semibold">Horario</th>
+                              <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {coordinators.map((u) => renderUserRow(u))}
+                            {members.map((u) => renderUserRow(u))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {coordinators.map((u) => renderUserCard(u))}
+                      {members.map((u) => renderUserCard(u))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {activeTab === "coordinadores" && project && (
               <TeamCoordinadoresTab
                 projectId={projectId!}
                 project={project}
@@ -861,17 +875,13 @@ export const ProjectTeamPage: React.FC = () => {
                   setTeamConfig(updatedProject.teamConfig || []);
                 }}
               />
-            </div>
-          )}
+            )}
 
-          {/* Solicitudes Tab */}
-          {activeTab === "solicitudes" && project && (
-            <div className="mt-0">
+            {activeTab === "solicitudes" && project && (
               <TeamSolicitudesTab
                 projectId={projectId!}
                 project={project}
                 onApproved={async () => {
-                  // Re-fetch team data and solicitudes count
                   const [projectData, usersData] = await Promise.all([
                     projectsAPI.getProject(projectId!),
                     usersAPI.list({ limit: 10000 }),
@@ -879,16 +889,14 @@ export const ProjectTeamPage: React.FC = () => {
                   setProject(projectData);
                   setTeamConfig(projectData.teamConfig || []);
                   setAllUsers(usersData.users);
-                  // Update solicitudes count
                   const solis = await usersAPI.listSolicitudes();
                   setSolicitudesCount(solis.filter(u => u.metadata?.projectIds?.includes(projectId!)).length);
                 }}
               />
-            </div>
-          )}
+            )}
           </div>
 
-          {/* User Schedule Modal */}
+          {/* Modals */}
           <Modal isOpen={!!editingScheduleUser} onClose={() => setEditingScheduleUser(null)} title={`Configurar Miembro: ${editingScheduleUser?.firstName || "Usuario"}`} size="sm">
             <div className="space-y-6 py-2">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 flex gap-3">
@@ -900,42 +908,30 @@ export const ProjectTeamPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {/* AREA */}
                 <div className="space-y-1.5 text-left">
                   <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Área de Trabajo</label>
                   <select
                     className="input-field w-full text-sm font-medium"
                     value={userScheduleData.areaId}
-                    onChange={(e) => {
-                      const newAreaId = e.target.value;
-                      setUserScheduleData(prev => ({ ...prev, areaId: newAreaId, shiftId: "" })); // Clear shift when area changes
-                    }}
+                    onChange={(e) => setUserScheduleData(prev => ({ ...prev, areaId: e.target.value, shiftId: "" }))}
                   >
                     <option value="">Sin área asignada</option>
-                    {allAreas.map(a => (
-                      <option key={a._id} value={a._id}>{a.name}</option>
-                    ))}
+                    {allAreas.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
                   </select>
                 </div>
 
-                {/* CARGO (Position) */}
                 <div className="space-y-1.5 pt-1 text-left">
                   <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Cargo</label>
                   <select
                     className="input-field w-full text-sm font-medium"
                     value={userScheduleData.positionId}
-                    onChange={(e) => {
-                      setUserScheduleData(prev => ({ ...prev, positionId: e.target.value, levelId: "" }));
-                    }}
+                    onChange={(e) => setUserScheduleData(prev => ({ ...prev, positionId: e.target.value, levelId: "" }))}
                   >
                     <option value="">Sin cargo asignado</option>
-                    {allPositions.map(p => (
-                      <option key={p._id} value={p._id}>{p.name}</option>
-                    ))}
+                    {allPositions.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
                   </select>
                 </div>
 
-                {/* NIVEL (Level) */}
                 <div className="space-y-1.5 pt-1 text-left">
                   <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nivel</label>
                   <select
@@ -946,17 +942,11 @@ export const ProjectTeamPage: React.FC = () => {
                   >
                     <option value="">{userScheduleData.positionId ? "Sin nivel asignado" : "Primero elige un cargo"}</option>
                     {allLevels
-                      .filter(l => {
-                        const lPosId = typeof l.positionId === 'object' ? (l.positionId as any)?._id : l.positionId;
-                        return String(lPosId) === String(userScheduleData.positionId);
-                      })
-                      .map(l => (
-                        <option key={l._id} value={l._id}>{l.name}</option>
-                      ))}
+                      .filter(l => String(typeof l.positionId === 'object' ? (l.positionId as any)?._id : l.positionId) === String(userScheduleData.positionId))
+                      .map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
                   </select>
                 </div>
 
-                {/* TURNO */}
                 <div className="space-y-1.5 pt-1 text-left">
                   <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Turno Asignado</label>
                   <select
@@ -968,22 +958,10 @@ export const ProjectTeamPage: React.FC = () => {
                     <option value="">{userScheduleData.areaId ? "Selecciona un turno" : "Primero elige un área"}</option>
                     {(() => {
                       if (!project || !userScheduleData.areaId) return null;
-                      
-                      const areaCfg = project.areasConfig?.find((ac: any) => {
-                        const acId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
-                        return String(acId) === String(userScheduleData.areaId);
-                      });
-                      
-                      // Map populated shiftIds to strings for comparison
-                      const allowedShiftIds = (areaCfg?.shiftIds || []).map((s: any) => 
-                        typeof s === 'object' ? s._id : s
-                      );
-                      
+                      const areaCfg = project.areasConfig?.find((ac: any) => String(typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId) === String(userScheduleData.areaId));
+                      const allowedShiftIds = (areaCfg?.shiftIds || []).map((s: any) => typeof s === 'object' ? s._id : s);
                       return (project.turnos || [])
-                        .filter(t => {
-                          const sid = typeof t === "object" ? t._id : t;
-                          return allowedShiftIds.some(id => String(id) === String(sid));
-                        })
+                        .filter(t => allowedShiftIds.some(id => String(id) === String(typeof t === "object" ? t._id : t)))
                         .map((t: any) => (
                           <option key={typeof t === "object" ? t._id : t} value={typeof t === "object" ? t._id : t}>
                             {typeof t === "object" ? `${t.name} (${t.startTime} - ${t.endTime})` : "..."}
@@ -1005,9 +983,8 @@ export const ProjectTeamPage: React.FC = () => {
             </div>
           </Modal>
 
-          {/* Add Members Modal */}
-          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Diponibles para asignar (${filteredCandidates.length})`} size="lg">
-            <div className="space-y-4 max-h-[70vh] flex flex-col">
+          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Diponibles para asignar (${filteredCandidates.length})`} size="xl">
+            <div className="space-y-4 max-h-[85vh] flex flex-col">
               <div className="relative shrink-0">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
@@ -1016,138 +993,344 @@ export const ProjectTeamPage: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-100 dark:border-gray-700 rounded-lg">
-                {filteredCandidates.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-12 text-gray-500">
-                    <FontAwesomeIcon icon={faFilter} className="h-8 w-8 mb-2 opacity-20" />
-                    <p className="text-sm">No se encontraron usuarios disponibles</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
-                      <thead>
-                        <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                          <th className="px-4 py-3">Nombre</th>
-                          <th className="px-4 py-3">Rol</th>
-                          <th className="px-4 py-3">Rol Frame</th>
-                          <th className="px-4 py-3">Proyecto/s</th>
-                          <th className="px-4 py-3">Turnos asociados</th>
-                          <th className="px-4 py-3 text-right">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
-                        {filteredCandidates.map((user) => {
-                          const isCoordinator = checkIsCoordinator(user);
-                          const metadataProjects = user.metadata?.projects || [];
-                          const rolFrame = metadataProjects[0]?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
-                          
-                          // Projects with active contracts
-                          const now = new Date().getTime();
-                          const activeProjects = Array.from(new Set(
-                            metadataProjects
-                              .filter(p => !p.contracts || p.contracts.length === 0 || p.contracts.some(c => {
-                                const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-                                if (endDate) endDate.setHours(23, 59, 59, 999);
-                                return !endDate || endDate.getTime() >= now;
-                              }))
-                              .map(p => p.nombre_proyecto)
-                          )).filter(Boolean);
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                      <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                        <th className="px-4 py-3">Nombre</th>
+                        <th className="px-4 py-3">Rol</th>
+                        <th className="px-4 py-3">Rol Frame</th>
+                        <th className="px-4 py-3">Proyecto/s</th>
+                        <th className="px-4 py-3">Turnos asociados</th>
+                        <th className="px-4 py-3 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
+                      {filteredCandidates.map((user) => {
+                        const isCoordinator = checkIsCoordinator(user);
+                        const metadataProjects = user.metadata?.projects || [];
+                        const rolFrame = metadataProjects[0]?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
+                        const activeProjects = Array.from(new Set(metadataProjects.map(p => p.nombre_proyecto))).filter(Boolean);
 
-                          return (
-                            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                                    {user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}
-                                  </span>
-                                  <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">
-                                    {user.email}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                  {isCoordinator && (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">
-                                      Coord.
-                                    </span>
-                                  )}
-                                  {(user.roles || []).map(r => {
-                                    const isCoord = r.name?.toLowerCase().includes("coordinador");
-                                    return (
-                                      <span 
-                                        key={r._id} 
-                                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${isCoord ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800"}`}
-                                      >
-                                        {r.name}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="font-medium text-gray-700 dark:text-gray-300">
-                                  {rolFrame}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col gap-0.5">
-                                  {activeProjects.length > 0 ? (
-                                    activeProjects.map((p, idx) => (
-                                      <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
-                                        {p}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col gap-1.5">
-                                  {user.turnos && user.turnos.length > 0 ? (
-                                    user.turnos.map(t => (
-                                      <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">
-                                          {typeof t === 'object' ? t.name : "Turno"}
-                                        </span>
-                                        {typeof t === 'object' && t.startTime && t.endTime && (
-                                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
-                                            {t.startTime} - {t.endTime}
-                                          </span>
-                                        )}
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <button 
-                                  onClick={() => handleAddUser(user._id)} 
-                                  className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold"
-                                >
-                                  <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                                  Agregar
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        return (
+                          <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                {isCoordinator && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">Coord.</span>}
+                                {(user.roles || []).map(r => <span key={r._id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800">{r.name}</span>)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{rolFrame}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-0.5">
+                                {activeProjects.length > 0 ? activeProjects.map((p, idx) => <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">{p}</span>) : <span className="text-xs text-gray-400">—</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-1.5">
+                                {user.turnos && user.turnos.length > 0 ? user.turnos.map(t => (
+                                  <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === 'object' ? t.name : "Turno"}</span>
+                                    {typeof t === 'object' && t.startTime && t.endTime && <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">{t.startTime} - {t.endTime}</span>}
+                                  </div>
+                                )) : <span className="text-xs text-gray-400">—</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button onClick={() => handleAddUser(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
+                                <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                Agregar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="shrink-0 pt-2 flex justify-end">
-                <button onClick={() => setShowAddModal(false)} className="btn-ghost">
-                  Cerrar
-                </button>
+                <button onClick={() => setShowAddModal(false)} className="btn-ghost">Cerrar</button>
               </div>
             </div>
           </Modal>
-        </>
+
+          {/* Wizard Modal */}
+          <Modal isOpen={!!selectedUserForWizard} onClose={() => setSelectedUserForWizard(null)} title="Edición integrante" subtitle={project?.name} size="xl">
+            <div className="space-y-6">
+              {/* Stepper Header */}
+              <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
+                {[
+                  { step: 1, label: "Contrato" },
+                  { step: 2, label: "Sueldo" },
+                  { step: 3, label: "Extras" }
+                ].map(s => (
+                  <button
+                    key={s.step}
+                    onClick={() => s.step < wizardStep && setWizardStep(s.step as any)}
+                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                      wizardStep === s.step 
+                        ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700" 
+                        : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Step 1: Contrato */}
+              {wizardStep === 1 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado *</label>
+                    <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Rol a desempeñar</label>
+                    <select 
+                      className="input-field w-full" 
+                      value={wizardData.rol_frame_id} 
+                      onChange={e => setWizardData(prev => ({ ...prev, rol_frame_id: e.target.value }))}
+                    >
+                      <option value="">Selecciona rol...</option>
+                      {allRoleFrames.map(rf => (
+                        <option key={rf._id} value={rf.data.rol.id}>{rf.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Categoria SAT *</label>
+                    <select 
+                      className="input-field w-full"
+                      value={wizardData.categoria_sat_id}
+                      onChange={e => setWizardData(prev => ({ ...prev, categoria_sat_id: e.target.value }))}
+                      required
+                    >
+                      <option value="">Selecciona categoria...</option>
+                      {allCategoriasSat.map(c => <option key={c._id} value={c.data.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Tipo de contrato *</label>
+                    <select 
+                      className="input-field w-full"
+                      value={wizardData.tipo_contrato_id}
+                      onChange={e => setWizardData(prev => ({ ...prev, tipo_contrato_id: e.target.value }))}
+                      required
+                    >
+                      <option value="">Selecciona tipo...</option>
+                      {allTiposContrato.map(t => <option key={t._id} value={t.data.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Estado *</label>
+                    <select 
+                      className="input-field w-full"
+                      value={wizardData.estado_id}
+                      onChange={e => setWizardData(prev => ({ ...prev, estado_id: e.target.value }))}
+                      required
+                    >
+                      <option value="">Selecciona estado...</option>
+                      {allEstados.map(e => <option key={e._id} value={e.data.id}>{e.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora inicio - HH:MM</label>
+                    <input 
+                      type="time" 
+                      className="input-field w-full" 
+                      value={wizardData.hora_inicio} 
+                      onChange={e => setWizardData(prev => ({ ...prev, hora_inicio: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Hora fin - HH:MM</label>
+                    <input 
+                      type="time" 
+                      className="input-field w-full" 
+                      value={wizardData.hora_fin} 
+                      onChange={e => setWizardData(prev => ({ ...prev, hora_fin: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
+                    <input 
+                      type="date" 
+                      className="input-field w-full text-sm" 
+                      value={wizardData.fecha_alta_contrato} 
+                      onChange={e => setWizardData(prev => ({ ...prev, fecha_alta_contrato: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha baja contrato</label>
+                    <input 
+                      type="date" 
+                      className="input-field w-full text-sm" 
+                      value={wizardData.fecha_baja_contrato} 
+                      onChange={e => setWizardData(prev => ({ ...prev, fecha_baja_contrato: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Sueldo */}
+              {wizardStep === 2 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cantidad de jornadas laborales *</label>
+                      <input 
+                        type="number" 
+                        className="input-field w-full"
+                        value={wizardData.cantidad_jornadas_laborales}
+                        onChange={e => setWizardData(prev => ({ ...prev, cantidad_jornadas_laborales: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo por jornada *</label>
+                      <input 
+                        type="number" 
+                        className="input-field w-full"
+                        value={wizardData.sueldo_jornada}
+                        onChange={e => setWizardData(prev => ({ ...prev, sueldo_jornada: Number(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
+                    <input 
+                      type="number" 
+                      className="input-field w-full"
+                      value={wizardData.sueldo_mano}
+                      onChange={e => setWizardData(prev => ({ ...prev, sueldo_mano: Number(e.target.value) }))}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto *</label>
+                    <input 
+                      type="text" 
+                      className="input-field w-full"
+                      placeholder="Ej: Cincuenta mil pesos"
+                      value={wizardData.sueldo_mano_texto}
+                      onChange={e => setWizardData(prev => ({ ...prev, sueldo_mano_texto: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
+                      <input 
+                        type="number" 
+                        className="input-field w-full"
+                        value={wizardData.sueldo_neto}
+                        onChange={e => setWizardData(prev => ({ ...prev, sueldo_neto: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo bruto</label>
+                      <input 
+                        type="number" 
+                        className="input-field w-full"
+                        value={wizardData.sueldo_bruto}
+                        onChange={e => setWizardData(prev => ({ ...prev, sueldo_bruto: Number(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Extras */}
+              {wizardStep === 3 && (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sede *</label>
+                    <select 
+                      className="input-field w-full"
+                      value={wizardData.sede_id}
+                      onChange={e => setWizardData(prev => ({ ...prev, sede_id: e.target.value }))}
+                    >
+                      <option value="">Selecciona sede...</option>
+                      {allSedes.map(s => <option key={s._id} value={s.data.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-100 dark:border-gray-800">
+                    <input 
+                      type="checkbox" 
+                      id="esReemplazo" 
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                      checked={wizardData.reemplazo}
+                      onChange={e => setWizardData(prev => ({ ...prev, reemplazo: e.target.checked }))}
+                    />
+                    <label htmlFor="esReemplazo" className="text-sm font-medium text-gray-700 dark:text-gray-300">Es reemplazo</label>
+                  </div>
+
+                  {wizardData.reemplazo && (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Empleado reemplazado</label>
+                      <select 
+                        className="input-field w-full"
+                        value={wizardData.empleado_id_reemplezado}
+                        onChange={e => setWizardData(prev => ({ ...prev, empleado_id_reemplezado: e.target.value }))}
+                      >
+                        <option value="">Selecciona empleado...</option>
+                        {teamMembers.map(m => (
+                          <option key={m._id} value={(m.metadata as any)?.id}>{m.firstName} {m.lastName}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Observaciones</label>
+                    <textarea 
+                      className="input-field w-full min-h-[100px] py-3" 
+                      placeholder="Notas adicionales..."
+                      value={wizardData.observaciones}
+                      onChange={e => setWizardData(prev => ({ ...prev, observaciones: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Wizard Footer */}
+              <div className="flex gap-3 pt-6 border-t border-gray-100 dark:border-gray-700">
+                {wizardStep > 1 && (
+                  <button onClick={() => setWizardStep((wizardStep - 1) as any)} className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                    ANTERIOR
+                  </button>
+                )}
+                {wizardStep < 3 ? (
+                  <button onClick={() => setWizardStep((wizardStep + 1) as any)} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
+                    SIGUIENTE
+                  </button>
+                ) : (
+                  <button onClick={handleSaveWizard} className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95 uppercase tracking-wider">
+                    GUARDAR
+                  </button>
+                )}
+              </div>
+            </div>
+          </Modal>
+        </div>
       ) : null}
     </PageLayout>
   );

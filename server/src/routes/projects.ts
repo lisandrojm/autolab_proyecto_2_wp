@@ -260,12 +260,14 @@ router.get("/miniprojects", requireTenant, authenticateToken, async (req: Authen
 router.get("/clients/:clientId/projects/count", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { clientId } = req.params;
+    console.log(`[PROJECTS] Count for clientId: ${clientId}, tenant: ${req.tenantId}`);
 
     // Cast explícito a ObjectId
     let clientObjectId: Types.ObjectId;
     try {
       clientObjectId = new Types.ObjectId(clientId);
-    } catch {
+    } catch (err) {
+      console.error(`[PROJECTS] Invalid clientId: ${clientId}`);
       return res.status(400).json({ error: "clientId inválido" });
     }
 
@@ -276,6 +278,7 @@ router.get("/clients/:clientId/projects/count", requireTenant, authenticateToken
     });
 
     if (!client) {
+      console.warn(`[PROJECTS] Client not found: ${clientId}`);
       return res.status(404).json({ error: "Client not found" });
     }
 
@@ -293,7 +296,9 @@ router.get("/clients/:clientId/projects/count", requireTenant, authenticateToken
       filter.clientId = clientObjectId;
     }
 
+    console.log(`[PROJECTS] Count filter: ${JSON.stringify(filter)}`);
     const count = await Project.countDocuments(filter);
+    console.log(`[PROJECTS] Count result: ${count}`);
 
     res.json({ count });
   } catch (error) {
@@ -724,6 +729,75 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
     });
   } catch (error) {
     console.error("Cleanup team error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /projects/:projectId/assign-member - Specialized endpoint for the wizard
+router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId } = req.params;
+    const { userId, contract } = req.body;
+
+    if (!userId || !contract) {
+      return res.status(400).json({ error: "userId and contract data are required" });
+    }
+
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // 1. Resolve names for the contract from Info collection
+    const [sede, cat, estado, tipo] = await Promise.all([
+      Info.findOne({ type: "sede", "data.id": contract.sede_id }).lean(),
+      Info.findOne({ type: "categoria-sat", "data.id": contract.categoria_sat_id }).lean(),
+      Info.findOne({ type: "estado-empleado", "data.id": contract.estado_id }).lean(),
+      Info.findOne({ type: "tipo-contrato", "data.id": contract.tipo_contrato_id }).lean(),
+    ]);
+
+    const enrichedContract = {
+      ...contract,
+      nombre_sede: sede?.name || "Sin sede",
+      nombre_categoria_sat: cat?.name || "Sin categoria",
+      nombre_estado_empleado: estado?.name || "Activo",
+      nombre_contrato: tipo?.name || "Sin tipo",
+      fecha_carga: new Date().toISOString(),
+      nombre_proyecto: project.name,
+      proyecto_id: (project.metadata as any)?.id || project.externalId,
+      empleado_id: (user.metadata as any)?.id,
+    };
+
+    // 2. Find or Create UserProject (assignment)
+    let userProject = await UserProject.findOne({
+      externalProjectId: enrichedContract.proyecto_id,
+      externalEmployeeId: enrichedContract.empleado_id,
+    });
+
+    if (!userProject) {
+      userProject = new UserProject({
+        projectId: project._id,
+        externalProjectId: enrichedContract.proyecto_id,
+        externalEmployeeId: enrichedContract.empleado_id,
+        nombre_proyecto: project.name,
+        contracts: [enrichedContract],
+      });
+    } else {
+      // Add to contracts history
+      userProject.contracts.push(enrichedContract);
+      userProject.projectId = project._id; // Ensure link exists
+    }
+
+    await userProject.save();
+
+    // 3. Sync internal arrays (Project.assignedUsers and User.projectIds)
+    await Project.findByIdAndUpdate(projectId, { $addToSet: { assignedUsers: user._id } });
+    await User.findByIdAndUpdate(userId, { $addToSet: { projectIds: project._id } });
+
+    res.json({ message: "Member assigned successfully", userProject });
+  } catch (error) {
+    console.error("Assign member error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

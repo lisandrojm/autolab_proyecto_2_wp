@@ -218,12 +218,12 @@ const getDurationText = (start: string | null | undefined, end: string | null | 
   if (!start || !end || start === "—" || end === "—") return null;
   const [sH, sM] = start.split(":").map(Number);
   const [eH, eM] = end.split(":").map(Number);
-  let totalMins = (eH * 60 + eM) - (sH * 60 + sM);
+  let totalMins = eH * 60 + eM - (sH * 60 + sM);
   if (totalMins < 0) totalMins += 24 * 60;
   const h = Math.floor(totalMins / 60);
   const m = totalMins % 60;
   if (h === 0 && m === 0) return "0h";
-  return `${h > 0 ? h + 'h' : ''} ${m > 0 ? m + 'm' : ''}`.trim();
+  return `${h > 0 ? h + "h" : ""} ${m > 0 ? m + "m" : ""}`.trim();
 };
 const TIME_OPTIONS = (() => {
   const options = [];
@@ -1491,7 +1491,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         {!isFastEntryEnabled ? (
                           <div className="space-y-4">
                             {wizardIndex === -1 ? (
-                              <div className="text-center p-4 bg-gray-50 dark:bg-blue-600/10 rounded border border-blue-600 dark:border-blue-600">
+                              <div className="text-center p-4 bg-gray-50 dark:bg-blue-600/10 rounded border border-blue-600 dark:border-blue-600 mt-4">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Reporte Detallado de Asistencia</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
                                   Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
