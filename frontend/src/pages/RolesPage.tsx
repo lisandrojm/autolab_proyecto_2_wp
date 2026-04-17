@@ -54,7 +54,7 @@ const AVAILABLE_PERMISSIONS: Record<string, PermissionModule> = {
     description: "Acceso a la aplicación móvil",
     permissions: ["mobile_collaborator:view", "mobile_coordinator:view"],
   },
-  proyectos: {
+  project_responsible: {
     label: "Proyectos",
     icon: faBriefcase,
     description: "Capacidades relacionadas con la gestión de proyectos",
@@ -196,10 +196,12 @@ export const RolesPage: React.FC = () => {
    * Por ejemplo: "users:*" se expande a ["users:view", "users:create", "users:update", "users:delete"]
    */
   const expandWildcardPermissions = (permissions: string[]): string[] => {
-    const expanded: string[] = [];
     const allModules = { ...AVAILABLE_PERMISSIONS, ...SUPERADMIN_ONLY_PERMISSIONS };
+    const expanded: string[] = [];
 
     permissions.forEach((perm) => {
+      if (!perm) return;
+
       if (perm === "*") {
         // Permiso superadmin - agregar todos los permisos disponibles
         Object.values(allModules).forEach((mod) => {
@@ -207,12 +209,25 @@ export const RolesPage: React.FC = () => {
         });
       } else if (perm.endsWith(":*")) {
         // Comodín de módulo específico (ej: "users:*")
-        const [module] = perm.split(":");
-        const moduleData = allModules[module];
+        const [modulePrefix] = perm.split(":");
+        
+        // 1. Intentar encontrar por clave de módulo exacta
+        let moduleData = allModules[modulePrefix];
+        
+        // 2. Si no coincide, buscar cualquier módulo que tenga permisos con ese prefijo
+        if (!moduleData) {
+          const foundModule = Object.values(allModules).find(mod => 
+            mod.permissions.some(p => p.startsWith(`${modulePrefix}:`))
+          );
+          if (foundModule) {
+            moduleData = foundModule;
+          }
+        }
+
         if (moduleData) {
           expanded.push(...moduleData.permissions);
         } else {
-          // Si el módulo no existe en nuestra definición, mantener el permiso original
+          // Si no encontramos el módulo, lo dejamos como wildcard
           expanded.push(perm);
         }
       } else {

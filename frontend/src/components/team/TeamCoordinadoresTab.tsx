@@ -262,16 +262,6 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                                     ))}
                                   </select>
                                 </div>
-                                {currentUserId && (
-                                  <div className="hidden md:flex flex-wrap items-center gap-1.5">
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 whitespace-nowrap">
-                                      Mobile-Coordinador
-                                    </span>
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]" title={project.name}>
-                                      {project.name}
-                                    </span>
-                                  </div>
-                                )}
                               </div>
                             </td>
                           </tr>
@@ -282,7 +272,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                 </div>
               </div>
             ))}
-          </div>
+          
         </div>
       )}
 
@@ -310,6 +300,22 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                 <li>Son miembros activos del <strong>equipo del proyecto</strong>.</li>
                 <li>Tienen asignado explícitamente el rol de <strong>Mobile - Coordinador</strong>.</li>
               </ul>
+              
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2">Ejemplo de visualización:</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Nombre del Coordinador</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 whitespace-nowrap">
+                      Mobile-Coordinador
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 whitespace-nowrap">
+                      {project.name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <p className="pt-2 text-xs italic text-gray-400 dark:text-gray-500">
                 Si no ves a la persona que buscas, verifica que haya sido agregada al proyecto desde la pestaña principal del equipo y que cuente con los permisos necesarios.
               </p>

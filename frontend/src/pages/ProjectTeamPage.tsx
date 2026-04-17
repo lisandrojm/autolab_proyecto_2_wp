@@ -60,6 +60,10 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState(""); // For Disponibles (Modal)
+  const [filterRole, setFilterRole] = useState(""); // Filter by Role
+  const [filterRoleFrame, setFilterRoleFrame] = useState(""); // Filter by Role Frame
+  const [filterProject, setFilterProject] = useState(""); // Filter by Project
+  const [showFilters, setShowFilters] = useState(false); // Toggle filters UI
   const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
   const [editingScheduleUser, setEditingScheduleUser] = useState<User | null>(null);
   const [userScheduleData, setUserScheduleData] = useState({
@@ -287,9 +291,28 @@ export const ProjectTeamPage: React.FC = () => {
         if (!fullName.includes(search) && !email.includes(search)) return false;
       }
 
+      // 3. Filter by Role
+      if (filterRole) {
+        if (!user.roles?.some(r => r.name === filterRole)) return false;
+      }
+
+      // 4. Filter by Role Frame
+      if (filterRoleFrame) {
+        const metadataProjects = user.metadata?.projects || [];
+        const userRF = metadataProjects[0]?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "");
+        if (userRF !== filterRoleFrame) return false;
+      }
+
+      // 5. Filter by Project
+      if (filterProject) {
+        const metadataProjects = user.metadata?.projects || [];
+        const hasProject = metadataProjects.some(p => p.nombre_proyecto === filterProject);
+        if (!hasProject) return false;
+      }
+
       return true;
     });
-  }, [allUsers, assignedUserIds, searchTerm]);
+  }, [allUsers, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject]);
 
   // Current Team Members
   const teamMembers = useMemo(() => {
@@ -1018,11 +1041,72 @@ export const ProjectTeamPage: React.FC = () => {
 
           <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Diponibles para asignar (${filteredCandidates.length})`} size="xl">
             <div className="space-y-4 max-h-[85vh] flex flex-col">
-              <div className="relative shrink-0">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
+              <div className="flex flex-col gap-3 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FontAwesomeIcon icon={faSearch} className="text-gray-400" />
+                    </div>
+                    <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
+                  </div>
+                  <button 
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${showFilters ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}
+                  >
+                    <FontAwesomeIcon icon={faFilter} className="text-xs" />
+                    Filtros
+                    {(filterRole || filterRoleFrame || filterProject) && (
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    )}
+                  </button>
                 </div>
-                <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
+
+                {showFilters && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol</label>
+                      <select 
+                        className="input-field py-1.5 h-auto text-xs" 
+                        value={filterRole} 
+                        onChange={(e) => setFilterRole(e.target.value)}
+                      >
+                        <option value="">Todos los Roles</option>
+                        {Array.from(new Set(allUsers.flatMap(u => (u.roles || []).map(r => r.name))))
+                          .sort()
+                          .map(roleName => <option key={roleName} value={roleName}>{roleName}</option>)
+                        }
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol Frame</label>
+                      <select 
+                        className="input-field py-1.5 h-auto text-xs" 
+                        value={filterRoleFrame} 
+                        onChange={(e) => setFilterRoleFrame(e.target.value)}
+                      >
+                        <option value="">Todos los Rol Frames</option>
+                        {allRoleFrames.map(rf => <option key={rf._id} value={rf.name}>{rf.name}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Proyecto/s</label>
+                      <select 
+                        className="input-field py-1.5 h-auto text-xs" 
+                        value={filterProject} 
+                        onChange={(e) => setFilterProject(e.target.value)}
+                      >
+                        <option value="">Todos los Proyectos</option>
+                        {Array.from(new Set(allUsers.flatMap(u => (u.metadata?.projects || []).map(p => p.nombre_proyecto))))
+                          .filter(Boolean)
+                          .sort()
+                          .map(projectName => <option key={projectName} value={projectName}>{projectName}</option>)
+                        }
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-100 dark:border-gray-700 rounded-lg">

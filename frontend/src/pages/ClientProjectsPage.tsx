@@ -204,7 +204,7 @@ export const ClientProjectsPage: React.FC = () => {
         centroCostoId: undefined,
         sedeId: undefined,
         responsableId: undefined,
-        clienteId: parseInt(client?.metadata?.clienteId) || undefined,
+        clienteId: client?.externalId ? parseInt(client.externalId) : undefined,
       },
     });
     setSelectedAreaId("");

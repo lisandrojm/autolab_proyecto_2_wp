@@ -445,11 +445,27 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
     const project = new Project({
       ...data,
       tenantId: req.tenantObjectId,
-      // Guardar como string funciona porque Mongoose castea, pero dejamos el valor original
       clientId: clientObjectId,
       createdBy: req.user!.userId,
       assignedUsers: [new Types.ObjectId(req.user!.userId)],
     });
+
+    // Ensure metadata is populated correctly as requested
+    const now = new Date();
+    project.metadata = {
+      ...(data.metadata || {}),
+      id: data.externalId || project.externalId,
+      nombre: project.name,
+      descripcion: project.description || "",
+      clienteId: client.externalId ? Number(client.externalId) : undefined,
+      fechaAlta: project.metadata?.fechaAlta || now.toISOString(),
+      fechaInicio: project.startDate ? project.startDate.toISOString() : "",
+      fechaFin: project.endDate ? project.endDate.toISOString() : "",
+      activo: project.status === "active",
+      responsableId: data.metadata?.responsableId,
+      sedeId: data.metadata?.sedeId,
+      centroCostoId: data.metadata?.centroCostoId,
+    };
 
     await project.save();
 
@@ -601,9 +617,38 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
       }
     }
 
-    const project = await Project.findOneAndUpdate(filter, updateData, { new: true, runValidators: true });
+    // Apply updates to currentProject
+    Object.assign(currentProject, updateData);
 
-    res.json(project);
+    // Sync metadata
+    if (!currentProject.metadata) {
+      currentProject.metadata = {} as any;
+    }
+
+    if (updateData.externalId !== undefined) currentProject.metadata.id = updateData.externalId;
+    if (updateData.name) currentProject.metadata.nombre = updateData.name;
+    if (updateData.description !== undefined) currentProject.metadata.descripcion = updateData.description || "";
+    if (updateData.startDate !== undefined) currentProject.metadata.fechaInicio = updateData.startDate ? updateData.startDate.toISOString() : "";
+    if (updateData.endDate !== undefined) currentProject.metadata.fechaFin = updateData.endDate ? updateData.endDate.toISOString() : "";
+    if (updateData.status) currentProject.metadata.activo = updateData.status === "active";
+
+    if (updateData.metadata) {
+      if (updateData.metadata.responsableId !== undefined) currentProject.metadata.responsableId = updateData.metadata.responsableId;
+      if (updateData.metadata.sedeId !== undefined) currentProject.metadata.sedeId = updateData.metadata.sedeId;
+      if (updateData.metadata.centroCostoId !== undefined) currentProject.metadata.centroCostoId = updateData.metadata.centroCostoId;
+    }
+
+    // Re-verify clientId/externalId relation if needed
+    if (updateData.clientId) {
+      const updatedClient = await Client.findById(updateData.clientId);
+      if (updatedClient?.externalId) {
+        currentProject.metadata.clienteId = Number(updatedClient.externalId);
+      }
+    }
+
+    await currentProject.save();
+
+    res.json(currentProject);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });
