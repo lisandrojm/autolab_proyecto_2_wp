@@ -799,7 +799,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       Info.findOne({ type: "sede", "data.id": contract.sede_id }).lean(),
       Info.findOne({ type: "categoria-sat", "data.id": contract.categoria_sat_id }).lean(),
       Info.findOne({ type: "estado-empleado", "data.id": contract.estado_id }).lean(),
-      Info.findOne({ type: "tipo-contrato", "data.id": contract.tipo_contrato_id }).lean(),
+      Info.findOne({ type: "contrato", "data.id": contract.tipo_contrato_id }).lean(),
     ]);
 
     const enrichedContract = {

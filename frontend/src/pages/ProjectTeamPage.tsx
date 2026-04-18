@@ -182,7 +182,7 @@ export const ProjectTeamPage: React.FC = () => {
           infoAPI.listByType("sede"),
           infoAPI.listByType("categoria-sat"),
           infoAPI.listByType("estado-empleado"),
-          infoAPI.listByType("tipo-contrato"),
+          infoAPI.listByType("contrato"),
           roleFrameAPI.list(),
         ]);
         setAllSedes(sedes);
@@ -314,7 +314,6 @@ export const ProjectTeamPage: React.FC = () => {
     });
   }, [allUsers, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject]);
 
-  // Current Team Members
   const teamMembers = useMemo(() => {
     const members = assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
 
@@ -330,6 +329,33 @@ export const ProjectTeamPage: React.FC = () => {
 
     return members;
   }, [assignedUserIds, allUsers, searchTermTeam]);
+
+  const availableCategoriasSat = useMemo(() => {
+    if (!wizardData.rol_frame_id) return [];
+    const selectedRF = allRoleFrames.find(rf => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
+    if (selectedRF && Array.isArray(selectedRF.data?.categoriasSat)) {
+      return selectedRF.data.categoriasSat;
+    }
+    return [];
+  }, [allRoleFrames, wizardData.rol_frame_id]);
+
+  const userAssignedRoleFrames = useMemo(() => {
+    if (!selectedUserForWizard) return [];
+    
+    const assignedNames = selectedUserForWizard.externalInfo?.rolFrames || [];
+    const projectsRFNames = (selectedUserForWizard.metadata?.projects || []).map(p => p.nombre_rol_frame).filter(Boolean);
+    const allAssignedNames = Array.from(new Set([...assignedNames, ...projectsRFNames]));
+
+    let filtered = allRoleFrames.filter(rf => allAssignedNames.includes(rf.name));
+
+    // If still empty, check the specific ID in metadata
+    if (filtered.length === 0 && selectedUserForWizard.metadata?.roleFrameId) {
+      const rfId = String(selectedUserForWizard.metadata.roleFrameId);
+      filtered = allRoleFrames.filter(rf => String(rf.data?.rol?.id) === rfId);
+    }
+
+    return filtered;
+  }, [allRoleFrames, selectedUserForWizard]);
 
   // Check Is Coordinator Helper
   const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
@@ -497,7 +523,17 @@ export const ProjectTeamPage: React.FC = () => {
     // Try to map names from last contract to current IDs
     let initialCatId = "";
     if (lastContract?.nombre_categoria_sat) {
-      initialCatId = String(allCategoriasSat.find(c => c.name === lastContract.nombre_categoria_sat)?.data.id || "");
+      // Find within the specific Role Frame categories if possible
+      const foundRF = allRoleFrames.find(rf => rf.name === lastProject?.nombre_rol_frame);
+      const rfCats = foundRF?.data?.categoriasSat || [];
+      const catInRF = rfCats.find((c: any) => c.nombre === lastContract.nombre_categoria_sat);
+      
+      if (catInRF) {
+        initialCatId = String(catInRF.id);
+      } else {
+        // Fallback to global list
+        initialCatId = String(allCategoriasSat.find(c => c.name === lastContract.nombre_categoria_sat)?.data.id || "");
+      }
     } else if (user.metadata?.categoriaSatId) {
       initialCatId = String(user.metadata.categoriaSatId);
     }
@@ -1212,14 +1248,20 @@ export const ProjectTeamPage: React.FC = () => {
                   </div>
                   
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Rol a desempeñar</label>
-                    <input 
-                      type="text" 
-                      className="input-field w-full bg-gray-50 dark:bg-gray-800/50 text-gray-500 cursor-not-allowed" 
-                      value={allRoleFrames.find(rf => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || "Sin role frame asignado"} 
-                      disabled 
-                      readOnly 
-                    />
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Role Frame a Desempeñar *</label>
+                    <select 
+                      className="input-field w-full"
+                      value={wizardData.rol_frame_id}
+                      onChange={e => setWizardData(prev => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: "" }))}
+                      required
+                    >
+                      <option value="">Selecciona role frame...</option>
+                      {userAssignedRoleFrames.map(rf => (
+                        <option key={rf._id} value={rf.data.rol.id}>
+                          {rf.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   
                   <div className="space-y-1.5">
@@ -1231,7 +1273,11 @@ export const ProjectTeamPage: React.FC = () => {
                       required
                     >
                       <option value="">Selecciona categoria...</option>
-                      {allCategoriasSat.map(c => <option key={c._id} value={c.data.id}>{c.name}</option>)}
+                      {availableCategoriasSat.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
                     </select>
                   </div>
 

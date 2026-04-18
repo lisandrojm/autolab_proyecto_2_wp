@@ -272,7 +272,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                 </div>
               </div>
             ))}
-          
+          </div>
         </div>
       )}
 
