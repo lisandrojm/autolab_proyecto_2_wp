@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
         mode === "development"
           ? {
               "/api": {
-                target: "http://localhost:8080", // backend local
+                target: "http://127.0.0.1:8080", // backend local
                 changeOrigin: true,
                 secure: false,
               },
