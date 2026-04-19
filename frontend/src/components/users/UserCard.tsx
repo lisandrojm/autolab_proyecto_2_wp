@@ -241,274 +241,62 @@ export const UserCard: React.FC<UserCardProps> = ({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        {/* Área */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Área
-          </label>
-          {typeof user.areaId === "object" && user.areaId?.name ? (
-            <div className="flex flex-wrap gap-1">
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300">{user.areaId.name}</span>
-            </div>
-          ) : (
-            <span className="text-xs text-gray-400">Sin área</span>
-          )}
-        </div>
-
-        {/* Cargo */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faUserTie} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Cargo
-          </label>
-          {typeof user.positionId === "object" && user.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.positionId.name}</span> : <span className="text-xs text-gray-400">Sin cargo</span>}
-        </div>
-
-        {/* Nivel */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faUserGraduate} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Nivel
-          </label>
-          {typeof user.levelId === "object" && user.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{user.levelId.name}</span> : <span className="text-xs text-gray-400">Sin nivel</span>}
-        </div>
-
-        {/* Turno */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faClock} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Turno
-          </label>
-          {(() => {
-            // Lógica de turno: Prioriza proyecto si hay contexto, sino base del usuario
-            const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? (user.turnos[0] as any)._id : user.turnos[0]) : undefined;
-            
-            // Si hay contexto de proyecto, buscamos el turno allí
-            if (projectContext) {
-              const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
-              const shiftInProject = (projectContext.turnos || []).find((t: any) => (typeof t === "object" ? t._id : t) === finalShiftId);
-              
-              if (shiftInProject) {
-                return (
-                  <div className="flex flex-col border border-indigo-100 dark:border-indigo-900/30 rounded p-1 bg-indigo-50/30 dark:bg-indigo-900/10">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300 w-fit">
-                      {typeof shiftInProject === "object" ? shiftInProject.name : "..."}
-                    </span>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium ml-0.5 mt-0.5 tracking-tight italic">
-                      {shiftInProject.startTime} - {shiftInProject.endTime}
-                    </span>
-                  </div>
-                );
+      {/* Clientes y Proyectos Agrupados */}
+      <div className="space-y-4">
+        {(() => {
+          const groups = new Map<string, { name: string; projects: any[] }>();
+          
+          // 1. Procesar proyectos asignados para agruparlos por cliente
+          user.projectIds?.forEach((p: any) => {
+            const pId = typeof p === "string" ? p : p?._id;
+            const pFull = projectMap.get(pId) || (typeof p === "object" ? p : null);
+            if (pFull) {
+              const cId = typeof pFull.clientId === "object" ? (pFull.clientId as any)?._id : pFull.clientId;
+              if (cId) {
+                if (!groups.has(cId)) {
+                  groups.set(cId, { name: clientMap.get(cId)?.name || "Cliente desconocido", projects: [] });
+                }
+                groups.get(cId)!.projects.push(pFull);
               }
             }
-            
-            // Fallback al turno base del usuario si no hay contexto o no se encontró en el proyecto
-            const baseShift = (user.turnos && user.turnos.length > 0 && typeof user.turnos[0] === 'object') ? user.turnos[0] : null;
-            if (baseShift) {
-              return (
-                <div className="flex flex-col">
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">
-                    {(baseShift as any).name}
-                  </span>
-                  {(baseShift as any).startTime && (
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-1 italic">
-                      {(baseShift as any).startTime} - {(baseShift as any).endTime}
-                    </span>
-                  )}
-                </div>
-              );
+          });
+
+          // 2. Asegurar que los clientes asignados directamente también aparezcan (aunque no tengan proyectos específicos)
+          user.clientIds?.forEach((c: any) => {
+            const cId = typeof c === "string" ? c : c?._id;
+            if (cId && !groups.has(cId)) {
+              groups.set(cId, { name: clientMap.get(cId)?.name || "Cliente desconocido", projects: [] });
             }
+          });
 
-            return <span className="text-xs text-gray-400">Sin turno</span>;
-          })()}
-        </div>
-      </div>
+          if (groups.size === 0) {
+            return <span className="text-xs text-gray-400 italic px-1">Sin clientes ni proyectos asignados</span>;
+          }
 
-      <div className="flex flex-wrap gap-3 mt-3">
-        {/* Sede */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faBuilding} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Sede
-          </label>
-          {(() => {
-            const sedes = getActiveSedes(user);
-            return sedes.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {sedes.map((sede, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">
-                    {sede}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <span className="text-xs text-gray-400">Sin sede</span>
-            );
-          })()}
-        </div>
-
-        {/* Rol Frame */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faIdCard} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Rol Frame
-          </label>
-          {currentProjectMeta?.nombre_rol_frame || (user.externalInfo?.rolFrames && user.externalInfo.rolFrames.length > 0) ? (
-            <div className="flex flex-wrap gap-1">
-              {currentProjectMeta?.nombre_rol_frame ? (
-                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${currentProjectMeta.nombre_rol_frame.toLowerCase().includes("responsable") ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800" : "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"}`}>
-                  {currentProjectMeta.nombre_rol_frame}
+          return Array.from(groups.values()).map((group, idx) => (
+            <div key={idx} className="flex flex-col gap-2 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50">
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-cyan-600 dark:text-cyan-400" />
+                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
+                  {group.name}
                 </span>
-              ) : (
-                user.externalInfo?.rolFrames?.map((rf: any, idx: number) => (
-                  <span key={idx} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${rf.toLowerCase().includes("responsable") ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800" : "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800"}`}>
-                    {rf}
-                  </span>
-                ))
-              )}
-            </div>
-          ) : (
-            <span className="text-xs text-gray-400">Sin rol frame</span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3 mt-3">
-        {/* Clientes */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Clientes
-          </label>
-          {(() => {
-            const uniqueClients = new Set<string>();
-            if (user.clientIds && user.clientIds.length > 0) {
-              user.clientIds.forEach((c: any) => {
-                const cId = typeof c === "string" ? c : c._id;
-                if (cId) uniqueClients.add(cId);
-              });
-            }
-            if (user.projectIds && user.projectIds.length > 0) {
-              user.projectIds.forEach((p: any) => {
-                const pId = typeof p === "string" ? p : p._id;
-                const pFull = projectMap.get(pId) || (typeof p === "object" ? p : null);
-                if (pFull) {
-                  const c = pFull.clientId;
-                  if (c) {
-                    const cId = typeof c === "object" ? (c as any)._id : c;
-                    if (cId) uniqueClients.add(cId);
-                  }
-                }
-              });
-            }
-            const clientList = Array.from(uniqueClients).map((cid) => {
-              const client = clientMap.get(cid);
-              return client ? client.name : null;
-            }).filter(Boolean);
-
-            if (clientList.length > 0) {
-              return (
-                <div className="flex flex-wrap gap-1">
-                  {clientList.map((name, idx) => (
-                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              );
-            }
-            return <span className="text-xs text-gray-400">Sin clientes</span>;
-          })()}
-        </div>
-
-        {/* Otros Proyectos */}
-        {!projectContext && (
-          <div className="flex flex-col">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-              <FontAwesomeIcon icon={faBriefcase} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-              Proyectos
-            </label>
-            {user.projectIds && user.projectIds.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {user.projectIds.map((projectItem) => {
-                  const pId = typeof projectItem === "object" ? (projectItem as any)._id : projectItem;
-                  const pFull = projectMap.get(pId);
-                  if (!pFull) return null;
-                  return (
-                    <span key={pId} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                      {pFull.name}
-                    </span>
-                  );
-                })}
               </div>
-            ) : (
-              <span className="text-xs text-gray-400">Sin proyectos</span>
-            )}
-          </div>
-        )}
+              <div className="flex flex-wrap gap-1.5 pl-5">
+                {group.projects.length > 0 ? (
+                  group.projects.map((p, pIdx) => (
+                    <span key={pIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shadow-sm">
+                      <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
+                      {p.name}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[10px] text-gray-400 italic">Sin proyectos específicos</span>
+                )}
+              </div>
+            </div>
+          ));
+        })()}
       </div>
-
-      <div className="flex flex-wrap gap-3 mt-3">
-        {/* Tipo de Contrato */}
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faFileContract} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Tipo Contrato
-          </label>
-          {getActiveContractType(user) ? (
-            <div className="flex gap-2 items-center flex-wrap">
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">{getActiveContractType(user)}</span>
-              {getActiveSchedule(user) && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
-                  <FontAwesomeIcon icon={faClock} className="mr-1 h-3 w-3" />
-                  {getActiveSchedule(user)}
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-xs text-gray-400">Sin contrato activo</span>
-          )}
-        </div>
-      </div>
-
-      {/* Reemplazo */}
-      {(isReplacement(user) || getReplacedEmployeeId(user)) && (
-        <div className="flex flex-wrap gap-6 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-          {isReplacement(user) && (
-            <div className="flex flex-col">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                <FontAwesomeIcon icon={faUser} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                Reemplazo
-              </label>
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300 w-fit">Sí</span>
-            </div>
-          )}
-          {getReplacedEmployeeId(user) && (
-            <div className="flex flex-col">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                <FontAwesomeIcon icon={faUser} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-                Reemplaza a
-              </label>
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
-                {(() => {
-                  const rId = getReplacedEmployeeId(user);
-                  return userLookup?.get(rId!) || `ID: ${rId}`;
-                })()}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Custom Schedule Indicator */}
-      {userConfig && (userConfig.useProjectSchedule === false || (userConfig.startTime && userConfig.endTime)) && (
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-3 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded w-fit">
-          <FontAwesomeIcon icon={faClock} /> Horario Personal: {userConfig.startTime} - {userConfig.endTime} 
-          <span className="opacity-70 ml-1 text-[10px]">({calculateDuration(userConfig.startTime, userConfig.endTime)})</span>
-        </div>
-      )}
     </Card>
   );
 };
