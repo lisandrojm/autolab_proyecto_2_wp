@@ -35,6 +35,9 @@ const ADMIN_PERMISSIONS = [
 
   // ──────────── Admin GENERAL ────────────
   "admin_clients:view", // Clientes
+  "admin_projects:view", // Proyectos
+  "admin_sedes:view", // Sedes
+  "admin_contracts:view", // Contratos
   "admin_orders:view", // Pedidos
   "admin_vacations:view", // Vacaciones
   "admin_activity_logs:view", // Novedades
@@ -54,6 +57,9 @@ const ADMIN_PERMISSIONS = [
   "config_vacations:view", // Vacaciones
   "config_activity_logs:view", // Novedades
   "config_pdf_templates:view", // Plantillas PDF
+
+  // ──────────── Proyectos ────────────
+  "project_responsible:eligible", // Responsable de Proyecto
 ];
 const MOBILE_COLLABORATOR_PERMISSIONS = [
   "mobile_collaborator:view", // Permisos de colaborador mobile
@@ -111,15 +117,14 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
       needsUpdate = true;
     }
 
-    // Actualizar permisos si han cambiado
+    // Actualizar permisos si faltan algunos esenciales (no sobreescribir para permitir personalización)
     const currentPerms = new Set(userRole.permissions);
-    const expectedPerms = new Set(USER_PERMISSIONS);
-    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const missingPerms = USER_PERMISSIONS.filter(p => !currentPerms.has(p));
 
-    if (!permsMatch) {
-      userRole.permissions = USER_PERMISSIONS;
+    if (missingPerms.length > 0) {
+      userRole.permissions = [...userRole.permissions, ...missingPerms];
       needsUpdate = true;
-      console.log(`[RoleInit] ♻️ Updating USER role permissions`);
+      console.log(`[RoleInit] ♻️ Adding missing permissions to USER role: ${missingPerms.join(", ")}`);
     }
 
     if (needsUpdate) {
@@ -155,15 +160,14 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
       needsUpdate = true;
     }
 
-    // Actualizar permisos si han cambiado
+    // Actualizar permisos si faltan algunos esenciales (no sobreescribir para permitir personalización)
     const currentPerms = new Set(adminRole.permissions);
-    const expectedPerms = new Set(ADMIN_PERMISSIONS);
-    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const missingPerms = ADMIN_PERMISSIONS.filter(p => !currentPerms.has(p));
 
-    if (!permsMatch) {
-      adminRole.permissions = ADMIN_PERMISSIONS;
+    if (missingPerms.length > 0) {
+      adminRole.permissions = [...adminRole.permissions, ...missingPerms];
       needsUpdate = true;
-      console.log(`[RoleInit] ♻️ Updating ADMIN role permissions`);
+      console.log(`[RoleInit] ♻️ Adding missing permissions to ADMIN role: ${missingPerms.join(", ")}`);
     }
 
     if (needsUpdate) {
@@ -212,10 +216,10 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
       return perm;
     });
 
-    // 2) Filtrar: Solo permitir permisos que terminen en :view o sean el comodín *
+    // 2) Filtrar: Solo permitir permisos que terminen en :view, :eligible o sean el comodín *
     // Esto elimina permisos granulares (:edit, :delete, :create) que ya no son necesarios
     const filteredPermissions = updatedPermissions.filter(
-      (perm) => perm === "*" || perm.endsWith(":view") || perm.startsWith("mobile_"), // Mantener roles móviles
+      (perm) => perm === "*" || perm.endsWith(":view") || perm.endsWith(":eligible") || perm.startsWith("mobile_"), // Mantener roles móviles y elegibilidad
     );
 
     if (filteredPermissions.length !== updatedPermissions.length) {
@@ -267,15 +271,14 @@ export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Prom
   } else {
     console.log(`[RoleInit] ✔️ MOBILE COLLABORATOR role already exists: ${collaboratorRole._id}`);
 
-    // Actualizar permisos si han cambiado
+    // Actualizar permisos si faltan algunos esenciales
     const currentPerms = new Set(collaboratorRole.permissions);
-    const expectedPerms = new Set(MOBILE_COLLABORATOR_PERMISSIONS);
-    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const missingPerms = MOBILE_COLLABORATOR_PERMISSIONS.filter(p => !currentPerms.has(p));
 
-    if (!permsMatch) {
-      collaboratorRole.permissions = MOBILE_COLLABORATOR_PERMISSIONS;
+    if (missingPerms.length > 0) {
+      collaboratorRole.permissions = [...collaboratorRole.permissions, ...missingPerms];
       await collaboratorRole.save();
-      console.log(`[RoleInit] ♻️ Updated MOBILE COLLABORATOR role permissions`);
+      console.log(`[RoleInit] ♻️ Added missing permissions to MOBILE COLLABORATOR role`);
     }
   }
 
@@ -298,15 +301,14 @@ export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Prom
   } else {
     console.log(`[RoleInit] ✔️ MOBILE COORDINATOR role already exists: ${coordinatorRole._id}`);
 
-    // Actualizar permisos si han cambiado
+    // Actualizar permisos si faltan algunos esenciales
     const currentPerms = new Set(coordinatorRole.permissions);
-    const expectedPerms = new Set(MOBILE_COORDINATOR_PERMISSIONS);
-    const permsMatch = currentPerms.size === expectedPerms.size && Array.from(currentPerms).every((p) => expectedPerms.has(p));
+    const missingPerms = MOBILE_COORDINATOR_PERMISSIONS.filter(p => !currentPerms.has(p));
 
-    if (!permsMatch) {
-      coordinatorRole.permissions = MOBILE_COORDINATOR_PERMISSIONS;
+    if (missingPerms.length > 0) {
+      coordinatorRole.permissions = [...coordinatorRole.permissions, ...missingPerms];
       await coordinatorRole.save();
-      console.log(`[RoleInit] ♻️ Updated MOBILE COORDINATOR role permissions`);
+      console.log(`[RoleInit] ♻️ Added missing permissions to MOBILE COORDINATOR role`);
     }
   }
 
