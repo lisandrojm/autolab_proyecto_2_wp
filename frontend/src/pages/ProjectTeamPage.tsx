@@ -102,7 +102,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [showAddModal, setShowAddModal] = useState(false);
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("coordinadores");
+  const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
 
   // Persistence for view mode
@@ -695,12 +695,17 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
-            {user.roles.slice(0, 2).map((r) => {
-              const isCoordinador = r.name.toLowerCase().includes("coordinador");
+            {user.roles.slice(0, 3).map((r) => {
+              const lower = r.name.toLowerCase();
+              const isCoordinador = lower.includes("coordinador");
+              const isResponsable = lower.includes("responsable");
               
-              const badgeClasses = isCoordinador
-                ? "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400"
-                : "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
+              let badgeClasses = "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
+              if (isCoordinador) {
+                badgeClasses = "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400";
+              } else if (isResponsable) {
+                badgeClasses = "border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400";
+              }
                 
               return (
                 <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
@@ -708,6 +713,11 @@ export const ProjectTeamPage: React.FC = () => {
                 </span>
               );
             })}
+            {user.roles.length > 3 && (
+              <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                +{user.roles.length - 3}
+              </span>
+            )}
           </div>
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
@@ -832,6 +842,17 @@ export const ProjectTeamPage: React.FC = () => {
           <div className="sticky top-[144px] pb-1 pt-3 z-[40] bg-[#f3f4f6] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 flex items-center justify-between shadow-sm lg:shadow-none hover:shadow-md transition-shadow">
             <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar flex-nowrap">
               <button
+                onClick={() => setActiveTab("equipo")}
+                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "equipo"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <FontAwesomeIcon icon={faUsers} className="text-xs" />
+                Equipo
+              </button>
+              <button
                 onClick={() => setActiveTab("coordinadores")}
                 className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
                   activeTab === "coordinadores"
@@ -868,17 +889,6 @@ export const ProjectTeamPage: React.FC = () => {
                     {solicitudesCount}
                   </span>
                 )}
-              </button>
-              <button
-                onClick={() => setActiveTab("equipo")}
-                className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === "equipo"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <FontAwesomeIcon icon={faUsers} className="text-xs" />
-                Equipo
               </button>
             </div>
             {/* The right side portal target */}
@@ -1173,12 +1183,28 @@ export const ProjectTeamPage: React.FC = () => {
                                 <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                {isCoordinator && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap">Coord.</span>}
-                                {(user.roles || []).map(r => <span key={r._id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800">{r.name}</span>)}
-                              </div>
-                            </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                  {(user.roles || []).map(r => {
+                                    const lower = r.name.toLowerCase();
+                                    const isCoord = lower.includes("coordinador");
+                                    const isResp = lower.includes("responsable");
+                                    
+                                    let classes = "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800";
+                                    if (isCoord) {
+                                      classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800";
+                                    } else if (isResp) {
+                                      classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
+                                    }
+                                    
+                                    return (
+                                      <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${classes}`}>
+                                        {r.name}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
                             <td className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{rolFrame}</td>
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-0.5">
