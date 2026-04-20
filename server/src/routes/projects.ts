@@ -806,7 +806,7 @@ router.post("/projects/:projectId/cleanup-team", requireTenant, authenticateToke
 router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { projectId } = req.params;
-    const { userId, contract } = req.body;
+    const { userId, contract, isUpdate } = req.body;
 
     if (!userId || !contract) {
       return res.status(400).json({ error: "userId and contract data are required" });
@@ -832,20 +832,27 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       isValidId(contract.shiftId) ? Shift.findById(contract.shiftId).lean() : Promise.resolve(null),
     ]);
 
-    // --- Validation: Check for overlapping shifts in ANY project ---
+    // --- Validation: Check for overlapping shifts in OTHER projects only ---
+    // Sanitize optional reference IDs (empty string -> null) to avoid BSON casting errors
+    const sanitizeId = (id: any) => (id === "" || id === undefined) ? null : id;
+    contract.areaId = sanitizeId(contract.areaId);
+    contract.positionId = sanitizeId(contract.positionId);
+    contract.levelId = sanitizeId(contract.levelId);
+    contract.shiftId = sanitizeId(contract.shiftId);
+
     if (contract.shiftId && contract.fecha_alta_contrato) {
       const newStart = new Date(contract.fecha_alta_contrato);
       const newEnd = contract.fecha_baja_contrato ? new Date(contract.fecha_baja_contrato) : new Date("2100-01-01");
 
+      // Only check OTHER projects, never block same-project saves
       const existingUserAssignments = await UserProject.find({
         userId,
+        projectId: { $ne: new Types.ObjectId(projectId) },
       }).lean();
 
       for (const assignment of existingUserAssignments) {
         for (const c of assignment.contracts) {
-          // If it's the same shift, check for date overlap
-          // SKIP if it's the SAME project we are currently assigning/editing
-          if (c.shiftId && String(c.shiftId) === String(contract.shiftId) && String(assignment.projectId) !== String(projectId)) {
+          if (c.shiftId && String(c.shiftId) === String(contract.shiftId)) {
             const exStart = new Date(c.fecha_alta_contrato);
             const exEnd = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date("2100-01-01");
 
@@ -865,6 +872,13 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       }
     }
 
+    // Resolve role frame name
+    let rolFrameName = "";
+    if (contract.rol_frame_id) {
+      const rfInfo = await Info.findOne({ type: "role-frame", "data.rol.id": Number(contract.rol_frame_id) }).lean();
+      if (rfInfo) rolFrameName = rfInfo.name;
+    }
+
     const enrichedContract = {
       ...contract,
       nombre_sede: sede?.name || "Sin sede",
@@ -875,6 +889,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       nombre_cargo: (pos as any)?.name || "Sin cargo",
       nombre_nivel: (level as any)?.name || "Sin nivel",
       nombre_turno: (shift as any)?.name || "Sin turno",
+      nombre_rol_frame: rolFrameName || "Sin rol frame",
       fecha_carga: new Date().toISOString(),
       nombre_proyecto: project.name,
       proyecto_id: (project.metadata as any)?.id || project.externalId,
@@ -888,22 +903,38 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     });
 
     if (!userProject) {
+      // New assignment
       userProject = new UserProject({
         projectId,
         userId,
         externalProjectId: enrichedContract.proyecto_id,
         externalEmployeeId: enrichedContract.empleado_id,
         nombre_proyecto: project.name,
+        nombre_rol_frame: rolFrameName,
         contracts: [enrichedContract],
       });
+    } else if (isUpdate) {
+      // Update mode: replace the last contract with the new data
+      if (userProject.contracts.length > 0) {
+        userProject.contracts[userProject.contracts.length - 1] = enrichedContract;
+      } else {
+        userProject.contracts.push(enrichedContract);
+      }
+      // Sync IDs
+      userProject.projectId = project._id;
+      userProject.userId = user._id;
+      if (enrichedContract.proyecto_id) userProject.externalProjectId = enrichedContract.proyecto_id;
+      if (enrichedContract.empleado_id) userProject.externalEmployeeId = enrichedContract.empleado_id;
+      if (rolFrameName) userProject.nombre_rol_frame = rolFrameName;
     } else {
-      // Add to contracts history
+      // Add to contracts history (new contract for existing project assignment)
       userProject.contracts.push(enrichedContract);
       // Ensure IDs are correctly synced
       userProject.projectId = project._id;
       userProject.userId = user._id;
       if (enrichedContract.proyecto_id) userProject.externalProjectId = enrichedContract.proyecto_id;
       if (enrichedContract.empleado_id) userProject.externalEmployeeId = enrichedContract.empleado_id;
+      if (rolFrameName) userProject.nombre_rol_frame = rolFrameName;
     }
 
     await userProject.save();
@@ -935,7 +966,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       } 
     });
 
-    res.json({ message: "Member assigned successfully", userProject });
+    res.json({ message: isUpdate ? "Member updated successfully" : "Member assigned successfully", userProject });
   } catch (error: any) {
     console.error("Assign member error CRASH:", error);
     res.status(500).json({ 

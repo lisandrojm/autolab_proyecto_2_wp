@@ -355,6 +355,11 @@ export const ProjectTeamPage: React.FC = () => {
       filtered = allRoleFrames.filter(rf => String(rf.data?.rol?.id) === rfId);
     }
 
+    // If STILL empty (e.g. editing existing member with no rolFrame history), show all role frames
+    if (filtered.length === 0) {
+      filtered = allRoleFrames;
+    }
+
     return filtered;
   }, [allRoleFrames, selectedUserForWizard]);
 
@@ -442,10 +447,10 @@ export const ProjectTeamPage: React.FC = () => {
     // Default statuses and IDs
     const activoEstado = allEstados.find(e => e.name.toLowerCase().includes("activo"));
     
-    // Try to map names from last contract to current IDs
-    let initialCatId = "";
-    if (lastContract?.nombre_categoria_sat) {
-      // Find within the specific Role Frame categories if possible
+    // Prioritize IDs from last contract if they exist (numeric IDs stored in UserProject)
+    let initialCatId = lastContract?.categoria_sat_id ? String(lastContract.categoria_sat_id) : "";
+    if (!initialCatId && lastContract?.nombre_categoria_sat) {
+      // Fallback: Find within the specific Role Frame categories if possible
       const foundRF = allRoleFrames.find(rf => rf.name === lastProject?.nombre_rol_frame);
       const rfCats = foundRF?.data?.categoriasSat || [];
       const catInRF = rfCats.find((c: any) => c.nombre === lastContract.nombre_categoria_sat);
@@ -456,39 +461,45 @@ export const ProjectTeamPage: React.FC = () => {
         // Fallback to global list
         initialCatId = String(allCategoriasSat.find(c => c.name === lastContract.nombre_categoria_sat)?.data.id || "");
       }
-    } else if (user.metadata?.categoriaSatId) {
+    } else if (!initialCatId && user.metadata?.categoriaSatId) {
       initialCatId = String(user.metadata.categoriaSatId);
     }
 
-    let initialTipoContratoId = "";
-    if (lastContract?.nombre_contrato) {
+    let initialTipoContratoId = lastContract?.tipo_contrato_id ? String(lastContract.tipo_contrato_id) : "";
+    if (!initialTipoContratoId && lastContract?.nombre_contrato) {
       initialTipoContratoId = String(allTiposContrato.find(t => t.name === lastContract.nombre_contrato)?.data.id || "");
     }
 
-    let initialEstadoId = String(activoEstado?.data.id || "");
-    if (lastContract?.nombre_estado_empleado) {
+    let initialEstadoId = lastContract?.estado_id ? String(lastContract.estado_id) : String(activoEstado?.data.id || "");
+    if (!initialEstadoId && lastContract?.nombre_estado_empleado) {
       const foundEstado = allEstados.find(e => e.name === lastContract.nombre_estado_empleado);
       if (foundEstado) initialEstadoId = String(foundEstado.data.id);
     }
 
-    let initialSedeId = project?.metadata?.sedeId ? String(project.metadata.sedeId) : "";
-    if (lastContract?.nombre_sede) {
+    let initialSedeId = lastContract?.sede_id ? String(lastContract.sede_id) : (project?.metadata?.sedeId ? String(project.metadata.sedeId) : "");
+    if (!initialSedeId && lastContract?.nombre_sede) {
       const foundSede = allSedes.find(s => s.name === lastContract.nombre_sede);
       if (foundSede) initialSedeId = String(foundSede.data.id);
     }
 
-    let initialRolFrameId = "";
-    if (lastProject?.nombre_rol_frame) {
+    let initialRolFrameId = lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : "";
+    if (!initialRolFrameId && lastProject?.nombre_rol_frame) {
       // Find role frame by name
       const foundRF = allRoleFrames.find(rf => rf.name === lastProject.nombre_rol_frame);
       if (foundRF) initialRolFrameId = String(foundRF.data.rol.id);
-    } else if (user.metadata?.roleFrameId) {
+    } else if (!initialRolFrameId && user.metadata?.roleFrameId) {
       initialRolFrameId = String(user.metadata.roleFrameId);
     }
 
     // Pre-fill assignments if they already exist in teamConfig
-    const existingConfig = teamConfig.find(c => c.userId === user._id);
-    const existingAssignments = existingConfig?.areaShiftAssignments || [];
+    // Primary source: project teamConfig
+    const existingConfig = teamConfig.find(c => String(c.userId) === String(user._id));
+    let existingAssignments = existingConfig?.areaShiftAssignments || [];
+
+    // Secondary source: user contract history (if teamConfig is missing it)
+    if (existingAssignments.length === 0 && lastContract?.areaShiftAssignments) {
+      existingAssignments = lastContract.areaShiftAssignments;
+    }
 
     // Map existing assignments to the wizard format, ensuring we use string IDs
     const areaShiftAssignments = (existingAssignments || []).map((a: any) => ({
@@ -499,6 +510,18 @@ export const ProjectTeamPage: React.FC = () => {
     setSelectedUserForWizard(user);
     setWizardStep(1);
     
+    // Helper for date formatting
+    const formatDate = (dateStr: any) => {
+      if (!dateStr) return "";
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return "";
+        return d.toISOString().split('T')[0];
+      } catch {
+        return "";
+      }
+    };
+
     // Reset wizard data with pulled data or defaults
     setWizardData({
       rol_frame_id: initialRolFrameId,
@@ -507,8 +530,8 @@ export const ProjectTeamPage: React.FC = () => {
       estado_id: initialEstadoId,
       hora_inicio: lastContract?.hora_inicio || "09:00",
       hora_fin: lastContract?.hora_fin || "18:00",
-      fecha_alta_contrato: lastContract?.fecha_alta_contrato || new Date().toISOString().split("T")[0],
-      fecha_baja_contrato: lastContract?.fecha_baja_contrato || "",
+      fecha_alta_contrato: formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
+      fecha_baja_contrato: formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
@@ -535,6 +558,9 @@ export const ProjectTeamPage: React.FC = () => {
       return;
     }
 
+    // Determine if this is an update (existing member) or new assignment
+    const isExistingMember = teamMembers.some(m => m._id === selectedUserForWizard._id);
+
     try {
       setLoading(true);
       // Construct the data to send to specific assignment endpoint
@@ -546,6 +572,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
+        isUpdate: isExistingMember,
         contract: {
           ...wizardData,
           areaId: primaryAreaId,
@@ -562,7 +589,7 @@ export const ProjectTeamPage: React.FC = () => {
         }
       });
 
-      sweetAlert.success("Miembro Agregado", `${selectedUserForWizard.firstName} ha sido incorporado al equipo.`);
+      sweetAlert.success(isExistingMember ? "Miembro Actualizado" : "Miembro Agregado", `${selectedUserForWizard.firstName} ha sido ${isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
       
       // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id);
@@ -702,15 +729,23 @@ export const ProjectTeamPage: React.FC = () => {
             let areaData: { id: string, name: string }[] = [];
 
             // 1. Priority: Detailed project team configuration (areaShiftAssignments)
-            const config = teamConfig.find(c => c.userId === user._id);
+            const config = teamConfig.find(c => String(c.userId) === String(user._id));
             if (config?.areaShiftAssignments && config.areaShiftAssignments.length > 0) {
               areaData = config.areaShiftAssignments.map((asa: any) => {
                 const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
-                const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find(a => String(a._id) === String(aId))?.name;
+                const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find(a => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
                 return aName ? { id: String(aId), name: aName } : null;
               }).filter(Boolean) as { id: string, name: string }[];
             } 
             
+            // 1b. Alternative: Check last contract in projects metadata (backup source)
+            if (areaData.length === 0 && activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
+               areaData = activeContract.areaShiftAssignments.map((asa: any) => {
+                const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
+                const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find(a => String(a._id) === String(aId))?.name;
+                return aName ? { id: String(aId), name: aName } : null;
+              }).filter(Boolean) as { id: string, name: string }[];
+            }
             // 2. Secondary: If coordinator and no detailed config, check coordinatorAssignments
             if (areaData.length === 0 && isCoord && project?.coordinatorAssignments) {
               const myAssignments = project.coordinatorAssignments.filter(asm => {
@@ -745,7 +780,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name })}
-                      className="flex items-center justify-center w-4 h-4 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors text-[10px] font-black shadow-sm"
+                      className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black"
                       title="Ver turnos"
                     >
                       +
@@ -756,8 +791,21 @@ export const ProjectTeamPage: React.FC = () => {
             );
           })()}
         </td>
-        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
-          {activeContract?.nombre_contrato || "-"}
+        <td className="px-4 py-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-gray-700 dark:text-gray-300">
+              {activeContract?.nombre_contrato || "-"}
+            </span>
+            {activeContract?.reemplazo && (
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
+                <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
+                <span>Reemplaza a: {(() => {
+                  const replaced = allUsers.find(u => (u.metadata as any)?.id === activeContract.empleado_id_reemplezado);
+                  return replaced ? `${replaced.firstName} ${replaced.lastName}` : `ID: ${activeContract.empleado_id_reemplezado}`;
+                })()}</span>
+              </div>
+            )}
+          </div>
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
           {activeContract?.hora_inicio ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "-"}
@@ -777,7 +825,7 @@ export const ProjectTeamPage: React.FC = () => {
   };
 
   const renderUserCard = (user: User) => {
-    const userConfig = teamConfig.find((c) => c.userId === user._id);
+    const userConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
     return (
       <UserCard
         key={user._id}
@@ -1186,35 +1234,84 @@ export const ProjectTeamPage: React.FC = () => {
               {(() => {
                 if (!viewingShiftsData) return null;
                 const { user, areaId } = viewingShiftsData;
-                const isCoord = checkIsCoordinator(user);
                 let shifts: any[] = [];
 
-                if (isCoord && project?.coordinatorAssignments) {
-                  const myAssignments = project.coordinatorAssignments.filter(asm => {
+                // 1. Check structural coordinator assignments
+                if (project?.coordinatorAssignments) {
+                  const myCoordAsgn = project.coordinatorAssignments.filter(asm => {
                     const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
                     const aid = typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId;
                     return String(uid) === String(user._id) && String(aid) === String(areaId);
                   });
-                  shifts = myAssignments.map(asm => {
+                  myCoordAsgn.forEach(asm => {
                     const sid = typeof asm.shiftId === 'object' ? asm.shiftId?._id : asm.shiftId;
-                    return allShifts.find(s => String(s._id) === String(sid));
-                  }).filter(Boolean);
-                } else {
-                  // For regular members, we usually assign them via wizardData.areaShiftAssignments
-                  // or legacy shiftId. If they have assignments for THIS area, show them.
-                  const userConfig = teamConfig.find(c => c.userId === user._id);
-                  const assignments = userConfig?.areaShiftAssignments || [];
-                  const areaAssign = assignments.find((a: any) => String(a.areaId) === String(areaId));
+                    const shift = allShifts.find(s => String(s._id) === String(sid));
+                    if (shift && !shifts.some(s => String(s._id) === String(shift._id))) shifts.push(shift);
+                  });
+                }
+
+                // 2. Check team configuration assignments (Wizard)
+                const userConfig = teamConfig.find(c => String(c.userId) === String(user._id));
+                const assignments = userConfig?.areaShiftAssignments || [];
+                const areaAssign = assignments.find((a: any) => {
+                  const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
+                  if (String(aid) === String(areaId)) return true;
                   
-                  if (areaAssign) {
-                    shifts = (areaAssign.shiftIds || []).map((sid: any) => allShifts.find(s => String(s._id) === String(sid))).filter(Boolean);
-                  } else {
-                    // Fallback for legacy members
-                    const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
-                    const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
-                    const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
-                    if (shift) shifts = [shift];
+                  // Secondary match: Check by area name if we have it
+                  const aData = allAreas.find(area => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+                  const targetName = viewingShiftsData.areaName;
+                  return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
+                });
+                
+                if (areaAssign) {
+                  const sids = areaAssign.shiftIds || [];
+                  sids.forEach((sid: any) => {
+                    const actualSid = typeof sid === 'object' ? sid?._id : sid;
+                    const shift = allShifts.find(s => String(s._id) === String(actualSid));
+                    if (shift && !shifts.some(s => String(s._id) === String(shift._id))) {
+                      shifts.push(shift);
+                    }
+                  });
+                } 
+                
+                // 3. Check user's contract history (metadata) - Same fallback as the table
+                if (shifts.length === 0) {
+                  const projectMeta = user.metadata?.projects?.find((p: any) => {
+                    const pId = p.projectId;
+                    const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+                    return String(idToCheck) === String(project?._id);
+                  });
+                  const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+                  
+                  if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
+                    const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
+                      const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
+                      if (String(aid) === String(areaId)) return true;
+                      const aData = allAreas.find(area => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+                      const targetName = viewingShiftsData.areaName;
+                      return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
+                    });
+
+                    if (fallbackAssign) {
+                      const sids = fallbackAssign.shiftIds || [];
+                      sids.forEach((sid: any) => {
+                        const actualSid = typeof sid === 'object' ? sid?._id : sid;
+                        const shift = allShifts.find(s => String(s._id) === String(actualSid));
+                        if (shift && !shifts.some(s => String(s._id) === String(shift._id))) {
+                          shifts.push(shift);
+                        }
+                      });
+                    }
                   }
+                }
+
+                // 4. Legacy members fallback
+                if (shifts.length === 0) {
+                  // Fallback for legacy members (only if nothing found yet)
+                  const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+                  const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
+                  const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
+                  if (shift) shifts = [shift];
                 }
 
                 if (shifts.length === 0) return <p className="text-center text-gray-500 py-12">No hay turnos asignados para esta área.</p>;

@@ -39,6 +39,10 @@ interface IContract {
   nombre_cargo: string;
   nombre_nivel: string;
   nombre_turno: string;
+  areaShiftAssignments?: {
+    areaId: Types.ObjectId | string;
+    shiftIds: (Types.ObjectId | string)[];
+  }[];
 }
 
 export interface IUserProject extends Document {
@@ -93,6 +97,12 @@ const contractSchema = new Schema<IContract>(
     nombre_cargo: { type: String },
     nombre_nivel: { type: String },
     nombre_turno: { type: String },
+    areaShiftAssignments: [
+      {
+        areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+        shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+      },
+    ],
   },
   { _id: false },
 ); // subdocument, no need for _id usually unless we want addressable contracts
