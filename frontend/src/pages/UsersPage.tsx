@@ -32,13 +32,9 @@ interface UserFormData {
   lastName: string;
   isActive: boolean;
   roles: string[];
-  positionId?: string;
-  levelId?: string;
-  areaId?: string;
   hireDate: string;
   extraVacationDays: number;
   clientIds: string[];
-  turnos: string[];
   isSolicitud?: boolean;
 }
 
@@ -78,7 +74,6 @@ export const UsersPage: React.FC = () => {
   const [filterProjectId, setFilterProjectId] = useState("");
   const [filterRoleFrameId, setFilterRoleFrameId] = useState("");
   const [filterRoleId, setFilterRoleId] = useState("");
-  const [filterTurnoId, setFilterTurnoId] = useState("");
   const [filterActiveContract, setFilterActiveContract] = useState(false);
   const [filterIsReplacement, setFilterIsReplacement] = useState(false);
   const [filterIsSolicitud, setFilterIsSolicitud] = useState(false);
@@ -104,13 +99,9 @@ export const UsersPage: React.FC = () => {
     lastName: "",
     isActive: true,
     roles: [],
-    positionId: undefined,
-    levelId: undefined,
-    areaId: undefined,
     hireDate: new Date().toISOString().split("T")[0],
     extraVacationDays: 0,
     clientIds: [],
-    turnos: [],
   });
 
   // password modal fields (cuando modalMode === "password")
@@ -222,7 +213,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud, filterTurnoId]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -257,7 +248,7 @@ export const UsersPage: React.FC = () => {
       const currentId = ++requestIdRef.current;
 
       // If filtering by client or using additional filters, fetch ALL users to filter client-side
-      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || !!filterRoleId || !!filterTurnoId || filterActiveContract || filterIsReplacement;
+      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || !!filterRoleId || filterActiveContract || filterIsReplacement;
       const isClientSideFilterNeeded = !!clientId || hasAdditionalFilters;
       const effectiveLimit = isClientSideFilterNeeded ? 10000 : limit;
       const effectivePage = isClientSideFilterNeeded ? 1 : page;
@@ -327,7 +318,7 @@ export const UsersPage: React.FC = () => {
         }
 
         // 2. ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, Role, Turno, ActiveContract)
-        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterRoleId || filterTurnoId || filterActiveContract || filterIsReplacement;
+        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterRoleId || filterActiveContract || filterIsReplacement;
 
         if (hasAdditionalFilters) {
           console.log(`[UsersPage] Applying Additional Filters to ${workingList.length} users...`);
@@ -364,11 +355,7 @@ export const UsersPage: React.FC = () => {
               if (!hasRole) return false;
             }
 
-            // Turno filter
-            if (filterTurnoId) {
-              const userTurnoIds = u.turnos?.map((t: any) => (typeof t === "string" ? t : t._id)) || [];
-              if (!userTurnoIds.includes(filterTurnoId)) return false;
-            }
+
 
             // Active Contract filter - match logic from getActiveContractType
             if (filterActiveContract) {
@@ -589,13 +576,9 @@ export const UsersPage: React.FC = () => {
       lastName: "",
       isActive: true,
       roles: Array.from(defaultRolesSet),
-      positionId: undefined,
-      levelId: undefined,
-      areaId: undefined,
       hireDate: new Date().toISOString().split("T")[0],
       extraVacationDays: 0,
       clientIds: [],
-      turnos: [],
     });
     setShowPassword(false);
     setShowModal(true);
@@ -616,14 +599,6 @@ export const UsersPage: React.FC = () => {
     setModalMode("edit");
 
     // Extraer positionId correctamente (puede ser string u objeto)
-    const positionId = typeof user.positionId === "string" ? user.positionId : typeof user.positionId === "object" && user.positionId?._id ? user.positionId._id : undefined;
-
-    // Extraer levelId correctamente (puede ser string u objeto)
-    const levelId = typeof user.levelId === "string" ? user.levelId : typeof user.levelId === "object" && user.levelId?._id ? user.levelId._id : undefined;
-
-    // Extraer areaId correctamente
-    const areaId = typeof user.areaId === "string" ? user.areaId : typeof user.areaId === "object" && user.areaId?._id ? user.areaId._id : undefined;
-
     const isSolicitud = user.metadata?.isSolicitud;
     let firstName = user.firstName || "";
     let lastName = user.lastName || "";
@@ -646,13 +621,9 @@ export const UsersPage: React.FC = () => {
       lastName,
       isActive: user.isActive,
       roles: user.roles.map((r) => r._id),
-      positionId,
-      levelId,
-      areaId,
       hireDate,
       extraVacationDays: user.extraVacationDays || 0,
       clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
-      turnos: user.turnos ? user.turnos.map((t) => (typeof t === "string" ? t : t._id)) : [],
       isSolicitud,
     });
     setShowPassword(false);
@@ -701,17 +672,7 @@ export const UsersPage: React.FC = () => {
         submitData.isActive = formData.isActive;
       }
 
-      // Enviar null explícitamente cuando se selecciona "Sin cargo" o "Sin nivel"
-      if (!submitData.positionId || submitData.positionId === "") {
-        submitData.positionId = null;
-        submitData.levelId = null;
-      } else if (!submitData.levelId || submitData.levelId === "") {
-        submitData.levelId = null;
-      }
 
-      if (submitData.levelId && !submitData.positionId) {
-        submitData.levelId = null;
-      }
 
       if (editingUser) {
         delete submitData.password;
@@ -898,13 +859,6 @@ export const UsersPage: React.FC = () => {
                   label: "Rol Sistema",
                   placeholder: "Todos los roles",
                 },
-                {
-                  value: filterTurnoId,
-                  onChange: setFilterTurnoId,
-                  options: allShifts.map((s) => ({ value: s._id, label: s.name })),
-                  label: "Turno",
-                  placeholder: "Todos los turnos",
-                },
               ]}
               switchFilters={[
                 {
@@ -1006,50 +960,6 @@ export const UsersPage: React.FC = () => {
                   })}
                 </div>
               )}
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
-                  Área
-                </label>
-                {typeof viewUser.areaId === "object" && viewUser.areaId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300 w-fit">{viewUser.areaId.name}</span> : <span className="text-xs text-gray-500">Sin área</span>}
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 text-gray-400" />
-                  Cargo
-                </label>
-                {typeof viewUser.positionId === "object" && viewUser.positionId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.positionId.name}</span> : <span className="text-xs text-gray-500">Sin cargo</span>}
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faUserGraduate} className="h-3 w-3 text-gray-400" />
-                  Nivel
-                </label>
-                {typeof viewUser.levelId === "object" && viewUser.levelId?.name ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.levelId.name}</span> : <span className="text-xs text-gray-500">Sin nivel</span>}
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faClock} className="h-3 w-3 text-gray-400" />
-                  Turno
-                </label>
-                {viewUser.turnos && viewUser.turnos.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {viewUser.turnos.map((turno) => (
-                      <span key={turno._id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300 w-fit">
-                        {turno.name} ({turno.startTime} - {turno.endTime})
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-500">Sin turno</span>
-                )}
-              </div>
             </div>
 
             <div className="flex flex-wrap gap-4">
@@ -1381,51 +1291,7 @@ export const UsersPage: React.FC = () => {
                   <input type="text" value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Area</label>
-                  <select value={formData.areaId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, areaId: e.target.value || undefined }))} className="input-field">
-                    <option value="">Sin area</option>
-                    {areas.map((area) => (
-                      <option key={area._id} value={area._id}>{area.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cargo</label>
-                  <select value={formData.positionId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, positionId: e.target.value || undefined, levelId: undefined }))} className="input-field">
-                    <option value="">Sin cargo</option>
-                    {positions.map((position) => (
-                      <option key={position._id} value={position._id}>{position.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
-                  <select value={formData.turnos[0] || ""} onChange={(e) => setFormData((prev) => ({ ...prev, turnos: e.target.value ? [e.target.value] : [] }))} className="input-field">
-                    <option value="">Sin turno</option>
-                    {allShifts.map((shift) => (
-                      <option key={shift._id} value={shift._id}>{shift.name} ({shift.startTime} - {shift.endTime})</option>
-                    ))}
-                  </select>
-                </div>
-                {formData.positionId && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nivel</label>
-                    <select value={formData.levelId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, levelId: e.target.value || undefined }))} className="input-field">
-                      <option value="">Sin nivel</option>
-                      {levels.filter((l) => l.type === "general").length > 0 && (
-                        <optgroup label="Generales">{levels.filter((l) => l.type === "general").map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}</optgroup>
-                      )}
-                      {levels.filter((l) => l.type === "position-specific").length > 0 && (
-                        <optgroup label="Específicos">{levels.filter((l) => l.type === "position-specific").map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}</optgroup>
-                      )}
-                    </select>
-                  </div>
-                )}
-              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Ingreso *</label>

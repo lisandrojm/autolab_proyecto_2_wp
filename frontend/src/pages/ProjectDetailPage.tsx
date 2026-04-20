@@ -752,13 +752,24 @@ export const ProjectDetailPage: React.FC = () => {
                               <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight mb-2">
                                 {typeof ac.areaId === "object" ? ac.areaId.name : "..."}
                               </div>
-                              <div className="flex flex-wrap gap-2">
-                                {ac.shiftIds.map((shift: any, j: number) => (
-                                  <div key={j} className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex flex-col">
-                                    <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{typeof shift === "object" ? shift.name : "..."}</span>
-                                    <span className="text-[8px] text-blue-600 dark:text-blue-500 font-medium uppercase">{typeof shift === "object" ? `${shift.startTime} — ${shift.endTime} hs` : ""}</span>
-                                  </div>
-                                ))}
+                              <div className="flex flex-wrap gap-3">
+                                  {ac.shiftIds.map((shift: any, j: number) => {
+                                    const DAY_LABELS = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+                                    const shiftDays = typeof shift === 'object' && Array.isArray(shift.days) ? shift.days : [];
+                                    return (
+                                      <div key={j} className="px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex flex-col min-w-[120px]">
+                                        <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{typeof shift === 'object' ? shift.name : '...'}</span>
+                                        <span className="text-[10px] text-blue-600 dark:text-blue-500 font-medium uppercase mt-0.5">{typeof shift === 'object' ? `${shift.startTime} — ${shift.endTime} hs` : ''}</span>
+                                        {shiftDays.length > 0 && (
+                                          <div className="flex gap-1 mt-1.5">
+                                            {DAY_LABELS.map((label, dayIdx) => (
+                                              <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${shiftDays.includes(dayIdx) ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : 'text-gray-300 dark:text-gray-600'}`}>{label}</span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             </div>
                           ))
@@ -1030,6 +1041,19 @@ export const ProjectDetailPage: React.FC = () => {
                     <div>
                       <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{shift.name}</div>
                       <div className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-wider">{shift.startTime} — {shift.endTime} hs</div>
+                      {shift.days && shift.days.length > 0 && (
+                        <div className="flex gap-0.5 mt-1.5">
+                          {['Do','Lu','Ma','Mi','Ju','Vi','Sa'].map((label, dayIdx) => (
+                            <span key={dayIdx} className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md ${
+                              shift.days.includes(dayIdx) 
+                                ? isShiftSelected
+                                  ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200'
+                                  : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                                : 'text-gray-300 dark:text-gray-600'
+                            }`}>{label}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${isShiftSelected ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-700"}`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xl ring-0 transition duration-200 ease-in-out ${isShiftSelected ? "translate-x-5" : "translate-x-0"}`} />

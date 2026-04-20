@@ -177,6 +177,21 @@ export const ProjectsPage: React.FC = () => {
     }
     try {
       setCreating(true);
+
+      // Validation for Area and Shift configuration
+      if (!formData.areasConfig || formData.areasConfig.length === 0) {
+        sweetAlert.error("Configuración requerida", "Debes agregar al menos un área al proyecto.");
+        setCreating(false);
+        return;
+      }
+
+      const hasInvalidArea = formData.areasConfig.some(ac => !ac.shiftIds || ac.shiftIds.length === 0);
+      if (hasInvalidArea) {
+        sweetAlert.error("Configuración requerida", "Cada área configurada debe tener al menos un turno asignado.");
+        setCreating(false);
+        return;
+      }
+
       await projectsAPI.createProject(selectedClientId, {
         ...formData,
       } as any);
@@ -457,9 +472,12 @@ export const ProjectsPage: React.FC = () => {
 
             {/* Áreas y Turnos */}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6 col-span-2">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Configuración por Área</label>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase mt-1 tracking-widest">
+                    * Es obligatorio configurar al menos un área y asignarle un turno
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -635,6 +653,19 @@ export const ProjectsPage: React.FC = () => {
                           <div>
                             <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{shift.name}</div>
                             <div className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-wider">{shift.startTime} — {shift.endTime}</div>
+                            {shift.days && shift.days.length > 0 && (
+                              <div className="flex gap-0.5 mt-1.5">
+                                {['Do','Lu','Ma','Mi','Ju','Vi','Sa'].map((label, dayIdx) => (
+                                  <span key={dayIdx} className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md ${
+                                    shift.days.includes(dayIdx) 
+                                      ? isShiftSelected
+                                        ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200'
+                                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                                      : 'text-gray-300 dark:text-gray-600'
+                                  }`}>{label}</span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${isShiftSelected ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-700"}`}>
                             <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xl ring-0 transition duration-200 ease-in-out ${isShiftSelected ? "translate-x-5" : "translate-x-0"}`} />

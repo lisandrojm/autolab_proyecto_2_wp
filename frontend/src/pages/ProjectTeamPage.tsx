@@ -15,7 +15,7 @@ import { Modal } from "../components/ui/Modal";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
@@ -23,6 +23,7 @@ import { Area, areasAPI } from "../api/areas";
 import { positionsAPI, Position } from "../api/positions";
 import { levelsAPI, Level } from "../api/levels";
 import { userProjectsAPI } from "../api/userProjects";
+import { shiftsAPI, Shift } from "../api/shifts";
 import { clientsAPI } from "../api/clients";
 import { infoAPI, InfoItem } from "../api/info";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
@@ -56,6 +57,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [allEstados, setAllEstados] = useState<InfoItem[]>([]);
   const [allTiposContrato, setAllTiposContrato] = useState<InfoItem[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
+  const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
   // Filters
@@ -65,15 +67,9 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterProject, setFilterProject] = useState(""); // Filter by Project
   const [showFilters, setShowFilters] = useState(false); // Toggle filters UI
   const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
-  const [editingScheduleUser, setEditingScheduleUser] = useState<User | null>(null);
-  const [userScheduleData, setUserScheduleData] = useState({
-    shiftId: "",
-    areaId: "",
-    positionId: "",
-    levelId: "",
-  });
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
+  const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User, areaId: string, areaName: string } | null>(null);
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
     rol_frame_id: "",
@@ -96,6 +92,9 @@ export const ProjectTeamPage: React.FC = () => {
     reemplazo: false,
     empleado_id_reemplezado: "",
     observaciones: "",
+    areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
+    positionId: "",
+    levelId: "",
   });
 
   // UI States
@@ -133,17 +132,19 @@ export const ProjectTeamPage: React.FC = () => {
     const init = async () => {
       try {
         setLoading(true);
-        const [projectData, usersData, vacationsData, areasData, positionsData, levelsData] = await Promise.all([
+        const [projectData, usersData, vacationsData, areasData, positionsData, levelsData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId),
           usersAPI.list({ limit: 10000 }), // Get all users (no limit)
           vacationsAPI.getAll(),
           areasAPI.listAll(),
           positionsAPI.listAll(),
           levelsAPI.listAll(),
+          shiftsAPI.getAll(),
         ]);
 
         setAllPositions(positionsData);
         setAllLevels(levelsData);
+        setAllShifts(shiftsData);
 
         // Auto-cleanup orphaned user IDs from assignedUsers
         try {
@@ -416,105 +417,26 @@ export const ProjectTeamPage: React.FC = () => {
     }
   };
   const handleOpenScheduleModal = (user: User) => {
-    const existing = teamConfig.find((c) => c.userId === user._id);
-    
-    // Find project-specific assignment (UserProject)
-    const userProject = (user.metadata?.projects as any[])?.find((p: any) => 
-      String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id)
-    );
-
-    const areaId = (userProject?.areaId?._id || userProject?.areaId || (typeof user.areaId === "object" ? user.areaId?._id : user.areaId)) || "";
-    const positionId = (userProject?.positionId?._id || userProject?.positionId || (typeof user.positionId === "object" ? user.positionId?._id : user.positionId)) || "";
-    const levelId = (userProject?.levelId?._id || userProject?.levelId || (typeof user.levelId === "object" ? user.levelId?._id : user.levelId)) || "";
-    
-    const shiftId = (user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : existing?.shiftId) || "";
-
-    setEditingScheduleUser(user);
-    setUserScheduleData({
-      shiftId,
-      areaId,
-      positionId,
-      levelId,
-    });
+    handleOpenWizard(user._id);
   };
 
-  const handleSaveUserSchedule = async () => {
-    if (!editingScheduleUser) return;
 
-    try {
-      // Find selected shift to get times
-      const selectedShift = (project?.turnos || []).find(t => String(typeof t === 'object' ? t._id : t) === String(userScheduleData.shiftId));
-      const startTime = typeof selectedShift === 'object' ? selectedShift.startTime : "09:00";
-      const endTime = typeof selectedShift === 'object' ? selectedShift.endTime : "18:00";
-
-      // 1. Update Project Team Config
-      const newConfig = teamMembers.map((member) => {
-        const existing = teamConfig.find((c) => c.userId === member._id);
-        if (member._id === editingScheduleUser._id) {
-          return {
-            userId: member._id,
-            canRegister: existing ? existing.canRegister : true,
-            shiftId: userScheduleData.shiftId,
-            useProjectSchedule: true,
-            startTime,
-            endTime
-          };
-        }
-        return {
-          userId: member._id,
-          canRegister: existing ? existing.canRegister : true,
-          useProjectSchedule: existing?.useProjectSchedule ?? true,
-          startTime: existing?.startTime || "09:00",
-          endTime: existing?.endTime || "18:00",
-          shiftId: existing?.shiftId,
-        };
-      });
-
-      await updateTeamConfig(newConfig);
-
-      // 2. Update Global User Info (Turnos & Fallback Area)
-      const shiftIds = userScheduleData.shiftId ? [userScheduleData.shiftId] : [];
-      await usersAPI.update(editingScheduleUser._id, { 
-        turnos: shiftIds,
-        areaId: userScheduleData.areaId || null,
-        positionId: userScheduleData.positionId || null,
-        levelId: userScheduleData.levelId || null
-      });
-
-      // 3. Update Project-Specific Assignment (UserProject)
-      const userProject = (editingScheduleUser.metadata?.projects as any[])?.find((p: any) => 
-        String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id)
-      );
-
-      if (userProject?._id) {
-        await userProjectsAPI.update(userProject._id, {
-          areaId: userScheduleData.areaId || null,
-          positionId: userScheduleData.positionId || null,
-          levelId: userScheduleData.levelId || null,
-        });
-      }
-
-      setEditingScheduleUser(null);
-      sweetAlert.success("Perfil Actualizado", `El cargo, nivel y área de ${editingScheduleUser.firstName} han sido personalizados para este proyecto.`);
-
-      // Refresh users to show updated data
-      const usersData = await usersAPI.list({ limit: 10000 });
-      setAllUsers(usersData.users);
-    } catch (err) {
-      console.error("Error saving user schedule/shift:", err);
-      sweetAlert.error("Error", "No se pudo guardar la configuración.");
-    }
-  };
 
   /* ------------------------------- Actions -------------------------------- */
 
-  const handleAddUser = (userId: string) => {
+  const handleOpenWizard = (userId: string) => {
     const user = allUsers.find(u => u._id === userId);
     if (!user) return;
     
     // Attempt to find existing data to pre-fill from user history
     const metadataProjects = user.metadata?.projects || [];
-    const lastProject = metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null;
+    
+    // Prioritize current project if existing
+    const currentProjectMeta = metadataProjects.find((p: any) => 
+      String(typeof p.projectId === 'string' ? p.projectId : p.projectId?._id) === String(project?._id)
+    );
+    
+    const lastProject = currentProjectMeta || (metadataProjects.length > 0 ? metadataProjects[metadataProjects.length - 1] : null);
     const lastContract = lastProject?.contracts?.length ? lastProject.contracts[lastProject.contracts.length - 1] : null;
 
     // Default statuses and IDs
@@ -564,6 +486,16 @@ export const ProjectTeamPage: React.FC = () => {
       initialRolFrameId = String(user.metadata.roleFrameId);
     }
 
+    // Pre-fill assignments if they already exist in teamConfig
+    const existingConfig = teamConfig.find(c => c.userId === user._id);
+    const existingAssignments = existingConfig?.areaShiftAssignments || [];
+
+    // Map existing assignments to the wizard format, ensuring we use string IDs
+    const areaShiftAssignments = (existingAssignments || []).map((a: any) => ({
+      areaId: String(a.areaId?._id || a.areaId || ""),
+      shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s))
+    }));
+
     setSelectedUserForWizard(user);
     setWizardStep(1);
     
@@ -575,35 +507,52 @@ export const ProjectTeamPage: React.FC = () => {
       estado_id: initialEstadoId,
       hora_inicio: lastContract?.hora_inicio || "09:00",
       hora_fin: lastContract?.hora_fin || "18:00",
-      fecha_alta_contrato: new Date().toISOString().split("T")[0],
-      fecha_baja_contrato: "",
+      fecha_alta_contrato: lastContract?.fecha_alta_contrato || new Date().toISOString().split("T")[0],
+      fecha_baja_contrato: lastContract?.fecha_baja_contrato || "",
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
       sueldo_mano_texto: lastContract?.sueldo_mano_texto || "",
-      sueldo_neto: 0,
-      sueldo_bruto: 0,
+      sueldo_neto: lastContract?.sueldo_neto || 0,
+      sueldo_bruto: lastContract?.sueldo_bruto || 0,
       sede_id: initialSedeId,
-      reemplazo: false,
-      empleado_id_reemplezado: "",
-      observaciones: "",
+      reemplazo: lastContract?.reemplazo || false,
+      empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || "",
+      observaciones: lastContract?.observaciones || "",
+      areaShiftAssignments: areaShiftAssignments,
+      positionId: lastContract?.positionId || "",
+      levelId: lastContract?.levelId || "",
     });
   };
 
   const handleSaveWizard = async () => {
     if (!selectedUserForWizard || !project) return;
 
+    // Validate area/shift assignment is required
+    if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) {
+      sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
+      setWizardStep(1);
+      return;
+    }
+
     try {
       setLoading(true);
       // Construct the data to send to specific assignment endpoint
       // backend will handle UserProject and internal assignedUsers
+      // Extract first assignment for backward-compatible contract fields
+      const firstAssignment = wizardData.areaShiftAssignments[0];
+      const primaryShiftId = firstAssignment?.shiftIds?.[0] || "";
+      const primaryAreaId = firstAssignment?.areaId || "";
+
       await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
         contract: {
           ...wizardData,
+          areaId: primaryAreaId,
+          shiftId: primaryShiftId,
+          areaShiftAssignments: wizardData.areaShiftAssignments,
           externalEmployeeId: (selectedUserForWizard.metadata as any)?.id,
           externalProjectId: (project.metadata as any)?.id || project.externalId,
-          // Convert string IDs to numbers as required by IContract
           sede_id: Number(wizardData.sede_id),
           estado_id: Number(wizardData.estado_id),
           categoria_sat_id: Number(wizardData.categoria_sat_id),
@@ -635,23 +584,31 @@ export const ProjectTeamPage: React.FC = () => {
 
   const handleRemoveUser = async (userId: string) => {
     if (!project) return;
-    const result = await sweetAlert.confirm("¿Retirar del equipo?", "El usuario será retirado del proyecto.");
+    const result = await sweetAlert.confirm("¿Retirar del equipo?", "El usuario será retirado del proyecto y se eliminarán sus asignaciones de áreas y turnos.");
     if (!result.isConfirmed) return;
 
     try {
-      const newAssigned = assignedUserIds.filter((id) => id !== userId);
-      await projectsAPI.updateProject(project._id, { assignedUsers: newAssigned });
+      setLoading(true);
+      
+      // Use the new thorough removal endpoint
+      await projectsAPI.removeMember(project._id, userId);
 
-      const updatedProject = await projectsAPI.getProject(project._id);
+      // Refresh local state
+      const [updatedProject, usersData] = await Promise.all([
+        projectsAPI.getProject(project._id),
+        usersAPI.list({ limit: 10000 })
+      ]);
+      
       setProject(updatedProject);
+      setTeamConfig(updatedProject.teamConfig || []);
+      setAllUsers(usersData.users);
 
-      const newConfig = teamConfig.filter((c) => c.userId !== userId);
-      updateTeamConfig(newConfig);
-
-      sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo.");
-    } catch (error) {
+      sweetAlert.success("Usuario Retirado", "El usuario ha sido retirado del equipo y sus asignaciones han sido limpiadas.");
+    } catch (error: any) {
       console.error("Error removing user:", error);
-      sweetAlert.error("Error", "No se pudo retirar al usuario.");
+      sweetAlert.error("Error", error.response?.data?.error || "No se pudo retirar al usuario.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -695,50 +652,107 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
-            {user.roles.slice(0, 3).map((r) => {
-              const lower = r.name.toLowerCase();
-              const isCoordinador = lower.includes("coordinador");
-              const isResponsable = lower.includes("responsable");
-              
-              let badgeClasses = "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
-              if (isCoordinador) {
-                badgeClasses = "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400";
-              } else if (isResponsable) {
-                badgeClasses = "border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400";
-              }
-                
+            {(() => {
+              const projectRespId = (project?.metadataResolutions as any)?.responsable?._id || project?.metadataResolutions?.responsable?.id || project?.metadata?.responsableId || (project?.metadata as any)?.id_responsable;
+              const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
+
+              const filteredRoles = user.roles.filter(r => !r.name.toLowerCase().includes("responsable"));
+
               return (
-                <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
-                  {r.name}
-                </span>
+                <>
+                  {isReallyResponsable && (
+                    <span className="text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">
+                      Responsable de Proyecto
+                    </span>
+                  )}
+                  {filteredRoles.slice(0, 3).map((r) => {
+                    const lower = r.name.toLowerCase();
+                    const isCoordinador = lower.includes("coordinador");
+                    
+                    let badgeClasses = "border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400";
+                    if (isCoordinador) {
+                      badgeClasses = "border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400";
+                    }
+                      
+                    return (
+                      <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
+                        {r.name}
+                      </span>
+                    );
+                  })}
+                  {filteredRoles.length > 3 && (
+                    <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                      +{filteredRoles.length - 3}
+                    </span>
+                  )}
+                </>
               );
-            })}
-            {user.roles.length > 3 && (
-              <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
-                +{user.roles.length - 3}
-              </span>
-            )}
+            })()}
           </div>
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
         <td className="px-4 py-3">
           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.isActive ? "ACTIVO" : "INACTIVO"}</span>
         </td>
-        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
-          {typeof user.areaId === "object" ? user.areaId?.name : "-"}
-        </td>
         <td className="px-4 py-3">
           {(() => {
-            const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
-            const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
-            const shift = (project?.turnos || []).find((t: any) => String(typeof t === "object" ? t._id : t) === String(finalShiftId));
-            return shift ? (
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase">{typeof shift === "object" ? shift.name : "..."}</span>
-                <span className="text-[9px] text-gray-500 italic">{shift.startTime} - {shift.endTime}</span>
+            const isCoord = checkIsCoordinator(user);
+
+            // Build area data list
+            let areaData: { id: string, name: string }[] = [];
+
+            // 1. Priority: Detailed project team configuration (areaShiftAssignments)
+            const config = teamConfig.find(c => c.userId === user._id);
+            if (config?.areaShiftAssignments && config.areaShiftAssignments.length > 0) {
+              areaData = config.areaShiftAssignments.map((asa: any) => {
+                const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
+                const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find(a => String(a._id) === String(aId))?.name;
+                return aName ? { id: String(aId), name: aName } : null;
+              }).filter(Boolean) as { id: string, name: string }[];
+            } 
+            
+            // 2. Secondary: If coordinator and no detailed config, check coordinatorAssignments
+            if (areaData.length === 0 && isCoord && project?.coordinatorAssignments) {
+              const myAssignments = project.coordinatorAssignments.filter(asm => {
+                const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
+                return String(uid) === String(user._id);
+              });
+              const areaIds = Array.from(new Set(myAssignments.map(asm => typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId)));
+              areaData = areaIds.map(id => {
+                const a = allAreas.find(area => String(area._id) === String(id));
+                return a ? { id: String(a._id), name: a.name } : null;
+              }).filter(Boolean) as { id: string, name: string }[];
+            }
+
+            // 3. Fallback: Global user area (legacy/basic)
+            if (areaData.length === 0) {
+              const userAreaId = typeof user.areaId === 'object' ? user.areaId?._id : user.areaId;
+              const userAreaName = typeof user.areaId === 'object' ? user.areaId?.name : allAreas.find(a => String(a._id) === String(userAreaId))?.name;
+              if (userAreaId && userAreaName) {
+                areaData = [{ id: String(userAreaId), name: userAreaName }];
+              }
+            }
+
+            if (areaData.length === 0) return <span className="text-xs text-gray-400">—</span>;
+
+            return (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {areaData.map((ad, i) => (
+                  <div key={i} className="group relative flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 pl-2 pr-1 py-1 rounded-lg border border-blue-100 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
+                    <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                      {ad.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name })}
+                      className="flex items-center justify-center w-4 h-4 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors text-[10px] font-black shadow-sm"
+                      title="Ver turnos"
+                    >
+                      +
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <span className="text-xs text-gray-400">-</span>
             );
           })()}
         </td>
@@ -862,17 +876,17 @@ export const ProjectTeamPage: React.FC = () => {
               >
                 <FontAwesomeIcon icon={faUserTie} className="text-xs" />
                 Coordinadores
-                <button
-                  type="button"
+                <span
+                  role="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenCoordinadoresInfo(true);
                   }}
-                  className={`ml-0.5 text-gray-400 hover:text-blue-500 transition-colors ${activeTab === "coordinadores" ? "text-blue-400" : ""}`}
+                  className={`ml-1.5 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer ${activeTab === "coordinadores" ? "text-blue-400" : ""}`}
                   title="Información de asignación"
                 >
                   <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                </button>
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab("solicitudes")}
@@ -941,8 +955,7 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold">Rol/es</th>
                               <th className="px-4 py-3 font-semibold">Rol Frame</th>
                               <th className="px-4 py-3 font-semibold">Estado</th>
-                              <th className="px-4 py-3 font-semibold">Area</th>
-                              <th className="px-4 py-3 font-semibold">Turno</th>
+                              <th className="px-4 py-3 font-semibold">Área / Turno</th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
                               <th className="px-4 py-3 font-semibold">Horario</th>
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>
@@ -999,91 +1012,7 @@ export const ProjectTeamPage: React.FC = () => {
           </div>
 
           {/* Modals */}
-          <Modal isOpen={!!editingScheduleUser} onClose={() => setEditingScheduleUser(null)} title={`Configurar Miembro: ${editingScheduleUser?.firstName || "Usuario"}`} size="sm">
-            <div className="space-y-6 py-2">
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 flex gap-3">
-                <FontAwesomeIcon icon={faIdCard} className="text-blue-500 mt-1" />
-                <div className="text-sm">
-                  <p className="font-semibold text-blue-900 dark:text-blue-200">Asignar Área y Turno</p>
-                  <p className="text-blue-700 dark:text-blue-400 opacity-80 mt-0.5 leading-relaxed">Define el área de trabajo y el turno correspondiente para este proyecto.</p>
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className="space-y-1.5 text-left">
-                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Área de Trabajo</label>
-                  <select
-                    className="input-field w-full text-sm font-medium"
-                    value={userScheduleData.areaId}
-                    onChange={(e) => setUserScheduleData(prev => ({ ...prev, areaId: e.target.value, shiftId: "" }))}
-                  >
-                    <option value="">Sin área asignada</option>
-                    {allAreas.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5 pt-1 text-left">
-                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Cargo</label>
-                  <select
-                    className="input-field w-full text-sm font-medium"
-                    value={userScheduleData.positionId}
-                    onChange={(e) => setUserScheduleData(prev => ({ ...prev, positionId: e.target.value, levelId: "" }))}
-                  >
-                    <option value="">Sin cargo asignado</option>
-                    {allPositions.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5 pt-1 text-left">
-                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nivel</label>
-                  <select
-                    className="input-field w-full text-sm font-medium"
-                    value={userScheduleData.levelId}
-                    onChange={(e) => setUserScheduleData(prev => ({ ...prev, levelId: e.target.value }))}
-                    disabled={!userScheduleData.positionId}
-                  >
-                    <option value="">{userScheduleData.positionId ? "Sin nivel asignado" : "Primero elige un cargo"}</option>
-                    {allLevels
-                      .filter(l => String(typeof l.positionId === 'object' ? (l.positionId as any)?._id : l.positionId) === String(userScheduleData.positionId))
-                      .map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5 pt-1 text-left">
-                  <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Turno Asignado</label>
-                  <select
-                    className="input-field w-full text-sm font-medium"
-                    value={userScheduleData.shiftId}
-                    onChange={(e) => setUserScheduleData((prev) => ({ ...prev, shiftId: e.target.value }))}
-                    disabled={!userScheduleData.areaId}
-                  >
-                    <option value="">{userScheduleData.areaId ? "Selecciona un turno" : "Primero elige un área"}</option>
-                    {(() => {
-                      if (!project || !userScheduleData.areaId) return null;
-                      const areaCfg = project.areasConfig?.find((ac: any) => String(typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId) === String(userScheduleData.areaId));
-                      const allowedShiftIds = (areaCfg?.shiftIds || []).map((s: any) => typeof s === 'object' ? s._id : s);
-                      return (project.turnos || [])
-                        .filter(t => allowedShiftIds.some(id => String(id) === String(typeof t === "object" ? t._id : t)))
-                        .map((t: any) => (
-                          <option key={typeof t === "object" ? t._id : t} value={typeof t === "object" ? t._id : t}>
-                            {typeof t === "object" ? `${t.name} (${t.startTime} - ${t.endTime})` : "..."}
-                          </option>
-                        ));
-                    })()}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setEditingScheduleUser(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  Cancelar
-                </button>
-                <button onClick={handleSaveUserSchedule} className="flex-1 py-2.5 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all active:scale-95">
-                  Guardar Cambios
-                </button>
-              </div>
-            </div>
-          </Modal>
 
           <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Diponibles para asignar (${filteredCandidates.length})`} size="xl">
             <div className="space-y-4 max-h-[85vh] flex flex-col">
@@ -1222,7 +1151,7 @@ export const ProjectTeamPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button onClick={() => handleAddUser(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
+                              <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
                                 <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
                                 Agregar
                               </button>
@@ -1241,28 +1170,98 @@ export const ProjectTeamPage: React.FC = () => {
             </div>
           </Modal>
 
+          {/* Viewing Shifts Modal */}
+          <Modal
+            isOpen={!!viewingShiftsData}
+            onClose={() => setViewingShiftsData(null)}
+            title={`Turnos Asignados - ${viewingShiftsData?.areaName}`}
+            subtitle={viewingShiftsData ? (
+              <p className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight">
+                {viewingShiftsData.user.firstName} {viewingShiftsData.user.lastName}
+              </p>
+            ) : ""}
+            size="md"
+          >
+            <div className="space-y-4">
+              {(() => {
+                if (!viewingShiftsData) return null;
+                const { user, areaId } = viewingShiftsData;
+                const isCoord = checkIsCoordinator(user);
+                let shifts: any[] = [];
+
+                if (isCoord && project?.coordinatorAssignments) {
+                  const myAssignments = project.coordinatorAssignments.filter(asm => {
+                    const uid = typeof asm.userId === 'object' ? asm.userId?._id : asm.userId;
+                    const aid = typeof asm.areaId === 'object' ? asm.areaId?._id : asm.areaId;
+                    return String(uid) === String(user._id) && String(aid) === String(areaId);
+                  });
+                  shifts = myAssignments.map(asm => {
+                    const sid = typeof asm.shiftId === 'object' ? asm.shiftId?._id : asm.shiftId;
+                    return allShifts.find(s => String(s._id) === String(sid));
+                  }).filter(Boolean);
+                } else {
+                  // For regular members, we usually assign them via wizardData.areaShiftAssignments
+                  // or legacy shiftId. If they have assignments for THIS area, show them.
+                  const userConfig = teamConfig.find(c => c.userId === user._id);
+                  const assignments = userConfig?.areaShiftAssignments || [];
+                  const areaAssign = assignments.find((a: any) => String(a.areaId) === String(areaId));
+                  
+                  if (areaAssign) {
+                    shifts = (areaAssign.shiftIds || []).map((sid: any) => allShifts.find(s => String(s._id) === String(sid))).filter(Boolean);
+                  } else {
+                    // Fallback for legacy members
+                    const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+                    const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
+                    const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
+                    if (shift) shifts = [shift];
+                  }
+                }
+
+                if (shifts.length === 0) return <p className="text-center text-gray-500 py-12">No hay turnos asignados para esta área.</p>;
+
+                return shifts.map((s, idx) => (
+                  <div key={idx} className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex flex-col gap-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">{s.name}</span>
+                      <span className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[10px] font-black shadow-sm">{s.startTime} — {s.endTime} HS</span>
+                    </div>
+                    {s.days && s.days.length > 0 && (
+                      <div className="flex gap-1.5 mt-1">
+                        {['Do','Lu','Ma','Mi','Ju','Vi','Sa'].map((label, dIdx) => (
+                          <span key={dIdx} className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${s.days.includes(dIdx) ? 'bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-300 shadow-sm ring-1 ring-blue-200 dark:ring-blue-700' : 'text-gray-300 dark:text-gray-600'}`}>{label}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
+          </Modal>
+
           {/* Wizard Modal */}
-          <Modal isOpen={!!selectedUserForWizard} onClose={() => setSelectedUserForWizard(null)} title="Agregar Miembro" subtitle={project?.name} size="xl">
+          <Modal isOpen={!!selectedUserForWizard} onClose={() => setSelectedUserForWizard(null)} title={teamMembers.some(m => m._id === selectedUserForWizard?._id) ? "Configurar Miembro" : "Agregar Miembro"} subtitle={project?.name} size="xl">
             <div className="space-y-6">
-              {/* Stepper Header */}
-              <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
-                {[
-                  { step: 1, label: "Contrato" },
-                  { step: 2, label: "Sueldo" },
-                  { step: 3, label: "Extras" }
-                ].map(s => (
-                  <button
-                    key={s.step}
-                    onClick={() => s.step < wizardStep && setWizardStep(s.step as any)}
-                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                      wizardStep === s.step 
-                        ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700" 
-                        : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
+              {/* Stepper Header (Sticky) */}
+              <div className="sticky -top-6 z-30 bg-white dark:bg-gray-800 -mx-6 px-6 py-4 border-b border-gray-100 dark:border-gray-700 shadow-sm mb-4">
+                <div className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg p-1">
+                  {[
+                    { step: 1, label: "Contrato" },
+                    { step: 2, label: "Sueldo" },
+                    { step: 3, label: "Extras" }
+                  ].map(s => (
+                    <button
+                      key={s.step}
+                      onClick={() => s.step < wizardStep && setWizardStep(s.step as any)}
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                        wizardStep === s.step 
+                          ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700" 
+                          : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Step 1: Contrato */}
@@ -1301,7 +1300,7 @@ export const ProjectTeamPage: React.FC = () => {
                       <option value="">Selecciona categoria...</option>
                       {availableCategoriasSat.map((c: any) => (
                         <option key={c.id} value={c.id}>
-                          {c.nombre}
+                          Cat {c.numeroCategoria || c.id} - {c.nombre}
                         </option>
                       ))}
                     </select>
@@ -1330,6 +1329,208 @@ export const ProjectTeamPage: React.FC = () => {
                     >
                       <option value="">Selecciona estado...</option>
                       {allEstados.map(e => <option key={e._id} value={e.data.id}>{e.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}
+                  <div className="md:col-span-2 space-y-3">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
+                      Asignación por Área y Turno *
+                    </label>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-1 ml-1">Selecciona las áreas y turnos donde trabajará este miembro. Los turnos con horarios superpuestos se bloquean automáticamente.</p>
+                    
+                    {(project?.areasConfig || []).length === 0 && (
+                      <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                        Este proyecto no tiene áreas configuradas.
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      {(project?.areasConfig || []).map((ac: any) => {
+                        const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
+                        const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : allAreas.find(a => a._id === aId)?.name;
+                        const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === 'object' ? s._id : s));
+                        const shiftsForArea = allShifts.filter(s => shiftIdsForArea.includes(String(s._id)));
+                        
+                        // Current assignment for this area
+                        const currentAssignment = wizardData.areaShiftAssignments.find(a => a.areaId === aId);
+                        const selectedShiftIds = currentAssignment?.shiftIds || [];
+                        const isAreaActive = selectedShiftIds.length > 0;
+
+                        // Collect ALL selected shift data across ALL areas for overlap detection
+                        // Track areaId so we can exclude only same-area entries, not same-shift-id entries
+                        const allSelectedShiftData: { areaId: string; shiftId: string; name: string; start: string; end: string; days: number[] }[] = [];
+                        wizardData.areaShiftAssignments.forEach(asa => {
+                          asa.shiftIds.forEach(sid => {
+                            const sh = allShifts.find(s => String(s._id) === sid);
+                            if (sh) allSelectedShiftData.push({ areaId: asa.areaId, shiftId: sid, name: sh.name, start: sh.startTime, end: sh.endTime, days: sh.days || [] });
+                          });
+                        });
+
+                        // Helper to check time overlap
+                        const timeToMinutes = (t: string) => {
+                          const [h, m] = t.split(':').map(Number);
+                          return h * 60 + m;
+                        };
+                        const timesOverlap = (s1Start: string, s1End: string, s2Start: string, s2End: string) => {
+                          let a1 = timeToMinutes(s1Start), b1 = timeToMinutes(s1End);
+                          let a2 = timeToMinutes(s2Start), b2 = timeToMinutes(s2End);
+                          if (b1 <= a1) b1 += 24 * 60;
+                          if (b2 <= a2) b2 += 24 * 60;
+                          return a1 < b2 && a2 < b1;
+                        };
+                        // Helper to check if two shifts share at least one work day
+                        const daysOverlap = (d1: number[], d2: number[]) => {
+                          if (d1.length === 0 || d2.length === 0) return true; // if no days configured, assume overlap
+                          return d1.some(d => d2.includes(d));
+                        };
+
+                        return (
+                          <div key={aId} className={`rounded-xl border transition-all ${
+                            isAreaActive 
+                              ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10' 
+                              : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20'
+                          }`}>
+                            <div className="flex items-center justify-between px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? 'text-blue-500' : 'text-gray-400'}`} />
+                                <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
+                              </div>
+                              {isAreaActive && (
+                                <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
+                                  {selectedShiftIds.length} turno{selectedShiftIds.length > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            <div className="px-4 pb-3 flex flex-wrap gap-3">
+                              {shiftsForArea.map(shift => {
+                                const isSelected = selectedShiftIds.includes(String(shift._id));
+                                
+                                // Check if this shift overlaps with shifts selected in OTHER areas
+                                // Skip entries from the SAME area (aId) — only cross-area conflicts matter
+                                const overlappingWith = allSelectedShiftData.find(sel => 
+                                  sel.areaId !== aId && 
+                                  timesOverlap(shift.startTime, shift.endTime, sel.start, sel.end) &&
+                                  daysOverlap(shift.days || [], sel.days)
+                                );
+                                const isBlocked = !isSelected && !!overlappingWith;
+
+                                const DAY_LABELS = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+
+                                return (
+                                  <button
+                                    key={shift._id}
+                                    type="button"
+                                    disabled={isBlocked}
+                                    onClick={() => {
+                                      setWizardData(prev => {
+                                        const assignments = [...prev.areaShiftAssignments];
+                                        const idx = assignments.findIndex(a => a.areaId === aId);
+                                        
+                                        if (isSelected) {
+                                          if (idx !== -1) {
+                                            assignments[idx] = {
+                                              ...assignments[idx],
+                                              shiftIds: assignments[idx].shiftIds.filter(id => id !== String(shift._id))
+                                            };
+                                            if (assignments[idx].shiftIds.length === 0) assignments.splice(idx, 1);
+                                          }
+                                        } else {
+                                          if (idx !== -1) {
+                                            assignments[idx] = {
+                                              ...assignments[idx],
+                                              shiftIds: [...assignments[idx].shiftIds, String(shift._id)]
+                                            };
+                                          } else {
+                                            assignments.push({ areaId: aId, shiftIds: [String(shift._id)] });
+                                          }
+                                        }
+
+                                        const allShiftIds = assignments.flatMap(a => a.shiftIds);
+                                        const firstShift = allShifts.find(s => allShiftIds.includes(String(s._id)));
+
+                                        return {
+                                          ...prev,
+                                          areaShiftAssignments: assignments,
+                                          hora_inicio: firstShift ? firstShift.startTime : prev.hora_inicio,
+                                          hora_fin: firstShift ? firstShift.endTime : prev.hora_fin,
+                                        };
+                                      });
+                                    }}
+                                    className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50'
+                                        : isBlocked
+                                          ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-50'
+                                          : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                    }`}
+                                    title={isBlocked ? `Se superpone con "${overlappingWith?.name}"` : shift.name}
+                                  >
+                                    <span className={`text-xs font-bold uppercase tracking-wider ${
+                                      isSelected ? 'text-blue-700 dark:text-blue-400' : isBlocked ? 'text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'
+                                    }`}>{shift.name}</span>
+                                    <span className={`text-[10px] font-medium uppercase mt-0.5 ${
+                                      isSelected ? 'text-blue-600 dark:text-blue-500' : isBlocked ? 'text-gray-400' : 'text-gray-500'
+                                    }`}>
+                                      {shift.startTime} — {shift.endTime} hs
+                                    </span>
+                                    {shift.days && shift.days.length > 0 && (
+                                      <div className="flex gap-1 mt-1.5">
+                                        {DAY_LABELS.map((label, dayIdx) => (
+                                          <span key={dayIdx} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                                            shift.days.includes(dayIdx)
+                                              ? isSelected ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200' 
+                                                : isBlocked ? 'text-gray-400 dark:text-gray-600' 
+                                                : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                                              : 'text-gray-300 dark:text-gray-600'
+                                          }`}>{label}</span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {isBlocked && (
+                                      <span className="text-[9px] text-red-500 dark:text-red-400 mt-1 normal-case font-medium">⚠ Se superpone con "{overlappingWith?.name}"</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && (
+                      <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Debes seleccionar al menos un área y turno.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cargo *</label>
+                    <select 
+                      className="input-field w-full"
+                      value={wizardData.positionId}
+                      onChange={e => setWizardData(prev => ({ ...prev, positionId: e.target.value, levelId: "" }))}
+                      required
+                    >
+                      <option value="">Selecciona cargo...</option>
+                      {allPositions.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nivel *</label>
+                    <select 
+                      className="input-field w-full"
+                      value={wizardData.levelId}
+                      onChange={e => setWizardData(prev => ({ ...prev, levelId: e.target.value }))}
+                      disabled={!wizardData.positionId}
+                      required
+                    >
+                      <option value="">{wizardData.positionId ? "Selecciona nivel..." : "Primero selecciona cargo"}</option>
+                      {allLevels
+                        .filter(l => String(typeof l.positionId === 'object' ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
+                        .map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
                     </select>
                   </div>
 
@@ -1505,7 +1706,17 @@ export const ProjectTeamPage: React.FC = () => {
                   </button>
                 )}
                 {wizardStep < 3 ? (
-                  <button onClick={() => setWizardStep((wizardStep + 1) as any)} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider">
+                  <button 
+                    onClick={() => {
+                      // Validate step 1: at least one area/shift must be selected
+                      if (wizardStep === 1 && (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0)) {
+                        sweetAlert.error("Campo requerido", "Debes seleccionar al menos un área y turno para el miembro.");
+                        return;
+                      }
+                      setWizardStep((wizardStep + 1) as any);
+                    }} 
+                    className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider"
+                  >
                     SIGUIENTE
                   </button>
                 ) : (

@@ -99,9 +99,7 @@ export interface IUser extends Document {
   tenantId: Types.ObjectId;
   firstName?: string;
   lastName?: string;
-  positionId?: Types.ObjectId;
-  levelId?: Types.ObjectId;
-  areaId?: Types.ObjectId;
+  lastName?: string;
   isActive: boolean;
   lastLoginAt?: Date;
   hireDate: Date;
@@ -115,7 +113,7 @@ export interface IUser extends Document {
   closeYear(maxDiasArrastre?: number): Promise<void>;
   name: string; // Keep name for backward compat if needed, or derived
   metadata?: IUserMetadata;
-  turnos?: Types.ObjectId[];
+  metadata?: IUserMetadata;
 }
 
 const userSchema = new Schema<IUser>(
@@ -136,9 +134,6 @@ const userSchema = new Schema<IUser>(
       trim: true,
       set: (v: string) => (v && v.trim() !== "" ? v.trim() : undefined),
     },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
-    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
     isActive: { type: Boolean, default: true },
     hireDate: { type: Date, required: true },
     extraVacationDays: { type: Number, default: 0 },
@@ -199,7 +194,7 @@ const userSchema = new Schema<IUser>(
       isSolicitud: { type: Boolean, default: false },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
     },
-    turnos: { type: [Schema.Types.ObjectId], ref: "Shift", default: [] },
+
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
@@ -257,10 +252,9 @@ userSchema.virtual("vacationDays").get(function (this: IUser) {
 userSchema.index({ email: 1, tenantId: 1 }, { unique: true });
 userSchema.index({ tenantId: 1, createdAt: -1 });
 userSchema.index({ tenantId: 1, isActive: 1, createdAt: -1 });
-userSchema.index({ tenantId: 1, areaId: 1, createdAt: -1 });
 userSchema.index({ tenantId: 1, clientIds: 1 });
 userSchema.index({ tenantId: 1, projectIds: 1 });
-userSchema.index({ areaId: 1 });
+
 
 userSchema.pre("save", async function (this: IUser, next) {
   if (!this.isModified("password")) return next();

@@ -34,17 +34,13 @@ import { toObjectIdArray } from "../utils/mongoIds.js";
 
 const router = Router();
 
-const createUserSchema = z
-  .object({
+const createUserSchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     isActive: z.boolean().default(true),
     roles: z.array(z.string()).default([]),
-    positionId: z.string().nullable().optional(),
-    levelId: z.string().nullable().optional(),
-    areaId: z.string().nullable().optional(),
     hireDate: z
       .string()
       .or(z.date())
@@ -52,23 +48,9 @@ const createUserSchema = z
     extraVacationDays: z.number().default(0),
     clientIds: z.array(z.string()).default([]),
     projectIds: z.array(z.string()).default([]),
-    turnos: z.array(z.string()).optional(),
     name: z.string().optional(),
     metadata: z.any().optional(),
-  })
-  .refine(
-    (data) => {
-      // Si hay levelId (y no es null), debe haber positionId (y no ser null)
-      if (data.levelId && data.levelId !== null && (!data.positionId || data.positionId === null)) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "No se puede asignar un nivel sin un cargo. Por favor, asigna un cargo primero.",
-      path: ["levelId"],
-    },
-  );
+  });
 
 const updateUserSchema = z
   .object({
@@ -77,9 +59,6 @@ const updateUserSchema = z
     lastName: z.string().optional(),
     isActive: z.boolean().optional(),
     roles: z.array(z.string()).optional(),
-    positionId: z.string().nullable().optional(),
-    levelId: z.string().nullable().optional(),
-    areaId: z.string().nullable().optional(),
     hireDate: z
       .string()
       .or(z.date())
@@ -88,24 +67,10 @@ const updateUserSchema = z
     extraVacationDays: z.number().optional(),
     clientIds: z.array(z.string()).optional(),
     projectIds: z.array(z.string()).optional(),
-    turnos: z.array(z.string()).optional(),
     name: z.string().optional(),
     metadata: z.any().optional(),
     password: z.string().min(6).optional(),
-  })
-  .refine(
-    (data) => {
-      // Si hay levelId (y no es null), debe haber positionId (y no ser null)
-      if (data.levelId && data.levelId !== null && (!data.positionId || data.positionId === null)) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "No se puede asignar un nivel sin un cargo. Por favor, asigna un cargo primero.",
-      path: ["levelId"],
-    },
-  );
+  });
 
 const updatePasswordSchema = z.object({
   password: z.string().min(6),
@@ -141,17 +106,6 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       filter.email = { $regex: email, $options: "i" };
     }
 
-    if (areaId) {
-      const oid = Types.ObjectId.isValid(areaId as string) ? new Types.ObjectId(areaId as string) : null;
-      if (oid) {
-        // Search for either string or ObjectId to cover potential data inconsistencies
-        filter.$or = [{ areaId: areaId }, { areaId: oid }];
-        // Note: Mix of $or with other fields in 'filter' works as explicit AND: { tenantId: ..., $or: [...] }
-      } else {
-        filter.areaId = areaId;
-      }
-    }
-
     if (isActive !== undefined) {
       filter.isActive = isActive === "true";
     }
@@ -180,11 +134,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
         },
       })
       .populate({ path: "clientIds", select: "name", model: Client })
-      .populate({ path: "positionId", select: "name", model: Position })
-      .populate({ path: "levelId", select: "name", model: Level })
-      .populate({ path: "areaId", select: "name", model: Area })
       .populate({ path: "tenantId", select: "name", model: Tenant })
-      .populate({ path: "turnos", select: "name startTime endTime type days", model: "Shift" })
       .populate({
         path: "metadata.projects",
         model: UserProject,
@@ -254,12 +204,6 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
   try {
     const data = createUserSchema.parse(req.body);
 
-    // Si no hay positionId o es null, eliminar levelId automáticamente
-    if (!data.positionId || data.positionId === null) {
-      data.levelId = undefined;
-      data.positionId = undefined;
-    }
-    // Si levelId es null, convertir a undefined
     if (data.levelId === null) {
       data.levelId = undefined;
     }
@@ -334,7 +278,7 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
     });
 
     // Devolver usuario sin password y con roles poblados
-    const userResponse = await User.findById(user._id).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description").populate("turnos", "name startTime endTime type days");
+    const userResponse = await User.findById(user._id).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name");
 
     res.status(201).json(userResponse);
   } catch (error) {
@@ -354,9 +298,8 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
       tenantId: req.tenantObjectId,
       isActive: true,
     })
-      .select("firstName lastName email projectIds areaId metadata")
+      .select("firstName lastName email projectIds metadata")
       .populate("projectIds", "name")
-      .populate("areaId", "name")
       .populate({
         path: "metadata.projects",
         model: UserProject,
@@ -405,32 +348,7 @@ router.get("/eligible-responsables", requireTenant, authenticateToken, async (re
 });
 
 
-// GET /users/by-area/:areaId - Listar usuarios por área (Endpoint dedicado)
-router.get("/by-area/:areaId", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
-  try {
-    const { areaId } = req.params;
-    console.log(`[Users By Area] Request for areaId: ${areaId} (Tenant: ${req.tenantObjectId})`);
 
-    let query: any = {
-      tenantId: req.tenantObjectId,
-      isActive: true,
-    };
-
-    if (Types.ObjectId.isValid(areaId)) {
-      query.$or = [{ areaId: areaId }, { areaId: new Types.ObjectId(areaId) }];
-    } else {
-      query.areaId = areaId;
-    }
-
-    const users = await User.find(query).select("firstName lastName email positionId levelId isActive").populate("positionId", "name").populate("levelId", "name").sort({ firstName: 1, lastName: 1 });
-
-    console.log(`[Users By Area] Found ${users.length} users`);
-    res.json(users);
-  } catch (error) {
-    console.error("Get users by area error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 // GET /users/:id - Obtener usuario específico
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -443,10 +361,6 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
       .populate("roles", "name description permissions")
       .populate("clientIds", "name")
       .populate("projectIds", "name")
-      .populate("positionId", "name description")
-      .populate("levelId", "name description")
-      .populate("areaId", "name description")
-      .populate("turnos", "name startTime endTime type days")
       .populate({
         path: "metadata.projects",
         model: UserProject,
@@ -532,10 +446,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
       data.roles = roleObjectIds.map((id) => id.toString());
     }
 
-    // Si se elimina positionId, también eliminar levelId automáticamente
-    if (data.positionId === null && data.levelId !== null) {
-      data.levelId = null;
-    }
+
 
     // Preparar updateData
     const updateData: any = { $set: {} };
@@ -569,7 +480,7 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
     }
 
     // Actualizar usuario
-    const user = await User.findOneAndUpdate({ _id: userId, tenantId: targetTenantId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name").populate("positionId", "name description").populate("levelId", "name description").populate("areaId", "name description").populate("turnos", "name startTime endTime type days");
+    const user = await User.findOneAndUpdate({ _id: userId, tenantId: targetTenantId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name");
 
     // Sincronizar proyectos si hubo cambio
     if (data.projectIds) {
@@ -786,10 +697,6 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
       .populate("roles", "name description permissions")
       .populate("clientIds", "name")
       .populate("projectIds", "name")
-      .populate("positionId", "name description")
-      .populate("levelId", "name description")
-      .populate("areaId", "name description")
-      .populate("turnos", "name startTime endTime type days")
       .populate({ path: "metadata.projects", model: UserProject });
 
     res.json(updatedUser);

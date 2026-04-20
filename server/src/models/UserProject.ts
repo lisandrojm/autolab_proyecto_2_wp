@@ -31,10 +31,19 @@ interface IContract {
   nombre_contrato: string;
   nombre_sede: string;
   nombre_rol_frame: string;
+  areaId: Types.ObjectId | string | null;
+  positionId: Types.ObjectId | string | null;
+  levelId: Types.ObjectId | string | null;
+  shiftId: Types.ObjectId | string | null;
+  nombre_area: string;
+  nombre_cargo: string;
+  nombre_nivel: string;
+  nombre_turno: string;
 }
 
 export interface IUserProject extends Document {
   projectId: Types.ObjectId; // Reference to the internal Project document
+  userId: Types.ObjectId; // Reference to the internal User document
   externalProjectId: number;
   externalEmployeeId: number;
   nombre_proyecto: string;
@@ -76,15 +85,24 @@ const contractSchema = new Schema<IContract>(
     nombre_contrato: { type: String },
     nombre_sede: { type: String },
     nombre_rol_frame: { type: String },
+    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
+    levelId: { type: Schema.Types.ObjectId, ref: "Level" },
+    shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
+    nombre_area: { type: String },
+    nombre_cargo: { type: String },
+    nombre_nivel: { type: String },
+    nombre_turno: { type: String },
   },
   { _id: false },
 ); // subdocument, no need for _id usually unless we want addressable contracts
 
 const userProjectSchema = new Schema<IUserProject>(
   {
-    projectId: { type: Schema.Types.ObjectId, ref: "Project", required: false }, // Optional for now in case link fails
-    externalProjectId: { type: Number, required: true },
-    externalEmployeeId: { type: Number, required: true },
+  projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    externalProjectId: { type: Number, required: false },
+    externalEmployeeId: { type: Number, required: false },
     nombre_proyecto: { type: String }, // User requested convenience field
     nombre_rol_frame: { type: String }, // User requested convenience field
     contracts: [contractSchema],
@@ -98,8 +116,14 @@ const userProjectSchema = new Schema<IUserProject>(
   },
 );
 
-// Index to ensure one document per project per employee
-userProjectSchema.index({ externalProjectId: 1, externalEmployeeId: 1 }, { unique: true });
+// Index to ensure one document per project per employee (internal IDs)
+userProjectSchema.index({ projectId: 1, userId: 1 }, { unique: true });
+
+// Optional index for legacy IDs if they exist
+userProjectSchema.index(
+  { externalProjectId: 1, externalEmployeeId: 1 },
+  { unique: true, sparse: true }
+);
 
 const UserProject = model<IUserProject>("UserProject", userProjectSchema);
 

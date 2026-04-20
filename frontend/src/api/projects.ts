@@ -382,6 +382,15 @@ class ProjectsAPI {
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", projectId, clientId);
   }
+
+  async removeMember(projectId: string, userId: string): Promise<void> {
+    await axios.delete(`/projects/${projectId}/members/${userId}`, {
+      headers: this.getHeaders(),
+    });
+    const project = await this.getProject(projectId);
+    const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
+    emitProjectsChanged("update", projectId, clientId);
+  }
 }
 
 export const projectsAPI = new ProjectsAPI();

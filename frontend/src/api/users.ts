@@ -64,28 +64,7 @@ export interface User {
   /** ← ahora viaja como OBJETO (no tenantId string) */
   tenant?: TenantRef;
   tenantId?: string;
-  positionId?:
-    | string
-    | {
-        _id: string;
-        name: string;
-        description?: string;
-      };
-  levelId?:
-    | string
-    | {
-        _id: string;
-        name: string;
-        description?: string;
-      };
-  areaId?:
-    | string
-    | {
-        _id: string;
-        name: string;
-        description?: string;
-      };
-  isActive: boolean;
+    isActive: boolean;
   lastLoginAt?: string;
   hireDate?: string;
   extraVacationDays?: number;
@@ -116,14 +95,6 @@ export interface User {
     isReplacement?: boolean;
     projectIds?: string[];
   };
-  turnos?: {
-    _id: string;
-    name: string;
-    startTime: string;
-    endTime: string;
-    type: string;
-    days: number[];
-  }[];
 }
 
 export interface UsersListResponse {
@@ -160,47 +131,7 @@ function normalizeUser(raw: any): User {
   const firstName = raw?.firstName && String(raw.firstName).trim() !== "" ? String(raw.firstName) : undefined;
   const lastName = raw?.lastName && String(raw.lastName).trim() !== "" ? String(raw.lastName) : undefined;
 
-  // Normalizar positionId
-  let positionId: User["positionId"] = undefined;
-  if (raw?.positionId) {
-    if (typeof raw.positionId === "string") {
-      positionId = raw.positionId;
-    } else if (typeof raw.positionId === "object" && raw.positionId._id) {
-      positionId = {
-        _id: String(raw.positionId._id),
-        name: String(raw.positionId.name ?? ""),
-        description: raw.positionId.description ?? undefined,
-      };
-    }
-  }
 
-  // Normalizar levelId
-  let levelId: User["levelId"] = undefined;
-  if (raw?.levelId) {
-    if (typeof raw.levelId === "string") {
-      levelId = raw.levelId;
-    } else if (typeof raw.levelId === "object" && raw.levelId._id) {
-      levelId = {
-        _id: String(raw.levelId._id),
-        name: String(raw.levelId.name ?? ""),
-        description: raw.levelId.description ?? undefined,
-      };
-    }
-  }
-
-  // Normalizar areaId
-  let areaId: User["areaId"] = undefined;
-  if (raw?.areaId) {
-    if (typeof raw.areaId === "string") {
-      areaId = raw.areaId;
-    } else if (typeof raw.areaId === "object" && raw.areaId._id) {
-      areaId = {
-        _id: String(raw.areaId._id),
-        name: String(raw.areaId.name ?? ""),
-        description: raw.areaId.description ?? undefined,
-      };
-    }
-  }
 
   return {
     _id: String(raw?._id ?? ""),
@@ -256,9 +187,6 @@ function normalizeUser(raw: any): User {
       : undefined,
     tenant: normalizeTenant(raw),
     tenantId: raw?.tenantId ?? undefined,
-    positionId,
-    levelId,
-    areaId,
     isActive: Boolean(raw?.isActive),
     lastLoginAt: raw?.lastLoginAt ? String(raw.lastLoginAt) : undefined,
     hireDate: raw?.hireDate ? String(raw.hireDate) : undefined,
@@ -275,16 +203,6 @@ function normalizeUser(raw: any): User {
     updatedAt: String(raw?.updatedAt ?? ""),
     externalInfo: raw?.externalInfo,
     metadata: raw?.metadata,
-    turnos: Array.isArray(raw?.turnos)
-      ? raw.turnos.map((t: any) => ({
-          _id: String(t?._id ?? t?.id ?? ""),
-          name: String(t?.name ?? ""),
-          startTime: String(t?.startTime ?? ""),
-          endTime: String(t?.endTime ?? ""),
-          type: String(t?.type ?? ""),
-          days: Array.isArray(t?.days) ? t.days : [],
-        }))
-      : undefined,
   };
 }
 
@@ -343,7 +261,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; positionId?: string | null; levelId?: string | null; areaId?: string | null; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[]; turnos?: string[] }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[] }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -358,14 +276,10 @@ class UsersAPI {
       lastName?: string;
       isActive?: boolean;
       roles?: string[];
-      positionId?: string | null;
-      levelId?: string | null;
-      areaId?: string | null;
       hireDate?: string;
       extraVacationDays?: number;
       clientIds?: string[];
       projectIds?: string[];
-      turnos?: string[];
     },
   ): Promise<User> {
     const { data: updated } = await axios.patch(`/users/${id}`, data, { headers: this.getHeaders() });
@@ -388,10 +302,7 @@ class UsersAPI {
     return Array.isArray(data) ? data.map(normalizeUser) : [];
   }
 
-  async getByArea(areaId: string): Promise<User[]> {
-    const { data } = await axios.get(`/users/by-area/${areaId}`, { headers: this.getHeaders() });
-    return Array.isArray(data) ? data.map(normalizeUser) : [];
-  }
+
 
   async listSolicitudes(): Promise<User[]> {
     const { data } = await axios.get(`/users?isSolicitud=true&limit=500`, { headers: this.getHeaders() });

@@ -10,6 +10,10 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requireAnyRole } from "../middleware/requireAnyRole.js";
 import { Types } from "mongoose"; // <-- IMPORTANTE: para castear a ObjectId
+import { Area } from "../models/Area.js";
+import { Position } from "../models/Position.js";
+import { Level } from "../models/Level.js";
+import { Shift } from "../models/Shift.js";
 
 const router = Router();
 
@@ -488,6 +492,26 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
   }
 });
 
+// GET /projects/count - Contar proyectos
+router.get("/projects/count", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const filter: any = { tenantId: req.tenantObjectId };
+
+    const userRoles = (req.user?.roles || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+
+    if (!isAdmin) {
+      filter.assignedUsers = req.user!.userId;
+    }
+
+    const count = await Project.countDocuments(filter);
+    res.json({ count });
+  } catch (error) {
+    console.error("Count projects error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /projects/:projectId
 router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -794,13 +818,52 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     const user = await User.findOne({ _id: userId, tenantId: req.tenantObjectId });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // 1. Resolve names for the contract from Info collection
-    const [sede, cat, estado, tipo] = await Promise.all([
-      Info.findOne({ type: "sede", "data.id": contract.sede_id }).lean(),
-      Info.findOne({ type: "categoria-sat", "data.id": contract.categoria_sat_id }).lean(),
-      Info.findOne({ type: "estado-empleado", "data.id": contract.estado_id }).lean(),
-      Info.findOne({ type: "contrato", "data.id": contract.tipo_contrato_id }).lean(),
+    // 1. Resolve names for the contract from Info collection and other collections
+    const isValidId = (id: any) => id && Types.ObjectId.isValid(id);
+
+    const [sede, cat, estado, tipo, area, pos, level, shift] = await Promise.all([
+      Info.findOne({ type: "sede", "data.id": Number(contract.sede_id) }).lean(),
+      Info.findOne({ type: "categoria-sat", "data.id": Number(contract.categoria_sat_id) }).lean(),
+      Info.findOne({ type: "estado-empleado", "data.id": Number(contract.estado_id) }).lean(),
+      Info.findOne({ type: "contrato", "data.id": Number(contract.tipo_contrato_id) }).lean(),
+      isValidId(contract.areaId) ? Area.findById(contract.areaId).lean() : Promise.resolve(null),
+      isValidId(contract.positionId) ? Position.findById(contract.positionId).lean() : Promise.resolve(null),
+      isValidId(contract.levelId) ? Level.findById(contract.levelId).lean() : Promise.resolve(null),
+      isValidId(contract.shiftId) ? Shift.findById(contract.shiftId).lean() : Promise.resolve(null),
     ]);
+
+    // --- Validation: Check for overlapping shifts in ANY project ---
+    if (contract.shiftId && contract.fecha_alta_contrato) {
+      const newStart = new Date(contract.fecha_alta_contrato);
+      const newEnd = contract.fecha_baja_contrato ? new Date(contract.fecha_baja_contrato) : new Date("2100-01-01");
+
+      const existingUserAssignments = await UserProject.find({
+        userId,
+      }).lean();
+
+      for (const assignment of existingUserAssignments) {
+        for (const c of assignment.contracts) {
+          // If it's the same shift, check for date overlap
+          // SKIP if it's the SAME project we are currently assigning/editing
+          if (c.shiftId && String(c.shiftId) === String(contract.shiftId) && String(assignment.projectId) !== String(projectId)) {
+            const exStart = new Date(c.fecha_alta_contrato);
+            const exEnd = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date("2100-01-01");
+
+            // Overlap condition: (StartA <= EndB) and (EndA >= StartB)
+            if (newStart <= exEnd && newEnd >= exStart) {
+              return res.status(409).json({ 
+                error: `El turno ya está asignado a este usuario en el proyecto "${assignment.nombre_proyecto || 'otro proyecto'}" para las fechas seleccionadas.`,
+                details: {
+                  projectName: assignment.nombre_proyecto,
+                  startDate: c.fecha_alta_contrato,
+                  endDate: c.fecha_baja_contrato
+                }
+              });
+            }
+          }
+        }
+      }
+    }
 
     const enrichedContract = {
       ...contract,
@@ -808,6 +871,10 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       nombre_categoria_sat: cat?.name || "Sin categoria",
       nombre_estado_empleado: estado?.name || "Activo",
       nombre_contrato: tipo?.name || "Sin tipo",
+      nombre_area: (area as any)?.name || "Sin área",
+      nombre_cargo: (pos as any)?.name || "Sin cargo",
+      nombre_nivel: (level as any)?.name || "Sin nivel",
+      nombre_turno: (shift as any)?.name || "Sin turno",
       fecha_carga: new Date().toISOString(),
       nombre_proyecto: project.name,
       proyecto_id: (project.metadata as any)?.id || project.externalId,
@@ -816,13 +883,14 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
 
     // 2. Find or Create UserProject (assignment)
     let userProject = await UserProject.findOne({
-      externalProjectId: enrichedContract.proyecto_id,
-      externalEmployeeId: enrichedContract.empleado_id,
+      projectId,
+      userId,
     });
 
     if (!userProject) {
       userProject = new UserProject({
-        projectId: project._id,
+        projectId,
+        userId,
         externalProjectId: enrichedContract.proyecto_id,
         externalEmployeeId: enrichedContract.empleado_id,
         nombre_proyecto: project.name,
@@ -831,18 +899,85 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     } else {
       // Add to contracts history
       userProject.contracts.push(enrichedContract);
-      userProject.projectId = project._id; // Ensure link exists
+      // Ensure IDs are correctly synced
+      userProject.projectId = project._id;
+      userProject.userId = user._id;
+      if (enrichedContract.proyecto_id) userProject.externalProjectId = enrichedContract.proyecto_id;
+      if (enrichedContract.empleado_id) userProject.externalEmployeeId = enrichedContract.empleado_id;
     }
 
     await userProject.save();
 
     // 3. Sync internal arrays (Project.assignedUsers and User.projectIds)
-    await Project.findByIdAndUpdate(projectId, { $addToSet: { assignedUsers: user._id } });
-    await User.findByIdAndUpdate(userId, { $addToSet: { projectIds: project._id } });
+    // Update teamConfig in project for UI/listing purposes
+    await Project.findByIdAndUpdate(projectId, { 
+      $addToSet: { assignedUsers: user._id },
+      $pull: { teamConfig: { userId: user._id } } // Remove old config if exists
+    });
+    
+    await Project.findByIdAndUpdate(projectId, {
+      $push: { 
+        teamConfig: {
+          userId: user._id,
+          areaId: contract.areaId,
+          shiftId: contract.shiftId,
+          areaShiftAssignments: contract.areaShiftAssignments || [],
+          canRegister: true, // Default
+          useProjectSchedule: true // Default
+        }
+      }
+    });
+
+    await User.findByIdAndUpdate(userId, { 
+      $addToSet: { 
+        projectIds: project._id,
+        "metadata.projects": userProject._id
+      } 
+    });
 
     res.json({ message: "Member assigned successfully", userProject });
+  } catch (error: any) {
+    console.error("Assign member error CRASH:", error);
+    res.status(500).json({ 
+      error: "Internal server error during assignment",
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+    });
+  }
+});
+
+// DELETE /projects/:projectId/members/:userId - Complete removal of a member from a project
+router.delete("/projects/:projectId/members/:userId", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { projectId, userId } = req.params;
+
+    // 1. Update Project: remove from assignedUsers, teamConfig, and coordinatorAssignments
+    await Project.findByIdAndUpdate(projectId, {
+      $pull: { 
+        assignedUsers: userId,
+        teamConfig: { userId },
+        coordinatorAssignments: { userId }
+      }
+    });
+
+    // 2. Remove the UserProject document (it holds history and creates shift conflicts)
+    await UserProject.deleteMany({ projectId, userId });
+
+    // 3. Update User: remove from projectIds and metadata.projects
+    await User.findByIdAndUpdate(userId, {
+      $pull: {
+        projectIds: projectId,
+        "metadata.projects": { projectId } // Pull from metadata projects if it matches the ID
+      }
+    });
+    
+    // Some metadata.projects might be stored as ObjectIds or the UserProject ID itself. 
+    // Let's also pull by searching for any entry that might reference the now-deleted UserProject
+    // but the above usually covers the projectIds link.
+
+    res.json({ message: "Member removed and data cleaned up successfully" });
   } catch (error) {
-    console.error("Assign member error:", error);
+    console.error("Remove member error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

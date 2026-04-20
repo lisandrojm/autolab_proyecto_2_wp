@@ -214,31 +214,42 @@ export const UserCard: React.FC<UserCardProps> = ({
           <FontAwesomeIcon icon={faUserShield} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
           Rol/es
         </label>
-        {user.roles.length === 0 ? (
-          <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            {user.roles.slice(0, 3).map((role) => {
-              const lower = role.name.toLowerCase();
-              const isCoord = lower.includes("coordinador");
-              const isResponsable = lower.includes("responsable");
-              
-              let classes = "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300";
-              if (isCoord) {
-                classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800";
-              } else if (isResponsable) {
-                classes = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800";
-              }
-              
-              return (
-                <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${classes}`}>
-                  {role.name}
+        {(() => {
+          const projectRespId = (projectContext?.metadataResolutions as any)?.responsable?._id || projectContext?.metadataResolutions?.responsable?.id || projectContext?.metadata?.responsableId || (projectContext?.metadata as any)?.id_responsable;
+          const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
+
+          const filteredRoles = user.roles.filter(r => !r.name.toLowerCase().includes("responsable"));
+          
+          if (filteredRoles.length === 0 && !isReallyResponsable) {
+            return <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>;
+          }
+
+          return (
+            <div className="flex flex-wrap gap-1">
+              {isReallyResponsable && (
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
+                  Responsable de Proyecto
                 </span>
-              );
-            })}
-            {user.roles.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{user.roles.length - 3} más</span>}
-          </div>
-        )}
+              )}
+              {filteredRoles.slice(0, 3).map((role) => {
+                const lower = role.name.toLowerCase();
+                const isCoord = lower.includes("coordinador");
+                
+                let classes = "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300";
+                if (isCoord) {
+                  classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800";
+                }
+                
+                return (
+                  <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${classes}`}>
+                    {role.name}
+                  </span>
+                );
+              })}
+              {filteredRoles.length > 3 && <span className="text-xs text-gray-500 dark:text-gray-500">+{filteredRoles.length - 3} más</span>}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Clientes y Proyectos Agrupados */}

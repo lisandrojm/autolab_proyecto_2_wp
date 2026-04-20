@@ -99,7 +99,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
     const { email, password, tenantSlug, clientId } = req.body;
 
     // Buscar usuarios con este email
-    const users = await User.find({ email, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug").populate("turnos", "name startTime endTime type days");
+    const users = await User.find({ email, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
 
     if (users.length === 0) {
       res.status(401).json({ error: "Invalid credentials" });
@@ -208,7 +208,6 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
         permissions,
         tenantId,
         tenantSlug: (user.tenantId as any).slug,
-        turnos: user.turnos || [],
         ...(clientId || (user.clientIds && user.clientIds.length > 0)
           ? {
               clientId: clientId || user.clientIds[0].toString(),
@@ -235,7 +234,7 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
       return;
     }
 
-    const user = await User.findOne({ _id: userId, tenantId, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug").populate("turnos", "name startTime endTime type days");
+    const user = await User.findOne({ _id: userId, tenantId, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -261,7 +260,6 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
         permissions,
         tenantId: (user.tenantId as any)._id,
         tenantSlug: (user.tenantId as any).slug,
-        turnos: user.turnos || [],
       },
     });
   } catch (err) {
@@ -281,16 +279,14 @@ router.get("/demo-users", async (req, res) => {
       isActive: true,
       email: { $in: seedEmails },
     })
-      .select("email firstName lastName role isActive tenantId areaId")
+      .select("email firstName lastName role isActive tenantId")
       .populate("roles", "name description")
       .populate("tenantId", "name slug")
-      .populate("areaId", "name")
       .sort({ "tenantId.name": 1, email: 1 })
       .limit(200);
 
     const demoUsers = users.map((user) => {
       const tenant = user.tenantId as any;
-      const area = user.areaId as any;
       return {
         _id: user._id,
         email: user.email,
@@ -303,7 +299,6 @@ router.get("/demo-users", async (req, res) => {
           name: tenant?.name || "Unknown",
           slug: tenant?.slug || "",
         },
-        area: area ? { _id: area._id, name: area.name } : undefined,
       };
     });
 
