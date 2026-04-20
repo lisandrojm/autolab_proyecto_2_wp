@@ -665,14 +665,28 @@ export const ProjectTeamPage: React.FC = () => {
             </div>
             <div className="min-w-0">
               <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}` : user.email}</p>
-              <div className="flex items-center gap-1.5 min-w-0">
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                {getUserVacationStatus(user._id) && (
-                  <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                    <FontAwesomeIcon icon={faUmbrellaBeach} className="mr-1" />
-                    VC
-                  </span>
-                )}
+              <div className="flex flex-col gap-1.5 mt-0.5 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  {getUserVacationStatus(user._id) && (
+                    <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                      <FontAwesomeIcon icon={faUmbrellaBeach} className="mr-1" />
+                      VC
+                    </span>
+                  )}
+                </div>
+                {(() => {
+                  const projectRespId = (project?.metadataResolutions as any)?.responsable?._id || project?.metadataResolutions?.responsable?.id || project?.metadata?.responsableId || (project?.metadata as any)?.id_responsable;
+                  const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
+                  if (isReallyResponsable) {
+                    return (
+                      <span className="w-fit text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">
+                        Responsable de Proyecto
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </div>
@@ -680,18 +694,10 @@ export const ProjectTeamPage: React.FC = () => {
         <td className="px-4 py-3">
           <div className="flex flex-wrap gap-1">
             {(() => {
-              const projectRespId = (project?.metadataResolutions as any)?.responsable?._id || project?.metadataResolutions?.responsable?.id || project?.metadata?.responsableId || (project?.metadata as any)?.id_responsable;
-              const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
-
               const filteredRoles = user.roles.filter(r => !r.name.toLowerCase().includes("responsable"));
 
               return (
                 <>
-                  {isReallyResponsable && (
-                    <span className="text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">
-                      Responsable de Proyecto
-                    </span>
-                  )}
                   {filteredRoles.slice(0, 3).map((r) => {
                     const lower = r.name.toLowerCase();
                     const isCoordinador = lower.includes("coordinador");
@@ -1776,7 +1782,9 @@ export const ProjectTeamPage: React.FC = () => {
                         onChange={e => setWizardData(prev => ({ ...prev, empleado_id_reemplezado: e.target.value }))}
                       >
                         <option value="">Selecciona empleado...</option>
-                        {teamMembers.map(m => (
+                        {teamMembers
+                          .filter(m => String(m._id) !== String(selectedUserForWizard?._id))
+                          .map(m => (
                           <option key={m._id} value={(m.metadata as any)?.id}>{m.firstName} {m.lastName}</option>
                         ))}
                       </select>
