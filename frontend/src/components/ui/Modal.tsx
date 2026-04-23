@@ -61,13 +61,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
         <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 h-vh h-vh" />
 
         {/* Panel */}
-        <div 
-          className={`relative bg-white dark:bg-gray-800 shadow-xl w-full ${getSizeClasses()} overflow-hidden flex flex-col ${size === "full" ? "rounded-xl" : "rounded-2xl"} ${!isFullscreen ? "max-h-[90vh]" : ""}`} 
-          role="dialog" 
-          aria-modal="true" 
-          aria-labelledby={titleId} 
-          aria-describedby={subtitleId}
-        >
+        <div className={`relative bg-white dark:bg-gray-800 shadow-xl w-full ${getSizeClasses()} overflow-hidden flex flex-col ${size === "full" ? "rounded-xl" : "rounded-2xl"} ${!isFullscreen ? "max-h-[90vh]" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId}>
           {/* Header */}
           {customHeader ? (
             customHeader
@@ -95,16 +89,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
           )}
 
           {/* Content */}
-          <div className={`flex-1 overflow-y-auto ${!isFullscreen ? "p-6" : ""}`}>
-            {children}
-          </div>
+          <div className={`flex-1 overflow-y-auto ${!isFullscreen ? "p-6 pt-0" : ""}`}>{children}</div>
 
           {/* Footer */}
-          {footer && (
-            <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 z-50">
-              {footer}
-            </div>
-          )}
+          {footer && <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 z-50">{footer}</div>}
         </div>
       </div>
     </div>

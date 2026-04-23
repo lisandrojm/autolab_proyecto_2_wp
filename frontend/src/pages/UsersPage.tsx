@@ -8,6 +8,7 @@ import { areasAPI, Area } from "../api/areas";
 import { clientsAPI, Client } from "../api/clients";
 import { projectsAPI, Project } from "../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
+import { infoAPI, InfoItem } from "../api/info";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -18,7 +19,7 @@ import { UserCard } from "../components/users/UserCard";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faMobileAlt, faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -36,7 +37,38 @@ interface UserFormData {
   extraVacationDays: number;
   clientIds: string[];
   isSolicitud?: boolean;
+  // Metadata fields
+  generoId?: number;
+  tipoDocumentoId?: number;
+  documento?: string;
+  cuit?: string;
+  estadoCivil?: string;
+  calle?: string;
+  altura?: string;
+  pisoDepto?: string;
+  codigoPostal?: string;
+  localidad?: string;
+  paisId?: number;
+  nacionalidadId?: number;
+  nivelEstudioId?: number;
+  osId?: number;
+  osPrepaga?: boolean;
+  fechaNac?: string;
+  telefono?: string;
+  telefono2?: string;
+  visa?: boolean;
+  bancoId?: number;
+  cbu?: string;
+  tipoDeCuentaBancaria?: string;
+  nroDeCuentaBancaria?: string;
+  aliasBancario?: string;
+  numeroLegajoTango?: string;
+  afiliadoAlSindicato?: boolean;
+  inHouse?: boolean;
+  role_frame?: string[];
 }
+
+type ModalTab = "general" | "domicilio" | "bancarios";
 
 type ModalMode = "edit" | "password";
 
@@ -104,6 +136,19 @@ export const UsersPage: React.FC = () => {
     clientIds: [],
   });
 
+  const [modalActiveTab, setModalActiveTab] = useState<ModalTab>("general");
+
+  // Info data for selects
+  const [genders, setGenders] = useState<InfoItem[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<InfoItem[]>([]);
+  const [countries, setCountries] = useState<InfoItem[]>([]);
+  const [nationalities, setNationalities] = useState<InfoItem[]>([]);
+  const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
+  const [banks, setBanks] = useState<InfoItem[]>([]);
+  const [insuranceCompanies, setInsuranceCompanies] = useState<InfoItem[]>([]);
+  const [contractTypes, setContractTypes] = useState<InfoItem[]>([]);
+  const [employeeStatuses, setEmployeeStatuses] = useState<InfoItem[]>([]);
+
   // password modal fields (cuando modalMode === "password")
   const [passwordUserId, setPasswordUserId] = useState<string>("");
   const [newPassword, setNewPassword] = useState("");
@@ -118,6 +163,7 @@ export const UsersPage: React.FC = () => {
   // view modal (solo lectura)
   const [viewOpen, setViewOpen] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
+  const [roleFrameSearch, setRoleFrameSearch] = useState("");
 
   const canManage = hasPermission("admin_users:view");
 
@@ -190,11 +236,29 @@ export const UsersPage: React.FC = () => {
         fetchAllShifts();
         fetchUserLookup(); // Fetch all users for name resolution
         fetchVacations();
+        fetchInfo();
       }
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchInfo = async () => {
+    try {
+      const [g, dt, c, n, el, b, ic, ct, es] = await Promise.all([infoAPI.listByType("genero"), infoAPI.listByType("tipo-documento"), infoAPI.listByType("pais"), infoAPI.listByType("nacionalidad"), infoAPI.listByType("nivel-estudio"), infoAPI.listByType("banco"), infoAPI.listByType("obra-social"), infoAPI.listByType("contrato"), infoAPI.listByType("estado-empleado")]);
+      setGenders(g);
+      setDocumentTypes(dt);
+      setCountries(c);
+      setNationalities(n);
+      setEducationLevels(el);
+      setBanks(b);
+      setInsuranceCompanies(ic);
+      setContractTypes(ct);
+      setEmployeeStatuses(es);
+    } catch (error) {
+      console.error("Error fetching info:", error);
+    }
+  };
 
   const fetchVacations = async () => {
     try {
@@ -354,8 +418,6 @@ export const UsersPage: React.FC = () => {
 
               if (!hasRole) return false;
             }
-
-
 
             // Active Contract filter - match logic from getActiveContractType
             if (filterActiveContract) {
@@ -545,7 +607,7 @@ export const UsersPage: React.FC = () => {
       console.error("Error fetching role frames:", error);
     }
   };
- 
+
   const fetchAllShifts = async () => {
     try {
       const shifts = await shiftsAPI.getAll();
@@ -579,7 +641,14 @@ export const UsersPage: React.FC = () => {
       hireDate: new Date().toISOString().split("T")[0],
       extraVacationDays: 0,
       clientIds: [],
+      // Metadata defaults
+      osPrepaga: false,
+      visa: false,
+      afiliadoAlSindicato: false,
+      inHouse: false,
+      role_frame: [],
     });
+    setModalActiveTab("general");
     setShowPassword(false);
     setShowModal(true);
   };
@@ -625,7 +694,37 @@ export const UsersPage: React.FC = () => {
       extraVacationDays: user.extraVacationDays || 0,
       clientIds: user.clientIds ? user.clientIds.map((c) => c._id) : [],
       isSolicitud,
+      // Metadata fields
+      generoId: user.metadata?.generoId,
+      tipoDocumentoId: user.metadata?.tipoDocumentoId,
+      documento: user.metadata?.documento,
+      cuit: user.metadata?.cuit,
+      estadoCivil: user.metadata?.estadoCivil || "",
+      calle: user.metadata?.calle,
+      altura: user.metadata?.altura,
+      pisoDepto: user.metadata?.pisoDepto || "",
+      codigoPostal: user.metadata?.codigoPostal || "",
+      localidad: user.metadata?.localidad || "",
+      paisId: user.metadata?.paisId,
+      nacionalidadId: user.metadata?.nacionalidadId,
+      nivelEstudioId: user.metadata?.nivelEstudioId,
+      osId: user.metadata?.osId,
+      osPrepaga: user.metadata?.osPrepaga || false,
+      fechaNac: user.metadata?.fechaNac ? new Date(user.metadata.fechaNac).toISOString().split("T")[0] : "",
+      telefono: user.metadata?.telefono,
+      telefono2: user.metadata?.telefono2 || "",
+      visa: user.metadata?.visa || false,
+      bancoId: user.metadata?.bancoId,
+      cbu: user.metadata?.cbu || "",
+      tipoDeCuentaBancaria: user.metadata?.tipoDeCuentaBancaria || "",
+      nroDeCuentaBancaria: user.metadata?.nroDeCuentaBancaria || "",
+      aliasBancario: user.metadata?.aliasBancario || "",
+      numeroLegajoTango: user.metadata?.numeroLegajoTango || "",
+      afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
+      inHouse: user.metadata?.inHouse || false,
+      role_frame: user.metadata?.role_frame?.map((rf: any) => (typeof rf === "string" ? rf : rf._id)) || [],
     });
+    setModalActiveTab("general");
     setShowPassword(false);
     setShowModal(true);
   };
@@ -645,6 +744,7 @@ export const UsersPage: React.FC = () => {
     setNewPassword("");
     setShowPassword(false);
     setShowNewPassword(false);
+    setRoleFrameSearch("");
   };
 
   const openView = (user: User) => {
@@ -660,27 +760,63 @@ export const UsersPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const submitData: any = { ...formData };
+      const submitData: any = {
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        isActive: formData.isActive,
+        roles: formData.roles,
+        hireDate: formData.hireDate,
+        extraVacationDays: formData.extraVacationDays,
+        clientIds: formData.clientIds,
+        metadata: {
+          ...(editingUser?.metadata || {}),
+          generoId: formData.generoId,
+          tipoDocumentoId: formData.tipoDocumentoId,
+          documento: formData.documento,
+          cuit: formData.cuit,
+          estadoCivil: formData.estadoCivil,
+          calle: formData.calle,
+          altura: formData.altura,
+          pisoDepto: formData.pisoDepto,
+          codigoPostal: formData.codigoPostal,
+          localidad: formData.localidad,
+          paisId: formData.paisId,
+          nacionalidadId: formData.nacionalidadId,
+          nivelEstudioId: formData.nivelEstudioId,
+          osId: formData.osId,
+          osPrepaga: formData.osPrepaga,
+          fechaNac: formData.fechaNac,
+          telefono: formData.telefono,
+          telefono2: formData.telefono2,
+          visa: formData.visa,
+          bancoId: formData.bancoId,
+          cbu: formData.cbu,
+          tipoDeCuentaBancaria: formData.tipoDeCuentaBancaria,
+          nroDeCuentaBancaria: formData.nroDeCuentaBancaria,
+          aliasBancario: formData.aliasBancario,
+          numeroLegajoTango: formData.numeroLegajoTango,
+          afiliadoAlSindicato: formData.afiliadoAlSindicato,
+          inHouse: formData.inHouse,
+          role_frame: formData.role_frame,
+        },
+      };
+
+      if (!editingUser || formData.isSolicitud) {
+        submitData.password = formData.password;
+      }
 
       // Si es una solicitud que se está aprobando, quitar el flag
       if (formData.isSolicitud) {
-        submitData.metadata = {
-          ...(editingUser?.metadata || {}),
-          isSolicitud: false,
-        };
+        submitData.metadata.isSolicitud = false;
         // Forzamos isActive true si se está aprobando, a menos que el admin diga lo contrario
         submitData.isActive = formData.isActive;
       }
 
-
-
       if (editingUser) {
         delete submitData.password;
         await usersAPI.update(editingUser._id, submitData);
-        sweetAlert.success(
-          formData.isSolicitud ? "Solicitud Aprobada" : "Usuario actualizado",
-          formData.isSolicitud ? "El usuario ha sido dado de alta correctamente" : "Los cambios se han guardado correctamente"
-        );
+        sweetAlert.success(formData.isSolicitud ? "Solicitud Aprobada" : "Usuario actualizado", formData.isSolicitud ? "El usuario ha sido dado de alta correctamente" : "Los cambios se han guardado correctamente");
       } else {
         await usersAPI.create(submitData);
         sweetAlert.success("Usuario creado", "El usuario se ha creado correctamente");
@@ -986,7 +1122,9 @@ export const UsersPage: React.FC = () => {
                     return (
                       <div className="flex flex-wrap gap-1">
                         {sedesList.map((sede, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{sede}</span>
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
+                            {sede}
+                          </span>
                         ))}
                       </div>
                     );
@@ -995,7 +1133,9 @@ export const UsersPage: React.FC = () => {
                     return (
                       <div className="flex flex-wrap gap-1">
                         {viewUser.externalInfo.sedes.map((sede, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{sede}</span>
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
+                            {sede}
+                          </span>
                         ))}
                       </div>
                     );
@@ -1012,7 +1152,9 @@ export const UsersPage: React.FC = () => {
                 {viewUser.externalInfo?.rolFrames && viewUser.externalInfo.rolFrames.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {viewUser.externalInfo.rolFrames.map((rf, idx) => (
-                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 w-fit">{rf}</span>
+                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 w-fit">
+                        {rf}
+                      </span>
                     ))}
                   </div>
                 ) : (
@@ -1042,12 +1184,16 @@ export const UsersPage: React.FC = () => {
                       }
                     });
                   }
-                  const uniqueClients = Array.from(clientSet).map((cid) => allClients.find((c) => c._id === cid)?.name).filter(Boolean);
+                  const uniqueClients = Array.from(clientSet)
+                    .map((cid) => allClients.find((c) => c._id === cid)?.name)
+                    .filter(Boolean);
                   if (uniqueClients.length > 0) {
                     return (
                       <div className="flex flex-wrap gap-1">
                         {uniqueClients.map((name, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 w-fit border border-cyan-200 dark:border-cyan-800">{name}</span>
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 w-fit border border-cyan-200 dark:border-cyan-800">
+                            {name}
+                          </span>
                         ))}
                       </div>
                     );
@@ -1145,11 +1291,14 @@ export const UsersPage: React.FC = () => {
                 </label>
                 {(() => {
                   const totalDays = (viewUser.metadata?.projects || []).reduce(
-                    (acc, p) => acc + (p.contracts || []).reduce((cAcc, c) => {
+                    (acc, p) =>
+                      acc +
+                      (p.contracts || []).reduce((cAcc, c) => {
                         const start = new Date(c.fecha_alta_contrato);
                         const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
                         return cAcc + Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                      }, 0), 0
+                      }, 0),
+                    0,
                   );
                   if (totalDays === 0) return <span className="text-xs text-gray-500">—</span>;
                   const years = Math.floor(totalDays / 365);
@@ -1179,11 +1328,13 @@ export const UsersPage: React.FC = () => {
               </button>
               <div className={`mt-3 overflow-hidden transition-all duration-300 ${isHistoryExpanded ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"}`}>
                 {(() => {
-                  const allRecords = (viewUser.metadata?.projects || []).flatMap((p) => (p.contracts || []).map((c) => ({
-                    ...c,
-                    projectName: p.nombre_proyecto || c.nombre_proyecto,
-                    days: Math.max(0, Math.ceil(((c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date()).getTime() - new Date(c.fecha_alta_contrato).getTime()) / (1000 * 60 * 60 * 24)) + 1)
-                  })));
+                  const allRecords = (viewUser.metadata?.projects || []).flatMap((p) =>
+                    (p.contracts || []).map((c) => ({
+                      ...c,
+                      projectName: p.nombre_proyecto || c.nombre_proyecto,
+                      days: Math.max(0, Math.ceil(((c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date()).getTime() - new Date(c.fecha_alta_contrato).getTime()) / (1000 * 60 * 60 * 24)) + 1),
+                    })),
+                  );
                   if (allRecords.length === 0) return <span className="text-xs text-gray-500 italic block mt-2">No hay registros.</span>;
                   allRecords.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
                   return (
@@ -1242,138 +1393,507 @@ export const UsersPage: React.FC = () => {
         title: modalMode === "password" ? "Cambiar Contraseña" : formData.isSolicitud ? "Aprobar Solicitud de Alta" : editingUser ? "Editar Usuario" : "Nuevo Usuario",
         subtitle: modalMode === "password" ? undefined : formData.isSolicitud ? "Completa los datos para dar de alta al usuario" : "Define datos básicos y roles",
         size: modalMode === "password" ? "sm" : "lg",
-        actions: modalMode === "password" ? [
-          { label: "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#password-form")?.requestSubmit(), variant: "primary" },
-          { label: "Cancelar", onClick: closeModal, variant: "ghost" }
-        ] : [
-          { label: formData.isSolicitud ? "Aprobar y Crear" : editingUser ? "Actualizar" : "Crear", onClick: () => document.querySelector<HTMLFormElement>("#user-form")?.requestSubmit(), variant: "primary" },
-          { label: "Cancelar", onClick: closeModal, variant: "ghost" }
-        ],
-        content: modalMode === "password" ? (
-          <form id="password-form" onSubmit={handlePasswordSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nueva Contraseña *</label>
-                <div className="relative">
-                  <input type={showNewPassword ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                  <button type="button" onClick={() => setShowNewPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                    <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </form>
-        ) : (
-          <form id="user-form" onSubmit={handleSubmit}>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email *</label>
-                <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
-              </div>
-              {(!editingUser || formData.isSolicitud) && (
+        actions:
+          modalMode === "password"
+            ? [
+                { label: "Actualizar", onClick: () => document.querySelector<HTMLFormElement>("#password-form")?.requestSubmit(), variant: "primary" },
+                { label: "Cancelar", onClick: closeModal, variant: "ghost" },
+              ]
+            : [
+                { label: formData.isSolicitud ? "Aprobar y Crear" : editingUser ? "Actualizar" : "Crear", onClick: () => document.querySelector<HTMLFormElement>("#user-form")?.requestSubmit(), variant: "primary" },
+                { label: "Cancelar", onClick: closeModal, variant: "ghost" },
+              ],
+        content:
+          modalMode === "password" ? (
+            <form id="password-form" onSubmit={handlePasswordSubmit}>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{formData.isSolicitud ? "Asignar Contraseña (obligatorio)" : "Contraseña *"}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nueva Contraseña *</label>
                   <div className="relative">
-                    <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
-                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
+                    <input type={showNewPassword ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-field pr-10" placeholder="••••••••" minLength={6} />
+                    <button type="button" onClick={() => setShowNewPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
                     </button>
                   </div>
                 </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
-                  <input type="text" value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Apellido</label>
-                  <input type="text" value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" />
-                </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha de Ingreso *</label>
-                  <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vacaciones (Días Extra)</label>
-                  <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
-                <div className="border border-gray-300 dark:border-gray-600 rounded p-3 max-h-64 overflow-y-auto space-y-4">
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Sistema</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {roles.filter((r) => r.name.toLowerCase() !== "superadmin" && !r.name.toLowerCase().includes("mobile")).map((r) => (
-                        <label key={r._id} className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer border border-transparent">
-                          <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={(e) => {
-                            let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
-                            const name = r.name.toLowerCase();
-                            if (e.target.checked) {
-                              if (name === "admin") newRoles = newRoles.filter(id => roles.find(ro => ro._id === id)?.name.toLowerCase() !== "user");
-                              else if (name === "user") newRoles = newRoles.filter(id => roles.find(ro => ro._id === id)?.name.toLowerCase() !== "admin");
-                            }
-                            setFormData(prev => ({ ...prev, roles: newRoles }));
-                          }} className="mt-1 rounded border-gray-300 text-primary-600" />
-                          <div><span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span></div>
-                        </label>
-                      ))}
-                    </div>
+            </form>
+          ) : (
+            <form id="user-form" onSubmit={handleSubmit}>
+              <div className="space-y-6">
+                {/* Tabs Header Sticky Container */}
+                <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-8 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+                  <div className="flex">
+                    <button type="button" onClick={() => setModalActiveTab("general")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "general" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                      <FontAwesomeIcon icon={faUser} className="text-xs" />
+                      General
+                    </button>
+                    <button type="button" onClick={() => setModalActiveTab("domicilio")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                      <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
+                      Domicilio
+                    </button>
+                    <button type="button" onClick={() => setModalActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                      <FontAwesomeIcon icon={faUniversity} className="text-xs" />
+                      Datos Bancarios
+                    </button>
                   </div>
-                  {roles.some(r => r.name.toLowerCase().includes("mobile")) && (
-                    <div>
-                      <h4 className="text-xs font-bold text-indigo-500 uppercase mb-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">Mobile (App)</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {roles.filter(r => r.name.toLowerCase().includes("mobile")).map(r => (
-                          <label key={r._id} className="flex items-start space-x-3 p-2 rounded bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-colors">
-                            <input type="checkbox" checked={formData.roles.includes(r._id)} onChange={(e) => {
-                              let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter(id => id !== r._id);
-                              const name = r.name.toLowerCase();
-                              if (e.target.checked) {
-                                if (name.includes("coordinador")) newRoles = newRoles.filter(id => !roles.find(ro => ro._id === id)?.name.toLowerCase().includes("colaborador"));
-                                else if (name.includes("colaborador")) newRoles = newRoles.filter(id => !roles.find(ro => ro._id === id)?.name.toLowerCase().includes("coordinador"));
-                              } else {
-                                if (!newRoles.some(id => roles.find(ro => ro._id === id)?.name.toLowerCase().includes("mobile"))) {
-                                  sweetAlert.warningAlert("Atención", "Debe tener al menos un rol Mobile.");
-                                  return;
-                                }
-                              }
-                              setFormData(prev => ({ ...prev, roles: newRoles }));
-                            }} className="mt-1 rounded border-gray-300 text-indigo-600" />
-                            <div><span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span></div>
-                          </label>
-                        ))}
+                </div>
+
+                {/* Tab Content */}
+                {modalActiveTab === "general" && (
+                  <div className="space-y-6 animate-fadeIn">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre *</label>
+                        <input type="text" required value={formData.firstName} onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))} className="input-field" placeholder="Ej: Juan" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Apellido *</label>
+                        <input type="text" required value={formData.lastName} onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))} className="input-field" placeholder="Ej: Pérez" />
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email *</label>
+                        <input type="email" required value={formData.email} onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))} className="input-field" placeholder="usuario@ejemplo.com" />
+                      </div>
+                      {(!editingUser || formData.isSolicitud) && (
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{formData.isSolicitud ? "Asignar Contraseña *" : "Contraseña *"}</label>
+                          <div className="relative">
+                            <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))} className="input-field pr-10" placeholder="••••••••" minLength={6} />
+                            <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                              <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="h-4 w-4 text-gray-400" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Documento</label>
+                        <select value={formData.tipoDocumentoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDocumentoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          {documentTypes.map((it) => (
+                            <option key={it._id} value={it.data.id}>
+                              {it.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Documento *</label>
+                        <input type="text" required value={formData.documento || ""} onChange={(e) => setFormData((prev) => ({ ...prev, documento: e.target.value }))} className="input-field" placeholder="DNI / Pasaporte" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Nacimiento</label>
+                        <input type="date" value={formData.fechaNac || ""} onChange={(e) => setFormData((prev) => ({ ...prev, fechaNac: e.target.value }))} className="input-field" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nivel de Estudio</label>
+                        <select value={formData.nivelEstudioId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nivelEstudioId: parseInt(e.target.value) || undefined }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          {educationLevels.map((it) => (
+                            <option key={it._id} value={it.data.id}>
+                              {it.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CUIT / CUIL</label>
+                        <input type="text" value={formData.cuit || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cuit: e.target.value }))} className="input-field" placeholder="20-XXXXXXXX-X" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nacionalidad</label>
+                        <select value={formData.nacionalidadId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nacionalidadId: parseInt(e.target.value) || undefined }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          {nationalities.map((it) => (
+                            <option key={it._id} value={it.data.id}>
+                              {it.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Género</label>
+                        <select value={formData.generoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, generoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          {genders.map((it) => (
+                            <option key={it._id} value={it.data.id}>
+                              {it.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado Civil</label>
+                        <select value={formData.estadoCivil || ""} onChange={(e) => setFormData((prev) => ({ ...prev, estadoCivil: e.target.value }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          <option value="Soltero">Soltero/a</option>
+                          <option value="Casado">Casado/a</option>
+                          <option value="Divorciado">Divorciado/a</option>
+                          <option value="Viudo">Viudo/a</option>
+                          <option value="Concuvino">Concubino/a</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-6 h-full pt-4">
+                        <label className="flex items-center space-x-3 cursor-pointer group">
+                          <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.osPrepaga ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
+                            <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.osPrepaga ? "translate-x-4" : ""}`}></div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">OS Prepaga</span>
+                          <input type="checkbox" className="hidden" checked={formData.osPrepaga} onChange={(e) => setFormData((prev) => ({ ...prev, osPrepaga: e.target.checked }))} />
+                        </label>
+                        <label className="flex items-center space-x-3 cursor-pointer group">
+                          <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.inHouse ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
+                            <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.inHouse ? "translate-x-4" : ""}`}></div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">In House</span>
+                          <input type="checkbox" className="hidden" checked={formData.inHouse} onChange={(e) => setFormData((prev) => ({ ...prev, inHouse: e.target.checked }))} />
+                        </label>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Obra Social</label>
+                        <select value={formData.osId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, osId: parseInt(e.target.value) || undefined }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          {insuranceCompanies.map((it) => (
+                            <option key={it._id} value={it.data.id}>
+                              {it.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Ingreso *</label>
+                        <input type="date" required value={formData.hireDate} onChange={(e) => setFormData((prev) => ({ ...prev, hireDate: e.target.value }))} className="input-field" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vacaciones (Días Extra)</label>
+                        <input type="number" min="0" value={formData.extraVacationDays} onChange={(e) => setFormData((prev) => ({ ...prev, extraVacationDays: parseInt(e.target.value) || 0 }))} className="input-field" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol Frame</label>
+                        <div className="relative w-48 md:w-64">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            value={roleFrameSearch}
+                            onChange={(e) => setRoleFrameSearch(e.target.value)}
+                            placeholder="Buscar especialidad..."
+                            className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                          />
+                          {roleFrameSearch && (
+                            <button type="button" onClick={() => setRoleFrameSearch("")} className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                              <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                          {allRoleFrames
+                            .filter((rf) => rf.name.toLowerCase().includes(roleFrameSearch.toLowerCase()))
+                            .map((rf) => (
+                              <label key={rf._id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.role_frame?.includes(rf._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={formData.role_frame?.includes(rf._id)}
+                                  onChange={(e) => {
+                                    const newRF = e.target.checked ? [...(formData.role_frame || []), rf._id] : (formData.role_frame || []).filter((id) => id !== rf._id);
+                                    setFormData((prev) => ({ ...prev, role_frame: newRF }));
+                                  }}
+                                  className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4"
+                                />
+                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{rf.name}</span>
+                              </label>
+                            ))}
+                          {allRoleFrames.filter((rf) => rf.name.toLowerCase().includes(roleFrameSearch.toLowerCase())).length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Legajo Tango</label>
+                        <input type="text" value={formData.numeroLegajoTango || ""} onChange={(e) => setFormData((prev) => ({ ...prev, numeroLegajoTango: e.target.value }))} className="input-field" placeholder="Ej: 01505" />
+                      </div>
+                      <div className="flex items-center pt-4">
+                        <label className="flex items-center space-x-3 cursor-pointer group">
+                          <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.afiliadoAlSindicato ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
+                            <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.afiliadoAlSindicato ? "translate-x-4" : ""}`}></div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Afiliado al Sindicato</span>
+                          <input type="checkbox" className="hidden" checked={formData.afiliadoAlSindicato} onChange={(e) => setFormData((prev) => ({ ...prev, afiliadoAlSindicato: e.target.checked }))} />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30 max-h-64 overflow-y-auto space-y-4">
+                        <div>
+                          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
+                            Sistema
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {roles
+                              .filter((r) => r.name.toLowerCase() !== "superadmin" && !r.name.toLowerCase().includes("mobile"))
+                              .map((r) => (
+                                <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.roles.includes(r._id)}
+                                    onChange={(e) => {
+                                      let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
+                                      const name = r.name.toLowerCase();
+                                      if (e.target.checked) {
+                                        if (name === "admin") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "user");
+                                        else if (name === "user") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "admin");
+                                      }
+                                      setFormData((prev) => ({ ...prev, roles: newRoles }));
+                                    }}
+                                    className="mt-0.5 rounded text-blue-500 focus:ring-blue-500"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                        {roles.some((r) => r.name.toLowerCase().includes("mobile")) && (
+                          <div>
+                            <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
+                              <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
+                              Mobile (App)
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {roles
+                                .filter((r) => r.name.toLowerCase().includes("mobile"))
+                                .map((r) => (
+                                  <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800 ring-2 ring-indigo-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={formData.roles.includes(r._id)}
+                                      onChange={(e) => {
+                                        let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
+                                        const name = r.name.toLowerCase();
+                                        if (e.target.checked) {
+                                          if (name.includes("coordinador"))
+                                            newRoles = newRoles.filter(
+                                              (id) =>
+                                                !roles
+                                                  .find((ro) => ro._id === id)
+                                                  ?.name.toLowerCase()
+                                                  .includes("colaborador"),
+                                            );
+                                          else if (name.includes("colaborador"))
+                                            newRoles = newRoles.filter(
+                                              (id) =>
+                                                !roles
+                                                  .find((ro) => ro._id === id)
+                                                  ?.name.toLowerCase()
+                                                  .includes("coordinador"),
+                                            );
+                                        } else {
+                                          if (
+                                            !newRoles.some((id) =>
+                                              roles
+                                                .find((ro) => ro._id === id)
+                                                ?.name.toLowerCase()
+                                                .includes("mobile"),
+                                            )
+                                          ) {
+                                            sweetAlert.warningAlert("Atención", "Debe tener al menos un rol Mobile.");
+                                            return;
+                                          }
+                                        }
+                                        setFormData((prev) => ({ ...prev, roles: newRoles }));
+                                      }}
+                                      className="mt-0.5 rounded text-indigo-500 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+                                  </label>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-800">
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Estado de la cuenta</span>
+                      <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${formData.isActive ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-gray-400 text-white shadow-lg shadow-gray-400/20"}`}>
+                        <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="text-base" />
+                        {formData.isActive ? "Activo" : "Inactivo"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {modalActiveTab === "domicilio" && (
+                  <div className="space-y-6 animate-fadeIn">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">País</label>
+                        <select value={formData.paisId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, paisId: parseInt(e.target.value) || undefined }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          {countries.map((it) => (
+                            <option key={it._id} value={it.data.id}>
+                              {it.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Localidad</label>
+                        <input type="text" value={formData.localidad || ""} onChange={(e) => setFormData((prev) => ({ ...prev, localidad: e.target.value }))} className="input-field" placeholder="Ej: CABA" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Calle</label>
+                        <input type="text" value={formData.calle || ""} onChange={(e) => setFormData((prev) => ({ ...prev, calle: e.target.value }))} className="input-field" placeholder="Ej: Av. Libertador" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Altura</label>
+                          <input type="text" value={formData.altura || ""} onChange={(e) => setFormData((prev) => ({ ...prev, altura: e.target.value }))} className="input-field" placeholder="Ej: 1234" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Piso/Depto</label>
+                          <input type="text" value={formData.pisoDepto || ""} onChange={(e) => setFormData((prev) => ({ ...prev, pisoDepto: e.target.value }))} className="input-field" placeholder="Ej: 4B" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Código Postal</label>
+                        <input type="text" value={formData.codigoPostal || ""} onChange={(e) => setFormData((prev) => ({ ...prev, codigoPostal: e.target.value }))} className="input-field" placeholder="Ej: 1425" />
+                      </div>
+                      <div className="flex items-center pt-4">
+                        <label className="flex items-center space-x-3 cursor-pointer group">
+                          <div className={`w-10 h-6 flex items-center bg-gray-300 dark:bg-gray-700 rounded-full p-1 duration-300 ease-in-out ${formData.visa ? "bg-blue-500 dark:bg-blue-600" : ""}`}>
+                            <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${formData.visa ? "translate-x-4" : ""}`}></div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Visa / Permiso de Trabajo</span>
+                          <input type="checkbox" className="hidden" checked={formData.visa} onChange={(e) => setFormData((prev) => ({ ...prev, visa: e.target.checked }))} />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
+                        <input type="text" value={formData.telefono || ""} onChange={(e) => setFormData((prev) => ({ ...prev, telefono: e.target.value }))} className="input-field" placeholder="Ej: 11 1234-5678" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono de Emergencia</label>
+                        <input type="text" value={formData.telefono2 || ""} onChange={(e) => setFormData((prev) => ({ ...prev, telefono2: e.target.value }))} className="input-field" placeholder="Ej: 11 8765-4321" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {modalActiveTab === "bancarios" && (
+                  <div className="space-y-6 animate-fadeIn">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Banco</label>
+                        <select value={formData.bancoId || ""} onChange={(e) => setFormData((prev) => ({ ...prev, bancoId: parseInt(e.target.value) || undefined }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          {banks.map((it) => (
+                            <option key={it._id} value={it.data.id}>
+                              {it.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CBU / CVU</label>
+                        <input type="text" value={formData.cbu || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: e.target.value }))} className="input-field" placeholder="22 dígitos" minLength={22} maxLength={22} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Cuenta</label>
+                        <select value={formData.tipoDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, tipoDeCuentaBancaria: e.target.value }))} className="input-field">
+                          <option value="">Seleccionar...</option>
+                          <option value="Caja de ahorro $">Caja de ahorro $</option>
+                          <option value="Cuenta Corriente $">Cuenta Corriente $</option>
+                          <option value="Caja de ahorro u$s">Caja de ahorro u$s</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Número de Cuenta</label>
+                        <input type="text" value={formData.nroDeCuentaBancaria || ""} onChange={(e) => setFormData((prev) => ({ ...prev, nroDeCuentaBancaria: e.target.value }))} className="input-field" placeholder="Ej: 347-333020/7" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alias Bancario</label>
+                      <input type="text" value={formData.aliasBancario || ""} onChange={(e) => setFormData((prev) => ({ ...prev, aliasBancario: e.target.value }))} className="input-field" placeholder="Ej: LUNES.MALETA.CUNA" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estado</label>
-                <button type="button" onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center ${formData.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
-                  <FontAwesomeIcon icon={formData.isActive ? faToggleOn : faToggleOff} className="mr-1" />
-                  {formData.isActive ? "Activo" : "Inactivo"}
-                </button>
-              </div>
-            </div>
-          </form>
-        ),
+            </form>
+          ),
       }}
     >
       {initialLoading || !hasLoaded ? (
-        <div className="flex justify-center items-center py-20"><LoadingSpinner message="Cargando usuarios..." /></div>
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner message="Cargando usuarios..." />
+        </div>
       ) : (
         <>
           <div className="relative">
             {isFetching && (
-              <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 rounded-xl backdrop-blur-[1px]"><div className="sticky top-[40vh] flex justify-center w-full"><LoadingSpinner message="Actualizando..." /></div></div>
+              <div className="absolute inset-0 z-10 bg-white/50 dark:bg-gray-900/50 rounded-xl backdrop-blur-[1px]">
+                <div className="sticky top-[40vh] flex justify-center w-full">
+                  <LoadingSpinner message="Actualizando..." />
+                </div>
+              </div>
             )}
             {users.length === 0 && !isFetching ? (
-              <EmptyState icon={faUser} title="No se encontraron usuarios" description="Ajusta los filtros." action={{ label: "Limpiar", onClick: () => { setSearchTerm(""); setStartDate(""); setEndDate(""); } }} />
+              <EmptyState
+                icon={faUser}
+                title="No se encontraron usuarios"
+                description="Ajusta los filtros."
+                action={{
+                  label: "Limpiar",
+                  onClick: () => {
+                    setSearchTerm("");
+                    setStartDate("");
+                    setEndDate("");
+                  },
+                }}
+              />
             ) : viewMode === "cards" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-0.5 lg:mx-0">
                 {users.map((user) => (
@@ -1385,12 +1905,50 @@ export const UsersPage: React.FC = () => {
                     vacations={allVacations}
                     onClick={() => openView(user)}
                     userLookup={userLookup}
-                    actions={canManage ? [
-                      ...(user.metadata?.isSolicitud ? [{ icon: faPlus, onClick: (e: any) => { e.stopPropagation(); openEdit(user); }, title: "Aprobar", className: "text-green-500" }] : []),
-                      { icon: faEdit, onClick: (e) => { e.stopPropagation(); openEdit(user); }, title: "Editar" },
-                      { icon: faKey, onClick: (e) => { e.stopPropagation(); openPassword(user._id); }, title: "Password" },
-                      { icon: faTrash, onClick: (e) => { e.stopPropagation(); handleDelete(user); }, title: "Eliminar", className: "text-red-500" }
-                    ] : undefined}
+                    actions={
+                      canManage
+                        ? [
+                            ...(user.metadata?.isSolicitud
+                              ? [
+                                  {
+                                    icon: faPlus,
+                                    onClick: (e: any) => {
+                                      e.stopPropagation();
+                                      openEdit(user);
+                                    },
+                                    title: "Aprobar",
+                                    className: "text-green-500",
+                                  },
+                                ]
+                              : []),
+                            {
+                              icon: faEdit,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                openEdit(user);
+                              },
+                              title: "Editar",
+                            },
+                            {
+                              icon: faKey,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                openPassword(user._id);
+                              },
+                              title: "Password",
+                            },
+                            {
+                              icon: faTrash,
+                              onClick: (e) => {
+                                e.stopPropagation();
+                                handleDelete(user);
+                              },
+                              title: "Eliminar",
+                              className: "text-red-500",
+                            },
+                          ]
+                        : undefined
+                    }
                   />
                 ))}
                 {canManage && <Card variant="create" onClick={openCreate} header={{ title: "Nuevo Usuario", subtitle: "Crear un nuevo usuario", icon: faUser }} />}
@@ -1421,7 +1979,11 @@ export const UsersPage: React.FC = () => {
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell">
                           <div className="flex flex-wrap gap-1">
-                            {user.roles.map((r) => <span key={r._id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 border border-blue-100">{r.name}</span>)}
+                            {user.roles.map((r) => (
+                              <span key={r._id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 border border-blue-100">
+                                {r.name}
+                              </span>
+                            ))}
                           </div>
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell text-center">
@@ -1432,7 +1994,17 @@ export const UsersPage: React.FC = () => {
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-1">
-                            {canManage && <button onClick={(e) => { e.stopPropagation(); handleDelete(user); }} className="p-2 text-gray-400 hover:text-red-500"><FontAwesomeIcon icon={faTrash} /></button>}
+                            {canManage && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(user);
+                                }}
+                                className="p-2 text-gray-400 hover:text-red-500"
+                              >
+                                <FontAwesomeIcon icon={faTrash} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1445,22 +2017,41 @@ export const UsersPage: React.FC = () => {
           {totalPages > 1 && (
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-6 pb-8 gap-4">
               <div className="flex-1 flex justify-between sm:hidden w-full">
-                <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white disabled:opacity-50">Anterior</button>
-                <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white disabled:opacity-50">Siguiente</button>
+                <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white disabled:opacity-50">
+                  Anterior
+                </button>
+                <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white disabled:opacity-50">
+                  Siguiente
+                </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between w-full">
-                <p className="text-sm text-gray-700 dark:text-gray-300">Mostrando <span className="font-semibold text-primary-600">{users.length}</span> de <span className="font-semibold text-primary-600">{totalUsers}</span></p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Mostrando <span className="font-semibold text-primary-600">{users.length}</span> de <span className="font-semibold text-primary-600">{totalUsers}</span>
+                </p>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"><FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" /></button>
+                  <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                    <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+                  </button>
                   {Array.from({ length: totalPages }).map((_, i) => {
                     const p = i + 1;
                     if (p === 1 || p === totalPages || (p >= currentPage - 2 && p <= currentPage + 2)) {
-                      return <button key={p} onClick={() => setCurrentPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold ${currentPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"}`}>{p}</button>;
+                      return (
+                        <button key={p} onClick={() => setCurrentPage(p)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold ${currentPage === p ? "bg-primary-600 border-primary-600 text-white z-10" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"}`}>
+                          {p}
+                        </button>
+                      );
                     }
-                    if ((p === 2 && currentPage > 4) || (p === totalPages - 1 && currentPage < totalPages - 3)) return <span key={`dots-${p}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700">...</span>;
+                    if ((p === 2 && currentPage > 4) || (p === totalPages - 1 && currentPage < totalPages - 3))
+                      return (
+                        <span key={`dots-${p}`} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700">
+                          ...
+                        </span>
+                      );
                     return null;
                   })}
-                  <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"><FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" /></button>
+                  <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                    <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+                  </button>
                 </nav>
               </div>
             </div>

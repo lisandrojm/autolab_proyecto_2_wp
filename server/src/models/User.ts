@@ -75,7 +75,7 @@ export interface IUserMetadata {
   swift?: string | null;
   informacionBancariaAdicional?: string | null;
   projects?: Types.ObjectId[] | IExternalProject[] | any[];
-  
+
   // Solicitud de alta fields
   fullName?: string;
   roleFrameId?: string;
@@ -88,6 +88,7 @@ export interface IUserMetadata {
   isReplacement?: boolean;
   isSolicitud?: boolean;
   projectIds?: Types.ObjectId[];
+  role_frame?: string[] | Types.ObjectId[];
 }
 
 export interface IUser extends Document {
@@ -98,7 +99,6 @@ export interface IUser extends Document {
   projectIds: Types.ObjectId[];
   tenantId: Types.ObjectId;
   firstName?: string;
-  lastName?: string;
   lastName?: string;
   isActive: boolean;
   lastLoginAt?: Date;
@@ -112,7 +112,6 @@ export interface IUser extends Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
   closeYear(maxDiasArrastre?: number): Promise<void>;
   name: string; // Keep name for backward compat if needed, or derived
-  metadata?: IUserMetadata;
   metadata?: IUserMetadata;
 }
 
@@ -180,7 +179,7 @@ const userSchema = new Schema<IUser>(
       swift: String,
       informacionBancariaAdicional: String,
       projects: [{ type: Schema.Types.ObjectId, ref: "UserProject" }],
-      
+
       // Solicitud de alta fields
       fullName: String,
       roleFrameId: String,
@@ -193,8 +192,8 @@ const userSchema = new Schema<IUser>(
       isReplacement: Boolean,
       isSolicitud: { type: Boolean, default: false },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
+      role_frame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
     },
-
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
@@ -254,7 +253,6 @@ userSchema.index({ tenantId: 1, createdAt: -1 });
 userSchema.index({ tenantId: 1, isActive: 1, createdAt: -1 });
 userSchema.index({ tenantId: 1, clientIds: 1 });
 userSchema.index({ tenantId: 1, projectIds: 1 });
-
 
 userSchema.pre("save", async function (this: IUser, next) {
   if (!this.isModified("password")) return next();

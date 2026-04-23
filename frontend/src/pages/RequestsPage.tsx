@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines } from "@fortawesome/free-solid-svg-icons";
-import { NewsReportsModal } from "../components/news/NewsReportsModal";
+import { NewsReportsModal } from "../components/orders/news/NewsReportsModal";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
 import { Modal } from "../components/ui/Modal";
@@ -107,7 +107,9 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 shadow-sm text-[9px] uppercase text-gray-500 font-medium outline outline-1 outline-gray-100 dark:outline-gray-700 bg-white dark:bg-gray-800">
                   <tr className="border-b border-gray-100 dark:border-gray-700">
-                    <th rowSpan={2} className="py-2 px-4 text-left font-black text-gray-400 border-r border-gray-100 dark:border-gray-700 align-middle w-[180px]">Colaborador Ausente</th>
+                    <th rowSpan={2} className="py-2 px-4 text-left font-black text-gray-400 border-r border-gray-100 dark:border-gray-700 align-middle w-[180px]">
+                      Colaborador Ausente
+                    </th>
                     <th colSpan={6} className="py-1 px-4 text-center font-black bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-b border-blue-100 dark:border-blue-900/30">
                       Información del Reemplazo / Jornalero
                     </th>

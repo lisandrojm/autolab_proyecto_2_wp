@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines } from "@fortawesome/free-solid-svg-icons";
-import { Modal } from "../ui/Modal";
-import { User, UserProjectMetadata } from "../../api/users";
-import { overtimeUtils, OvertimeSettings } from "../../utils/overtimeUtils";
+import { Modal } from "../../ui/Modal";
+import { User, UserProjectMetadata } from "../../../api/users";
+import { overtimeUtils, OvertimeSettings } from "../../../utils/overtimeUtils";
 import * as XLSX from "xlsx";
 
 // This works with the already-formatted data from RequestsPage
@@ -65,16 +65,19 @@ interface EmployeeStats {
   contractType?: string;
   contractAlta?: string;
   contractBaja?: string;
-  dailyAttendance: Record<string, { 
-    status: string; 
-    reason?: string;
-    overtimeHours?: number;
-    h50?: number;
-    h100?: number;
-    pct?: number;
-    entryTime?: string;
-    exitTime?: string;
-  }>;
+  dailyAttendance: Record<
+    string,
+    {
+      status: string;
+      reason?: string;
+      overtimeHours?: number;
+      h50?: number;
+      h100?: number;
+      pct?: number;
+      entryTime?: string;
+      exitTime?: string;
+    }
+  >;
 }
 
 const getDailyHoursFromContract = (horaInicio?: string, horaFin?: string): number => {
@@ -457,29 +460,9 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
                         <span className="text-[10px] font-medium text-gray-500 uppercase py-0.5 px-2 bg-gray-800 rounded">{shortDay}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-6 text-center">
-                      {attendance ? (
-                        <span
-                          className={`text-[9px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest border ${
-                            attendance.status === "present"
-                              ? "bg-green-500/10 text-green-500 border-green-500/20"
-                              : attendance.status === "absent"
-                                ? "bg-red-500/10 text-red-500 border-red-500/20"
-                                : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                          }`}
-                        >
-                          {attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza"}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-bold text-gray-700 uppercase italic opacity-20">Sin Registro</span>
-                      )}
-                    </td>
+                    <td className="py-3 px-6 text-center">{attendance ? <span className={`text-[9px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest border ${attendance.status === "present" ? "bg-green-500/10 text-green-500 border-green-500/20" : attendance.status === "absent" ? "bg-red-500/10 text-red-500 border-red-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"}`}>{attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza"}</span> : <span className="text-[9px] font-bold text-gray-700 uppercase italic opacity-20">Sin Registro</span>}</td>
                     <td className="py-3 px-6">
-                      <span className="text-[11px] text-gray-400 italic">
-                        {attendance?.reason ? (
-                          <span className={`${attendance.status === "absent" ? "text-red-400 font-medium" : ""}`}>{attendance.reason}</span>
-                        ) : "-"}
-                      </span>
+                      <span className="text-[11px] text-gray-400 italic">{attendance?.reason ? <span className={`${attendance.status === "absent" ? "text-red-400 font-medium" : ""}`}>{attendance.reason}</span> : "-"}</span>
                     </td>
                     <td className="py-3 px-6 text-right">
                       {attendance?.overtimeHours ? (
@@ -616,7 +599,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     return {
       h50: parseFloat(h50.toFixed(2)),
       h100: parseFloat(h100.toFixed(2)),
-      pct: h100 > h50 ? glossary.pct100 : glossary.pct50
+      pct: h100 > h50 ? glossary.pct100 : glossary.pct50,
     };
   };
 
@@ -1159,29 +1142,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         const attendance = s.dailyAttendance[dateKey];
         const shortDay = daysMap[format(date, "EEEE")] || format(date, "eee");
 
-        rows.push([
-          s.employeeName,
-          s.rowProjectName || "S/P",
-          format(date, "dd/MM/yyyy"),
-          shortDay,
-          attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro",
-          attendance?.reason || "-",
-          attendance?.overtimeHours || 0,
-          attendance?.entryTime || "-",
-          attendance?.exitTime || "-",
-          attendance?.pct ? `${attendance.pct}%` : "-",
-        ]);
+        rows.push([s.employeeName, s.rowProjectName || "S/P", format(date, "dd/MM/yyyy"), shortDay, attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro", attendance?.reason || "-", attendance?.overtimeHours || 0, attendance?.entryTime || "-", attendance?.exitTime || "-", attendance?.pct ? `${attendance.pct}%` : "-"]);
       });
       // Add divider row between employees
       rows.push(Array(headers.length).fill(""));
     });
 
-    const introRows = [
-      ["REPORTE CONSOLIDADO DIARIO", ""],
-      ["Periodo:", `${dateFrom} al ${dateTo}`],
-      ["Exportado el:", format(new Date(), "dd/MM/yyyy HH:mm")],
-      [],
-    ];
+    const introRows = [["REPORTE CONSOLIDADO DIARIO", ""], ["Periodo:", `${dateFrom} al ${dateTo}`], ["Exportado el:", format(new Date(), "dd/MM/yyyy HH:mm")], []];
 
     const wsData = [...introRows, headers, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -1643,8 +1610,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                             </span>
                             <span className="text-gray-300 dark:text-gray-600">|</span>
                             <button onClick={() => setDailyDetailModal({ open: true, stats: s })} className="text-gray-400 hover:text-blue-500 transition-colors p-1" title="Ver detalle diario">
-                               <FontAwesomeIcon icon={faCalendarDays} className="text-xs" />
-                             </button>
+                              <FontAwesomeIcon icon={faCalendarDays} className="text-xs" />
+                            </button>
                           </div>
                         </td>
                         {/* Horario Extra */}
@@ -1700,7 +1667,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                             </button>
                           </div>
                         </td>
-
                       </tr>
                       {/* Sub-fila expansion eliminada a favor de Modal */}
                     </React.Fragment>
