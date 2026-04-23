@@ -5,6 +5,7 @@ import { faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTi
 import { vacationsAPI } from "../api/vacations";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
+import { roleFrameAPI, RoleFrameItem } from "../api/roleFrames";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -41,6 +42,7 @@ interface VacationRequestMock {
     rolFrames: string[];
     clients: string[];
     projects: { name: string; clientName?: string }[];
+    rolesFrameIds?: string[];
   };
 }
 
@@ -69,6 +71,7 @@ export const VacationsPage: React.FC = () => {
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
+  const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
 
   useEffect(() => {
     let timeoutId: any;
@@ -132,10 +135,16 @@ export const VacationsPage: React.FC = () => {
       setHasLoadedOnce(true);
 
       // Load vacations, projects, and clients in parallel
-      const [data, projectsData, clientsData] = await Promise.all([vacationsAPI.getAll(), projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll()]);
+      const [data, projectsData, clientsData, roleFramesData] = await Promise.all([
+        vacationsAPI.getAll(),
+        projectsAPI.listAll({ limit: 500 }),
+        clientsAPI.listAll(),
+        roleFrameAPI.list()
+      ]);
 
       setAllProjects(Array.isArray(projectsData) ? projectsData : (projectsData as any).data || []);
       setAllClients(Array.isArray(clientsData) ? clientsData : (clientsData as any).data || []);
+      setAllRoleFrames(roleFramesData);
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
         id: item._id,
@@ -157,7 +166,7 @@ export const VacationsPage: React.FC = () => {
         userProject: item.userProject || "-",
         userRoleFrame: item.userRoleFrame || "-",
         projectsInfo: item.projectsInfo || [],
-        userSnapshot: item.userSnapshot || { sedes: [], rolFrames: [], clients: [], projects: [] },
+        userSnapshot: item.userSnapshot || { sedes: [], rolFrames: [], clients: [], projects: [], rolesFrameIds: [] },
       }));
       setMockVacations(transformedRecords);
       calculateStats(transformedRecords);
@@ -838,15 +847,27 @@ export const VacationsPage: React.FC = () => {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex flex-wrap gap-1">
-                              {vacation.userSnapshot?.rolFrames && vacation.userSnapshot.rolFrames.length > 0 ? (
-                                vacation.userSnapshot.rolFrames.map((rf, idx) => (
-                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
-                                    {rf}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-xs text-gray-500">-</span>
-                              )}
+                              {(() => {
+                                const rfIds = vacation.userSnapshot?.rolesFrameIds || [];
+                                if (rfIds.length === 0) {
+                                  const oldFrames = vacation.userSnapshot?.rolFrames || [];
+                                  if (oldFrames.length === 0) return <span className="text-xs text-gray-500">-</span>;
+                                  return oldFrames.map((rf, idx) => (
+                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                                      {rf}
+                                    </span>
+                                  ));
+                                }
+                                return rfIds.map((rfId, idx) => {
+                                  const roleFrameObj = allRoleFrames.find(item => item._id === rfId);
+                                  const name = roleFrameObj ? roleFrameObj.name : rfId;
+                                  return (
+                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                                      {name}
+                                    </span>
+                                  );
+                                });
+                              })()}
                             </div>
                           </td>
                           <td className="py-3 px-4">
@@ -981,17 +1002,35 @@ export const VacationsPage: React.FC = () => {
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
                     <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" /> Rol Frame
                   </span>
-                  {selectedVacation.userSnapshot?.rolFrames && selectedVacation.userSnapshot.rolFrames.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {selectedVacation.userSnapshot.rolFrames.map((rf, idx) => (
-                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
-                          {rf}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-gray-500">Sin rol frame</span>
-                  )}
+                  {(() => {
+                    const rfIds = selectedVacation.userSnapshot?.rolesFrameIds || [];
+                    if (rfIds.length === 0) {
+                      const oldFrames = selectedVacation.userSnapshot?.rolFrames || [];
+                      if (oldFrames.length === 0) return <span className="text-xs text-gray-500">Sin rol frame</span>;
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {oldFrames.map((rf, idx) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                              {rf}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {rfIds.map((rfId, idx) => {
+                          const roleFrameObj = allRoleFrames.find(item => item._id === rfId);
+                          const name = roleFrameObj ? roleFrameObj.name : rfId;
+                          return (
+                            <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                              {name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Cliente/s */}

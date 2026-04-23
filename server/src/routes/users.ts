@@ -630,9 +630,10 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
       };
 
       // Resolve rol frame name if we have the id
-      if (meta?.roleFrameId) {
+      const rfId = meta?.rolesFrameIds?.[0];
+      if (rfId) {
         try {
-          const rf = await RoleFrame.findById(meta.roleFrameId).lean();
+          const rf = await RoleFrame.findById(rfId).lean();
           if (rf) {
             contractData.nombre_rol_frame = (rf as any).name || "";
           }

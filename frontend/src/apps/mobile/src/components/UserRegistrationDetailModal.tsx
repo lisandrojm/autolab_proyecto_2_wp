@@ -40,8 +40,9 @@ export const UserRegistrationDetailModal: React.FC<UserRegistrationDetailModalPr
             if (found) setRequestedProjects([found]);
           }
 
-          if (user.metadata?.roleFrameId) {
-            setRoleFrame(frames.find(f => f._id === user.metadata?.roleFrameId) || null);
+          const rfId = user.metadata?.rolesFrameIds?.[0] || user.metadata?.roleFrameId;
+          if (rfId) {
+            setRoleFrame(frames.find(f => f._id === rfId) || null);
           }
           if (user.metadata?.categoriaSatId) {
             setCategoriaSat(cats.find(c => c._id === user.metadata?.categoriaSatId) || null);

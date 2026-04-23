@@ -65,7 +65,7 @@ interface UserFormData {
   numeroLegajoTango?: string;
   afiliadoAlSindicato?: boolean;
   inHouse?: boolean;
-  role_frame?: string[];
+  rolesFrameIds?: string[];
 }
 
 type ModalTab = "general" | "domicilio" | "bancarios";
@@ -646,7 +646,7 @@ export const UsersPage: React.FC = () => {
       visa: false,
       afiliadoAlSindicato: false,
       inHouse: false,
-      role_frame: [],
+      rolesFrameIds: [],
     });
     setModalActiveTab("general");
     setShowPassword(false);
@@ -722,7 +722,7 @@ export const UsersPage: React.FC = () => {
       numeroLegajoTango: user.metadata?.numeroLegajoTango || "",
       afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
       inHouse: user.metadata?.inHouse || false,
-      role_frame: user.metadata?.role_frame?.map((rf: any) => (typeof rf === "string" ? rf : rf._id)) || [],
+      rolesFrameIds: user.metadata?.rolesFrameIds?.map((rf: any) => (typeof rf === "string" ? rf : rf._id)) || [],
     });
     setModalActiveTab("general");
     setShowPassword(false);
@@ -798,7 +798,7 @@ export const UsersPage: React.FC = () => {
           numeroLegajoTango: formData.numeroLegajoTango,
           afiliadoAlSindicato: formData.afiliadoAlSindicato,
           inHouse: formData.inHouse,
-          role_frame: formData.role_frame,
+          rolesFrameIds: formData.rolesFrameIds,
         },
       };
 
@@ -1080,7 +1080,7 @@ export const UsersPage: React.FC = () => {
             <div>
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
                 <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 text-gray-400" />
-                Rol/es
+                Rol/es de Sistema
               </label>
               {viewUser.roles.length === 0 ? (
                 <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>
@@ -1146,20 +1146,27 @@ export const UsersPage: React.FC = () => {
 
               <div className="flex flex-col">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" />
+                  <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
                   Rol Frame
                 </label>
-                {viewUser.externalInfo?.rolFrames && viewUser.externalInfo.rolFrames.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {viewUser.externalInfo.rolFrames.map((rf, idx) => (
-                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300 w-fit">
-                        {rf}
-                      </span>
-                    ))}
+                {(() => {
+                  const rfIds = viewUser.metadata?.rolesFrameIds || (viewUser.metadata as any)?.roles_frame;
+                  if (!rfIds || rfIds.length === 0) return <span className="text-xs text-gray-500">Sin rol frame</span>;
+                  return (
+                    <div className="flex flex-wrap gap-1">
+                      {rfIds.map((rf: any, idx: number) => {
+                      const roleFrameId = typeof rf === "string" ? rf : rf._id;
+                      const roleFrameObj = allRoleFrames.find((item) => item._id === roleFrameId);
+                      const roleFrameName = roleFrameObj ? roleFrameObj.name : (typeof rf === "object" ? rf.name : roleFrameId);
+                      return (
+                        <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                          {roleFrameName}
+                        </span>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <span className="text-xs text-gray-500">Sin rol frame</span>
-                )}
+                );
+              })()}
               </div>
             </div>
 
@@ -1617,13 +1624,13 @@ export const UsersPage: React.FC = () => {
                           {allRoleFrames
                             .filter((rf) => rf.name.toLowerCase().includes(roleFrameSearch.toLowerCase()))
                             .map((rf) => (
-                              <label key={rf._id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.role_frame?.includes(rf._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
+                              <label key={rf._id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
                                 <input
                                   type="checkbox"
-                                  checked={formData.role_frame?.includes(rf._id)}
+                                  checked={formData.rolesFrameIds?.includes(rf._id)}
                                   onChange={(e) => {
-                                    const newRF = e.target.checked ? [...(formData.role_frame || []), rf._id] : (formData.role_frame || []).filter((id) => id !== rf._id);
-                                    setFormData((prev) => ({ ...prev, role_frame: newRF }));
+                                    const newRF = e.target.checked ? [...(formData.rolesFrameIds || []), rf._id] : (formData.rolesFrameIds || []).filter((id) => id !== rf._id);
+                                    setFormData((prev) => ({ ...prev, rolesFrameIds: newRF }));
                                   }}
                                   className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4"
                                 />
@@ -1905,6 +1912,7 @@ export const UsersPage: React.FC = () => {
                     vacations={allVacations}
                     onClick={() => openView(user)}
                     userLookup={userLookup}
+                    allRoleFrames={allRoleFrames}
                     actions={
                       canManage
                         ? [

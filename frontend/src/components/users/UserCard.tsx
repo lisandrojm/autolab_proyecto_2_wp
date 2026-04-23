@@ -19,6 +19,7 @@ import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
 import { Vacation } from "../../api/vacations";
+import { RoleFrameItem } from "../../api/roleFrames";
 import { Card } from "../ui/Card";
 
 interface UserCardProps {
@@ -29,6 +30,7 @@ interface UserCardProps {
   projectContext?: Project;
   userConfig?: any; // Configuración del usuario en el contexto de un proyecto (p.ej. shiftId, areaId)
   userLookup?: Map<number | string, string>; // Mapa para buscar nombres de empleados reemplazados
+  allRoleFrames?: RoleFrameItem[];
   actions?: {
     icon: any;
     title: string;
@@ -45,6 +47,7 @@ export const UserCard: React.FC<UserCardProps> = ({
   projectContext,
   userConfig,
   userLookup,
+  allRoleFrames = [],
   actions,
 }) => {
   // --- Helper Functions (Replicados de UsersPage para independencia) ---
@@ -253,21 +256,32 @@ export const UserCard: React.FC<UserCardProps> = ({
       </div>
       
       {/* Role Frame */}
-      {user.metadata?.role_frame && user.metadata.role_frame.length > 0 && (
-        <div className="mb-3">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-            <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-            Rol Frame
-          </label>
-          <div className="flex flex-wrap gap-1">
-            {user.metadata.role_frame.map((rf: any, idx: number) => (
-              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-                {typeof rf === "string" ? rf : rf.name}
-              </span>
-            ))}
+      {(() => {
+        const rfIds = user.metadata?.rolesFrameIds || (user.metadata as any)?.roles_frame;
+        if (!rfIds || rfIds.length === 0) return null;
+        
+        return (
+          <div className="mb-3">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+              <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
+              Rol Frame
+            </label>
+            <div className="flex flex-wrap gap-1">
+              {rfIds.map((rf: any, idx: number) => {
+              const roleFrameId = typeof rf === "string" ? rf : rf._id;
+              const roleFrameObj = allRoleFrames.find((item) => item._id === roleFrameId);
+              const roleFrameName = roleFrameObj ? roleFrameObj.name : (typeof rf === "object" ? rf.name : roleFrameId);
+              
+              return (
+                <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                  {roleFrameName}
+                </span>
+              );
+            })}
           </div>
         </div>
-      )}
+      );
+    })()}
 
       {/* Clientes y Proyectos Agrupados */}
       <div className="space-y-4">

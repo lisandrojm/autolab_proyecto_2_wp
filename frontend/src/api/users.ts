@@ -94,7 +94,7 @@ export interface User {
     dailyRate?: number;
     isReplacement?: boolean;
     projectIds?: string[];
-    role_frame?: (string | { _id: string; name: string })[];
+    rolesFrameIds?: (string | { _id: string; name: string })[];
   };
 }
 

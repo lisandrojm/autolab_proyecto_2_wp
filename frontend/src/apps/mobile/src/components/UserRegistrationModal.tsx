@@ -100,7 +100,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       setFormData({
         fullName: meta.fullName || `${editingUser.firstName} ${editingUser.lastName}`,
         projectIds: meta.projectIds || [],
-        roleFrameId: meta.roleFrameId || "",
+        roleFrameId: meta.rolesFrameIds?.[0] || meta.roleFrameId || "",
         categoriaSatId: meta.categoriaSatId || "",
         startDate: meta.startDate || editingUser.hireDate?.split("T")[0] || "",
         dueDate: meta.dueDate || "",
@@ -164,7 +164,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         metadata: {
           fullName: formData.fullName,
           projectIds: formData.projectIds,
-          roleFrameId: formData.roleFrameId,
+          rolesFrameIds: [formData.roleFrameId],
           categoriaSatId: formData.categoriaSatId,
           startDate: formData.startDate,
           dueDate: formData.dueDate,
@@ -431,6 +431,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                           
                           // Collect all assigned role frame IDs and category IDs from project history
                           const assignedRoleFrameIds = new Set<string>();
+                          if (meta.rolesFrameIds?.[0]) assignedRoleFrameIds.add(meta.rolesFrameIds[0]);
                           if (meta.roleFrameId) assignedRoleFrameIds.add(meta.roleFrameId);
                           
                           const assignedCategoriaSatIds = new Set<string>();

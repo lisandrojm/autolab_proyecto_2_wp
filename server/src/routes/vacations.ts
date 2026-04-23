@@ -404,6 +404,7 @@ router.get("/", async (req, res) => {
         rolFrames: new Set<string>(),
         clients: new Set<string>(),
         projects: [] as { name: string; clientName?: string }[],
+        rolesFrameIds: [] as string[],
       };
 
       // Helper to avoid duplicates in projects list
@@ -414,6 +415,12 @@ router.get("/", async (req, res) => {
       };
 
       if (userObj) {
+        // Extract Role Frame IDs from metadata
+        if (userObj.metadata?.roles_frame && Array.isArray(userObj.metadata.roles_frame)) {
+          userSnapshot.rolesFrameIds = userObj.metadata.roles_frame.map((id: any) => id.toString());
+        } else if (userObj.metadata?.rolesFrameIds && Array.isArray(userObj.metadata.rolesFrameIds)) {
+          userSnapshot.rolesFrameIds = userObj.metadata.rolesFrameIds.map((id: any) => id.toString());
+        }
         // DEBUG: Inspect populated data
         console.log(`[Vacations Debug] Processing user ${userObj._id}`);
         if (userObj.projectIds && userObj.projectIds.length > 0) {
@@ -501,6 +508,7 @@ router.get("/", async (req, res) => {
           rolFrames: Array.from(userSnapshot.rolFrames),
           clients: Array.from(userSnapshot.clients),
           projects: userSnapshot.projects,
+          rolesFrameIds: userSnapshot.rolesFrameIds,
         },
       };
     });

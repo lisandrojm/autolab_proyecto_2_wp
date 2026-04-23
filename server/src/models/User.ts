@@ -78,7 +78,6 @@ export interface IUserMetadata {
 
   // Solicitud de alta fields
   fullName?: string;
-  roleFrameId?: string;
   categoriaSatId?: string;
   startDate?: string;
   dueDate?: string;
@@ -88,7 +87,7 @@ export interface IUserMetadata {
   isReplacement?: boolean;
   isSolicitud?: boolean;
   projectIds?: Types.ObjectId[];
-  role_frame?: string[] | Types.ObjectId[];
+  rolesFrameIds?: string[] | Types.ObjectId[];
 }
 
 export interface IUser extends Document {
@@ -182,7 +181,6 @@ const userSchema = new Schema<IUser>(
 
       // Solicitud de alta fields
       fullName: String,
-      roleFrameId: String,
       categoriaSatId: String,
       startDate: String,
       dueDate: String,
@@ -192,7 +190,10 @@ const userSchema = new Schema<IUser>(
       isReplacement: Boolean,
       isSolicitud: { type: Boolean, default: false },
       projectIds: [{ type: Schema.Types.ObjectId, ref: "Project" }],
-      role_frame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
+      roles_frame: {
+        type: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
+        alias: "rolesFrameIds",
+      },
     },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
