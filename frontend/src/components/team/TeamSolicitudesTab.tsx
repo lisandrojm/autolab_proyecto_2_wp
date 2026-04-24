@@ -1,20 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCheck,
-  faTimes,
-  faUserPlus,
-  faClock,
-  faSearch,
-  faDollarSign,
-  faExchangeAlt,
-  faIdCard,
-  faEnvelope,
-  faLock,
-  faEye,
-  faEyeSlash,
-  faBuilding
-} from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faUserPlus, faClock, faSearch, faDollarSign, faExchangeAlt, faIdCard, faEnvelope, faLock, faEye, faEyeSlash, faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../api/users";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
@@ -52,11 +38,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
   const fetchSolicitudes = async () => {
     try {
       setLoading(true);
-      const [allSolicitudes, frames, cats] = await Promise.all([
-        usersAPI.listSolicitudes(),
-        roleFrameAPI.list(),
-        categoriaSatAPI.list(),
-      ]);
+      const [allSolicitudes, frames, cats] = await Promise.all([usersAPI.listSolicitudes(), roleFrameAPI.list(), categoriaSatAPI.list()]);
       setRoleFrames(frames);
       setCategoriasSat(cats);
       setSolicitudes(allSolicitudes);
@@ -155,11 +137,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
   };
 
   const handleReject = async (user: User) => {
-    const result = await sweetAlert.confirm(
-      "¿Rechazar solicitud?",
-      `Se eliminará la solicitud de ${user.metadata?.fullName || "este usuario"}. Esta acción no se puede deshacer.`,
-      "Sí, rechazar"
-    );
+    const result = await sweetAlert.confirm("¿Rechazar solicitud?", `Se eliminará la solicitud de ${user.metadata?.fullName || "este usuario"}. Esta acción no se puede deshacer.`, "Sí, rechazar");
     if (!result.isConfirmed) return;
 
     try {
@@ -196,13 +174,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
           <FontAwesomeIcon icon={faSearch} />
         </span>
-        <input
-          type="text"
-          className="input-field pl-10 h-10 w-full"
-          placeholder="Buscar solicitudes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <input type="text" className="input-field pl-10 h-10 w-full" placeholder="Buscar solicitudes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
       </div>
 
       {/* List */}
@@ -219,7 +191,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Rol Frame</th>
+                  <th className="px-4 py-3 font-semibold">Rol/es Frame</th>
                   <th className="px-4 py-3 font-semibold">Categoría SAT</th>
                   <th className="px-4 py-3 font-semibold">Fechas</th>
                   <th className="px-4 py-3 font-semibold">Horario</th>
@@ -237,9 +209,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                     <tr key={user._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-xs shrink-0">
-                            {displayName.charAt(0).toUpperCase()}
-                          </div>
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-xs shrink-0">{displayName.charAt(0).toUpperCase()}</div>
                           <div className="min-w-0">
                             <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{displayName}</p>
                             <p className="text-xs text-gray-500 truncate">{formatDate(user.createdAt)}</p>
@@ -256,9 +226,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{meta?.schedule || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {meta?.dailyRate ? `$${meta.dailyRate.toLocaleString("es-AR")}` : "-"}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{meta?.dailyRate ? `$${meta.dailyRate.toLocaleString("es-AR")}` : "-"}</td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                           <FontAwesomeIcon icon={faClock} className="text-[8px]" />
@@ -267,19 +235,11 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenApproval(user)}
-                            className="px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors flex items-center gap-1.5 shadow-sm"
-                            title="Aprobar solicitud"
-                          >
+                          <button onClick={() => handleOpenApproval(user)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors flex items-center gap-1.5 shadow-sm" title="Aprobar solicitud">
                             <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
                             Aprobar
                           </button>
-                          <button
-                            onClick={() => handleReject(user)}
-                            className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5"
-                            title="Rechazar solicitud"
-                          >
+                          <button onClick={() => handleReject(user)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5" title="Rechazar solicitud">
                             <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
                             Rechazar
                           </button>
@@ -295,13 +255,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
       )}
 
       {/* Approval Modal */}
-      <Modal
-        isOpen={approvalModal.open}
-        onClose={() => setApprovalModal({ open: false, user: null })}
-        title="Aprobar Solicitud de Alta"
-        subtitle={approvalModal.user?.metadata?.fullName || ""}
-        size="lg"
-      >
+      <Modal isOpen={approvalModal.open} onClose={() => setApprovalModal({ open: false, user: null })} title="Aprobar Solicitud de Alta" subtitle={approvalModal.user?.metadata?.fullName || ""} size="lg">
         {approvalModal.user && (
           <div className="space-y-6">
             {/* Current solicitud info summary */}
@@ -313,7 +267,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                   <p className="font-medium text-gray-900 dark:text-white">{approvalModal.user.metadata?.fullName}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-blue-500 dark:text-blue-400 uppercase font-semibold">Rol Frame</span>
+                  <span className="text-[10px] text-blue-500 dark:text-blue-400 uppercase font-semibold">Rol/es Frame</span>
                   <p className="font-medium text-gray-900 dark:text-white">{getRolFrameName(approvalModal.user.metadata?.roleFrameId)}</p>
                 </div>
                 <div>
@@ -359,13 +313,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                     <FontAwesomeIcon icon={faEnvelope} className="text-blue-500 text-[10px]" />
                     Email *
                   </label>
-                  <input
-                    type="email"
-                    value={approvalForm.email}
-                    onChange={(e) => setApprovalForm((p) => ({ ...p, email: e.target.value }))}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="usuario@email.com"
-                  />
+                  <input type="email" value={approvalForm.email} onChange={(e) => setApprovalForm((p) => ({ ...p, email: e.target.value }))} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="usuario@email.com" />
                 </div>
 
                 {/* Password */}
@@ -375,18 +323,8 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                     Contraseña *
                   </label>
                   <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={approvalForm.password}
-                      onChange={(e) => setApprovalForm((p) => ({ ...p, password: e.target.value }))}
-                      className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm pr-10 focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Mín. 6 caracteres"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                    >
+                    <input type={showPassword ? "text" : "password"} value={approvalForm.password} onChange={(e) => setApprovalForm((p) => ({ ...p, password: e.target.value }))} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm pr-10 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Mín. 6 caracteres" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1">
                       <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="text-xs" />
                     </button>
                   </div>
@@ -400,13 +338,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                     <FontAwesomeIcon icon={faDollarSign} className="text-blue-500 text-[10px]" />
                     Sueldo Jornada
                   </label>
-                  <input
-                    type="number"
-                    value={approvalForm.sueldo_jornada}
-                    onChange={(e) => setApprovalForm((p) => ({ ...p, sueldo_jornada: e.target.value }))}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="0"
-                  />
+                  <input type="number" value={approvalForm.sueldo_jornada} onChange={(e) => setApprovalForm((p) => ({ ...p, sueldo_jornada: e.target.value }))} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" />
                 </div>
 
                 {/* Sueldo Mano */}
@@ -415,13 +347,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                     <FontAwesomeIcon icon={faDollarSign} className="text-blue-500 text-[10px]" />
                     Sueldo Mano
                   </label>
-                  <input
-                    type="number"
-                    value={approvalForm.sueldo_mano}
-                    onChange={(e) => setApprovalForm((p) => ({ ...p, sueldo_mano: e.target.value }))}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="0"
-                  />
+                  <input type="number" value={approvalForm.sueldo_mano} onChange={(e) => setApprovalForm((p) => ({ ...p, sueldo_mano: e.target.value }))} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" />
                 </div>
               </div>
 
@@ -432,11 +358,7 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                     <FontAwesomeIcon icon={faIdCard} className="text-blue-500 text-[10px]" />
                     Tipo de Contrato
                   </label>
-                  <select
-                    value={approvalForm.nombre_contrato}
-                    onChange={(e) => setApprovalForm((p) => ({ ...p, nombre_contrato: e.target.value }))}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
+                  <select value={approvalForm.nombre_contrato} onChange={(e) => setApprovalForm((p) => ({ ...p, nombre_contrato: e.target.value }))} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="Tiempo Indeterminado">Tiempo Indeterminado</option>
                     <option value="Jornada">Jornada</option>
                     <option value="Temporal">Temporal</option>
@@ -451,42 +373,23 @@ export const TeamSolicitudesTab: React.FC<TeamSolicitudesTabProps> = ({ projectI
                     <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-[10px]" />
                     Sede
                   </label>
-                  <input
-                    type="text"
-                    value={approvalForm.nombre_sede}
-                    onChange={(e) => setApprovalForm((p) => ({ ...p, nombre_sede: e.target.value }))}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Sede del proyecto"
-                  />
+                  <input type="text" value={approvalForm.nombre_sede} onChange={(e) => setApprovalForm((p) => ({ ...p, nombre_sede: e.target.value }))} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Sede del proyecto" />
                 </div>
               </div>
 
               {/* Observaciones */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Observaciones</label>
-                <textarea
-                  value={approvalForm.observaciones}
-                  onChange={(e) => setApprovalForm((p) => ({ ...p, observaciones: e.target.value }))}
-                  rows={2}
-                  className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                  placeholder="Opcional..."
-                />
+                <textarea value={approvalForm.observaciones} onChange={(e) => setApprovalForm((p) => ({ ...p, observaciones: e.target.value }))} rows={2} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Opcional..." />
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setApprovalModal({ open: false, user: null })}
-                className="flex-1 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
-              >
+              <button onClick={() => setApprovalModal({ open: false, user: null })} className="flex-1 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm">
                 Cancelar
               </button>
-              <button
-                onClick={handleApprove}
-                disabled={submitting}
-                className="flex-1 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 shadow-lg shadow-green-500/20 transition-all active:scale-95 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
+              <button onClick={handleApprove} disabled={submitting} className="flex-1 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 shadow-lg shadow-green-500/20 transition-all active:scale-95 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {submitting ? "Procesando..." : "Confirmar Alta"}
                 <FontAwesomeIcon icon={faCheck} />
               </button>

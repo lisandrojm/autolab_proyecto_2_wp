@@ -66,22 +66,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       const loadData = async () => {
         setLoadingData(true);
         try {
-          const [frames, cats, projs, usersRes] = await Promise.all([
-            roleFrameAPI.list(),
-            categoriaSatAPI.list(),
-            projectsAPI.listAll(),
-            usersAPI.list({ limit: 1000 })
-          ]);
+          const [frames, cats, projs, usersRes] = await Promise.all([roleFrameAPI.list(), categoriaSatAPI.list(), projectsAPI.listAll(), usersAPI.list({ limit: 1000 })]);
           setRoleFrames(frames);
           setCategoriasSat(cats);
           setPlatformUsers(usersRes.users || []);
-          
+
           // Filter projects by profile.projectIds (coordinator projects)
-          let activeProjects = projs.filter(p => p.status === 'active');
+          let activeProjects = projs.filter((p) => p.status === "active");
           if (profile?.projectIds && profile.projectIds.length > 0) {
-            activeProjects = activeProjects.filter(p => profile.projectIds?.includes(p._id));
+            activeProjects = activeProjects.filter((p) => profile.projectIds?.includes(p._id));
           }
-          
+
           setProjects(activeProjects);
         } catch (error) {
           console.error("Error loading form data:", error);
@@ -132,7 +127,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   // Auto-select project if only one exists or when projects list changes
   useEffect(() => {
     if (projects.length > 0 && formData.projectIds.length === 0) {
-      setFormData(prev => ({ ...prev, projectIds: [projects[0]._id] }));
+      setFormData((prev) => ({ ...prev, projectIds: [projects[0]._id] }));
     }
   }, [projects, formData.projectIds.length]);
 
@@ -159,7 +154,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         password: placeholderPassword,
         firstName: formData.fullName.split(" ")[0] || "Pendiente",
         lastName: formData.fullName.split(" ").slice(1).join(" ") || "Pendiente",
-        isActive: false, 
+        isActive: false,
         hireDate: formData.startDate || new Date().toISOString(),
         metadata: {
           fullName: formData.fullName,
@@ -215,9 +210,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       customHeader={
         <div className="flex flex-col flex-shrink-0 sticky top-0 z-50 shadow-sm border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="p-4 flex justify-between items-center ">
-            <h3 className="font-bold text-lg text-slate-900 dark:text-white">
-              {editingUser ? "Editar Solicitud" : "Solicitud de Alta"}
-            </h3>
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">{editingUser ? "Editar Solicitud" : "Solicitud de Alta"}</h3>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
               <FontAwesomeIcon icon={faTimes} className="text-slate-500 dark:text-slate-400" />
             </button>
@@ -248,9 +241,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 <LoadingSpinner message="Cargando datos..." />
               </div>
             ) : projects.length === 0 ? (
-              <div className="flex items-center justify-center h-full py-4 text-slate-500 italic text-sm">
-                No hay proyectos disponibles
-              </div>
+              <div className="flex items-center justify-center h-full py-4 text-slate-500 italic text-sm">No hay proyectos disponibles</div>
             ) : (
               projects.map((p) => {
                 const isSelected = formData.projectIds.includes(p._id);
@@ -260,23 +251,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                     type="button"
                     onClick={() => {
                       if (isSelected) {
-                        setFormData(prev => ({ ...prev, projectIds: prev.projectIds.filter(id => id !== p._id) }));
+                        setFormData((prev) => ({ ...prev, projectIds: prev.projectIds.filter((id) => id !== p._id) }));
                       } else {
-                        setFormData(prev => ({ ...prev, projectIds: [...prev.projectIds, p._id] }));
+                        setFormData((prev) => ({ ...prev, projectIds: [...prev.projectIds, p._id] }));
                       }
                     }}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                      isSelected 
-                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" 
-                        : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 opacity-60"
-                    }`}
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 opacity-60"}`}
                   >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center border ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
-                      {isSelected && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}
-                    </div>
-                    <span className="text-sm font-medium">
-                      {typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}
-                    </span>
+                    <div className={`w-5 h-5 rounded flex items-center justify-center border ${isSelected ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}>{isSelected && <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}</div>
+                    <span className="text-sm font-medium">{typeof p.clientId === "object" && p.clientId.name ? `${p.clientId.name} | ${p.name}` : p.name}</span>
                   </button>
                 );
               })
@@ -294,34 +277,26 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
                 <FontAwesomeIcon icon={faSearch} className="text-sm" />
               </div>
-              <input 
-                type="text" 
-                name="fullName" 
-                value={userSearchTerm} 
+              <input
+                type="text"
+                name="fullName"
+                value={userSearchTerm}
                 onChange={(e) => {
                   const val = e.target.value;
                   setUserSearchTerm(val);
-                  setFormData(prev => ({ ...prev, fullName: val }));
+                  setFormData((prev) => ({ ...prev, fullName: val }));
                   setShowUserResults(val.length > 0);
                   setSelectedUser(null);
-                }} 
+                }}
                 onFocus={() => {
                   if (userSearchTerm.length > 0) setShowUserResults(true);
                 }}
                 autoComplete="off"
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-11 pr-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white" 
-                placeholder="Nombre o apellidos" 
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-11 pr-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white"
+                placeholder="Nombre o apellidos"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setShowRoleFilterMenu(true)}
-              className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all font-bold text-sm ${
-                selectedRoleFilters.length > 0 
-                  ? "bg-blue-500 border-blue-500 text-white" 
-                  : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
-              }`}
-            >
+            <button type="button" onClick={() => setShowRoleFilterMenu(true)} className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all font-bold text-sm ${selectedRoleFilters.length > 0 ? "bg-blue-500 border-blue-500 text-white" : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"}`}>
               <FontAwesomeIcon icon={faFilter} className="text-xs" />
               Rol {selectedRoleFilters.length > 0 && `(${selectedRoleFilters.length})`}
             </button>
@@ -334,53 +309,37 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               size="md"
               footer={
                 <div className="flex w-full justify-between items-center p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-b-xl">
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedRoleFilters([]);
                       // No cerramos el modal al limpiar, para que el usuario pueda elegir otros si quiere
-                    }} 
+                    }}
                     className="text-red-500 hover:text-red-600 font-bold text-sm py-2 px-4 transition-colors"
                   >
                     Limpiar Filtros
                   </button>
-                  <button 
-                    onClick={() => setShowRoleFilterMenu(false)}
-                    className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  >
+                  <button onClick={() => setShowRoleFilterMenu(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
                     Listo
                   </button>
                 </div>
               }
             >
               <div className="p-6 space-y-6">
-                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                  Selecciona uno o más roles para filtrar la lista de colaboradores.
-                </p>
+                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Selecciona uno o más roles para filtrar la lista de colaboradores.</p>
                 <div className="space-y-1 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                  {roleFrames.map(rf => {
+                  {roleFrames.map((rf) => {
                     const isSelected = selectedRoleFilters.includes(rf.name);
                     return (
-                      <div 
-                        key={rf._id} 
-                        className="flex items-center justify-between py-4 border-b border-slate-100 dark:border-slate-800/50 last:border-0 group"
-                      >
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-blue-500 transition-colors">
-                          {rf.name}
-                        </span>
-                        <button 
+                      <div key={rf._id} className="flex items-center justify-between py-4 border-b border-slate-100 dark:border-slate-800/50 last:border-0 group">
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-blue-500 transition-colors">{rf.name}</span>
+                        <button
                           onClick={() => {
-                            if (isSelected) setSelectedRoleFilters(prev => prev.filter(r => r !== rf.name));
-                            else setSelectedRoleFilters(prev => [...prev, rf.name]);
+                            if (isSelected) setSelectedRoleFilters((prev) => prev.filter((r) => r !== rf.name));
+                            else setSelectedRoleFilters((prev) => [...prev, rf.name]);
                           }}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
-                            isSelected ? 'bg-blue-500 shadow-inner' : 'bg-slate-200 dark:bg-slate-700'
-                          }`}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${isSelected ? "bg-blue-500 shadow-inner" : "bg-slate-200 dark:bg-slate-700"}`}
                         >
-                          <span 
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
-                              isSelected ? 'translate-x-6' : 'translate-x-1'
-                            }`} 
-                          />
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${isSelected ? "translate-x-6" : "translate-x-1"}`} />
                         </button>
                       </div>
                     );
@@ -394,31 +353,25 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             {showUserResults && (
               <div className="absolute z-[100] left-0 right-0 top-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto overflow-x-hidden divide-y divide-slate-100 dark:divide-slate-700">
                 {(() => {
-                  const filtered = platformUsers.filter(u => {
-                    const full = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
+                  const filtered = platformUsers.filter((u) => {
+                    const full = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
                     const search = userSearchTerm.toLowerCase();
-                    
+
                     // Name/email match
-                    const matchesSearch = full.includes(search) || (u.email || '').toLowerCase().includes(search);
-                    
+                    const matchesSearch = full.includes(search) || (u.email || "").toLowerCase().includes(search);
+
                     // Role filter match
-                    const matchesRole = selectedRoleFilters.length === 0 || 
-                      (u.externalInfo?.rolFrames || []).some((rf: string) => selectedRoleFilters.includes(rf)) ||
-                      (u.metadata?.projects || []).some((p: any) => selectedRoleFilters.includes(p.nombre_rol_frame));
+                    const matchesRole = selectedRoleFilters.length === 0 || (u.externalInfo?.rolFrames || []).some((rf: string) => selectedRoleFilters.includes(rf)) || (u.metadata?.projects || []).some((p: any) => selectedRoleFilters.includes(p.nombre_rol_frame));
 
                     return matchesSearch && matchesRole;
                   });
 
                   if (filtered.length === 0) {
-                    return (
-                      <div className="px-4 py-3 text-xs text-slate-400 italic">
-                        Sin coincidencias (escribe para crear uno nuevo)
-                      </div>
-                    );
+                    return <div className="px-4 py-3 text-xs text-slate-400 italic">Sin coincidencias (escribe para crear uno nuevo)</div>;
                   }
 
-                  return filtered.slice(0, 10).map(user => {
-                    const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+                  return filtered.slice(0, 10).map((user) => {
+                    const userFullName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email;
                     return (
                       <button
                         key={user._id}
@@ -426,36 +379,28 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                         onClick={() => {
                           const meta = user.metadata || {};
                           const projects = Array.isArray(meta.projects) ? meta.projects : [];
-                          
+
                           const externalRolFrames = user.externalInfo?.rolFrames || [];
-                          
+
                           // Collect all assigned role frame IDs and category IDs from project history
                           const assignedRoleFrameIds = new Set<string>();
                           if (meta.rolesFrameIds?.[0]) assignedRoleFrameIds.add(meta.rolesFrameIds[0]);
                           if (meta.roleFrameId) assignedRoleFrameIds.add(meta.roleFrameId);
-                          
+
                           const assignedCategoriaSatIds = new Set<string>();
                           if (meta.categoriaSatId) assignedCategoriaSatIds.add(meta.categoriaSatId);
 
                           // Try to match external roles by name
                           externalRolFrames.forEach((rfName: string) => {
-                            const match = roleFrames.find(rf => rf.name === rfName);
+                            const match = roleFrames.find((rf) => rf.name === rfName);
                             if (match) assignedRoleFrameIds.add(match._id);
                           });
 
                           projects.forEach((proj: any) => {
-                            const rfMatch = roleFrames.find(rf => 
-                              rf._id === proj.roleFrameId || 
-                              rf.externalId === String(proj.rol_frame_id) || 
-                              rf.name === proj.nombre_rol_frame
-                            );
+                            const rfMatch = roleFrames.find((rf) => rf._id === proj.roleFrameId || rf.externalId === String(proj.rol_frame_id) || rf.name === proj.nombre_rol_frame);
                             if (rfMatch) assignedRoleFrameIds.add(rfMatch._id);
 
-                            const catMatch = categoriasSat.find(cat => 
-                              cat._id === proj.categoriaSatId || 
-                              cat.externalId === String(proj.categoria_sat_id) || 
-                              cat.name === proj.nombre_categoria_sat
-                            );
+                            const catMatch = categoriasSat.find((cat) => cat._id === proj.categoriaSatId || cat.externalId === String(proj.categoria_sat_id) || cat.name === proj.nombre_categoria_sat);
                             if (catMatch) assignedCategoriaSatIds.add(catMatch._id);
                           });
 
@@ -463,12 +408,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                           const roleFrameIds = Array.from(assignedRoleFrameIds);
                           const categoriaSatIds = Array.from(assignedCategoriaSatIds);
 
-                          setFormData(prev => ({ 
-                            ...prev, 
+                          setFormData((prev) => ({
+                            ...prev,
                             fullName: userFullName,
                             // Pre-select the first one if available
                             roleFrameId: roleFrameIds[0] || prev.roleFrameId,
-                            categoriaSatId: categoriaSatIds[0] || prev.categoriaSatId
+                            categoriaSatId: categoriaSatIds[0] || prev.categoriaSatId,
                           }));
                           setUserSearchTerm(userFullName);
                           setSelectedUser({
@@ -476,8 +421,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                             metadata: {
                               ...meta,
                               roleFrameIds,
-                              categoriaSatIds
-                            }
+                              categoriaSatIds,
+                            },
                           });
                           setShowUserResults(false);
                         }}
@@ -492,31 +437,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               </div>
             )}
           </div>
-          {showUserResults && (
-            <div 
-              className="fixed inset-0 z-[90]" 
-              onClick={() => setShowUserResults(false)}
-            />
-          )}
+          {showUserResults && <div className="fixed inset-0 z-[90]" onClick={() => setShowUserResults(false)} />}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-              Rol Frame*
+              Rol/es Frame*
             </label>
-            <select 
-              name="roleFrameId" 
-              value={formData.roleFrameId} 
-              onChange={handleChange} 
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white"
-            >
+            <select name="roleFrameId" value={formData.roleFrameId} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white">
               <option value="">Selecciona rol</option>
               {roleFrames
-                .filter(rf => !selectedUser?.metadata?.roleFrameIds?.length || selectedUser.metadata.roleFrameIds.includes(rf._id))
+                .filter((rf) => !selectedUser?.metadata?.roleFrameIds?.length || selectedUser.metadata.roleFrameIds.includes(rf._id))
                 .map((rf) => (
-                  <option key={rf._id} value={rf._id}>{rf.name}</option>
+                  <option key={rf._id} value={rf._id}>
+                    {rf.name}
+                  </option>
                 ))}
             </select>
           </div>
@@ -525,30 +462,26 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
               Categoría SAT*
             </label>
-            <select 
-              name="categoriaSatId" 
-              value={formData.categoriaSatId} 
-              onChange={handleChange} 
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white"
-            >
+            <select name="categoriaSatId" value={formData.categoriaSatId} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white">
               <option value="">Selecciona categoría</option>
               {(() => {
-                const selectedRF = roleFrames.find(rf => rf._id === formData.roleFrameId);
+                const selectedRF = roleFrames.find((rf) => rf._id === formData.roleFrameId);
                 const allowedExternalIds = (selectedRF?.data?.categoriasSat || []).map((c: any) => String(c.id || c));
-                
+
                 return categoriasSat
-                  .filter(cat => {
+                  .filter((cat) => {
                     // 1. Must be allowed by the selected Role Frame (if one is selected)
                     const isAllowedByRole = !formData.roleFrameId || allowedExternalIds.includes(cat.externalId) || allowedExternalIds.includes(String(cat.data?.id));
-                    
+
                     // 2. Must be assigned to the user (if a platform user is selected)
                     const isAssignedToUser = !selectedUser?.metadata?.categoriaSatIds?.length || selectedUser.metadata.categoriaSatIds.includes(cat._id);
-                    
+
                     return isAllowedByRole && isAssignedToUser;
                   })
                   .map((cat) => (
                     <option key={cat._id} value={cat._id}>
-                      {cat.data?.numeroCategoria ? `(${cat.data.numeroCategoria}) ` : ""}{cat.name}
+                      {cat.data?.numeroCategoria ? `(${cat.data.numeroCategoria}) ` : ""}
+                      {cat.name}
                     </option>
                   ));
               })()}
@@ -558,34 +491,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <CustomDatePicker 
-              label="Start Date" 
-              value={formData.startDate} 
-              onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} 
-            />
+            <CustomDatePicker label="Start Date" value={formData.startDate} onChange={(date) => setFormData((p) => ({ ...p, startDate: date }))} />
           </div>
           <div className="space-y-1">
-            <CustomDatePicker 
-              label="Due Date" 
-              value={formData.dueDate} 
-              onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} 
-            />
+            <CustomDatePicker label="Due Date" value={formData.dueDate} onChange={(date) => setFormData((p) => ({ ...p, dueDate: date }))} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Cantidad de Jornadas
-            </label>
-            <input 
-              type="number"
-              name="workdaysCount" 
-              value={formData.workdaysCount} 
-              onChange={handleChange} 
-              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" 
-              placeholder="Ej: 5" 
-            />
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cantidad de Jornadas</label>
+            <input type="number" name="workdaysCount" value={formData.workdaysCount} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="Ej: 5" />
           </div>
           <div className="space-y-1 md:col-span-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
@@ -594,12 +510,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <select
-                  name="inTime"
-                  value={formData.inTime}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none"
-                >
+                <select name="inTime" value={formData.inTime} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
                   <option value="">Entrada</option>
                   {TIME_OPTIONS.map((opt) => (
                     <option key={`in-${opt.value}`} value={opt.value}>
@@ -610,12 +521,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               </div>
               <FontAwesomeIcon icon={faArrowRight} className="text-slate-400 text-xs" />
               <div className="relative flex-1">
-                <select
-                  name="outTime"
-                  value={formData.outTime}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none"
-                >
+                <select name="outTime" value={formData.outTime} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
                   <option value="">Salida</option>
                   {TIME_OPTIONS.map((opt) => (
                     <option key={`out-${opt.value}`} value={opt.value}>
@@ -627,21 +533,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Importe por Jornada
-            </label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Importe por Jornada</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                 <FontAwesomeIcon icon={faMoneyBillWave} />
               </span>
-              <input 
-                type="number"
-                name="dailyRate" 
-                value={formData.dailyRate} 
-                onChange={handleChange} 
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" 
-                placeholder="0" 
-              />
+              <input type="number" name="dailyRate" value={formData.dailyRate} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium" placeholder="0" />
             </div>
           </div>
         </div>
@@ -657,17 +554,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </div>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input 
-              type="checkbox" 
-              name="isReplacement"
-              checked={formData.isReplacement} 
-              onChange={handleChange}
-              className="sr-only peer" 
-            />
+            <input type="checkbox" name="isReplacement" checked={formData.isReplacement} onChange={handleChange} className="sr-only peer" />
             <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none dark:bg-slate-700 rounded-full transition-colors duration-200 ease-in-out peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
-            <span className="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-              {formData.isReplacement ? "SÍ" : "NO"}
-            </span>
+            <span className="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{formData.isReplacement ? "SÍ" : "NO"}</span>
           </label>
         </div>
       </div>

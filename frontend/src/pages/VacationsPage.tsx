@@ -135,12 +135,7 @@ export const VacationsPage: React.FC = () => {
       setHasLoadedOnce(true);
 
       // Load vacations, projects, and clients in parallel
-      const [data, projectsData, clientsData, roleFramesData] = await Promise.all([
-        vacationsAPI.getAll(),
-        projectsAPI.listAll({ limit: 500 }),
-        clientsAPI.listAll(),
-        roleFrameAPI.list()
-      ]);
+      const [data, projectsData, clientsData, roleFramesData] = await Promise.all([vacationsAPI.getAll(), projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll(), roleFrameAPI.list()]);
 
       setAllProjects(Array.isArray(projectsData) ? projectsData : (projectsData as any).data || []);
       setAllClients(Array.isArray(clientsData) ? clientsData : (clientsData as any).data || []);
@@ -859,7 +854,7 @@ export const VacationsPage: React.FC = () => {
                                   ));
                                 }
                                 return rfIds.map((rfId, idx) => {
-                                  const roleFrameObj = allRoleFrames.find(item => item._id === rfId);
+                                  const roleFrameObj = allRoleFrames.find((item) => item._id === rfId);
                                   const name = roleFrameObj ? roleFrameObj.name : rfId;
                                   return (
                                     <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
@@ -997,10 +992,10 @@ export const VacationsPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Rol Frame */}
+                {/* Rol/es Frame */}
                 <div className="flex flex-col">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" /> Rol Frame
+                    <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" /> Rol/es Frame
                   </span>
                   {(() => {
                     const rfIds = selectedVacation.userSnapshot?.rolesFrameIds || [];
@@ -1020,7 +1015,7 @@ export const VacationsPage: React.FC = () => {
                     return (
                       <div className="flex flex-wrap gap-1">
                         {rfIds.map((rfId, idx) => {
-                          const roleFrameObj = allRoleFrames.find(item => item._id === rfId);
+                          const roleFrameObj = allRoleFrames.find((item) => item._id === rfId);
                           const name = roleFrameObj ? roleFrameObj.name : rfId;
                           return (
                             <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">

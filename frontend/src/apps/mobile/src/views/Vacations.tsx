@@ -986,7 +986,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             </div>
           </div>
 
-          {/* Sede, Rol Frame, Contrato, Horario y Fechas */}
+          {/* Sede, Rol/es Frame, Contrato, Horario y Fechas */}
           {((profile?.externalInfo?.sedes?.length ?? 0) > 0 || (profile?.externalInfo?.rolFrames?.length ?? 0) > 0 || (profile?.externalInfo?.contracts?.length ?? 0) > 0 || (profile?.externalInfo?.schedules?.length ?? 0) > 0 || (profile?.externalInfo?.projectDates?.length ?? 0) > 0) && (
             <div className="space-y-1">
               <h4 className="font-semibold text-slate-900 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-2 mt-2">Detalles Laborales</h4>
@@ -999,7 +999,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               {profile?.externalInfo?.rolFrames && profile.externalInfo.rolFrames.length > 0 && (
                 <div className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faIdCard} className="w-3 h-3 text-slate-400" />
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">Rol Frame:</span> {profile.externalInfo.rolFrames.join(", ")}
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">Rol/es Frame:</span> {profile.externalInfo.rolFrames.join(", ")}
                 </div>
               )}
               {profile?.externalInfo?.contracts && profile.externalInfo.contracts.length > 0 && (

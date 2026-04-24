@@ -136,7 +136,7 @@ export default function Profile() {
     - Ingreso: profile.hireDate
     - Antigüedad Total: profile.seniorityYears
     - Sede: contractInfo.seat
-    - Rol Frame: profile.externalInfo?.rolFrames
+    - Rol/es Frame: profile.externalInfo?.rolFrames
     - Contrato: contractInfo.type
     - Horario: contractInfo.schedule (if available) -> externalInfo.schedules might be better
     - Proyecto Actual: profile.projectIds (names?)
@@ -157,7 +157,7 @@ export default function Profile() {
     employeeId: profile?._id?.slice(-8).toUpperCase() || "ID-???",
     level: profile?.levelName || "Sin Nivel",
     seniority: seniorityData.text,
-    roleFrame: profile?.externalInfo?.rolFrames?.[0] || "Sin Rol Frame",
+    roleFrame: profile?.externalInfo?.rolFrames?.[0] || "Sin Rol/es Frame",
     contractType: contractInfo.type,
     activeProject: stats?.project || contractInfo.project || "Sin proyecto activo",
     schedule: contractInfo.schedule || profile?.externalInfo?.schedules?.[0] || "Sin horario",
@@ -241,11 +241,11 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Rol Frame */}
+              {/* Rol/es Frame */}
               <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
                 <FontAwesomeIcon icon={faIdCard} className="w-5 h-5 text-primary" />
                 <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Rol Frame</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Rol/es Frame</p>
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.roleFrame}</p>
                 </div>
               </div>

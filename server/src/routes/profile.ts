@@ -141,7 +141,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Explicitly send projectIds for frontend selectors
     const projectIds = user?.projectIds?.map((id) => id.toString()) || [];
 
-    // ENRICHMENT LOGIC: Extract Sede and Rol Frame names from populated metadata.projects
+    // ENRICHMENT LOGIC: Extract Sede and Rol/es Frame names from populated metadata.projects
     const userSedeNames = new Set<string>();
     const userRolFrameNames = new Set<string>();
     const userContractNames = new Set<string>();

@@ -95,6 +95,31 @@ export interface User {
     isReplacement?: boolean;
     projectIds?: string[];
     rolesFrameIds?: (string | { _id: string; name: string })[];
+    // Domicilio & Personal
+    generoId?: number;
+    tipoDocumentoId?: number;
+    cuit?: string;
+    estadoCivil?: string;
+    calle?: string;
+    altura?: string;
+    pisoDepto?: string;
+    codigoPostal?: string;
+    localidad?: string;
+    paisId?: number;
+    nacionalidadId?: number;
+    nivelEstudioId?: number;
+    osId?: number;
+    osPrepaga?: boolean;
+    fechaNac?: string;
+    telefono?: string;
+    telefono2?: string;
+    visa?: boolean;
+    // Bancarios
+    bancoId?: number;
+    cbu?: string;
+    tipoDeCuentaBancaria?: string;
+    nroDeCuentaBancaria?: string;
+    aliasBancario?: string;
   };
 }
 

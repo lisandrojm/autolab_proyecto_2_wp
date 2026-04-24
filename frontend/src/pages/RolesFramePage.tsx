@@ -162,7 +162,7 @@ export const RolesFramePage: React.FC = () => {
       )}
 
       {selectedRole && (
-        <Modal isOpen={!!selectedRole} onClose={() => setSelectedRole(null)} title={selectedRole.name} subtitle="Información detallada del Rol Frame" size="lg">
+        <Modal isOpen={!!selectedRole} onClose={() => setSelectedRole(null)} title={selectedRole.name} subtitle="Información detallada del Rol/es Frame" size="lg">
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">

@@ -163,6 +163,7 @@ export const UsersPage: React.FC = () => {
   // view modal (solo lectura)
   const [viewOpen, setViewOpen] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
+  const [viewActiveTab, setViewActiveTab] = useState<ModalTab>("general");
   const [roleFrameSearch, setRoleFrameSearch] = useState("");
 
   const canManage = hasPermission("admin_users:view");
@@ -722,7 +723,39 @@ export const UsersPage: React.FC = () => {
       numeroLegajoTango: user.metadata?.numeroLegajoTango || "",
       afiliadoAlSindicato: user.metadata?.afiliadoAlSindicato || false,
       inHouse: user.metadata?.inHouse || false,
-      rolesFrameIds: user.metadata?.rolesFrameIds?.map((rf: any) => (typeof rf === "string" ? rf : rf._id)) || [],
+      rolesFrameIds: (() => {
+        const rawRf = user.metadata?.rolesFrameIds || (user.metadata as any)?.roles_frame || [];
+        const rfArray = Array.isArray(rawRf) ? rawRf : [rawRf];
+        
+        const resolvedIds = new Set<string>();
+        rfArray.forEach((rf: any) => {
+          if (!rf) return;
+          const id = typeof rf === "string" ? rf : rf._id;
+          const name = typeof rf === "object" ? rf.name : null;
+
+          // 1. Intentar match por _id en allRoleFrames
+          let match = allRoleFrames.find((item) => item._id === id);
+          
+          // 2. Intentar match por externalId o data.rol.id
+          if (!match && id) {
+            match = allRoleFrames.find((item) => item.externalId === String(id) || String(item.data?.rol?.id) === String(id));
+          }
+
+          // 3. Intentar match por nombre (si tenemos el nombre)
+          if (!match && name) {
+            match = allRoleFrames.find((item) => item.name === name);
+          }
+          
+          // 4. Si encontramos un match en allRoleFrames, usamos SU _id actual
+          if (match) {
+            resolvedIds.add(match._id);
+          } else if (typeof id === "string" && id.length === 24) {
+            // Fallback: si parece un ObjectId, lo mantenemos por si acaso es válido pero no está en la lista actual
+            resolvedIds.add(id);
+          }
+        });
+        return Array.from(resolvedIds);
+      })(),
     });
     setModalActiveTab("general");
     setShowPassword(false);
@@ -749,6 +782,7 @@ export const UsersPage: React.FC = () => {
 
   const openView = (user: User) => {
     setViewUser(user);
+    setViewActiveTab("general");
     setViewOpen(true);
   };
 
@@ -798,6 +832,7 @@ export const UsersPage: React.FC = () => {
           numeroLegajoTango: formData.numeroLegajoTango,
           afiliadoAlSindicato: formData.afiliadoAlSindicato,
           inHouse: formData.inHouse,
+          roles_frame: formData.rolesFrameIds,
           rolesFrameIds: formData.rolesFrameIds,
         },
       };
@@ -1030,7 +1065,7 @@ export const UsersPage: React.FC = () => {
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
-        title: "Detalle de Usuario",
+        title: viewUser ? `Detalle: ${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim() || viewUser.email : "Detalle de Usuario",
         subtitle: undefined,
         size: "md",
         actions: [
@@ -1044,10 +1079,6 @@ export const UsersPage: React.FC = () => {
                   },
                   variant: "secondary",
                 } as const,
-              ]
-            : []),
-          ...(canManage
-            ? [
                 {
                   label: "Cambiar contraseña",
                   onClick: () => {
@@ -1065,331 +1096,335 @@ export const UsersPage: React.FC = () => {
           },
         ],
         content: viewUser ? (
-          <div className="space-y-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{viewUser.firstName || viewUser.lastName ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim() : viewUser.email.split("@")[0]}</h3>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewUser.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
-                {viewUser.primaryRole && <span className="inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 uppercase tracking-wider">{viewUser.primaryRole}</span>}
-                {viewUser.tenant && viewUser.tenant.name && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewUser.tenant.name}</span>}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 text-gray-400" />
-                Rol/es de Sistema
-              </label>
-              {viewUser.roles.length === 0 ? (
-                <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>
-              ) : (
-                <div className="flex flex-wrap gap-1">
-                  {viewUser.roles.map((role) => {
-                    const isCoord = role.name.toLowerCase().includes("coordinador");
-                    return (
-                      <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isCoord ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300"}`}>
-                        {role.name}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
-                  Sede
-                </label>
-                {(() => {
-                  const activeSedes = new Set<string>();
-                  if (viewUser.metadata?.projects) {
-                    viewUser.metadata.projects.forEach((p: any) => {
-                      if (p.contracts) {
-                        p.contracts.forEach((c: any) => {
-                          const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-                          const isActive = !endDate || endDate >= new Date();
-                          if (isActive && c.nombre_sede) activeSedes.add(c.nombre_sede);
-                        });
-                      }
-                    });
-                  }
-                  const sedesList = Array.from(activeSedes);
-                  if (sedesList.length > 0) {
-                    return (
-                      <div className="flex flex-wrap gap-1">
-                        {sedesList.map((sede, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
-                            {sede}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  }
-                  if (viewUser.externalInfo?.sedes && viewUser.externalInfo.sedes.length > 0) {
-                    return (
-                      <div className="flex flex-wrap gap-1">
-                        {viewUser.externalInfo.sedes.map((sede, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">
-                            {sede}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return <span className="text-xs text-gray-500">Sin sede</span>;
-                })()}
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 text-gray-400" />
-                  Rol Frame
-                </label>
-                {(() => {
-                  const rfIds = viewUser.metadata?.rolesFrameIds || (viewUser.metadata as any)?.roles_frame;
-                  if (!rfIds || rfIds.length === 0) return <span className="text-xs text-gray-500">Sin rol frame</span>;
-                  return (
-                    <div className="flex flex-wrap gap-1">
-                      {rfIds.map((rf: any, idx: number) => {
-                      const roleFrameId = typeof rf === "string" ? rf : rf._id;
-                      const roleFrameObj = allRoleFrames.find((item) => item._id === roleFrameId);
-                      const roleFrameName = roleFrameObj ? roleFrameObj.name : (typeof rf === "object" ? rf.name : roleFrameId);
-                      return (
-                        <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
-                          {roleFrameName}
-                        </span>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+          <div className="flex flex-col h-[550px] -mx-6 -mb-6">
+            {/* Tabs Header */}
+            <div className="z-20 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+              <div className="flex">
+                <button type="button" onClick={() => setViewActiveTab("general")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "general" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                  <FontAwesomeIcon icon={faUser} className="text-xs" />
+                  General
+                </button>
+                <button type="button" onClick={() => setViewActiveTab("domicilio")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                  <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
+                  Domicilio
+                </button>
+                <button type="button" onClick={() => setViewActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                  <FontAwesomeIcon icon={faUniversity} className="text-xs" />
+                  Datos Bancarios
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
-                  Cliente/s
-                </label>
-                {(() => {
-                  const clientSet = new Set<string>();
-                  if (viewUser.clientIds && viewUser.clientIds.length > 0) {
-                    viewUser.clientIds.forEach((c) => clientSet.add(typeof c === "string" ? c : c._id));
-                  }
-                  if (viewUser.projectIds && viewUser.projectIds.length > 0) {
-                    viewUser.projectIds.forEach((p) => {
-                      const pId = typeof p === "string" ? p : p._id;
-                      const fullProject = allProjects.find((proj) => proj._id === pId);
-                      if (fullProject) {
-                        const cid = typeof fullProject.clientId === "object" ? fullProject.clientId._id : fullProject.clientId;
-                        if (cid) clientSet.add(cid);
-                      }
-                    });
-                  }
-                  const uniqueClients = Array.from(clientSet)
-                    .map((cid) => allClients.find((c) => c._id === cid)?.name)
-                    .filter(Boolean);
-                  if (uniqueClients.length > 0) {
-                    return (
-                      <div className="flex flex-wrap gap-1">
-                        {uniqueClients.map((name, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 w-fit border border-cyan-200 dark:border-cyan-800">
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return <span className="text-xs text-gray-500">Sin clientes</span>;
-                })()}
-              </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-gray-400" />
-                  Proyecto/s Actual/es
-                </label>
-                {viewUser.projectIds && viewUser.projectIds.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {viewUser.projectIds.map((project) => {
-                      const projectId = typeof project === "string" ? project : project._id;
-                      const projectName = typeof project === "object" && "name" in project ? project.name : null;
-                      const fullProject = allProjects.find((p) => p._id === projectId);
-                      const displayName = projectName || fullProject?.name || "Proyecto desconocido";
-                      let clientName = "";
-                      if (fullProject) {
-                        if (typeof fullProject.clientId === "object" && fullProject.clientId.name) {
-                          clientName = fullProject.clientId.name;
-                        } else if (typeof fullProject.clientId === "string") {
-                          const client = allClients.find((c) => c._id === fullProject.clientId);
-                          if (client) clientName = client.name;
-                        }
-                      }
-                      return (
-                        <span key={projectId} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 shadow-sm">
-                          {displayName}
-                          {clientName && <span className="ml-1 text-[10px] opacity-90 font-normal">({clientName})</span>}
-                        </span>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-500">Sin proyectos</span>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faCalendar} className="h-3 w-3 text-gray-400" />
-                  Ingreso
-                </label>
-                {viewUser.hireDate ? <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{new Date(viewUser.hireDate).toLocaleDateString()}</span> : <span className="text-xs text-gray-500">—</span>}
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-gray-400" />
-                  Tipo de Contrato
-                </label>
-                {getActiveContractType(viewUser) ? (
-                  <div className="flex gap-2 items-center flex-wrap">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{getActiveContractType(viewUser)}</span>
-                    {getActiveSchedule(viewUser) && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 w-fit border border-gray-200 dark:border-gray-600">
-                        <FontAwesomeIcon icon={faClock} className="mr-1 h-3 w-3" />
-                        {getActiveSchedule(viewUser)}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-500">Sin contrato activo</span>
-                )}
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faUser} className="h-3 w-3 text-gray-400" />
-                  Email
-                </label>
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.email}</span>
-              </div>
-
-              {viewUser.metadata?.documento && (
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                    <FontAwesomeIcon icon={faIdCard} className="h-3 w-3 text-gray-400" />
-                    Documento
-                  </label>
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 w-fit">{viewUser.metadata.documento}</span>
-                </div>
-              )}
-
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faHourglassHalf} className="h-3 w-3 text-gray-400" />
-                  Antigüedad Total
-                </label>
-                {(() => {
-                  const totalDays = (viewUser.metadata?.projects || []).reduce(
-                    (acc, p) =>
-                      acc +
-                      (p.contracts || []).reduce((cAcc, c) => {
-                        const start = new Date(c.fecha_alta_contrato);
-                        const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
-                        return cAcc + Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                      }, 0),
-                    0,
-                  );
-                  if (totalDays === 0) return <span className="text-xs text-gray-500">—</span>;
-                  const years = Math.floor(totalDays / 365);
-                  const months = Math.floor((totalDays % 365) / 30);
-                  const days = (totalDays % 365) % 30;
-                  const parts = [];
-                  if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
-                  if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
-                  if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
-                  return (
-                    <div className="flex flex-col gap-1">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-primary-600 text-white dark:bg-primary-900 dark:text-primary-300 w-fit shadow-sm">{parts.join(", ")}</span>
-                      <span className="text-[10px] text-gray-400 ml-1">({totalDays} días en total)</span>
+            {viewActiveTab === "general" && (
+              <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
+                <div className="flex justify-between items-start pb-4 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-bold shadow-md">
+                      {viewUser.firstName?.charAt(0) || viewUser.email.charAt(0).toUpperCase()}
                     </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <button onClick={() => setIsHistoryExpanded(!isHistoryExpanded)} className="flex items-center justify-between w-full text-xs font-medium text-gray-500 dark:text-gray-400 group hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
-                <div className="flex gap-1 items-center">
-                  <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                  Historial y Antigüedad Detallada
-                </div>
-                <FontAwesomeIcon icon={isHistoryExpanded ? faChevronUp : faChevronDown} className="h-3 w-3" />
-              </button>
-              <div className={`mt-3 overflow-hidden transition-all duration-300 ${isHistoryExpanded ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"}`}>
-                {(() => {
-                  const allRecords = (viewUser.metadata?.projects || []).flatMap((p) =>
-                    (p.contracts || []).map((c) => ({
-                      ...c,
-                      projectName: p.nombre_proyecto || c.nombre_proyecto,
-                      days: Math.max(0, Math.ceil(((c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date()).getTime() - new Date(c.fecha_alta_contrato).getTime()) / (1000 * 60 * 60 * 24)) + 1),
-                    })),
-                  );
-                  if (allRecords.length === 0) return <span className="text-xs text-gray-500 italic block mt-2">No hay registros.</span>;
-                  allRecords.sort((a, b) => new Date(b.fecha_alta_contrato).getTime() - new Date(a.fecha_alta_contrato).getTime());
-                  return (
-                    <div className="mt-2 overflow-x-auto max-h-[400px] custom-scrollbar border border-gray-100 dark:border-gray-800 rounded-lg">
-                      <table className="w-full text-left border-collapse min-w-[700px]">
-                        <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Proyecto / Contrato</th>
-                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Sede / Rol</th>
-                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Periodo</th>
-                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center">Días</th>
-                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Monto / Jorn.</th>
-                            <th className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right">Estado</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                          {allRecords.map((record, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                              <td className="px-3 py-2.5">
-                                <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
-                                <div className="text-[9px] text-gray-400 mt-0.5">{record.nombre_contrato}</div>
-                              </td>
-                              <td className="px-3 py-2.5 text-[10px] text-gray-600 dark:text-gray-400">
-                                <div className="font-medium">{record.nombre_sede}</div>
-                                <div className="text-[9px] opacity-70">{record.nombre_rol_frame}</div>
-                              </td>
-                              <td className="px-3 py-2.5 text-[10px] text-gray-500 dark:text-gray-500">
-                                <div>{new Date(record.fecha_alta_contrato).toLocaleDateString()}</div>
-                                <div className="text-[9px]">{record.fecha_baja_contrato ? new Date(record.fecha_baja_contrato).toLocaleDateString() : "Presente"}</div>
-                              </td>
-                              <td className="px-3 py-2.5 text-center">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{record.days}</span>
-                              </td>
-                              <td className="px-3 py-2.5 text-right">
-                                <div className="text-[10px] font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
-                                {record.cantidad_jornadas_laborales && <div className="text-[9px] text-gray-400">{record.cantidad_jornadas_laborales} jor.</div>}
-                              </td>
-                              <td className="px-3 py-2.5 text-right">
-                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${record.nombre_estado_empleado === "DISPONIBLE" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>{record.nombre_estado_empleado}</span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{viewUser.firstName || viewUser.lastName ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim() : viewUser.email.split("@")[0]}</h3>
+                      <p className="text-sm text-gray-500">{viewUser.email}</p>
                     </div>
-                  );
-                })()}
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold uppercase ${viewUser.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                  {/* Basic Info */}
+                  {viewUser.metadata?.documento && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
+                        Documento
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.documento}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.tipoDocumentoId && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faPassport} className="text-gray-300" />
+                        Tipo Documento
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{documentTypes.find((dt) => dt.data.id === viewUser.metadata?.tipoDocumentoId)?.name || "—"}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.fechaNac && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faCalendar} className="text-gray-300" />
+                        Fecha Nacimiento
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{new Date(viewUser.metadata.fechaNac).toLocaleDateString()}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.generoId && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faVenusMars} className="text-gray-300" />
+                        Género
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{genders.find((g) => g.data.id === viewUser.metadata?.generoId)?.name || "—"}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.estadoCivil && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUser} className="text-gray-300" />
+                        Estado Civil
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.estadoCivil}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.nivelEstudioId && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faGraduationCap} className="text-gray-300" />
+                        Nivel de Estudio
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{educationLevels.find((el) => el.data.id === viewUser.metadata?.nivelEstudioId)?.name || "—"}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.nacionalidadId && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faPassport} className="text-gray-300" />
+                        Nacionalidad
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{nationalities.find((n) => n.data.id === viewUser.metadata?.nacionalidadId)?.name || "—"}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.osId && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faStethoscope} className="text-gray-300" />
+                        Obra Social
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{insuranceCompanies.find((ic) => ic.data.id === viewUser.metadata?.osId)?.name || "—"}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.cuit && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
+                        CUIT / CUIL
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.cuit}</p>
+                    </div>
+                  )}
+
+                  {viewUser.hireDate && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faBriefcase} className="text-gray-300" />
+                        Fecha de Ingreso
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{new Date(viewUser.hireDate).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  {viewUser.roles.length > 0 && (
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                        <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
+                        Roles de Sistema
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {viewUser.roles.map((role) => (
+                          <span key={role._id} className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
+                            {role.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(() => {
+                    const rfIds = viewUser.metadata?.rolesFrameIds || (viewUser.metadata as any)?.roles_frame;
+                    if (!rfIds || rfIds.length === 0) return null;
+                    return (
+                      <div>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                          <FontAwesomeIcon icon={faLayerGroup} className="text-gray-300" />
+                          Roles Frame
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {rfIds.map((rf: any, idx: number) => {
+                            const roleFrameId = typeof rf === "string" ? rf : rf._id;
+                            const roleFrameObj = allRoleFrames.find((item) => item._id === roleFrameId);
+                            const roleFrameName = roleFrameObj ? roleFrameObj.name : typeof rf === "object" ? rf.name : roleFrameId;
+                            return (
+                              <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 uppercase tracking-tight">
+                                {roleFrameName}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
+            )}
+
+            {viewActiveTab === "domicilio" && (
+              <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                  {viewUser.metadata?.paisId && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                        País
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{countries.find((c) => c.data.id === viewUser.metadata?.paisId)?.name || "—"}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.localidad && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                        Localidad
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.localidad}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.calle && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                        Calle
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        {viewUser.metadata.calle} {viewUser.metadata.altura}
+                      </p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.pisoDepto && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                        Piso/Depto
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.pisoDepto}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.codigoPostal && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faMapMarkerAlt} className="text-gray-300" />
+                        Código Postal
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.codigoPostal}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.telefono && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUser} className="text-gray-300" />
+                        Teléfono
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.telefono}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.telefono2 && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUser} className="text-gray-300" />
+                        Teléfono Emergencia
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.telefono2}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.visa !== undefined && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faPassport} className="text-gray-300" />
+                        Visa
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.visa ? "Sí" : "No"}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {viewActiveTab === "bancarios" && (
+              <div className="space-y-6 animate-fadeIn transition-opacity duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-4">
+                  {viewUser.metadata?.bancoId && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
+                        Banco
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{banks.find((b) => b.data.id === viewUser.metadata?.bancoId)?.name || "—"}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.cbu && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
+                        CBU / CVU
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 tracking-wider transition-all hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1 -mx-1">{viewUser.metadata.cbu}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.tipoDeCuentaBancaria && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
+                        Tipo de Cuenta
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.tipoDeCuentaBancaria}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.nroDeCuentaBancaria && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faCreditCard} className="text-gray-300" />
+                        Número de Cuenta
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.nroDeCuentaBancaria}</p>
+                    </div>
+                  )}
+
+                  {viewUser.metadata?.aliasBancario && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUniversity} className="text-gray-300" />
+                        Alias Bancario
+                      </label>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{viewUser.metadata.aliasBancario}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             </div>
           </div>
         ) : null,
@@ -1397,7 +1432,7 @@ export const UsersPage: React.FC = () => {
       modal={{
         isOpen: showModal,
         onClose: closeModal,
-        title: modalMode === "password" ? "Cambiar Contraseña" : formData.isSolicitud ? "Aprobar Solicitud de Alta" : editingUser ? "Editar Usuario" : "Nuevo Usuario",
+        title: modalMode === "password" ? "Cambiar Contraseña" : formData.isSolicitud ? "Aprobar Solicitud de Alta" : editingUser ? `Editar Usuario: ${editingUser.firstName || ""} ${editingUser.lastName || ""}`.trim() || editingUser.email : "Nuevo Usuario",
         subtitle: modalMode === "password" ? undefined : formData.isSolicitud ? "Completa los datos para dar de alta al usuario" : "Define datos básicos y roles",
         size: modalMode === "password" ? "sm" : "lg",
         actions:
@@ -1426,25 +1461,26 @@ export const UsersPage: React.FC = () => {
               </div>
             </form>
           ) : (
-            <form id="user-form" onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                {/* Tabs Header Sticky Container */}
-                <div className="sticky top-0 z-20 -mx-6 -mt-6 mb-8 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="flex">
-                    <button type="button" onClick={() => setModalActiveTab("general")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "general" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                      <FontAwesomeIcon icon={faUser} className="text-xs" />
-                      General
-                    </button>
-                    <button type="button" onClick={() => setModalActiveTab("domicilio")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                      <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
-                      Domicilio
-                    </button>
-                    <button type="button" onClick={() => setModalActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                      <FontAwesomeIcon icon={faUniversity} className="text-xs" />
-                      Datos Bancarios
-                    </button>
-                  </div>
+            <form id="user-form" onSubmit={handleSubmit} className="flex flex-col h-[550px] -mx-6 -mb-6">
+              {/* Tabs Header Sticky Container */}
+              <div className="z-20 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm shrink-0">
+                <div className="flex">
+                  <button type="button" onClick={() => setModalActiveTab("general")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "general" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                    <FontAwesomeIcon icon={faUser} className="text-xs" />
+                    General
+                  </button>
+                  <button type="button" onClick={() => setModalActiveTab("domicilio")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "domicilio" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                    <FontAwesomeIcon icon={faMapMarkerAlt} className="text-xs" />
+                    Domicilio
+                  </button>
+                  <button type="button" onClick={() => setModalActiveTab("bancarios")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${modalActiveTab === "bancarios" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                    <FontAwesomeIcon icon={faUniversity} className="text-xs" />
+                    Datos Bancarios
+                  </button>
                 </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
                 {/* Tab Content */}
                 {modalActiveTab === "general" && (
@@ -1600,18 +1636,12 @@ export const UsersPage: React.FC = () => {
 
                     <div>
                       <div className="flex items-center gap-4 mb-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol Frame</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rol/es Frame</label>
                         <div className="relative w-48 md:w-64">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-gray-400" />
                           </div>
-                          <input
-                            type="text"
-                            value={roleFrameSearch}
-                            onChange={(e) => setRoleFrameSearch(e.target.value)}
-                            placeholder="Buscar especialidad..."
-                            className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
-                          />
+                          <input type="text" value={roleFrameSearch} onChange={(e) => setRoleFrameSearch(e.target.value)} placeholder="Buscar especialidad..." className="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" />
                           {roleFrameSearch && (
                             <button type="button" onClick={() => setRoleFrameSearch("")} className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                               <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />

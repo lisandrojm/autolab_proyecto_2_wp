@@ -1,20 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faUser,
-  faUserShield,
-  faLayerGroup,
-  faUserTie,
-  faUserGraduate,
-  faClock,
-  faBuilding,
-  faIdCard,
-  faBriefcase,
-  faFileContract,
-  faUmbrellaBeach,
-  faChevronDown,
-  faChevronUp,
-} from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -31,6 +17,7 @@ interface UserCardProps {
   userConfig?: any; // Configuración del usuario en el contexto de un proyecto (p.ej. shiftId, areaId)
   userLookup?: Map<number | string, string>; // Mapa para buscar nombres de empleados reemplazados
   allRoleFrames?: RoleFrameItem[];
+  onClick?: () => void;
   actions?: {
     icon: any;
     title: string;
@@ -39,19 +26,9 @@ interface UserCardProps {
   }[];
 }
 
-export const UserCard: React.FC<UserCardProps> = ({
-  user,
-  allProjects,
-  allClients,
-  vacations = [],
-  projectContext,
-  userConfig,
-  userLookup,
-  allRoleFrames = [],
-  actions,
-}) => {
+export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClients, vacations = [], projectContext, userConfig, userLookup, allRoleFrames = [], onClick, actions }) => {
   // --- Helper Functions (Replicados de UsersPage para independencia) ---
-  
+
   const getUserVacationStatus = (userId: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -70,7 +47,7 @@ export const UserCard: React.FC<UserCardProps> = ({
     try {
       const [h1, m1] = start.split(":").map(Number);
       const [h2, m2] = end.split(":").map(Number);
-      let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+      let diff = h2 * 60 + m2 - (h1 * 60 + m1);
       if (diff < 0) diff += 24 * 60;
       const hours = Math.floor(diff / 60);
       const mins = diff % 60;
@@ -167,20 +144,23 @@ export const UserCard: React.FC<UserCardProps> = ({
   };
 
   // --- Mappings ---
-  const projectMap = new Map(allProjects.map(p => [p._id, p]));
-  const clientMap = new Map(allClients.map(c => [c._id, c]));
+  const projectMap = new Map(allProjects.map((p) => [p._id, p]));
+  const clientMap = new Map(allClients.map((c) => [c._id, c]));
 
   // Metadata del proyecto actual si aplica
-  const currentProjectMeta = projectContext ? user.metadata?.projects?.find((p: any) => {
-    const pId = p.projectId;
-    const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-    return idToCheck === projectContext._id;
-  }) : null;
+  const currentProjectMeta = projectContext
+    ? user.metadata?.projects?.find((p: any) => {
+        const pId = p.projectId;
+        const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+        return idToCheck === projectContext._id;
+      })
+    : null;
 
   return (
     <Card
       key={user._id}
-      className="h-full hover:scale-105 hover:shadow-lg transition-all duration-200"
+      onClick={onClick}
+      className={`h-full hover:scale-105 hover:shadow-lg transition-all duration-200 ${onClick ? "cursor-pointer" : ""}`}
       header={{
         title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0],
         subtitle: user.email,
@@ -221,28 +201,24 @@ export const UserCard: React.FC<UserCardProps> = ({
           const projectRespId = (projectContext?.metadataResolutions as any)?.responsable?._id || projectContext?.metadataResolutions?.responsable?.id || projectContext?.metadata?.responsableId || (projectContext?.metadata as any)?.id_responsable;
           const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
 
-          const filteredRoles = user.roles.filter(r => !r.name.toLowerCase().includes("responsable"));
-          
+          const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes("responsable"));
+
           if (filteredRoles.length === 0 && !isReallyResponsable) {
             return <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>;
           }
 
           return (
             <div className="flex flex-wrap gap-1">
-              {isReallyResponsable && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
-                  Responsable de Proyecto
-                </span>
-              )}
+              {isReallyResponsable && <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">Responsable de Proyecto</span>}
               {filteredRoles.slice(0, 3).map((role) => {
                 const lower = role.name.toLowerCase();
                 const isCoord = lower.includes("coordinador");
-                
+
                 let classes = "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300";
                 if (isCoord) {
                   classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800";
                 }
-                
+
                 return (
                   <span key={role._id} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${classes}`}>
                     {role.name}
@@ -254,40 +230,40 @@ export const UserCard: React.FC<UserCardProps> = ({
           );
         })()}
       </div>
-      
+
       {/* Role Frame */}
       {(() => {
         const rfIds = user.metadata?.rolesFrameIds || (user.metadata as any)?.roles_frame;
         if (!rfIds || rfIds.length === 0) return null;
-        
+
         return (
           <div className="mb-3">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
               <FontAwesomeIcon icon={faLayerGroup} className="h-2 w-2 lg:h-3 lg:w-3 text-gray-400" />
-              Rol Frame
+              Rol/es Frame
             </label>
             <div className="flex flex-wrap gap-1">
               {rfIds.map((rf: any, idx: number) => {
-              const roleFrameId = typeof rf === "string" ? rf : rf._id;
-              const roleFrameObj = allRoleFrames.find((item) => item._id === roleFrameId);
-              const roleFrameName = roleFrameObj ? roleFrameObj.name : (typeof rf === "object" ? rf.name : roleFrameId);
-              
-              return (
-                <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
-                  {roleFrameName}
-                </span>
-              );
-            })}
+                const roleFrameId = typeof rf === "string" ? rf : rf._id;
+                const roleFrameObj = allRoleFrames.find((item) => item._id === roleFrameId);
+                const roleFrameName = roleFrameObj ? roleFrameObj.name : typeof rf === "object" ? rf.name : roleFrameId;
+
+                return (
+                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                    {roleFrameName}
+                  </span>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      );
-    })()}
+        );
+      })()}
 
       {/* Clientes y Proyectos Agrupados */}
       <div className="space-y-4">
         {(() => {
           const groups = new Map<string, { name: string; projects: any[] }>();
-          
+
           // 1. Procesar proyectos asignados para agruparlos por cliente
           user.projectIds?.forEach((p: any) => {
             const pId = typeof p === "string" ? p : p?._id;
@@ -319,9 +295,7 @@ export const UserCard: React.FC<UserCardProps> = ({
             <div key={idx} className="flex flex-col gap-2 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50">
               <div className="flex items-center gap-2">
                 <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-cyan-600 dark:text-cyan-400" />
-                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide">
-                  {group.name}
-                </span>
+                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{group.name}</span>
               </div>
               <div className="flex flex-wrap gap-1.5 pl-5">
                 {group.projects.length > 0 ? (

@@ -144,6 +144,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
           { path: "areaId", select: "name description", model: Area },
         ],
       })
+      .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
       .sort({ _id: -1 })
       .skip(skip)
       .limit(limitNum)
@@ -278,7 +279,12 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
     });
 
     // Devolver usuario sin password y con roles poblados
-    const userResponse = await User.findById(user._id).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name");
+    const userResponse = await User.findById(user._id)
+      .select("-password")
+      .populate("roles", "name description permissions")
+      .populate("clientIds", "name")
+      .populate("projectIds", "name")
+      .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
 
     res.status(201).json(userResponse);
   } catch (error) {
@@ -369,7 +375,8 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
           { path: "levelId", select: "name description", model: Level },
           { path: "areaId", select: "name description", model: Area },
         ],
-      });
+      })
+      .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -480,7 +487,12 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
     }
 
     // Actualizar usuario
-    const user = await User.findOneAndUpdate({ _id: userId, tenantId: targetTenantId }, updateData, { new: true, runValidators: true }).select("-password").populate("roles", "name description permissions").populate("clientIds", "name").populate("projectIds", "name");
+    const user = await User.findOneAndUpdate({ _id: userId, tenantId: targetTenantId }, updateData, { new: true, runValidators: true })
+      .select("-password")
+      .populate("roles", "name description permissions")
+      .populate("clientIds", "name")
+      .populate("projectIds", "name")
+      .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
 
     // Sincronizar proyectos si hubo cambio
     if (data.projectIds) {
@@ -698,7 +710,8 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
       .populate("roles", "name description permissions")
       .populate("clientIds", "name")
       .populate("projectIds", "name")
-      .populate({ path: "metadata.projects", model: UserProject });
+      .populate({ path: "metadata.projects", model: UserProject })
+      .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
 
     res.json(updatedUser);
   } catch (error) {
