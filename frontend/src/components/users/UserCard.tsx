@@ -1,6 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -191,6 +191,41 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
       }}
       footer={actions ? { actions } : undefined}
     >
+      {/* DNI y Antigüedad */}
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        {user.metadata?.documento && (
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+              <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
+              Documento
+            </label>
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-[11px] font-bold cursor-text select-all border border-blue-100/50 dark:border-blue-800/20" title="Haz clic para copiar">
+              {user.metadata.documento}
+            </div>
+          </div>
+        )}
+        {(() => {
+          const totalDaysCount = (user.metadata?.projects as any[])?.reduce((acc: number, p: any) => {
+            return acc + (p.contracts?.reduce((pAcc: number, c: any) => pAcc + (c.cantidad_jornadas_laborales || 0), 0) || 0);
+          }, 0) || 0;
+
+          if (totalDaysCount === 0 && !user.metadata?.documento) return null;
+
+          return (
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                <FontAwesomeIcon icon={faClock} className="text-gray-300" />
+                Antigüedad Total
+              </label>
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-[11px] font-bold border border-blue-100/50 dark:border-blue-800/20">
+                {totalDaysCount} {totalDaysCount === 1 ? "día" : "días"}
+              </div>
+              {totalDaysCount > 0 && <div className="text-[9px] text-gray-400 mt-0.5 ml-1">({totalDaysCount} días en total)</div>}
+            </div>
+          );
+        })()}
+      </div>
+
       {/* Roles */}
       <div className="mb-3">
         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
@@ -260,7 +295,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
       })()}
 
       {/* Clientes y Proyectos Agrupados */}
-      <div className="space-y-4">
+      <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-800">
         {(() => {
           const groups = new Map<string, { name: string; projects: any[] }>();
 
@@ -279,7 +314,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             }
           });
 
-          // 2. Asegurar que los clientes asignados directamente también aparezcan (aunque no tengan proyectos específicos)
+          // 2. Asegurar que los clientes asignados directamente también aparezcan
           user.clientIds?.forEach((c: any) => {
             const cId = typeof c === "string" ? c : c?._id;
             if (cId && !groups.has(cId)) {
@@ -288,29 +323,62 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
           });
 
           if (groups.size === 0) {
-            return <span className="text-xs text-gray-400 italic px-1">Sin clientes ni proyectos asignados</span>;
+            return (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faUsers} className="text-gray-300" />
+                    Clientes
+                  </label>
+                  <span className="text-[10px] text-gray-400 italic">Sin clientes</span>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faBriefcase} className="text-gray-300" />
+                    Proyectos
+                  </label>
+                  <span className="text-[10px] text-gray-400 italic">Sin proyectos</span>
+                </div>
+              </div>
+            );
           }
 
-          return Array.from(groups.values()).map((group, idx) => (
-            <div key={idx} className="flex flex-col gap-2 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50">
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-cyan-600 dark:text-cyan-400" />
-                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{group.name}</span>
+          return (
+            <div className="space-y-2">
+              <div className="grid grid-cols-[120px_1fr] gap-4 px-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faUsers} className="text-gray-300" />
+                  Clientes
+                </label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <FontAwesomeIcon icon={faBriefcase} className="text-gray-300" />
+                  Proyectos
+                </label>
               </div>
-              <div className="flex flex-wrap gap-1.5 pl-5">
-                {group.projects.length > 0 ? (
-                  group.projects.map((p, pIdx) => (
-                    <span key={pIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
-                      {p.name}
+              
+              <div className="space-y-1.5">
+                {Array.from(groups.values()).map((group, idx) => (
+                  <div key={idx} className="grid grid-cols-[120px_1fr] gap-4 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-800/50 items-start">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 shadow-sm uppercase truncate" title={group.name}>
+                      {group.name}
                     </span>
-                  ))
-                ) : (
-                  <span className="text-[10px] text-gray-400 italic">Sin proyectos específicos</span>
-                )}
+                    <div className="flex flex-wrap gap-1">
+                      {group.projects.length > 0 ? (
+                        group.projects.map((p, pIdx) => (
+                          <span key={pIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shadow-sm">
+                            <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
+                            {p.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-gray-400 italic py-0.5">—</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ));
+          );
         })()}
       </div>
     </Card>
