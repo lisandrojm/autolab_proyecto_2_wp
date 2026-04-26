@@ -201,11 +201,13 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
         <button
           onClick={saveAssignments}
           disabled={isSaving || validationItems.unassignedCount > 0}
-          className={`flex items-center gap-2 px-4 py-1.5 text-sm rounded-md w-full sm:w-auto justify-center ${isSaving || validationItems.unassignedCount > 0 ? "btn-disabled bg-gray-200 text-gray-500 cursor-not-allowed" : "btn-primary"}`}
+          className={`btn-primary flex items-center justify-center text-sm p-2 gap-2 w-full sm:w-auto text-white ${isSaving || validationItems.unassignedCount > 0 ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          <FontAwesomeIcon icon={faSave} />
-          {isSaving ? "Guardando..." : "Guardar Roles"}
+          <FontAwesomeIcon icon={faSave} className="h-3 w-3 lg:h-4 lg:w-4" />
+          <span>{isSaving ? "Guardando..." : "Guardar Roles"}</span>
         </button>,
+
+
         actionPortalTarget
       )}
       {groupedCombinations.length === 0 ? (

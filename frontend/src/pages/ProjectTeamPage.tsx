@@ -1415,11 +1415,18 @@ export const ProjectTeamPage: React.FC = () => {
                     {(project?.areasConfig || []).length === 0 && <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 dark:bg-gray-900/30 rounded-lg">Este proyecto no tiene áreas configuradas.</div>}
 
                     <div className="space-y-3">
-                      {(project?.areasConfig || []).map((ac: any) => {
-                        const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                        const aName = typeof ac.areaId === "object" ? ac.areaId?.name : allAreas.find((a) => a._id === aId)?.name;
-                        const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
-                        const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id)));
+                      {(() => {
+                        const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes("mobile-coordinador"));
+
+                        return (project?.areasConfig || []).map((ac: any) => {
+                          const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+                          const areaObj = allAreas.find((a) => a._id === aId);
+                          const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
+                          const isCoordinadorArea = areaObj?.isSystem || aName?.toLowerCase().includes("coordinador");
+                          const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
+
+                          const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
+                          const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id)));
 
                         // Current assignment for this area
                         const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
@@ -1457,11 +1464,16 @@ export const ProjectTeamPage: React.FC = () => {
                         };
 
                         return (
-                          <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
+                          <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
                             <div className="flex items-center justify-between px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : "text-gray-400"}`} />
+                                <FontAwesomeIcon icon={faLayerGroup} className={`h-4 w-4 ${isAreaActive ? "text-blue-500" : isAreaRestricted ? "text-amber-500" : "text-gray-400"}`} />
                                 <span className="font-bold text-sm uppercase tracking-wide">{aName || aId}</span>
+                                {isAreaRestricted && (
+                                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tighter">
+                                    Requiere Rol Coordinador
+                                  </span>
+                                )}
                               </div>
                               {isAreaActive && (
                                 <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">
@@ -1469,7 +1481,15 @@ export const ProjectTeamPage: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="px-4 pb-3 flex flex-wrap gap-3">
+                            {isAreaRestricted && (
+                              <div className="px-4 pb-3">
+                                <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                  Este usuario no tiene el rol "mobile-coordinador". Debes asignarle el rol primero para habilitar esta área.
+                                </p>
+                              </div>
+                            )}
+                            <div className={`px-4 pb-3 flex flex-wrap gap-3 ${isAreaRestricted ? "pointer-events-none grayscale-[0.5]" : ""}`}>
+
                               {shiftsForArea.map((shift) => {
                                 const isSelected = selectedShiftIds.includes(String(shift._id));
 
@@ -1484,7 +1504,7 @@ export const ProjectTeamPage: React.FC = () => {
                                   <button
                                     key={shift._id}
                                     type="button"
-                                    disabled={isBlocked}
+                                    disabled={isBlocked || isAreaRestricted}
                                     onClick={() => {
                                       setWizardData((prev) => {
                                         const assignments = [...prev.areaShiftAssignments];
@@ -1566,7 +1586,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
                       <option value="">{wizardData.positionId ? "Selecciona nivel..." : "Primero selecciona cargo"}</option>
                       {allLevels
-                        .filter((l) => String(typeof l.positionId === "object" ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
+                        .filter((l) => String((typeof l.positionId === "object" ? (l.positionId as any)?._id : l.positionId)) === String(wizardData.positionId))
                         .map((l) => (
                           <option key={l._id} value={l._id}>
                             {l.name}
