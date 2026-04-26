@@ -162,10 +162,35 @@ export const ProjectDetailPage: React.FC = () => {
       if (responsablesRes.ok) {
         setAvailableCoordinators(await responsablesRes.json());
       }
+
+      // Also fetch shifts and areas
+      const [shifts, areas] = await Promise.all([
+        shiftsAPI.getAll(),
+        areasAPI.listAll()
+      ]);
+      setAvailableShifts(shifts);
+      setAvailableAreas(areas);
+
+      // Ensure Coordinador is in projectForm.areasConfig
+      const coordinadorArea = areas.find(a => a.name.toLowerCase() === "coordinador");
+      if (coordinadorArea) {
+        setProjectForm(prev => {
+          const hasCoordinador = prev.areasConfig.some(ac => ac.areaId === coordinadorArea._id);
+          if (hasCoordinador) return prev;
+          return {
+            ...prev,
+            areasConfig: [
+              ...prev.areasConfig,
+              { areaId: coordinadorArea._id, shiftIds: shifts.map(s => s._id) }
+            ]
+          };
+        });
+      }
     } catch (err) {
       console.error("Error fetching aux data:", err);
     }
   };
+
 
   useEffect(() => {
     if (!projectId || !token) return;
@@ -173,10 +198,9 @@ export const ProjectDetailPage: React.FC = () => {
       try {
         await Promise.all([
           fetchProject(),
-          shiftsAPI.getAll().then(setAvailableShifts),
-          areasAPI.listAll().then(setAvailableAreas),
           fetchAuxData()
         ]);
+
       } finally {
         setLoading(false);
       }
@@ -382,9 +406,10 @@ export const ProjectDetailPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   <div>
-                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo</label>
+                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Centro de costo *</label>
                     <select
                       className="input-field py-2.5"
+                      required
                       value={projectForm.metadata?.centroCostoId || ""}
                       onChange={(e) => setProjectForm(p => ({ ...p, metadata: { ...p.metadata, centroCostoId: parseInt(e.target.value) || undefined } }))}
                     >
@@ -488,20 +513,23 @@ export const ProjectDetailPage: React.FC = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setProjectForm(prev => ({
-                                    ...prev,
-                                    areasConfig: prev.areasConfig.filter(item => item.areaId !== ac.areaId)
-                                  }));
-                                }}
-                                className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
-                                title="Quitar"
-                              >
-                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                              </button>
+                              {!area.isSystem && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setProjectForm(prev => ({
+                                      ...prev,
+                                      areasConfig: prev.areasConfig.filter(item => item.areaId !== ac.areaId)
+                                    }));
+                                  }}
+                                  className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                                  title="Quitar"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
+
                           </div>
                         );
                       })

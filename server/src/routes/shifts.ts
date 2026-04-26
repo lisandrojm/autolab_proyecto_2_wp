@@ -201,6 +201,12 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
       return;
     }
 
+    const currentShift = await Shift.findOne({ _id: shiftId, tenantId: req.tenantObjectId });
+    if (!currentShift) {
+      res.status(404).json({ error: "Turno no encontrado" });
+      return;
+    }
+
     if (data.name) {
       const existingShift = await Shift.findOne({
         name: data.name,
@@ -213,6 +219,8 @@ router.patch("/:id", requireTenant, authenticateToken, requirePermission("admin_
         return;
       }
     }
+
+
 
     const shift = await Shift.findOneAndUpdate({ _id: shiftId, tenantId: req.tenantObjectId }, data, { new: true, runValidators: true });
 
@@ -247,6 +255,17 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
+    const shift = await Shift.findOne({ _id: shiftId, tenantId: req.tenantObjectId });
+    if (!shift) {
+      res.status(404).json({ error: "Turno no encontrado" });
+      return;
+    }
+
+    if (shift.isSystem) {
+      res.status(403).json({ error: "No se puede eliminar un turno generado por el sistema" });
+      return;
+    }
+
     // Opcional: Verificar si el turno está asignado a usuarios (si agregamos shiftId al User)
     const usersWithShift = await User.countDocuments({
       turnos: shiftId,
@@ -261,10 +280,8 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
-    const shift = await Shift.findOneAndDelete({
-      _id: shiftId,
-      tenantId: req.tenantObjectId,
-    });
+    await Shift.deleteOne({ _id: shiftId, tenantId: req.tenantObjectId });
+
 
     if (!shift) {
       res.status(404).json({ error: "Turno no encontrado" });

@@ -89,7 +89,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
           )}
 
           {/* Content */}
-          <div className={`flex-1 overflow-y-auto ${!isFullscreen ? "p-6 pt-0" : ""}`}>{children}</div>
+          <div className={`flex-1 overflow-y-auto ${!isFullscreen ? "p-6 pt-4" : ""}`}>{children}</div>
 
           {/* Footer */}
           {footer && <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 z-50">{footer}</div>}

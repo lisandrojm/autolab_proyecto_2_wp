@@ -4,7 +4,9 @@ export interface IArea extends Document {
   tenantId: Types.ObjectId;
   name: string;
   description?: string;
+  isSystem: boolean;
   vacationConfig?: {
+
     useGlobalConfig: boolean;
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
@@ -19,7 +21,9 @@ const areaSchema = new Schema<IArea>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
+    isSystem: { type: Boolean, default: false },
     vacationConfig: {
+
       useGlobalConfig: { type: Boolean, default: true },
       permiteFraccionadas: { type: Boolean, default: true },
       minDiasFraccion: { type: Number },

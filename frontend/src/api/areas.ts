@@ -12,7 +12,9 @@ export interface Area {
   tenant?: TenantRef;
   name: string;
   description?: string;
+  isSystem?: boolean;
   vacationConfig?: {
+
     useGlobalConfig: boolean;
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
@@ -61,7 +63,9 @@ function normalizeArea(raw: any): Area {
     tenant: normalizeTenant(raw),
     name: raw.name,
     description: raw.description,
+    isSystem: !!raw.isSystem,
     vacationConfig: raw.vacationConfig,
+
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };

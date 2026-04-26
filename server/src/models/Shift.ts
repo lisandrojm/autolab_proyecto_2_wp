@@ -9,7 +9,9 @@ export interface IShift extends Document {
   endTime: string;   // HH:mm
   order: number;
   description?: string;
+  isSystem: boolean;
   createdAt: Date;
+
   updatedAt: Date;
 }
 
@@ -23,7 +25,9 @@ const shiftSchema = new Schema<IShift>(
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
     description: { type: String, trim: true },
+    isSystem: { type: Boolean, default: false },
   },
+
   { timestamps: true }
 );
 

@@ -311,14 +311,28 @@ export const AreasPage: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Nombre del área" />
+                <input type="text" required disabled={!!editingArea?.isSystem} value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className={`input-field ${editingArea?.isSystem ? "bg-gray-100 dark:bg-gray-700 cursor-not-allowed" : ""}`} placeholder="Nombre del área" />
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descripción</label>
                 <textarea value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del área" />
               </div>
+
+              {editingArea?.isSystem && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg flex items-start gap-3">
+                  <FontAwesomeIcon icon={faShieldHalved} className="text-amber-600 dark:text-amber-500 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wide">Área generada por sistema</p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-500 leading-tight">
+                      Esta área es esencial para el funcionamiento del sistema. No se puede eliminar y su nombre está protegido.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
+
           </form>
         ),
       }}
@@ -345,13 +359,32 @@ export const AreasPage: React.FC = () => {
                       badges:
                         area.tenant && area.tenant.name
                           ? [
+
                               {
                                 text: area.tenant.name,
                                 variant: "default" as const,
                                 className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
                               },
+                              ...(area.isSystem
+                                ? [
+                                    {
+                                      text: "Sistema",
+                                      variant: "default" as const,
+                                      className: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+                                    },
+                                  ]
+                                : []),
+                            ]
+                          : area.isSystem
+                          ? [
+                              {
+                                text: "Sistema",
+                                variant: "default" as const,
+                                className: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+                              },
                             ]
                           : [],
+
                     }}
                     footer={
                       canManage
@@ -367,15 +400,19 @@ export const AreasPage: React.FC = () => {
                                 title: "Editar",
                                 variant: "default",
                               },
-                              {
-                                icon: faTrash,
-                                onClick: (e) => {
-                                  e.stopPropagation();
-                                  handleDelete(area);
-                                },
-                                title: "Eliminar",
-                                variant: "default",
-                              },
+                              ...(!area.isSystem
+                                ? [
+                                    {
+                                      icon: faTrash,
+                                      onClick: (e: any) => {
+                                        e.stopPropagation();
+                                        handleDelete(area);
+                                      },
+                                      title: "Eliminar",
+                                      variant: "default" as const,
+                                    },
+                                  ]
+                                : []),
                             ],
                           }
                         : undefined
@@ -417,7 +454,11 @@ export const AreasPage: React.FC = () => {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
-                              {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
+                              <div className="flex items-center gap-2">
+                                {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
+                                {area.isSystem && <span className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tighter">Sistema</span>}
+                              </div>
+
                             </div>
                           </div>
                         </td>
@@ -440,17 +481,20 @@ export const AreasPage: React.FC = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                               </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(area);
-                                }}
-                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                                title="Eliminar"
-                              >
-                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                              </button>
+                              {!area.isSystem && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(area);
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                  title="Eliminar"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
+
                           </td>
                         )}
                       </tr>

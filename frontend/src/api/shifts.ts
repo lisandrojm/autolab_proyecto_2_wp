@@ -10,7 +10,9 @@ export interface Shift {
   endTime: string;   // HH:mm
   order: number;
   description?: string;
+  isSystem?: boolean;
   createdAt: string;
+
   updatedAt: string;
 }
 

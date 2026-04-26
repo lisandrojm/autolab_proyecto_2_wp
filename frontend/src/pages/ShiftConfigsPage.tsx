@@ -50,8 +50,12 @@ const SortableRow: React.FC<SortableRowProps> = ({ config, isReorderMode, index,
         <span className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-2 py-1 rounded-full">{index + 1}</span>
       </td>
       <td className="px-6 py-4">
-        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{config.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{config.name}</span>
+          {config.isSystem && <span className="text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Sistema</span>}
+        </div>
       </td>
+
       <td className="px-6 py-4">
         <span className="text-sm text-gray-600 dark:text-gray-400">{config.description || "—"}</span>
       </td>
@@ -61,10 +65,13 @@ const SortableRow: React.FC<SortableRowProps> = ({ config, isReorderMode, index,
             <button onClick={() => onEdit(config)} className="p-1.5 text-gray-500 hover:text-blue-600 rounded transition-colors" title="Editar">
               <FontAwesomeIcon icon={faEdit} />
             </button>
-            <button onClick={() => onDelete(config)} className="p-1.5 text-gray-500 hover:text-red-600 rounded transition-colors" title="Eliminar">
-              <FontAwesomeIcon icon={faTrash} />
-            </button>
+            {!config.isSystem && (
+              <button onClick={() => onDelete(config)} className="p-1.5 text-gray-500 hover:text-red-600 rounded transition-colors" title="Eliminar">
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
+            )}
           </div>
+
         </td>
       )}
     </tr>
@@ -346,8 +353,14 @@ export const ShiftConfigsPage: React.FC = () => {
       viewModal={{
         isOpen: viewOpen,
         onClose: closeView,
-        title: viewConfig ? viewConfig.name : "Configuración",
+        title: viewConfig ? (
+          <div className="flex items-center gap-2">
+            <span>{viewConfig.name}</span>
+            {viewConfig.isSystem && <span className="text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Sistema</span>}
+          </div>
+        ) : "Configuración",
         subtitle: viewConfig?.description,
+
         size: "md",
         actions: [
           ...(canManage
@@ -433,10 +446,16 @@ export const ShiftConfigsPage: React.FC = () => {
                   onClick={() => openView(config)}
                   className="hover:scale-105 hover:shadow-lg transition-all duration-200"
                   header={{
-                    title: config.name,
+                    title: (
+                      <div className="flex items-center gap-2">
+                        <span>{config.name}</span>
+                        {config.isSystem && <span className="text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Sistema</span>}
+                      </div>
+                    ),
                     subtitle: config.description,
                     icon: faClock,
                   }}
+
                   footer={
                     canManage
                       ? {
@@ -451,17 +470,22 @@ export const ShiftConfigsPage: React.FC = () => {
                               title: "Editar",
                               variant: "default",
                             },
-                            {
-                              icon: faTrash,
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                handleDelete(config);
-                              },
-                              title: "Eliminar",
-                              variant: "default",
-                            },
+                            ...(!config.isSystem
+                              ? [
+                                  {
+                                    icon: faTrash,
+                                    onClick: (e: any) => {
+                                      e.stopPropagation();
+                                      handleDelete(config);
+                                    },
+                                    title: "Eliminar",
+                                    variant: "default" as const,
+                                  },
+                                ]
+                              : []),
                           ],
                         }
+
                       : undefined
                   }
                 >

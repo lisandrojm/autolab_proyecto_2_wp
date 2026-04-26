@@ -17,7 +17,13 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
+import { ensureAllTenantsHaveDefaultAreas } from "./services/areaInitService.js";
+import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
+import { ensureAllTenantsHaveDefaultShiftConfigs } from "./services/shiftConfigInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+
+
+
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 
 import { authRoutes } from "./routes/auth.js";
@@ -203,6 +209,33 @@ connectDB()
     } catch (error) {
       console.error("❌ Role verification failed:", error);
     }
+
+    try {
+      console.log("🔍 Verifying all tenants have default areas...");
+      await ensureAllTenantsHaveDefaultAreas();
+      console.log("✅ Area verification completed successfully");
+    } catch (error) {
+      console.error("❌ Area verification failed:", error);
+    }
+
+    try {
+      console.log("🔍 Verifying all tenants have default shifts...");
+      await ensureAllTenantsHaveDefaultShifts();
+      console.log("✅ Shift verification completed successfully");
+    } catch (error) {
+      console.error("❌ Shift verification failed:", error);
+    }
+
+    try {
+      console.log("🔍 Verifying all tenants have default shift configs...");
+      await ensureAllTenantsHaveDefaultShiftConfigs();
+      console.log("✅ Shift config verification completed successfully");
+    } catch (error) {
+      console.error("❌ Shift config verification failed:", error);
+    }
+
+
+
 
     if (String(env.SEED_ON_START) === "true") {
       try {

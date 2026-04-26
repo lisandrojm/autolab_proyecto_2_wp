@@ -5,7 +5,9 @@ export interface IShiftConfig extends Document {
   name: string;
   description?: string;
   sortOrder: number;
+  isSystem: boolean;
   createdAt: Date;
+
   updatedAt: Date;
 }
 
@@ -15,7 +17,9 @@ const shiftConfigSchema = new Schema<IShiftConfig>(
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     sortOrder: { type: Number, default: 0 },
+    isSystem: { type: Boolean, default: false },
   },
+
   { timestamps: true }
 );
 

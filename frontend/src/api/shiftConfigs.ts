@@ -6,8 +6,10 @@ export interface ShiftConfig {
   name: string;
   description?: string;
   sortOrder?: number;
+  isSystem?: boolean;
   createdAt?: string;
   updatedAt?: string;
+
 }
 
 export interface ShiftConfigFormData {

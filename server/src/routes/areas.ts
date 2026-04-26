@@ -238,10 +238,22 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
+    const areaToDelete = await Area.findOne({ _id: areaId, tenantId: req.tenantObjectId });
+    if (!areaToDelete) {
+      res.status(404).json({ error: "Área no encontrada" });
+      return;
+    }
+
+    if (areaToDelete.isSystem) {
+      res.status(403).json({ error: "No se puede eliminar un área de sistema" });
+      return;
+    }
+
     const area = await Area.findOneAndDelete({
       _id: areaId,
       tenantId: req.tenantObjectId,
     });
+
 
     if (!area) {
       res.status(404).json({ error: "Área no encontrada" });

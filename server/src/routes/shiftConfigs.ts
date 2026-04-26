@@ -153,10 +153,19 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
-    const shiftConfig = await ShiftConfig.findOneAndDelete({
-      _id: id,
-      tenantId: req.tenantObjectId,
-    });
+    const config = await ShiftConfig.findOne({ _id: id, tenantId: req.tenantObjectId });
+    if (!config) {
+      res.status(404).json({ error: "Tipo de turno no encontrado" });
+      return;
+    }
+
+    if (config.isSystem) {
+      res.status(403).json({ error: "No se puede eliminar un tipo de turno generado por el sistema" });
+      return;
+    }
+
+    await ShiftConfig.deleteOne({ _id: id, tenantId: req.tenantObjectId });
+
 
     if (!shiftConfig) {
       res.status(404).json({ error: "Tipo de turno no encontrado" });

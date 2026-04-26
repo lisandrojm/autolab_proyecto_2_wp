@@ -322,6 +322,14 @@ export const ProjectTeamPage: React.FC = () => {
     return members;
   }, [assignedUserIds, allUsers, searchTermTeam]);
 
+  const hasMobileCoordinator = useMemo(() => {
+    return teamMembers.some((u) => u.roles?.some((r) => {
+      const n = r.name.toLowerCase();
+      return n.includes("mobile") && n.includes("coordinador");
+    }));
+  }, [teamMembers]);
+
+
   const availableCategoriasSat = useMemo(() => {
     if (!wizardData.rol_frame_id) return [];
     const selectedRF = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
@@ -935,6 +943,19 @@ export const ProjectTeamPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
+                
+                {!hasMobileCoordinator && teamMembers.length > 0 && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-amber-800 dark:text-amber-400 font-bold flex items-center gap-2 text-sm">
+                      <FontAwesomeIcon icon={faInfoCircle} />
+                      Asignación requerida
+                    </p>
+                    <p className="text-amber-700 dark:text-amber-500 text-xs leading-normal">
+                      Usted debe asignar al equipo un usuario con el role de sistema <strong>"mobile coordinador"</strong> para poder asignarlo.
+                    </p>
+                  </div>
+                )}
+
 
                 {(() => {
                   const coordinators = teamMembers.filter(checkIsCoordinator);
@@ -989,6 +1010,7 @@ export const ProjectTeamPage: React.FC = () => {
                 project={project}
                 allUsers={allUsers}
                 teamMembers={teamMembers}
+                onGoToTeam={() => setActiveTab("equipo")}
                 onUpdated={async () => {
                   const updatedProject = await projectsAPI.getProject(projectId!);
                   setProject(updatedProject);
@@ -996,6 +1018,7 @@ export const ProjectTeamPage: React.FC = () => {
                 }}
               />
             )}
+
 
             {activeTab === "solicitudes" && project && (
               <TeamSolicitudesTab

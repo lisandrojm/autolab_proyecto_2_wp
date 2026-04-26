@@ -297,9 +297,20 @@ export const ShiftsPage: React.FC = () => {
           <form id="shift-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre del Turno *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))} className="input-field" placeholder="Ej: Mañana 9-18" />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Nombre del Turno * {editingShift?.isSystem && <span className="text-[10px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded ml-2 uppercase font-bold">Sistema</span>}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="input-field"
+                  placeholder="Ej: Mañana 9-18"
+                />
+
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Turno *</label>
@@ -441,7 +452,14 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
         </td>
       )}
       {isReorderMode && <td className="py-3 px-4 text-center font-bold text-blue-600">{index + 1}</td>}
-      <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{shift.name}</td>
+      <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+        <div className="flex items-center gap-2">
+          {shift.name}
+          {shift.isSystem && <span className="text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Sistema</span>}
+        </div>
+      </td>
+
+
       <td className="py-3 px-4">
         <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
           {shift.type}
@@ -466,10 +484,13 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
           <button onClick={() => openEdit(shift)} className="p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors" title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
-          <button onClick={() => handleDelete(shift)} className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Eliminar">
-            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-          </button>
+          {!shift.isSystem && (
+            <button onClick={() => handleDelete(shift)} className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Eliminar">
+              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+            </button>
+          )}
         </div>
+
       </td>
     </tr>
   );
@@ -505,20 +526,28 @@ const SortableShiftCard: React.FC<SortableShiftCardProps> = ({ shift, isReorderM
       )}
       <Card
         header={{
-          title: shift.name,
+          title: (
+            <div className="flex items-center gap-2">
+              <span>{shift.name}</span>
+              {shift.isSystem && <span className="text-[9px] bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Sistema</span>}
+            </div>
+          ),
+
           subtitle: shift.type,
           icon: faClock,
         }}
+
         className={isReorderMode ? "border-2 border-blue-500/50 shadow-blue-500/10" : ""}
         footer={
           canManage && !isReorderMode
             ? {
                 actions: [
                   { icon: faEdit, onClick: () => openEdit(shift), title: "Editar" },
-                  { icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" },
+                  ...(!shift.isSystem ? [{ icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" }] : []),
                 ],
               }
             : undefined
+
         }
       >
         <div className="space-y-3">

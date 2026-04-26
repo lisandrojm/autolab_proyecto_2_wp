@@ -13,13 +13,18 @@ interface TeamCoordinadoresTabProps {
   project: Project;
   teamMembers: User[];
   onUpdated: () => void;
+  onGoToTeam?: () => void;
 }
 
-export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ projectId, project, teamMembers, onUpdated }) => {
+
+export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ projectId, project, teamMembers, onUpdated, onGoToTeam }) => {
+
   const [areas, setAreas] = useState<Area[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [autoShown, setAutoShown] = useState(false);
+
   
   // local copy of coordinator assignments
   // { areaId_shiftId: userId }
@@ -105,6 +110,14 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
       });
     });
   }, [teamMembers]);
+
+  useEffect(() => {
+    if (!loading && eligibleCoordinators.length === 0 && groupedCombinations.length > 0 && !autoShown) {
+      setShowInfoModal(true);
+      setAutoShown(true);
+    }
+  }, [loading, eligibleCoordinators.length, groupedCombinations.length, autoShown]);
+
 
   // Identify validation errors: combinations without coordinators, and overlapping users
   const validationItems = React.useMemo(() => {
@@ -293,13 +306,31 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
               </button>
             </div>
             <div className="p-6 text-sm text-gray-600 dark:text-gray-300 space-y-3 leading-relaxed">
-              <p>
-                En esta lista desplegable únicamente aparecen los usuarios que cumplen con los siguientes requisitos:
-              </p>
-              <ul className="list-disc pl-5 space-y-1.5 marker:text-blue-500">
-                <li>Son miembros activos del <strong>equipo del proyecto</strong>.</li>
-                <li>Tienen asignado explícitamente el rol de <strong>Mobile - Coordinador</strong>.</li>
-              </ul>
+              {eligibleCoordinators.length === 0 ? (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl space-y-3">
+                  <p className="text-amber-800 dark:text-amber-400 font-bold flex items-center gap-2">
+                    <FontAwesomeIcon icon={faInfoCircle} />
+                    Asignación requerida
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-500 leading-normal">
+                    Usted debe asignar al equipo un usuario con el role de sistema <strong>"mobile coordinador"</strong> para poder asignarlo.
+                  </p>
+                  <p className="text-[11px] text-amber-600 dark:text-amber-600 italic">
+                    Vuelva a la pestaña "Equipo" y agregue un miembro con dicho rol antes de configurar los roles en esta pestaña.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p>
+                    En esta lista desplegable únicamente aparecen los usuarios que cumplen con los siguientes requisitos:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5 marker:text-blue-500">
+                    <li>Son miembros activos del <strong>equipo del proyecto</strong>.</li>
+                    <li>Tienen asignado explícitamente el rol de <strong>Mobile - Coordinador</strong>.</li>
+                  </ul>
+                </>
+              )}
+
               
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
                 <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2">Ejemplo de visualización:</p>
@@ -322,12 +353,18 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
             </div>
             <div className="px-6 py-4 bg-gray-50/50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700/50 flex justify-end">
               <button 
-                onClick={() => setShowInfoModal(false)}
+                onClick={() => {
+                  setShowInfoModal(false);
+                  if (eligibleCoordinators.length === 0 && onGoToTeam) {
+                    onGoToTeam();
+                  }
+                }}
                 className="btn-primary"
               >
                 Entendido
               </button>
             </div>
+
           </div>
         </div>
       )}
