@@ -199,9 +199,10 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               <FontAwesomeIcon icon={faIdCard} className="text-gray-300" />
               Documento
             </label>
-            <div className="bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-[11px] font-bold cursor-text select-all border border-blue-100/50 dark:border-blue-800/20" title="Haz clic para copiar">
+            <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold cursor-text select-all" title="Haz clic para copiar">
               {user.metadata.documento}
             </div>
+
           </div>
         )}
         {(() => {
@@ -217,9 +218,10 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                 <FontAwesomeIcon icon={faClock} className="text-gray-300" />
                 Antigüedad Total
               </label>
-              <div className="bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-[11px] font-bold border border-blue-100/50 dark:border-blue-800/20">
+              <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
                 {totalDaysCount} {totalDaysCount === 1 ? "día" : "días"}
               </div>
+
               {totalDaysCount > 0 && <div className="text-[9px] text-gray-400 mt-0.5 ml-1">({totalDaysCount} días en total)</div>}
             </div>
           );
