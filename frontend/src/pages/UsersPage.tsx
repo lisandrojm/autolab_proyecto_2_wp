@@ -1239,7 +1239,31 @@ export const UsersPage: React.FC = () => {
                       <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{new Date(viewUser.hireDate).toLocaleDateString()}</p>
                     </div>
                   )}
+
+                  {(() => {
+                    const totalDaysCount = (viewUser.metadata?.projects as any[])?.reduce((acc: number, p: any) => {
+                      return acc + (p.contracts?.reduce((pAcc: number, c: any) => pAcc + (c.cantidad_jornadas_laborales || 0), 0) || 0);
+                    }, 0) || 0;
+
+                    if (totalDaysCount === 0) return null;
+
+                    return (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <FontAwesomeIcon icon={faClock} className="text-gray-300" />
+                          Antigüedad Total
+                        </label>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            {totalDaysCount} {totalDaysCount === 1 ? "día" : "días"}
+                          </p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">({totalDaysCount} días en total)</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
+
 
                 <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                   {viewUser.roles.length > 0 && (
