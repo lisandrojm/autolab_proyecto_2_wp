@@ -236,7 +236,11 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
           const projectRespId = (projectContext?.metadataResolutions as any)?.responsable?._id || projectContext?.metadataResolutions?.responsable?.id || projectContext?.metadata?.responsableId || (projectContext?.metadata as any)?.id_responsable;
           const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
 
-          const filteredRoles = user.roles.filter((r) => !r.name.toLowerCase().includes("responsable"));
+          const filteredRoles = user.roles.filter((r) => {
+            const isResponsableRole = r.name.toLowerCase().includes("responsable");
+            if (isResponsableRole && isReallyResponsable) return false;
+            return true;
+          });
 
           if (filteredRoles.length === 0 && !isReallyResponsable) {
             return <span className="text-xs text-gray-500 dark:text-gray-500">Sin roles</span>;

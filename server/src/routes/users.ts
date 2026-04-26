@@ -328,10 +328,13 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
 // Busca roles que tengan el permiso "project_responsible:eligible" y devuelve los usuarios con esos roles
 router.get("/eligible-responsables", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    // 1. Encontrar todos los roles del tenant que incluyen el permiso
+    // 1. Encontrar todos los roles del tenant que incluyen el permiso o tienen "Responsable" en el nombre
     const eligibleRoles = await Role.find({
       tenantId: req.tenantObjectId,
-      permissions: "project_responsible:eligible",
+      $or: [
+        { permissions: "project_responsible:eligible" },
+        { name: { $regex: /responsable/i } }
+      ]
     }).select("_id");
 
     const eligibleRoleIds = eligibleRoles.map(r => r._id);

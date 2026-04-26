@@ -68,7 +68,7 @@ interface UserFormData {
   rolesFrameIds?: string[];
 }
 
-type ModalTab = "general" | "domicilio" | "bancarios";
+type ModalTab = "general" | "domicilio" | "bancarios" | "proyectos";
 
 type ModalMode = "edit" | "password";
 
@@ -1112,6 +1112,10 @@ export const UsersPage: React.FC = () => {
                   <FontAwesomeIcon icon={faUniversity} className="text-xs" />
                   Datos Bancarios
                 </button>
+                <button type="button" onClick={() => setViewActiveTab("proyectos")} className={`flex-1 py-3 text-sm font-bold transition-all border-b-2 flex items-center justify-center gap-2 ${viewActiveTab === "proyectos" ? "border-blue-500 text-blue-500 bg-blue-50/30 dark:bg-blue-500/10" : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                  <FontAwesomeIcon icon={faBriefcase} className="text-xs" />
+                  Proyectos
+                </button>
               </div>
             </div>
 
@@ -1423,6 +1427,121 @@ export const UsersPage: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {viewActiveTab === "proyectos" && (
+              <div className="space-y-4 animate-fadeIn transition-opacity duration-300">
+                {viewUser.metadata?.projects && viewUser.metadata.projects.length > 0 ? (
+                  viewUser.metadata.projects.map((up: any, upIdx: number) => {
+                    const pId = typeof up.projectId === "object" ? up.projectId?._id : up.projectId;
+                    const project = projectMap.get(pId);
+                    const clientId = typeof project?.clientId === "object" ? project?.clientId?._id : project?.clientId;
+                    const client = allClients.find((c) => c._id === clientId);
+
+                    return (
+                      <div key={upIdx} className="bg-gray-50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+                        {/* Project Header */}
+                        <div className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{client?.name || "Cliente"}</span>
+                              <span className="text-gray-300 dark:text-gray-600">/</span>
+                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{up.nombre_proyecto || project?.name || "Proyecto"}</span>
+                            </div>
+                          </div>
+                          {up.nombre_rol_frame && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 uppercase tracking-tight self-start">
+                              {up.nombre_rol_frame}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Contracts List */}
+                        <div className="p-4 space-y-3">
+                          {up.contracts && up.contracts.length > 0 ? (
+                            up.contracts.map((c: any, cIdx: number) => (
+                              <div key={cIdx} className="bg-white dark:bg-gray-800/50 rounded-lg p-3 border border-gray-100 dark:border-gray-700/50 shadow-sm transition-all hover:border-blue-200 dark:hover:border-blue-800">
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-xs" />
+                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{c.nombre_contrato || "Contrato"}</span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {c.nombre_sede && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                                        {c.nombre_sede}
+                                      </span>
+                                    )}
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${c.nombre_estado_empleado === "Activo" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800" : "bg-gray-50 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400 border border-gray-100 dark:border-gray-800"}`}>
+                                      {c.nombre_estado_empleado || "Estado"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
+                                  <div className="space-y-0.5">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Periodo</label>
+                                    <p className="font-semibold text-gray-600 dark:text-gray-400">
+                                      {c.fecha_alta_contrato ? new Date(c.fecha_alta_contrato).toLocaleDateString() : "?"} - {c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato).toLocaleDateString() : "Indef."}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Turno</label>
+                                    <div className="flex flex-wrap items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-400">
+                                      <FontAwesomeIcon icon={faGrip} className="text-blue-500 text-[10px]" />
+                                      {(() => {
+                                        const shifts: string[] = [];
+                                        if (c.areaShiftAssignments && Array.isArray(c.areaShiftAssignments)) {
+                                          c.areaShiftAssignments.forEach((asa: any) => {
+                                            if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
+                                              asa.shiftIds.forEach((sId: any) => {
+                                                const id = typeof sId === "object" ? sId?._id : sId;
+                                                const sName = typeof sId === "object" && sId.name ? sId.name : allShifts.find((s) => s._id === id)?.name;
+                                                if (sName) shifts.push(sName);
+                                              });
+                                            }
+                                          });
+                                        }
+                                        if (shifts.length > 0) return Array.from(new Set(shifts)).join(", ");
+                                        return c.nombre_turno && !c.nombre_turno.includes(":") ? c.nombre_turno : "Sin asignar";
+                                      })()}
+                                    </div>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Horario</label>
+                                    <div className="flex items-center gap-1.5 font-semibold text-gray-600 dark:text-gray-400">
+                                      <FontAwesomeIcon icon={faClock} className="text-amber-500 text-[10px]" />
+                                      {c.hora_inicio && c.hora_fin ? `${c.hora_inicio} - ${c.hora_fin}` : "Sin horario"}
+                                    </div>
+                                  </div>
+                                  {c.nombre_area && (
+                                    <div className="space-y-0.5">
+                                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Área</label>
+                                      <p className="font-semibold text-gray-600 dark:text-gray-400">{c.nombre_area}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-4 text-xs text-gray-400 italic">No hay contratos registrados para este proyecto.</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      <FontAwesomeIcon icon={faBriefcase} className="text-2xl text-gray-300" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">Sin proyectos asignados</h4>
+                      <p className="text-xs text-gray-500">Este usuario aún no tiene participación en proyectos.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             </div>

@@ -26,6 +26,12 @@ export interface Contract {
   hora_fin?: string;
   nombre_estado_empleado?: string;
   nombre_categoria_sat?: string;
+  nombre_turno?: string;
+  nombre_area?: string;
+  areaShiftAssignments?: {
+    areaId: string | any;
+    shiftIds: string[] | any[];
+  }[];
 }
 
 export interface UserProjectMetadata {
