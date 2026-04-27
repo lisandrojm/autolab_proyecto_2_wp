@@ -200,7 +200,7 @@ router.get("/availability", async (req, res) => {
           for (const posId of finalPositions) {
             for (const lId of finalLevels) {
               // Construct specific query for this bucket
-              const query: any = { tenantId, isActive: true, _id: { $ne: userId } };
+              const query: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
 
               if (pId) query.projectIds = pId;
               if (aId) query.areaId = aId;
@@ -685,7 +685,7 @@ router.post("/", async (req, res) => {
           for (const aId of finalAreas) {
             for (const posId of finalPositions) {
               for (const lId of finalLevels) {
-                const otherUsersQuery: any = { tenantId, isActive: true, _id: { $ne: userId } };
+                const otherUsersQuery: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
                 if (pId) otherUsersQuery.projectIds = pId;
                 if (aId) otherUsersQuery.areaId = aId;
                 if (posId) otherUsersQuery.positionId = posId;

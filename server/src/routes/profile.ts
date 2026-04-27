@@ -352,7 +352,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // However, for "Current Availability", usually it's based on "Antigüedad al 31 de Diciembre".
     // Let's add the remaining days of year to the calculation IF the user is currently active.
     let projectedTotalDays = calculatedTotalDays;
-    if (user.isActive) {
+    if (user.metadata?.activo) {
       const now = new Date();
       const endOfCurrentYear = new Date(now.getFullYear(), 11, 31);
       const daysToYearEnd = Math.max(0, Math.ceil((endOfCurrentYear.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));

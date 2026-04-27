@@ -70,7 +70,6 @@ export interface User {
   /** ← ahora viaja como OBJETO (no tenantId string) */
   tenant?: TenantRef;
   tenantId?: string;
-    isActive: boolean;
   lastLoginAt?: string;
   hireDate?: string;
   extraVacationDays?: number;
@@ -219,7 +218,6 @@ function normalizeUser(raw: any): User {
       : undefined,
     tenant: normalizeTenant(raw),
     tenantId: raw?.tenantId ?? undefined,
-    isActive: Boolean(raw?.isActive),
     lastLoginAt: raw?.lastLoginAt ? String(raw.lastLoginAt) : undefined,
     hireDate: raw?.hireDate ? String(raw.hireDate) : undefined,
     extraVacationDays: typeof raw?.extraVacationDays === "number" ? raw.extraVacationDays : 0,
@@ -258,9 +256,10 @@ class UsersAPI {
       page?: number;
       limit?: number;
       email?: string;
-      isActive?: boolean;
       areaId?: string;
       clientId?: string;
+      metadataActivo?: string;
+      isSolicitud?: string;
     } = {},
   ): Promise<UsersListResponse> {
     const searchParams = new URLSearchParams();
@@ -268,9 +267,10 @@ class UsersAPI {
     if (params.page) searchParams.append("page", params.page.toString());
     if (params.limit) searchParams.append("limit", params.limit.toString());
     if (params.email) searchParams.append("email", params.email);
-    if (params.isActive !== undefined) searchParams.append("isActive", params.isActive.toString());
     if (params.areaId) searchParams.append("areaId", params.areaId);
     if (params.clientId) searchParams.append("clientId", params.clientId);
+    if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
+    if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
 
     const { data } = await axios.get(`/users?${searchParams.toString()}`, { headers: this.getHeaders() });
 
@@ -293,7 +293,7 @@ class UsersAPI {
     return normalizeUser(data);
   }
 
-  async create(data: { email: string; password: string; firstName?: string; lastName?: string; isActive?: boolean; roles?: string[]; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[] }): Promise<User> {
+  async create(data: { email: string; password: string; firstName?: string; lastName?: string; roles?: string[]; hireDate?: string; extraVacationDays?: number; clientIds?: string[]; projectIds?: string[]; metadata?: any }): Promise<User> {
     const { data: created } = await axios.post(`/users`, data, { headers: this.getHeaders() });
     const user = normalizeUser(created);
     emitUsersChanged("create", user._id);
@@ -306,7 +306,6 @@ class UsersAPI {
       email?: string;
       firstName?: string;
       lastName?: string;
-      isActive?: boolean;
       roles?: string[];
       hireDate?: string;
       extraVacationDays?: number;

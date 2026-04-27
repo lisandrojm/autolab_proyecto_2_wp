@@ -109,6 +109,7 @@ export const UsersPage: React.FC = () => {
   const [filterActiveContract, setFilterActiveContract] = useState(false);
   const [filterIsReplacement, setFilterIsReplacement] = useState(false);
   const [filterIsSolicitud, setFilterIsSolicitud] = useState(false);
+  const [filterUserStatus, setFilterUserStatus] = useState<string>("active");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -278,7 +279,7 @@ export const UsersPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud]);
+  }, [searchTerm, startDate, endDate, clientId, allProjects.length, filterProjectId, filterRoleFrameId, filterRoleId, filterActiveContract, filterIsReplacement, filterIsSolicitud, filterUserStatus]);
 
   // Refrescar cuando cambia la página
   useEffect(() => {
@@ -327,6 +328,9 @@ export const UsersPage: React.FC = () => {
       if (endDate) params.endDate = endDate;
       if (clientId) params.clientId = clientId;
       if (filterIsSolicitud) params.isSolicitud = "true";
+      if (filterUserStatus === "active") params.metadataActivo = "true";
+      if (filterUserStatus === "inactive") params.metadataActivo = "false";
+
 
       // Reset client context if we're not filtering by client anymore (though normally we stay in the route)
       if (!clientId && selectedClient) setSelectedClient(null);
@@ -687,9 +691,9 @@ export const UsersPage: React.FC = () => {
     setFormData({
       email: user.email.startsWith("solicitud_") ? "" : user.email,
       password: "",
-      firstName,
-      lastName,
-      isActive: user.isActive,
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      isActive: user.metadata?.activo ?? true,
       roles: user.roles.map((r) => r._id),
       hireDate,
       extraVacationDays: user.extraVacationDays || 0,
@@ -798,13 +802,13 @@ export const UsersPage: React.FC = () => {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        isActive: formData.isActive,
         roles: formData.roles,
         hireDate: formData.hireDate,
         extraVacationDays: formData.extraVacationDays,
         clientIds: formData.clientIds,
         metadata: {
           ...(editingUser?.metadata || {}),
+          activo: formData.isActive,
           generoId: formData.generoId,
           tipoDocumentoId: formData.tipoDocumentoId,
           documento: formData.documento,
@@ -844,8 +848,8 @@ export const UsersPage: React.FC = () => {
       // Si es una solicitud que se está aprobando, quitar el flag
       if (formData.isSolicitud) {
         submitData.metadata.isSolicitud = false;
-        // Forzamos isActive true si se está aprobando, a menos que el admin diga lo contrario
-        submitData.isActive = formData.isActive;
+        // Forzamos activo true si se está aprobando, a menos que el admin diga lo contrario
+        submitData.metadata.activo = formData.isActive;
       }
 
       if (editingUser) {
@@ -1048,6 +1052,18 @@ export const UsersPage: React.FC = () => {
                   label: "Solicitudes",
                 },
               ]}
+              radioFilters={[
+                {
+                  label: "Estado de usuarios",
+                  value: filterUserStatus,
+                  onChange: setFilterUserStatus,
+                  options: [
+                    { label: "Usuarios Activos", value: "active" },
+                    { label: "Usuarios Inactivos", value: "inactive" },
+                    { label: "Todos los usuarios", value: "" },
+                  ],
+                },
+              ]}
             />
           </div>
           {isXXL && (
@@ -1134,7 +1150,7 @@ export const UsersPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold uppercase ${viewUser.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{viewUser.isActive ? "Activo" : "Inactivo"}</span>
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold uppercase ${viewUser.metadata?.activo ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{viewUser.metadata?.activo ? "Activo" : "Inactivo"}</span>
                   </div>
                 </div>
 
@@ -2171,7 +2187,7 @@ export const UsersPage: React.FC = () => {
                           <span className="text-xs font-bold bg-gray-100 px-2 py-0.5 rounded">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
                         </td>
                         <td className="py-4 px-6">
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{user.isActive ? "Activo" : "Inactivo"}</span>
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{user.metadata?.activo ? "Activo" : "Inactivo"}</span>
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-1">

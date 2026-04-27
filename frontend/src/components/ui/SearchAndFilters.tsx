@@ -36,6 +36,18 @@ export interface SwitchFilter {
   label: string;
 }
 
+export interface RadioFilterOption {
+  value: string;
+  label: string;
+}
+
+export interface RadioFilter {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: RadioFilterOption[];
+}
+
 interface SearchAndFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -45,6 +57,7 @@ interface SearchAndFiltersProps {
   // New filter props for modal
   selectFilters?: SelectFilter[];
   switchFilters?: SwitchFilter[];
+  radioFilters?: RadioFilter[];
 
   className?: string;
   extraActions?: React.ReactNode;
@@ -73,14 +86,15 @@ const FilterSelect: React.FC<FilterProps> = ({ value, onChange, options, placeho
   );
 };
 
-export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, selectFilters = [], switchFilters = [], className = "", extraActions }) => {
+export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, selectFilters = [], switchFilters = [], radioFilters = [], className = "", extraActions }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const hasDateFilters = dateFilter && (dateFilter.startDate || dateFilter.endDate);
   const hasSelectFilters = selectFilters.some((sf) => sf.value !== "");
   const hasSwitchFilters = switchFilters.some((sw) => sw.value);
-  const hasActiveFilters = hasDateFilters || hasSelectFilters || hasSwitchFilters;
-  const activeFilterCount = [hasDateFilters, ...selectFilters.map((sf) => sf.value !== ""), ...switchFilters.map((sw) => sw.value)].filter(Boolean).length;
+  const hasRadioFilters = radioFilters.some((rf) => rf.value !== "");
+  const hasActiveFilters = hasDateFilters || hasSelectFilters || hasSwitchFilters || hasRadioFilters;
+  const activeFilterCount = [hasDateFilters, ...selectFilters.map((sf) => sf.value !== ""), ...switchFilters.map((sw) => sw.value), ...radioFilters.map((rf) => rf.value !== "")].filter(Boolean).length;
 
   const handleApply = () => {
     setShowFilterModal(false);
@@ -93,6 +107,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
     }
     selectFilters.forEach((sf) => sf.onChange(""));
     switchFilters.forEach((sw) => sw.onChange(false));
+    radioFilters.forEach((rf) => rf.onChange(""));
     setShowFilterModal(false);
   };
 
@@ -110,7 +125,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
   };
 
   // Check if filter modal should be shown (date filter OR new filters exist)
-  const showFilterButton = dateFilter || selectFilters.length > 0 || switchFilters.length > 0;
+  const showFilterButton = dateFilter || selectFilters.length > 0 || switchFilters.length > 0 || radioFilters.length > 0;
 
   return (
     <>
@@ -205,6 +220,35 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                   </button>
                 </span>
               ))}
+            {radioFilters
+              .filter((rf) => rf.value !== "")
+              .map((rf, idx) => (
+                <span
+                  key={`radio-${idx}`}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium border ${
+                    rf.value === "active"
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700"
+                      : rf.value === "inactive"
+                        ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700"
+                        : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 border-indigo-300 dark:border-indigo-700"
+                  }`}
+                >
+                  {rf.label}: {rf.options.find((o) => o.value === rf.value)?.label || rf.value}
+                  <button
+                    onClick={() => rf.onChange("")}
+                    className={`p-0.5 rounded transition-colors ${
+                      rf.value === "active"
+                        ? "hover:bg-green-200 dark:hover:bg-green-800/50"
+                        : rf.value === "inactive"
+                          ? "hover:bg-red-200 dark:hover:bg-red-800/50"
+                          : "hover:bg-indigo-200 dark:hover:bg-indigo-800/50"
+                    }`}
+                    title={`Quitar filtro de ${rf.label}`}
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
           </div>
         )}
       </div>
@@ -229,6 +273,31 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
           }
         >
           <div className="space-y-4">
+            {/* Radio Filters Section (Top) */}
+            {radioFilters.length > 0 && (
+              <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtrar por usuarios</h4>
+                {radioFilters.map((rf, idx) => (
+                  <div key={`modal-radio-${idx}`} className="space-y-2">
+                    {rf.options.map((opt, optIdx) => (
+                      <label key={optIdx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{opt.label}</span>
+                        <div
+                          className={`relative w-11 h-6 rounded-full transition-colors ${rf.value === opt.value ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            rf.onChange(opt.value);
+                          }}
+                        >
+                          <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${rf.value === opt.value ? "translate-x-5" : "translate-x-0"}`} />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Date Filter Section */}
             {dateFilter && (
               <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">

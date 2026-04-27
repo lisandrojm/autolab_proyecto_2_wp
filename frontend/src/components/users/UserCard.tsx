@@ -176,7 +176,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                 },
               ]
             : []),
-          { text: user.isActive ? "Activo" : "Inactivo", variant: user.isActive ? "green" : "destructive" },
+          { text: user.metadata?.activo ? "Activo" : "Inactivo", variant: user.metadata?.activo ? "green" : "destructive" },
           ...(getUserVacationStatus(user._id)
             ? [
                 {

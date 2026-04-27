@@ -290,20 +290,21 @@ async function ensureUser(params: {
       user.lastName = lastName;
       isModified = true;
     }
-    if (typeof isActive === "boolean" && user.isActive !== isActive) {
-      user.isActive = isActive;
+    if (typeof isActive === "boolean" && user.metadata?.activo !== isActive) {
+      if (!user.metadata) user.metadata = {};
+      user.metadata.activo = isActive;
       isModified = true;
     }
-    if (positionId && String(user.positionId) !== String(positionId)) {
-      user.positionId = positionId;
+    if (positionId && String((user as any).positionId) !== String(positionId)) {
+      (user as any).positionId = positionId;
       isModified = true;
     }
-    if (levelId && String(user.levelId) !== String(levelId)) {
-      user.levelId = levelId;
+    if (levelId && String((user as any).levelId) !== String(levelId)) {
+      (user as any).levelId = levelId;
       isModified = true;
     }
-    if (areaId && String(user.areaId) !== String(areaId)) {
-      user.areaId = areaId;
+    if (areaId && String((user as any).areaId) !== String(areaId)) {
+      (user as any).areaId = areaId;
       isModified = true;
     }
     if (hireDate && (!user.hireDate || user.hireDate.getTime() !== hireDate.getTime())) {

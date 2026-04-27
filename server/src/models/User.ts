@@ -97,9 +97,11 @@ export interface IUser extends Document {
   clientIds: Types.ObjectId[];
   projectIds: Types.ObjectId[];
   tenantId: Types.ObjectId;
+  positionId?: Types.ObjectId;
+  levelId?: Types.ObjectId;
+  areaId?: Types.ObjectId;
   firstName?: string;
   lastName?: string;
-  isActive: boolean;
   lastLoginAt?: Date;
   hireDate: Date;
   extraVacationDays: number;
@@ -132,7 +134,6 @@ const userSchema = new Schema<IUser>(
       trim: true,
       set: (v: string) => (v && v.trim() !== "" ? v.trim() : undefined),
     },
-    isActive: { type: Boolean, default: true },
     hireDate: { type: Date, required: true },
     extraVacationDays: { type: Number, default: 0 },
     carryOverVacationDays: { type: Number, default: 0 },
@@ -162,7 +163,7 @@ const userSchema = new Schema<IUser>(
       telefono: String,
       telefono2: String,
       visa: Boolean,
-      activo: Boolean,
+      activo: { type: Boolean, default: true },
       bancoId: Number,
       cbu: String,
       tipoDeCuentaBancaria: String,

@@ -40,7 +40,9 @@ interface DemoUser {
     name: string;
     description?: string;
   }[];
-  isActive: boolean;
+  metadata?: {
+    activo?: boolean;
+  };
   tenant?: {
     _id: string;
     name: string;
@@ -502,10 +504,10 @@ export const LoginPage: React.FC = () => {
                         )}
                         <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
                           Estado:
-                          {user.isActive ? <FontAwesomeIcon icon={faCheckCircle} className="text-blue-500" /> : <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />}
+                          {user.metadata?.activo ? <FontAwesomeIcon icon={faCheckCircle} className="text-blue-500" /> : <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />}
                         </div>
                       </div>
-                      <button type="button" onClick={() => autofill(user)} disabled={!user.isActive} className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-sm bg-primary-600 text-white hover:bg-primary-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+                      <button type="button" onClick={() => autofill(user)} disabled={!user.metadata?.activo} className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-sm bg-primary-600 text-white hover:bg-primary-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
                         <FontAwesomeIcon icon={faMagicWandSparkles} className="h-4 w-4" />
                         Usar
                       </button>

@@ -709,7 +709,7 @@ export const ProjectTeamPage: React.FC = () => {
         </td>
         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{rolFrame}</td>
         <td className="px-4 py-3">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.isActive ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.isActive ? "ACTIVO" : "INACTIVO"}</span>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${user.metadata?.activo ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{user.metadata?.activo ? "ACTIVO" : "INACTIVO"}</span>
         </td>
         <td className="px-4 py-3">
           {(() => {
@@ -1563,8 +1563,9 @@ export const ProjectTeamPage: React.FC = () => {
                             </div>
                           </div>
                         );
-                      })}
-                    </div>
+                      });
+                    })()}
+                  </div>
 
                     {wizardData.areaShiftAssignments.length === 0 && (project?.areasConfig || []).length > 0 && <p className="text-[11px] text-amber-500 dark:text-amber-400 ml-1">⚠ Debes seleccionar al menos un área y turno.</p>}
                   </div>
@@ -1586,7 +1587,7 @@ export const ProjectTeamPage: React.FC = () => {
                     <select className="input-field w-full" value={wizardData.levelId} onChange={(e) => setWizardData((prev) => ({ ...prev, levelId: e.target.value }))} disabled={!wizardData.positionId} required>
                       <option value="">{wizardData.positionId ? "Selecciona nivel..." : "Primero selecciona cargo"}</option>
                       {allLevels
-                        .filter((l) => String((typeof l.positionId === "object" ? (l.positionId as any)?._id : l.positionId)) === String(wizardData.positionId))
+                        .filter((l) => String(typeof l.positionId === "object" ? (l.positionId as any)?._id : l.positionId) === String(wizardData.positionId))
                         .map((l) => (
                           <option key={l._id} value={l._id}>
                             {l.name}

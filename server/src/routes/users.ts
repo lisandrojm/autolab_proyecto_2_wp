@@ -39,7 +39,6 @@ const createUserSchema = z.object({
     password: z.string().min(6),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    isActive: z.boolean().default(true),
     roles: z.array(z.string()).default([]),
     hireDate: z
       .string()
@@ -57,7 +56,6 @@ const updateUserSchema = z
     email: z.string().email().optional(),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    isActive: z.boolean().optional(),
     roles: z.array(z.string()).optional(),
     hireDate: z
       .string()
@@ -84,7 +82,11 @@ router.get("/count", requireTenant, authenticateToken, requirePermission("admin_
     const filter: any = isSuperAdmin ? {} : { tenantId: req.tenantObjectId };
 
     if (isActive !== undefined) {
-      filter.isActive = isActive === "true";
+      filter["metadata.activo"] = isActive === "true";
+    }
+
+    if (req.query.metadataActivo !== undefined) {
+      filter["metadata.activo"] = req.query.metadataActivo === "true";
     }
 
     const count = await User.countDocuments(filter);
@@ -107,12 +109,17 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
     }
 
     if (isActive !== undefined) {
-      filter.isActive = isActive === "true";
+      filter["metadata.activo"] = isActive === "true";
     }
 
     if (req.query.isSolicitud !== undefined) {
       filter["metadata.isSolicitud"] = req.query.isSolicitud === "true";
     }
+
+    if (req.query.metadataActivo !== undefined) {
+      filter["metadata.activo"] = req.query.metadataActivo === "true";
+    }
+
 
     const limitNum = Number(limit) || 50;
     const skip = (Number(page) - 1) * limitNum;
@@ -205,8 +212,8 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
   try {
     const data = createUserSchema.parse(req.body);
 
-    if (data.levelId === null) {
-      data.levelId = undefined;
+    if ((data as any).levelId === null) {
+      (data as any).levelId = undefined;
     }
 
     // Verificar que no existe usuario con el mismo email en el tenant
@@ -302,7 +309,7 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
   try {
     const users = await User.find({
       tenantId: req.tenantObjectId,
-      isActive: true,
+      "metadata.activo": true,
     })
       .select("firstName lastName email projectIds metadata")
       .populate("projectIds", "name")
@@ -342,7 +349,7 @@ router.get("/eligible-responsables", requireTenant, authenticateToken, async (re
     // 2. Encontrar usuarios activos que tengan alguno de esos roles
     const users = await User.find({
       tenantId: req.tenantObjectId,
-      isActive: true,
+      "metadata.activo": true,
       roles: { $in: eligibleRoleIds },
     })
       .select("firstName lastName email metadata")
@@ -692,7 +699,7 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
     const updatePayload: any = {
       email,
       password: hashedPassword,
-      isActive: true,
+      "metadata.activo": true,
       projectIds: projectIds.map((id: any) => new Types.ObjectId(id.toString())),
       "metadata.isSolicitud": false,
       "metadata.projects": userProjectRefs,

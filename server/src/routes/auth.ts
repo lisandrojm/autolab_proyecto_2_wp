@@ -41,7 +41,7 @@ router.post("/check-tenants", async (req, res) => {
       return;
     }
 
-    const users = await User.find({ email, isActive: true }).select("tenantId").populate("tenantId", "name slug");
+    const users = await User.find({ email, "metadata.activo": true }).select("tenantId").populate("tenantId", "name slug");
 
     if (users.length === 0) {
       res.status(404).json({ error: "No account found with this email" });
@@ -74,7 +74,7 @@ router.post("/check-status", async (req, res) => {
       return;
     }
 
-    const users = await User.find({ email: email.toLowerCase(), isActive: true }).select("lastLoginAt");
+    const users = await User.find({ email: email.toLowerCase(), "metadata.activo": true }).select("lastLoginAt");
 
     if (users.length === 0) {
       res.json({ exists: false, isFirstLogin: false });
@@ -99,7 +99,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
     const { email, password, tenantSlug, clientId } = req.body;
 
     // Buscar usuarios con este email
-    const users = await User.find({ email, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
+    const users = await User.find({ email, "metadata.activo": true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
 
     if (users.length === 0) {
       res.status(401).json({ error: "Invalid credentials" });
@@ -234,7 +234,7 @@ router.get("/me", requireTenant, authenticateToken, async (req: AuthenticatedReq
       return;
     }
 
-    const user = await User.findOne({ _id: userId, tenantId, isActive: true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
+    const user = await User.findOne({ _id: userId, tenantId, "metadata.activo": true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -276,10 +276,10 @@ router.get("/demo-users", async (req, res) => {
 
     // Traer usuarios de todos los tenants filtering by seed emails
     const users = await User.find({
-      isActive: true,
+      "metadata.activo": true,
       email: { $in: seedEmails },
     })
-      .select("email firstName lastName role isActive tenantId")
+      .select("email firstName lastName role metadata tenantId")
       .populate("roles", "name description")
       .populate("tenantId", "name slug")
       .sort({ "tenantId.name": 1, email: 1 })
@@ -293,7 +293,9 @@ router.get("/demo-users", async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         roles: user.roles || [],
-        isActive: user.isActive,
+        metadata: {
+          activo: user.metadata?.activo ?? true,
+        },
         tenant: {
           _id: tenant?._id || "",
           name: tenant?.name || "Unknown",
@@ -320,7 +322,7 @@ router.get("/clients-for-email", requireTenant, async (req: TenantRequest, res) 
       return;
     }
 
-    const user = await User.findOne({ email, tenantId, isActive: true }).populate("clientIds", "name slug").populate("roles", "name");
+    const user = await User.findOne({ email, tenantId, "metadata.activo": true }).populate("clientIds", "name slug").populate("roles", "name");
 
     const primaryRoleName = user?.roles && user.roles.length > 0 ? (user.roles[0] as any).name : "";
     if (!user || primaryRoleName !== "client") {
@@ -382,7 +384,7 @@ router.post("/register-client", requireTenant, validate(registerClientSchema), a
       clientIds: [client._id],
       firstName: name.split(" ")[0],
       lastName: name.split(" ").slice(1).join(" ") || undefined,
-      isActive: true,
+      metadata: { activo: true },
       hireDate: new Date(),
     });
 
@@ -483,7 +485,7 @@ router.post("/register", async (req, res) => {
       lastName,
       role: "user",
       roles: defaultRole ? [defaultRole._id] : [],
-      isActive: true,
+      metadata: { activo: true },
       hireDate: new Date(),
     });
 
@@ -643,7 +645,7 @@ router.post("/register-tenant", async (req, res) => {
       firstName: data.firstName,
       lastName: data.lastName,
       roles: [adminRole._id],
-      isActive: true,
+      metadata: { activo: true },
       hireDate: new Date(),
     });
 
