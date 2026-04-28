@@ -11,6 +11,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { EmptyState } from "../components/ui/EmptyState";
 import { UserCard } from "../components/users/UserCard";
 import { Modal } from "../components/ui/Modal";
+import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 
 import { getHelp } from "../data/help/helpContent";
 
@@ -67,6 +68,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [filterProject, setFilterProject] = useState(""); // Filter by Project
   const [showFilters, setShowFilters] = useState(false); // Toggle filters UI
   const [searchTermTeam, setSearchTermTeam] = useState(""); // For Equipo Actual
+  const [filterUserStatus, setFilterUserStatus] = useState<string>("");
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedUserForWizard, setSelectedUserForWizard] = useState<User | null>(null);
   const [viewingShiftsData, setViewingShiftsData] = useState<{ user: User; areaId: string; areaName: string } | null>(null);
@@ -310,17 +312,22 @@ export const ProjectTeamPage: React.FC = () => {
     const members = assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
 
     // Apply search filter if searchTermTeam is set
-    if (searchTermTeam) {
-      const search = searchTermTeam.toLowerCase();
-      return members.filter((user) => {
+    return members.filter((user) => {
+      // User Status Filter
+      if (filterUserStatus === "active" && !user.metadata?.activo) return false;
+      if (filterUserStatus === "inactive" && user.metadata?.activo) return false;
+
+      // Search Filter
+      if (searchTermTeam) {
+        const search = searchTermTeam.toLowerCase();
         const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
         const email = user.email.toLowerCase();
-        return fullName.includes(search) || email.includes(search);
-      });
-    }
+        if (!fullName.includes(search) && !email.includes(search)) return false;
+      }
 
-    return members;
-  }, [assignedUserIds, allUsers, searchTermTeam]);
+      return true;
+    });
+  }, [assignedUserIds, allUsers, searchTermTeam, filterUserStatus]);
 
   const hasMobileCoordinator = useMemo(() => {
     return teamMembers.some((u) => u.roles?.some((r) => {
@@ -926,12 +933,25 @@ export const ProjectTeamPage: React.FC = () => {
           <div className="mt-0">
             {activeTab === "equipo" && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                  <div className="relative w-full">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                      <FontAwesomeIcon icon={faSearch} />
-                    </span>
-                    <input type="text" className="input-field pl-10 h-10" placeholder="Buscar en equipo actual..." value={searchTermTeam} onChange={(e) => setSearchTermTeam(e.target.value)} />
+                <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
+                  <div className="flex-1 w-full">
+                    <SearchAndFilters
+                      searchTerm={searchTermTeam}
+                      onSearchChange={setSearchTermTeam}
+                      searchPlaceholder="Buscar en equipo actual..."
+                      radioFilters={[
+                        {
+                          label: "Estado de usuarios",
+                          value: filterUserStatus,
+                          onChange: setFilterUserStatus,
+                          options: [
+                            { label: "Usuarios Activos", value: "active" },
+                            { label: "Usuarios Inactivos", value: "inactive" },
+                            { label: "Todos los usuarios", value: "" },
+                          ],
+                        },
+                      ]}
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { projectsAPI, Project, Client } from "../api/projects";
 import { shiftsAPI, Shift } from "../api/shifts";
 
@@ -36,6 +36,7 @@ type ModalMode = "editProject" | "assignUser" | "manageTeam" | "viewProjectInfo"
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useAuthStore();
 
   // data
@@ -217,6 +218,13 @@ export const ProjectDetailPage: React.FC = () => {
     setSelectedAreaId("");
     setShowModal(true);
   };
+
+  useEffect(() => {
+    if (!loading && project && location.state?.openEdit) {
+      openEditProject();
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [loading, project, location.state, navigate, location.pathname]);
 
   const openManageTeam = () => {
     if (project) {

@@ -95,6 +95,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
   const hasRadioFilters = radioFilters.some((rf) => rf.value !== "");
   const hasActiveFilters = hasDateFilters || hasSelectFilters || hasSwitchFilters || hasRadioFilters;
   const activeFilterCount = [hasDateFilters, ...selectFilters.map((sf) => sf.value !== ""), ...switchFilters.map((sw) => sw.value), ...radioFilters.map((rf) => rf.value !== "")].filter(Boolean).length;
+  const shouldShowBadges = hasDateFilters || hasSelectFilters || hasSwitchFilters || radioFilters.length > 0;
 
   const handleApply = () => {
     setShowFilterModal(false);
@@ -169,7 +170,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
         </div>
 
         {/* Active Filter Badges */}
-        {hasActiveFilters && (
+        {shouldShowBadges && (
           <div className="flex flex-wrap items-center gap-2">
             {hasDateFilters && (
               <span
@@ -220,35 +221,41 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                   </button>
                 </span>
               ))}
-            {radioFilters
-              .filter((rf) => rf.value !== "")
-              .map((rf, idx) => (
+            {radioFilters.map((rf, idx) => {
+              const isDefault = rf.value === "";
+              const isActive = rf.value === "active";
+              const isInactive = rf.value === "inactive";
+              
+              return (
                 <span
                   key={`radio-${idx}`}
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium border ${
-                    rf.value === "active"
+                    isActive
                       ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700"
-                      : rf.value === "inactive"
+                      : isInactive
                         ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-300 dark:border-red-700"
-                        : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 border-indigo-300 dark:border-indigo-700"
+                        : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700"
                   }`}
                 >
-                  {rf.label}: {rf.options.find((o) => o.value === rf.value)?.label || rf.value}
-                  <button
-                    onClick={() => rf.onChange("")}
-                    className={`p-0.5 rounded transition-colors ${
-                      rf.value === "active"
-                        ? "hover:bg-green-200 dark:hover:bg-green-800/50"
-                        : rf.value === "inactive"
-                          ? "hover:bg-red-200 dark:hover:bg-red-800/50"
-                          : "hover:bg-indigo-200 dark:hover:bg-indigo-800/50"
-                    }`}
-                    title={`Quitar filtro de ${rf.label}`}
-                  >
-                    <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
-                  </button>
+                  {rf.label}: {isDefault ? "Todos los usuarios Activos e Inactivos" : (rf.options.find((o) => o.value === rf.value)?.label || rf.value)}
+                  {!isDefault && (
+                    <button
+                      onClick={() => rf.onChange("")}
+                      className={`p-0.5 rounded transition-colors ${
+                        isActive
+                          ? "hover:bg-green-200 dark:hover:bg-green-800/50"
+                          : isInactive
+                            ? "hover:bg-red-200 dark:hover:bg-red-800/50"
+                            : "hover:bg-blue-200 dark:hover:bg-blue-800/50"
+                      }`}
+                      title={`Quitar filtro de ${rf.label}`}
+                    >
+                      <FontAwesomeIcon icon={faXmark} className="h-3 w-3" />
+                    </button>
+                  )}
                 </span>
-              ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { Project, projectsAPI } from "../../api/projects";
 import { User } from "../../api/users";
 import { Area, areasAPI } from "../../api/areas";
@@ -18,6 +19,7 @@ interface TeamCoordinadoresTabProps {
 
 
 export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ projectId, project, teamMembers, onUpdated, onGoToTeam }) => {
+  const navigate = useNavigate();
 
   const [areas, setAreas] = useState<Area[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -216,6 +218,14 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
             El proyecto no tiene áreas o turnos configurados aún.
           </p>
+          <div className="mt-5">
+            <button
+              onClick={() => navigate(`/projects/${projectId}`, { state: { openEdit: true } })}
+              className="btn-secondary px-4 py-2 text-sm font-medium"
+            >
+              Editar Proyecto
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
