@@ -606,68 +606,117 @@ export const RolesPage: React.FC = () => {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {/* Permisos Generales */}
-                  {Object.entries(AVAILABLE_PERMISSIONS).map(([module, moduleData]) => {
-                    return (
-                      <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 flex items-center justify-center flex-shrink-0">
-                            <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
-                          {moduleData.permissions.map((permission) => {
-                            const permissionLabel = MODULE_LABELS[permission] || permission;
-
-                            return (
-                              <label key={permission} className="flex items-center gap-2 group cursor-pointer">
-                                <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 focus:ring-offset-0 cursor-pointer" />
-                                <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Permisos de SuperAdmin */}
-                  {isSuperAdmin &&
-                    editingRole?.name.toLowerCase() !== "superadmin" &&
-                    Object.entries(SUPERADMIN_ONLY_PERMISSIONS).map(([module, moduleData]) => {
-                      return (
-                        <div key={module} className="border-2 border-blue-400 dark:border-blue-600 rounded p-4 bg-blue-50 dark:bg-blue-950/30">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 flex items-center justify-center flex-shrink-0">
-                              <FontAwesomeIcon icon={moduleData.icon} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
-                                <span className="text-xs px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>
+                  {/* Permisos de Sistema */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faUserShield} className="text-gray-400" />
+                      Permisos de Sistema
+                    </label>
+                    <div className="space-y-3">
+                      {Object.entries(AVAILABLE_PERMISSIONS)
+                        .filter(([module]) => module !== "mobile")
+                        .map(([module, moduleData]) => {
+                          return (
+                            <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                              <div className="flex items-start gap-3">
+                                <div className="w-6 h-6 rounded bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 flex items-center justify-center flex-shrink-0">
+                                  <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
+                                </div>
                               </div>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
-                            {moduleData.permissions.map((permission) => {
-                              const permissionLabel = MODULE_LABELS[permission] || (permission === "*" ? "Acceso Total" : permission);
+                              <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
+                                {moduleData.permissions.map((permission) => {
+                                  const permissionLabel = MODULE_LABELS[permission] || permission;
 
-                              return (
-                                <label key={permission} className="flex items-center gap-2 group cursor-pointer">
-                                  <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer" />
-                                  <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                                  return (
+                                    <label key={permission} className="flex items-center gap-2 group cursor-pointer">
+                                      <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 focus:ring-offset-0 cursor-pointer" />
+                                      <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                      {/* Permisos de SuperAdmin */}
+                      {isSuperAdmin &&
+                        editingRole?.name.toLowerCase() !== "superadmin" &&
+                        Object.entries(SUPERADMIN_ONLY_PERMISSIONS).map(([module, moduleData]) => {
+                          return (
+                            <div key={module} className="border-2 border-blue-400 dark:border-blue-600 rounded p-4 bg-blue-50 dark:bg-blue-950/30">
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 flex items-center justify-center flex-shrink-0">
+                                  <FontAwesomeIcon icon={moduleData.icon} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
+                                    <span className="text-xs px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium">SuperAdmin</span>
+                                  </div>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-3 pl-[52px] mt-3">
+                                {moduleData.permissions.map((permission) => {
+                                  const permissionLabel = MODULE_LABELS[permission] || (permission === "*" ? "Acceso Total" : permission);
+
+                                  return (
+                                    <label key={permission} className="flex items-center gap-2 group cursor-pointer">
+                                      <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer" />
+                                      <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  {/* Permisos Mobile (App) */}
+                  <div className="pt-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faMobileAlt} className="text-gray-400" />
+                      Permisos Mobile (App)
+                    </label>
+                    <div className="space-y-3">
+                      {Object.entries(AVAILABLE_PERMISSIONS)
+                        .filter(([module]) => module === "mobile")
+                        .map(([module, moduleData]) => {
+                          return (
+                            <div key={module} className="border border-gray-200 dark:border-gray-700 rounded p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                              <div className="flex items-start gap-3">
+                                <div className="w-6 h-6 rounded bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 flex items-center justify-center flex-shrink-0">
+                                  <FontAwesomeIcon icon={moduleData.icon} className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-900 dark:text-white">{moduleData.label}</h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{moduleData.description}</p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-3 pl-[36px] mt-3">
+                                {moduleData.permissions.map((permission) => {
+                                  const permissionLabel = MODULE_LABELS[permission] || permission;
+
+                                  return (
+                                    <label key={permission} className="flex items-center gap-2 group cursor-pointer">
+                                      <input type="checkbox" checked={formData.permissions.includes(permission)} onChange={() => togglePermission(permission)} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer" />
+                                      <span className="text-sm transition-colors text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{permissionLabel}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

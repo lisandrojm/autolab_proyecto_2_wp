@@ -225,8 +225,10 @@ export const LoginPage: React.FC = () => {
       const roleNames = rolesFromResult.map((r) => (typeof r === "string" ? r : r?.name || "").toLowerCase());
 
       const isSuperadmin = roleNames.includes("superadmin");
-      const hasMobileAccess = roleNames.some((n) => n.includes("mobile"));
-      const hasPlatformAccess = roleNames.some((n) => !n.includes("mobile")); // Any non-mobile role implies platform
+      
+      // Consider "responsable de proyecto" as a mobile-only role for routing purposes
+      const hasMobileAccess = roleNames.some((n) => n.includes("mobile") || n.includes("responsable de proyecto"));
+      const hasPlatformAccess = roleNames.some((n) => !n.includes("mobile") && !n.includes("responsable de proyecto"));
 
       // 1. Si tiene ambos accesos, mostrar selector (prioridad máxima)
       if (hasPlatformAccess && hasMobileAccess) {

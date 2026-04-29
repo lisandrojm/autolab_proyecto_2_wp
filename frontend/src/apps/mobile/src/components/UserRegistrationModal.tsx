@@ -66,7 +66,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       const loadData = async () => {
         setLoadingData(true);
         try {
-          const [frames, cats, projs, usersRes] = await Promise.all([roleFrameAPI.list(), categoriaSatAPI.list(), projectsAPI.listAll(), usersAPI.list({ limit: 1000 })]);
+          const [frames, cats, projs, usersRes] = await Promise.all([roleFrameAPI.list(), categoriaSatAPI.list(), projectsAPI.listAll(), usersAPI.list({ limit: 1000, metadataActivo: "true" })]);
           setRoleFrames(frames);
           setCategoriasSat(cats);
           setPlatformUsers(usersRes.users || []);

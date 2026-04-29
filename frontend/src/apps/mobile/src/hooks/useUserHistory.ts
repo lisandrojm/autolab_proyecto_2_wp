@@ -10,8 +10,8 @@ export const useUserHistory = () => {
     try {
       setLoading(true);
       setError(null);
-      // Fetch recent users. Limit to 50 for history.
-      const response = await usersAPI.list({ limit: 50 });
+      // Fetch recent users. Limit to 50 for history. Filter by active users.
+      const response = await usersAPI.list({ limit: 50, metadataActivo: "true" });
       setUsers(response.users);
     } catch (err: any) {
       setError(err.response?.data?.error || "Error al cargar el historial de usuarios");
