@@ -227,7 +227,7 @@ export default function Profile() {
               <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
                 <FontAwesomeIcon icon={faBriefcase} className="w-5 h-5 text-primary" />
                 <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Proyecto Actual</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Proyecto/s Actual/es</p>
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.activeProject}</p>
                 </div>
               </div>

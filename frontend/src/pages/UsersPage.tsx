@@ -1289,11 +1289,18 @@ export const UsersPage: React.FC = () => {
                         Roles de Sistema
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {viewUser.roles.map((role) => (
-                          <span key={role._id} className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
-                            {role.name}
-                          </span>
-                        ))}
+                        {viewUser.roles.map((role) => {
+                          const isCoord = role.name.toLowerCase().includes("coordinador");
+                          const classes = isCoord
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800";
+                          
+                          return (
+                            <span key={role._id} className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${classes}`}>
+                              {role.name}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

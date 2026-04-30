@@ -19,7 +19,6 @@ import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { ensureAllTenantsHaveDefaultAreas } from "./services/areaInitService.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
-import { ensureAllTenantsHaveDefaultShiftConfigs } from "./services/shiftConfigInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 
@@ -65,7 +64,7 @@ import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
 import { ProjectPdfConfigRoutes } from "./routes/projectPdfConfig.js";
 import { shiftRoutes } from "./routes/shifts.js";
-import { shiftConfigRoutes } from "./routes/shiftConfigs.js";
+
 import { userProjectRoutes } from "./routes/userProjects.js";
 
 
@@ -185,7 +184,7 @@ app.use("/api/v1/vacations", vacationsRoutes);
 app.use("/api/v1/request-config", RequestConfigRoutes);
 app.use("/api/v1/activity-reports", RequestRoutes);
 app.use("/api/v1/shifts", shiftRoutes);
-app.use("/api/v1/shift-configs", shiftConfigRoutes);
+
 app.use("/api/v1/user-projects", userProjectRoutes);
 
 
@@ -226,13 +225,7 @@ connectDB()
       console.error("❌ Shift verification failed:", error);
     }
 
-    try {
-      console.log("🔍 Verifying all tenants have default shift configs...");
-      await ensureAllTenantsHaveDefaultShiftConfigs();
-      console.log("✅ Shift config verification completed successfully");
-    } catch (error) {
-      console.error("❌ Shift config verification failed:", error);
-    }
+
 
 
 

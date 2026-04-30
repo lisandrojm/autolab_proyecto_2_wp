@@ -217,6 +217,31 @@ export const ProjectDetailPage: React.FC = () => {
     setConfiguringAreaId(null);
     setSelectedAreaId("");
     setShowModal(true);
+
+    // Ensure Coordinador is in the project when editing
+    if (availableAreas.length > 0 && availableShifts.length > 0) {
+      const coordinadorArea = availableAreas.find(a => a.name.toLowerCase() === "coordinador");
+      if (coordinadorArea) {
+        setProjectForm(prev => {
+          const areaConfigIndex = prev.areasConfig.findIndex(ac => ac.areaId === coordinadorArea._id);
+          if (areaConfigIndex > -1) {
+            // Update existing to have all shifts
+            const newConfig = [...prev.areasConfig];
+            newConfig[areaConfigIndex].shiftIds = availableShifts.map(s => s._id);
+            return { ...prev, areasConfig: newConfig };
+          } else {
+            // Add it
+            return {
+              ...prev,
+              areasConfig: [
+                ...prev.areasConfig,
+                { areaId: coordinadorArea._id, shiftIds: availableShifts.map(s => s._id) }
+              ]
+            };
+          }
+        });
+      }
+    }
   };
 
   useEffect(() => {

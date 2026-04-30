@@ -500,9 +500,6 @@ export const ProjectsPage: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <label className="block text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Configuración por Área</label>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase mt-1 tracking-widest">
-                    * Es obligatorio configurar al menos un área y asignarle un turno
-                  </p>
                 </div>
                 <button
                   type="button"
@@ -583,7 +580,6 @@ export const ProjectsPage: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">Agregar Nueva Área</h3>
-                      <p className="text-[10px] text-gray-500 uppercase font-medium">Selecciona el área para integrarla</p>
                     </div>
                   </div>
                   

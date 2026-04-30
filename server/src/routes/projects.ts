@@ -14,6 +14,7 @@ import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
+import { enforceCoordinatorArea } from "../services/projectEnforcementService.js";
 
 const router = Router();
 
@@ -471,6 +472,7 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
       centroCostoId: data.metadata?.centroCostoId,
     };
 
+    await enforceCoordinatorArea(project);
     await project.save();
 
     // Actualizar el cliente para incluir el proyecto
@@ -670,6 +672,7 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
       }
     }
 
+    await enforceCoordinatorArea(currentProject);
     await currentProject.save();
 
     res.json(currentProject);
