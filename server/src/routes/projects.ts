@@ -87,6 +87,7 @@ const createProjectSchema = z.object({
       })
     )
     .optional(),
+  clientId: z.string().optional(),
 });
 
 const updateTeamConfigSchema = z.object({
