@@ -25,7 +25,6 @@ export async function ensureDefaultShifts(tenantId: Types.ObjectId | string): Pr
     await Shift.create({
       tenantId: tid,
       name,
-      type: "Mañana",
       startTime: "09:00",
       endTime: "17:00",
       days: [1, 2, 3, 4, 5],

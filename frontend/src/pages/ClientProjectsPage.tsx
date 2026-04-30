@@ -161,6 +161,14 @@ export const ClientProjectsPage: React.FC = () => {
       if (responsablesRes.ok) {
         setAvailableCoordinators(await responsablesRes.json());
       }
+
+      // Also fetch shifts and areas
+      const [shifts, areas] = await Promise.all([
+        shiftsAPI.getAll(),
+        areasAPI.listAll()
+      ]);
+      setAvailableShifts(shifts);
+      setAvailableAreas(areas);
     } catch (err) {
       console.error("Error fetching aux data:", err);
     }
@@ -211,6 +219,24 @@ export const ClientProjectsPage: React.FC = () => {
     setIsAddingArea(false);
     setConfiguringAreaId(null);
     setShowModal(true);
+    
+    // Ensure Coordinador is added once areas/shifts are loaded (or if already loaded)
+    if (availableAreas.length > 0 && availableShifts.length > 0) {
+      const coordinadorArea = availableAreas.find(a => a.name.toLowerCase() === "coordinador");
+      if (coordinadorArea) {
+        setFormData(prev => {
+          const hasCoordinador = prev.areasConfig.some(ac => ac.areaId === coordinadorArea._id);
+          if (hasCoordinador) return prev;
+          return {
+            ...prev,
+            areasConfig: [
+              ...prev.areasConfig,
+              { areaId: coordinadorArea._id, shiftIds: availableShifts.map(s => s._id) }
+            ]
+          };
+        });
+      }
+    }
   };
 
   const handleOpenEdit = (project: Project) => {
@@ -240,6 +266,31 @@ export const ClientProjectsPage: React.FC = () => {
     setIsAddingArea(false);
     setConfiguringAreaId(null);
     setShowModal(true);
+
+    // Ensure Coordinador is in the project when editing
+    if (availableAreas.length > 0 && availableShifts.length > 0) {
+      const coordinadorArea = availableAreas.find(a => a.name.toLowerCase() === "coordinador");
+      if (coordinadorArea) {
+        setFormData(prev => {
+          const areaConfigIndex = prev.areasConfig.findIndex(ac => ac.areaId === coordinadorArea._id);
+          if (areaConfigIndex > -1) {
+            // Update existing to have all shifts if needed (as per user request "must have all active shifts")
+            const newConfig = [...prev.areasConfig];
+            newConfig[areaConfigIndex].shiftIds = availableShifts.map(s => s._id);
+            return { ...prev, areasConfig: newConfig };
+          } else {
+            // Add it
+            return {
+              ...prev,
+              areasConfig: [
+                ...prev.areasConfig,
+                { areaId: coordinadorArea._id, shiftIds: availableShifts.map(s => s._id) }
+              ]
+            };
+          }
+        });
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -486,9 +537,6 @@ export const ClientProjectsPage: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <label className="block text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Configuración por Área</label>
-                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase mt-1 tracking-widest">
-                            * Es obligatorio configurar al menos un área y asignarle un turno
-                          </p>
                         </div>
                         <button
                           type="button"

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
-import { shiftConfigsAPI, ShiftConfig } from "../api/shiftConfigs";
 import { Shift, ShiftFormData } from "../api/shifts";
 import { shiftsAPI } from "../api/shifts";
 import { useAuthStore } from "../stores/authStore";
@@ -37,14 +36,13 @@ export const ShiftsPage: React.FC = () => {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [formData, setFormData] = useState<ShiftFormData>({
     name: "",
-    type: "",
     days: [1, 2, 3, 4, 5],
     startTime: "09:00",
     endTime: "18:00",
     description: "",
   });
 
-  const [shiftConfigs, setShiftConfigs] = useState<ShiftConfig[]>([]);
+
 
   const [isReorderMode, setIsReorderMode] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -73,7 +71,6 @@ export const ShiftsPage: React.FC = () => {
 
   useEffect(() => {
     fetchShifts();
-    fetchShiftConfigs();
   }, [currentPage, searchTerm]);
 
   const fetchShifts = async () => {
@@ -89,20 +86,12 @@ export const ShiftsPage: React.FC = () => {
     }
   };
 
-  const fetchShiftConfigs = async () => {
-    try {
-      const resp = await shiftConfigsAPI.getAll();
-      setShiftConfigs(resp.data);
-    } catch (error) {
-      console.error("Error fetching configs", error);
-    }
-  };
+
 
   const openCreate = () => {
     setEditingShift(null);
     setFormData({
       name: "",
-      type: shiftConfigs.length > 0 ? shiftConfigs[0].name : "",
       days: [1, 2, 3, 4, 5],
       startTime: "09:00",
       endTime: "18:00",
@@ -115,7 +104,6 @@ export const ShiftsPage: React.FC = () => {
     setEditingShift(shift);
     setFormData({
       name: shift.name,
-      type: shift.type,
       days: shift.days,
       startTime: shift.startTime,
       endTime: shift.endTime,
@@ -214,10 +202,7 @@ export const ShiftsPage: React.FC = () => {
             <p>
               En esta sección puedes gestionar los <strong>horarios laborales</strong> de tu organización. Los turnos permiten definir cuándo debe trabajar cada colaborador.
             </p>
-            <div className="space-y-2">
-              <h4 className="text-white font-medium">Tipos de Turno</h4>
-              <p className="text-sm">Utiliza los tipos (como Mañana, Tarde, Noche) para categorizar tus horarios. Puedes configurar más tipos desde el menú de configuración lateral.</p>
-            </div>
+
             <div className="space-y-2">
               <h4 className="text-white font-medium">Días Laborales</h4>
               <p className="text-sm">Selecciona los días específicos en los que este turno está activo. Por defecto, los nuevos turnos se crean de Lunes a Viernes.</p>
@@ -312,17 +297,7 @@ export const ShiftsPage: React.FC = () => {
               </div>
 
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Turno *</label>
-                <select required value={formData.type} onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))} className="input-field">
-                  {shiftConfigs.length === 0 && <option value="">Cargando tipos...</option>}
-                  {shiftConfigs.map((t) => (
-                    <option key={t._id} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -383,7 +358,7 @@ export const ShiftsPage: React.FC = () => {
                       {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Ordenar</th>}
                       {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>}
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Horario</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días</th>
                       <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
@@ -460,11 +435,7 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
       </td>
 
 
-      <td className="py-3 px-4">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300">
-          {shift.type}
-        </span>
-      </td>
+
       <td className="py-3 px-4">
         <span className="text-sm text-gray-600 dark:text-gray-400">
           {shift.startTime} - {shift.endTime}
@@ -533,7 +504,7 @@ const SortableShiftCard: React.FC<SortableShiftCardProps> = ({ shift, isReorderM
             </div>
           ),
 
-          subtitle: shift.type,
+          subtitle: undefined,
           icon: faClock,
         }}
 

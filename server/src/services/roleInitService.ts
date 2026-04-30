@@ -59,7 +59,6 @@ const ADMIN_PERMISSIONS = [
   "config_pdf_templates:view", // Plantillas PDF
 
   // ──────────── Proyectos ────────────
-  "project_responsible:eligible", // Responsable de Proyecto
 ];
 const MOBILE_COLLABORATOR_PERMISSIONS = [
   "mobile_collaborator:view", // Permisos de colaborador mobile

@@ -251,7 +251,7 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
           path: "userId",
           select: "firstName lastName email positionId metadata clientIds projectIds turnos",
           populate: [
-            { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
+            { path: "turnos", select: "name startTime endTime days", model: "Shift" },
             { path: "positionId", select: "name" },
             { path: "clientIds", select: "name", model: "Client" },
             {
@@ -345,7 +345,7 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
             path: "userId",
             select: "firstName lastName email positionId metadata clientIds turnos",
             populate: [
-              { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
+              { path: "turnos", select: "name startTime endTime days", model: "Shift" },
               { path: "positionId", select: "name" },
               { path: "clientIds", select: "name" },
               {
@@ -453,7 +453,7 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
         path: "userId",
         select: "firstName lastName email positionId metadata clientIds turnos",
         populate: [
-          { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
+          { path: "turnos", select: "name startTime endTime days", model: "Shift" },
           { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
@@ -765,7 +765,7 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
         path: "userId",
         select: "firstName lastName email positionId metadata clientIds turnos",
         populate: [
-          { path: "turnos", select: "name startTime endTime type days", model: "Shift" },
+          { path: "turnos", select: "name startTime endTime days", model: "Shift" },
           { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
