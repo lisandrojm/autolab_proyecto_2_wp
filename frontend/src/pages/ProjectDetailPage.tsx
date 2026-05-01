@@ -529,7 +529,14 @@ export const ProjectDetailPage: React.FC = () => {
                                 <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5" />
                               </div>
                               <div>
-                                <div className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">{area.name}</div>
+                                <div className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                                  {area.name}
+                                  {(area.isSystem || area.name.toLowerCase() === "coordinador") && (
+                                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 uppercase tracking-wider">
+                                      Sistema
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${ac.shiftIds.length > 0 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"}`}>
                                     {ac.shiftIds.length} {ac.shiftIds.length === 1 ? 'Turno' : 'Turnos'}
@@ -546,7 +553,7 @@ export const ProjectDetailPage: React.FC = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                               </button>
-                              {!area.isSystem && (
+                              {!(area.isSystem || area.name.toLowerCase() === "coordinador") && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -810,8 +817,17 @@ export const ProjectDetailPage: React.FC = () => {
                         {(project.areasConfig || []).length > 0 ? (
                           (project.areasConfig || []).map((ac: any, i: number) => (
                             <div key={i} className="p-3 rounded-xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800">
-                              <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight mb-2">
+                              <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight mb-2 flex items-center gap-2">
                                 {typeof ac.areaId === "object" ? ac.areaId.name : "..."}
+                                {((typeof ac.areaId === "object" && (ac.areaId.isSystem || ac.areaId.name.toLowerCase() === "coordinador")) || 
+                                  (() => {
+                                    const a = availableAreas.find(a => a._id === ac.areaId);
+                                    return a && (a.isSystem || a.name.toLowerCase() === "coordinador");
+                                  })()) && (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 uppercase tracking-wider">
+                                    Sistema
+                                  </span>
+                                )}
                               </div>
                               <div className="flex flex-wrap gap-3">
                                   {ac.shiftIds.map((shift: any, j: number) => {

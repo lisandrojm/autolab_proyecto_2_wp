@@ -359,28 +359,27 @@ export const AreasPage: React.FC = () => {
                       badges:
                         area.tenant && area.tenant.name
                           ? [
-
                               {
                                 text: area.tenant.name,
                                 variant: "default" as const,
                                 className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
                               },
-                              ...(area.isSystem
+                              ...(area.isSystem || area.name.toLowerCase() === "coordinador"
                                 ? [
                                     {
                                       text: "Sistema",
                                       variant: "default" as const,
-                                      className: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+                                      className: "bg-orange-500/10 text-orange-500 border border-orange-500/50",
                                     },
                                   ]
                                 : []),
                             ]
-                          : area.isSystem
+                          : area.isSystem || area.name.toLowerCase() === "coordinador"
                           ? [
                               {
                                 text: "Sistema",
                                 variant: "default" as const,
-                                className: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+                                className: "bg-orange-500/10 text-orange-500 border border-orange-500/50",
                               },
                             ]
                           : [],
@@ -456,7 +455,7 @@ export const AreasPage: React.FC = () => {
                               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
                               <div className="flex items-center gap-2">
                                 {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
-                                {area.isSystem && <span className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tighter">Sistema</span>}
+                                {(area.isSystem || area.name.toLowerCase() === "coordinador") && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
                               </div>
 
                             </div>
@@ -481,7 +480,7 @@ export const AreasPage: React.FC = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                               </button>
-                              {!area.isSystem && (
+                              {!(area.isSystem || area.name.toLowerCase() === "coordinador") && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
