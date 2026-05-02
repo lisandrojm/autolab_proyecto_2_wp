@@ -53,7 +53,18 @@ const createProjectSchema = z.object({
     .optional()
     .nullable(),
   externalId: z.number().optional(),
-  metadata: z.any().optional(),
+  metadata: z.object({
+    responsableId: z.number({ required_error: "El responsable del proyecto es obligatorio" }),
+    sedeId: z.number().optional().nullable(),
+    centroCostoId: z.number().optional().nullable(),
+    clienteId: z.number().optional().nullable(),
+    nombre: z.string().optional().nullable(),
+    descripcion: z.string().optional().nullable(),
+    fechaAlta: z.string().optional().nullable(),
+    fechaInicio: z.string().optional().nullable(),
+    fechaFin: z.string().optional().nullable(),
+    activo: z.boolean().optional().nullable(),
+  }),
   workSchedule: z.any().optional(),
   activityLogConfig: z
     .object({

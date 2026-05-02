@@ -173,7 +173,7 @@ const projectSchema = new Schema<IProject>(
       id: { type: Number },
       nombre: { type: String },
       descripcion: { type: String },
-      responsableId: { type: Number },
+      responsableId: { type: Number, required: true },
       clienteId: { type: Number },
       fechaInicio: { type: String },
       fechaFin: { type: String },

@@ -267,6 +267,10 @@ export const ProjectDetailPage: React.FC = () => {
   const submitEditProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!project) return;
+    if (!projectForm.metadata?.responsableId) {
+      sweetAlert.error("Datos incompletos", "El responsable del proyecto es obligatorio");
+      return;
+    }
 
     try {
       const payload = {

@@ -198,6 +198,10 @@ export const ProjectsPage: React.FC = () => {
       sweetAlert.error("Error", "Seleccioná un cliente para el proyecto");
       return;
     }
+    if (!formData.metadata?.responsableId) {
+      sweetAlert.error("Datos incompletos", "El responsable del proyecto es obligatorio");
+      return;
+    }
     try {
       setCreating(true);
 
