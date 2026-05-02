@@ -203,6 +203,39 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
       });
     }
 
+    // 4. BULK METADATA RESOLUTION (Responsables)
+    const responsableIds = new Set<number>();
+    projects.forEach((p) => {
+      if (p.metadata?.responsableId) {
+        responsableIds.add(Number(p.metadata.responsableId));
+      }
+    });
+
+    if (responsableIds.size > 0) {
+      const responsables = await User.find({
+        tenantId: req.tenantObjectId,
+        "metadata.id": { $in: Array.from(responsableIds) }
+      }).select("firstName lastName email metadata").lean();
+
+      const respMap = new Map();
+      responsables.forEach((r) => respMap.set(String(r.metadata?.id), r));
+
+      projects.forEach((p) => {
+        if (p.metadata?.responsableId) {
+          const resp = respMap.get(String(p.metadata.responsableId));
+          if (resp) {
+            if (!(p as any).metadataResolutions) (p as any).metadataResolutions = {};
+            (p as any).metadataResolutions.responsable = {
+               _id: resp._id,
+               name: `${resp.firstName || ""} ${resp.lastName || ""}`.trim() || resp.email,
+               firstName: resp.firstName,
+               lastName: resp.lastName
+            };
+          }
+        }
+      });
+    }
+
     console.log(`[PROJECTS] Found ${projects.length} projects for filter`);
 
     res.json({

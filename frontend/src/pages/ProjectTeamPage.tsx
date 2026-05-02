@@ -44,7 +44,9 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Data
   const [project, setProject] = useState<Project | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+   const [allUsers, setAllUsers] = useState<User[]>([]);
+   const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
+   const [searchingCandidates, setSearchingCandidates] = useState(false);
   const [loading, setLoading] = useState(true);
   const [teamConfig, setTeamConfig] = useState<any[]>([]);
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -136,7 +138,7 @@ export const ProjectTeamPage: React.FC = () => {
         setLoading(true);
         const [projectData, usersData, vacationsData, areasData, positionsData, levelsData, shiftsData] = await Promise.all([
           projectsAPI.getProject(projectId),
-          usersAPI.list({ limit: 10000 }), // Get all users (no limit)
+          usersAPI.list({ projectId, limit: 500 }), // Only fetch team members initially
           vacationsAPI.getAll(),
           areasAPI.listAll(),
           positionsAPI.listAll(),
@@ -227,6 +229,34 @@ export const ProjectTeamPage: React.FC = () => {
     fetchCount();
   }, [projectId]);
 
+  // Candidate Search
+  useEffect(() => {
+    if (!showAddModal) {
+      setCandidateUsers([]);
+      setSearchTerm("");
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchTerm.length < 2) {
+        setCandidateUsers([]);
+        return;
+      }
+
+      try {
+        setSearchingCandidates(true);
+        const response = await usersAPI.list({ email: searchTerm, limit: 50 });
+        setCandidateUsers(response.users);
+      } catch (error) {
+        console.error("Error fetching candidates:", error);
+      } finally {
+        setSearchingCandidates(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, showAddModal]);
+
   /* ------------------------------- Logic --------------------------------- */
 
   // Derived state
@@ -272,8 +302,10 @@ export const ProjectTeamPage: React.FC = () => {
   }, [project, projectId, allUsers]);
 
   // Filtered Users (candidates to add) - only search by name or email
-  const filteredCandidates = useMemo(() => {
-    return allUsers.filter((user) => {
+   const filteredCandidates = useMemo(() => {
+    // If we have a search term, use candidateUsers, otherwise use allUsers (which only contains team members now)
+    const source = searchTerm.length >= 2 ? candidateUsers : allUsers;
+    return source.filter((user) => {
       // 1. Exclude already assigned
       if (assignedUserIds.includes(user._id)) return false;
 
@@ -1135,7 +1167,27 @@ export const ProjectTeamPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
-                      {filteredCandidates.map((user) => {
+                      {searchingCandidates ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                            <FontAwesomeIcon icon={faSearch} className="animate-pulse mr-2" />
+                            Buscando candidatos...
+                          </td>
+                        </tr>
+                      ) : searchTerm.length >= 2 && filteredCandidates.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                            No se encontraron usuarios para "{searchTerm}"
+                          </td>
+                        </tr>
+                      ) : searchTerm.length < 2 && filteredCandidates.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic">
+                            Escribe al menos 2 caracteres para buscar candidatos...
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredCandidates.map((user) => {
                         const isCoordinator = checkIsCoordinator(user);
                         const metadataProjects = user.metadata?.projects || [];
                         const rolFrame = metadataProjects[0]?.nombre_rol_frame || (user.externalInfo?.rolFrames?.length ? user.externalInfo.rolFrames[0] : "-");
@@ -1211,7 +1263,8 @@ export const ProjectTeamPage: React.FC = () => {
                             </td>
                           </tr>
                         );
-                      })}
+                      })
+                    )}
                     </tbody>
                   </table>
                 </div>

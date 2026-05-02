@@ -102,23 +102,94 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
   try {
     const { page = 1, limit = 50, email, isActive, areaId } = req.query;
     const isSuperAdmin = req.user?.roles.some((r) => r.toLowerCase() === "superadmin");
-    const filter: any = isSuperAdmin ? {} : { tenantId: req.tenantObjectId };
+    const andConditions: any[] = [];
+    if (!isSuperAdmin) {
+      andConditions.push({ tenantId: req.tenantObjectId });
+    }
 
     if (email) {
-      filter.email = { $regex: email, $options: "i" };
+      const searchRegex = { $regex: String(email), $options: "i" };
+      andConditions.push({
+        $or: [
+          { email: searchRegex },
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { "metadata.fullName": searchRegex },
+          { "metadata.nombre": searchRegex },
+          { "metadata.apellido": searchRegex },
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $concat: [
+                    { $ifNull: ["$firstName", ""] },
+                    " ",
+                    { $ifNull: ["$lastName", ""] }
+                  ]
+                },
+                regex: String(email),
+                options: "i"
+              }
+            }
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $concat: [
+                    { $ifNull: ["$metadata.nombre", ""] },
+                    " ",
+                    { $ifNull: ["$metadata.apellido", ""] }
+                  ]
+                },
+                regex: String(email),
+                options: "i"
+              }
+            }
+          }
+        ]
+      });
     }
 
     if (isActive !== undefined) {
-      filter["metadata.activo"] = isActive === "true";
+      andConditions.push({ "metadata.activo": isActive === "true" });
     }
 
     if (req.query.isSolicitud !== undefined) {
-      filter["metadata.isSolicitud"] = req.query.isSolicitud === "true";
+      andConditions.push({ "metadata.isSolicitud": req.query.isSolicitud === "true" });
     }
 
     if (req.query.metadataActivo !== undefined) {
-      filter["metadata.activo"] = req.query.metadataActivo === "true";
+      andConditions.push({ "metadata.activo": req.query.metadataActivo === "true" });
     }
+
+    if (req.query.clientId) {
+      const cid = req.query.clientId;
+      const clientProjectIds = await Project.find({ clientId: cid }).distinct("_id");
+      andConditions.push({
+        $or: [
+          { clientIds: cid },
+          { projectIds: { $in: clientProjectIds } },
+          { "metadata.projects.projectId": { $in: clientProjectIds } }
+        ]
+      });
+    }
+
+    if (req.query.projectId) {
+      const pid = req.query.projectId;
+      andConditions.push({
+        $or: [
+          { projectIds: pid },
+          { "metadata.projects.projectId": pid }
+        ]
+      });
+    }
+
+    if (req.query.roleId) {
+      andConditions.push({ roles: req.query.roleId });
+    }
+
+    const filter = andConditions.length > 0 ? { $and: andConditions } : {};
 
 
     const limitNum = Number(limit) || 50;

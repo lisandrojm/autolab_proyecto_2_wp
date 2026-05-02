@@ -154,7 +154,17 @@ export const ProjectsPage: React.FC = () => {
   const filteredProjects = useMemo(() => {
     if (!searchTerm) return projects;
     const lowerSearch = searchTerm.toLowerCase();
-    return projects.filter((p) => p.name.toLowerCase().includes(lowerSearch) || (typeof p.clientId === "object" ? p.clientId.name : clientMap.get(p.clientId)?.name)?.toLowerCase().includes(lowerSearch));
+    return projects.filter((p) => {
+      const projectName = p.name.toLowerCase();
+      const projectDescription = (p.description || "").toLowerCase();
+      const clientName = (typeof p.clientId === "object" ? p.clientId.name : clientMap.get(p.clientId)?.name)?.toLowerCase() || "";
+      const responsableName = p.metadataResolutions?.responsable?.name?.toLowerCase() || "";
+      
+      return projectName.includes(lowerSearch) || 
+             projectDescription.includes(lowerSearch) ||
+             clientName.includes(lowerSearch) || 
+             responsableName.includes(lowerSearch);
+    });
   }, [projects, searchTerm, clientMap]);
 
   const handleProjectClick = (project: Project) => {

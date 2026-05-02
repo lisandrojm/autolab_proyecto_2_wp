@@ -109,7 +109,7 @@ export const UsersPage: React.FC = () => {
   const [filterActiveContract, setFilterActiveContract] = useState(false);
   const [filterIsReplacement, setFilterIsReplacement] = useState(false);
   const [filterIsSolicitud, setFilterIsSolicitud] = useState(false);
-  const [filterUserStatus, setFilterUserStatus] = useState<string>("active");
+  const [filterUserStatus, setFilterUserStatus] = useState<string>("");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -313,20 +313,17 @@ export const UsersPage: React.FC = () => {
       if (!silent) setIsFetching(true);
       const currentId = ++requestIdRef.current;
 
-      // If filtering by client or using additional filters, fetch ALL users to filter client-side
-      const hasAdditionalFilters = !!filterProjectId || !!filterRoleFrameId || !!filterRoleId || filterActiveContract || filterIsReplacement;
-      const isClientSideFilterNeeded = !!clientId || hasAdditionalFilters;
-      const effectiveLimit = isClientSideFilterNeeded ? 10000 : limit;
-      const effectivePage = isClientSideFilterNeeded ? 1 : page;
-
+      // Always use server-side pagination and filtering
       const params: any = {
-        page: effectivePage,
-        limit: effectiveLimit,
+        page: page,
+        limit: limit,
       };
       if (searchTerm) params.email = searchTerm;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
       if (clientId) params.clientId = clientId;
+      if (filterProjectId) params.projectId = filterProjectId;
+      if (filterRoleId) params.roleId = filterRoleId;
       if (filterIsSolicitud) params.isSolicitud = "true";
       if (filterUserStatus === "active") params.metadataActivo = "true";
       if (filterUserStatus === "inactive") params.metadataActivo = "false";
@@ -345,169 +342,12 @@ export const UsersPage: React.FC = () => {
 
         let workingList = response.users;
 
-        // 1. CLIENT-SIDE FILTERING ENFORCEMENT (by client)
-        if (clientId) {
-          console.log(`[UsersPage] Starting Client Filter. Initial users: ${response.users.length}`);
-
-          // Create efficient lookup map from allProjects (state) to ensure we can check project->client
-          const localProjMap = new Map(allProjects.map((p: any) => [p._id, p]));
-
-          const clientFiltered = workingList.filter((u) => {
-            // 1. Direct match
-            if (
-              u.clientIds?.some((c: any) => {
-                const cId = typeof c === "string" ? c : c._id;
-                return cId === clientId;
-              })
-            )
-              return true;
-
-            // 2. Project match
-            if (
-              u.projectIds?.some((p: any) => {
-                const pId = typeof p === "string" ? p : p._id;
-                // Look up in global list if available, fallback to user's data
-                const pFull = localProjMap.get(pId);
-                const pData = pFull || p;
-
-                let pClientId = null;
-                if (typeof pData === "object" && pData.clientId) {
-                  pClientId = typeof pData.clientId === "object" ? pData.clientId._id : pData.clientId;
-                }
-                return pClientId === clientId;
-              })
-            )
-              return true;
-
-            return false;
-          });
-
-          workingList = clientFiltered;
-          console.log(`[UsersPage] Client Filter done. Result: ${workingList.length} users.`);
-        }
-
-        // 2. ADDITIONAL CLIENT-SIDE FILTERING (Project, RoleFrame, Role, Turno, ActiveContract)
-        const hasAdditionalFilters = filterProjectId || filterRoleFrameId || filterRoleId || filterActiveContract || filterIsReplacement;
-
-        if (hasAdditionalFilters) {
-          console.log(`[UsersPage] Applying Additional Filters to ${workingList.length} users...`);
-
-          workingList = workingList.filter((u: User) => {
-            // Project filter
-            if (filterProjectId) {
-              const userProjectIds = u.projectIds?.map((p: any) => (typeof p === "string" ? p : p._id)) || [];
-              if (!userProjectIds.includes(filterProjectId)) return false;
-            }
-
-            // RoleFrame filter
-            if (filterRoleFrameId) {
-              // Check metadata.projects for rol_frame_id matching
-              const userMetaProjects = (u as any).metadata?.projects || [];
-              const selectedRoleFrame = allRoleFrames.find((rf) => rf._id === filterRoleFrameId);
-              if (selectedRoleFrame) {
-                const hasRole = userMetaProjects.some((mp: any) => mp.rol_frame_id === selectedRoleFrame.externalId || mp.rol_frame_id === selectedRoleFrame.data?.rol?.id || mp.nombre_rol_frame === selectedRoleFrame.name);
-                if (!hasRole) return false;
-              } else {
-                return false;
-              }
-            }
-
-            // Role filter
-            if (filterRoleId) {
-              const userRoles = u.roles || [];
-              const hasRole = userRoles.some((r: any) => {
-                // Determine ID whether populated object or string ID
-                const rId = r && typeof r === "object" && r._id ? String(r._id) : String(r);
-                return rId === String(filterRoleId);
-              });
-
-              if (!hasRole) return false;
-            }
-
-            // Active Contract filter - match logic from getActiveContractType
-            if (filterActiveContract) {
-              let hasActiveContract = false;
-              const userMetaProjects = (u as any).metadata?.projects || [];
-
-              // Check metadata.projects[].contracts[] for active contracts
-              for (const proj of userMetaProjects) {
-                if (proj.contracts && Array.isArray(proj.contracts)) {
-                  for (const contract of proj.contracts) {
-                    const endDateStr = contract.fecha_baja_contrato;
-                    const endDate = endDateStr ? new Date(endDateStr) : null;
-                    if (endDate) endDate.setHours(23, 59, 59, 999);
-
-                    const isActive = !endDate || endDate.getTime() >= new Date().getTime();
-                    if (isActive && (contract.nombre_contrato || contract.tipo_contrato)) {
-                      hasActiveContract = true;
-                      break;
-                    }
-                  }
-                }
-                if (hasActiveContract) break;
-              }
-
-              // Fallback: check externalInfo.contracts
-              if (!hasActiveContract) {
-                const externalContracts = (u as any).externalInfo?.contracts;
-                if (externalContracts && Array.isArray(externalContracts) && externalContracts.length > 0) {
-                  hasActiveContract = true;
-                }
-              }
-
-              if (!hasActiveContract) return false;
-            }
-
-            // Is Replacement filter
-            if (filterIsReplacement) {
-              let isUserReplacement = false;
-              const userMetaProjects = (u as any).metadata?.projects || [];
-
-              // Check metadata.projects[].contracts[] for reemplazo: true
-              for (const proj of userMetaProjects) {
-                if (proj.contracts && Array.isArray(proj.contracts)) {
-                  for (const contract of proj.contracts) {
-                    const endDateStr = contract.fecha_baja_contrato;
-                    const endDate = endDateStr ? new Date(endDateStr) : null;
-                    if (endDate) endDate.setHours(23, 59, 59, 999);
-
-                    const isActive = !endDate || endDate.getTime() >= new Date().getTime();
-                    if (isActive && contract.reemplazo) {
-                      isUserReplacement = true;
-                      break;
-                    }
-                  }
-                }
-                if (isUserReplacement) break;
-              }
-
-              if (!isUserReplacement) return false;
-            }
-
-            return true;
-          });
-          console.log(`[UsersPage] After Additional Filters: ${workingList.length} users`);
-        }
-
-        if (isClientSideFilterNeeded) {
-          // Apply Pagination to final list (client-side)
-          finalTotal = workingList.length;
-          // Manual pagination
-          const startIndex = (page - 1) * limit;
-          const endIndex = startIndex + limit;
-          finalUsers = workingList.slice(startIndex, endIndex);
-          finalPages = Math.ceil(finalTotal / limit) || 1;
-        } else {
-          // Server-side pagination
-          finalUsers = workingList;
-          // finalTotal and finalPages are already set from response.pagination
-        }
-
-        setUsers(finalUsers);
-        setTotalUsers(finalTotal);
-        setTotalPages(finalPages);
+        // 3. APPLY SERVER RESPONSE DIRECTLY
+        setUsers(response.users);
+        setTotalUsers(response.pagination.total);
+        setTotalPages(response.pagination.pages);
         setHasLoaded(true);
-        console.log("📋 Usuarios cargados:", finalUsers.length, "de un total de:", finalTotal);
+        console.log("📋 Usuarios cargados:", response.users.length, "de un total de:", response.pagination.total);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -1060,7 +900,7 @@ export const UsersPage: React.FC = () => {
                   options: [
                     { label: "Usuarios Activos", value: "active" },
                     { label: "Usuarios Inactivos", value: "inactive" },
-                    { label: "Todos los usuarios", value: "" },
+                    { label: "Todos los usuarios (Activos e Inactivos)", value: "" },
                   ],
                 },
               ]}
