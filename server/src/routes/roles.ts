@@ -239,6 +239,13 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
+    // No permitir eliminar roles de sistema
+    const existingRole = await Role.findOne({ _id: roleId, tenantId: req.tenantObjectId });
+    if (existingRole?.isSystem) {
+      res.status(403).json({ error: "Cannot delete a system role" });
+      return;
+    }
+
     // Verificar si el rol está asignado a usuarios
     const usersWithRole = await User.countDocuments({
       roles: roleId,

@@ -9,11 +9,12 @@ import { useClientContextStore } from "../stores/clientContextStore";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
+import { InfoModal } from "../components/ui/InfoModal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
@@ -26,6 +27,7 @@ export const ProjectsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [openInfo, setOpenInfo] = useState(false);
+  const [showResponsableInfo, setShowResponsableInfo] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -332,11 +334,22 @@ export const ProjectsPage: React.FC = () => {
               >
                 {project.metadataResolutions?.sede && (
                   <div className="flex flex-col">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex gap-1 items-center">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
                       <FontAwesomeIcon icon={faBuilding} className="h-3 w-3 text-gray-400" />
                       Sede
                     </label>
                     <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 w-fit">{project.metadataResolutions.sede.name || project.metadataResolutions.sede.data?.nombre || "Sede"}</span>
+                  </div>
+                )}
+                {project.metadataResolutions?.responsable && (
+                  <div className="flex flex-col mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
+                      <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 text-gray-400" />
+                      Responsable
+                    </label>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-tight">
+                      {project.metadataResolutions.responsable.firstName} {project.metadataResolutions.responsable.lastName}
+                    </span>
                   </div>
                 )}
               </Card>
@@ -353,6 +366,7 @@ export const ProjectsPage: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Responsable</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
@@ -396,6 +410,15 @@ export const ProjectsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600 dark:text-gray-400">{sedeName}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {project.metadataResolutions?.responsable 
+                              ? `${project.metadataResolutions.responsable.firstName} ${project.metadataResolutions.responsable.lastName || ""}` 
+                              : project.metadata?.responsableId ? `ID: ${project.metadata.responsableId}` : "-"}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-500">{new Date(project.createdAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-right">{/* Actions column */}</td>
@@ -485,7 +508,16 @@ export const ProjectsPage: React.FC = () => {
             </div>
 
             <div className="pt-2">
-              <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Responsable del Proyecto *</label>
+              <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                Responsable del Proyecto
+                <button 
+                  type="button"
+                  onClick={() => setShowResponsableInfo(true)}
+                  className="text-blue-500 hover:text-blue-600 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faInfoCircle} />
+                </button>
+              </label>
               <select
                 className="input-field py-2.5"
                 required
@@ -776,6 +808,38 @@ export const ProjectsPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+      {/* Modal Informativo Responsable */}
+      <InfoModal
+        isOpen={showResponsableInfo}
+        onClose={() => setShowResponsableInfo(false)}
+        title="Responsable de Proyecto"
+        subtitle="Información sobre la selección de responsables"
+        size="sm"
+        zIndex={100}
+        actions={[
+          { label: "Entendido", onClick: () => setShowResponsableInfo(false), variant: "primary" }
+        ]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Para que un usuario aparezca en esta lista, debe cumplir con los siguientes requisitos de sistema:
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>Estado Activo:</strong> El usuario debe estar marcado como activo en el módulo de Usuarios.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>Rol de Sistema:</strong> Debe tener asignado el rol "Responsable de Proyecto" o un rol con permisos de elegibilidad.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };

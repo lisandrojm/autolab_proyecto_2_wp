@@ -19,7 +19,7 @@ import { UserCard } from "../components/users/UserCard";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faMobileAlt, faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faMobileAlt, faSearch, faTimes, faLock } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -1981,15 +1981,26 @@ export const UsersPage: React.FC = () => {
                               },
                               title: "Password",
                             },
-                            {
-                              icon: faTrash,
-                              onClick: (e) => {
-                                e.stopPropagation();
-                                handleDelete(user);
-                              },
-                              title: "Eliminar",
-                              className: "text-red-500",
-                            },
+                            ...(!user.isSystem
+                              ? [
+                                  {
+                                    icon: faTrash,
+                                    onClick: (e: any) => {
+                                      e.stopPropagation();
+                                      handleDelete(user);
+                                    },
+                                    title: "Eliminar",
+                                    className: "text-red-500",
+                                  },
+                                ]
+                              : [
+                                  {
+                                    icon: faLock,
+                                    onClick: (e: any) => e.stopPropagation(),
+                                    title: "Protegido",
+                                    className: "text-gray-400 cursor-not-allowed",
+                                  },
+                                ]),
                           ]
                         : undefined
                     }
@@ -2039,15 +2050,22 @@ export const UsersPage: React.FC = () => {
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-1">
                             {canManage && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(user);
-                                }}
-                                className="p-2 text-gray-400 hover:text-red-500"
-                              >
-                                <FontAwesomeIcon icon={faTrash} />
-                              </button>
+                              user.isSystem ? (
+                                <div className="p-2 text-gray-400 cursor-not-allowed" title="Usuario del sistema protegido">
+                                  <FontAwesomeIcon icon={faLock} />
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(user);
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-red-500"
+                                  title="Eliminar usuario"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              )
                             )}
                           </div>
                         </td>

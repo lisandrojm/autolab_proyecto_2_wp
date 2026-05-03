@@ -81,6 +81,7 @@ export interface User {
   };
   createdAt: string;
   updatedAt: string;
+  isSystem: boolean;
   externalInfo?: {
     sedes: string[];
     rolFrames: string[];
@@ -231,6 +232,7 @@ function normalizeUser(raw: any): User {
       : undefined,
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: String(raw?.updatedAt ?? ""),
+    isSystem: !!raw?.isSystem,
     externalInfo: raw?.externalInfo,
     metadata: raw?.metadata,
   };

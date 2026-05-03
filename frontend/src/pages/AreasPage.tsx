@@ -8,7 +8,7 @@ import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 
 // const HELP_KEY = "areas" as const; // TODO: Add help content if needed
@@ -411,7 +411,17 @@ export const AreasPage: React.FC = () => {
                                       variant: "default" as const,
                                     },
                                   ]
-                                : []),
+                                : [
+                                    {
+                                      icon: faLock,
+                                      onClick: (e: any) => {
+                                        e.stopPropagation();
+                                      },
+                                      title: "Área de sistema protegida",
+                                      variant: "default" as const,
+                                      disabled: true,
+                                    },
+                                  ]),
                             ],
                           }
                         : undefined
@@ -480,7 +490,7 @@ export const AreasPage: React.FC = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                               </button>
-                              {!(area.isSystem || area.name.toLowerCase() === "coordinador") && (
+                              {!(area.isSystem || area.name.toLowerCase() === "coordinador") ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -491,6 +501,10 @@ export const AreasPage: React.FC = () => {
                                 >
                                   <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                                 </button>
+                              ) : (
+                                <div className="p-1.5 text-gray-400" title="Área de sistema protegida">
+                                  <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                                </div>
                               )}
                             </div>
 

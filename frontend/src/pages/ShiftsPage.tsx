@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faGripVertical, faCheck, faMultiply } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faGripVertical, faCheck, faMultiply, faLock } from "@fortawesome/free-solid-svg-icons";
 
 // Helper para días
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -455,10 +455,14 @@ const SortableShiftRow: React.FC<SortableShiftRowProps> = ({ shift, index, isReo
           <button onClick={() => openEdit(shift)} className="p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors" title="Editar">
             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
           </button>
-          {!shift.isSystem && (
+          {!shift.isSystem ? (
             <button onClick={() => handleDelete(shift)} className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Eliminar">
               <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
             </button>
+          ) : (
+            <div className="p-1.5 text-gray-400" title="Turno de sistema protegido">
+              <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+            </div>
           )}
         </div>
 
@@ -514,7 +518,16 @@ const SortableShiftCard: React.FC<SortableShiftCardProps> = ({ shift, isReorderM
             ? {
                 actions: [
                   { icon: faEdit, onClick: () => openEdit(shift), title: "Editar" },
-                  ...(!shift.isSystem ? [{ icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" }] : []),
+                  ...(!shift.isSystem
+                    ? [{ icon: faTrash, onClick: () => handleDelete(shift), title: "Eliminar" }]
+                    : [
+                        {
+                          icon: faLock,
+                          onClick: () => {},
+                          title: "Turno de sistema protegido",
+                          disabled: true,
+                        },
+                      ]),
                 ],
               }
             : undefined

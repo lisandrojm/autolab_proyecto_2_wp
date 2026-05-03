@@ -69,116 +69,83 @@ const MOBILE_COORDINATOR_PERMISSIONS = [
 ];
 
 /**
- * Asegura que un tenant tenga los roles admin y user configurados correctamente
+ * Helper para asegurar la existencia y sincronización de un rol
  */
-export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Promise<{
-  userRole: any;
-  adminRole: any;
-}> {
+async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "", isDefault = false, isSystem = false) {
+  let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, "i") } });
+
+  if (!role) {
+    console.log(`[RoleInit] Creating ${name} role for tenant: ${tenantId}`);
+    role = await Role.create({
+      tenantId,
+      name,
+      description: description || `${name} role`,
+      permissions,
+      isDefault,
+      isSystem,
+    });
+    console.log(`[RoleInit] ✅ ${name} role created: ${role._id}`);
+  } else {
+    // Sincronizar configuración básica
+    let hasChanges = false;
+
+    if (role.isDefault !== isDefault) {
+      role.isDefault = isDefault;
+      hasChanges = true;
+    }
+
+    if (role.isSystem !== isSystem) {
+      role.isSystem = isSystem;
+      hasChanges = true;
+    }
+
+    // Sincronizar permisos esenciales (unión)
+    const currentPerms = new Set(role.permissions);
+    const missingPerms = permissions.filter((p) => !currentPerms.has(p));
+
+    if (missingPerms.length > 0) {
+      role.permissions = [...role.permissions, ...missingPerms];
+      hasChanges = true;
+      console.log(`[RoleInit] ♻️ Adding missing permissions to ${name} role: ${missingPerms.join(", ")}`);
+    }
+
+    if (hasChanges) {
+      await role.save();
+      console.log(`[RoleInit] ♻️ ${name} role updated`);
+    }
+  }
+  return role;
+}
+
+/**
+ * Asegura que un tenant tenga los roles de sistema configurados correctamente
+ */
+export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Promise<void> {
   const tid = new Types.ObjectId(tenantId);
 
   // ════════ SKIP FOR SUPERADMIN TENANT ════════
-  // El tenant de Platform Administration (superadmin) solo debe tener el rol Superadmin
-  // No debe tener roles admin ni user
   const { Tenant } = await import("../models/Tenant.js");
   const tenant = await Tenant.findById(tid);
   if (tenant?.isSystem || tenant?.slug === "superadmin") {
     console.log(`[RoleInit] Skipping default roles for system tenant: ${tenant.slug}`);
-    return { userRole: null, adminRole: null };
+    return;
   }
 
-  console.log(`[RoleInit] Ensuring default roles for tenant: ${tid}`);
+  // 1. Admin (Sistema)
+  await ensureRole(tid, "Admin", ADMIN_PERMISSIONS, "Administrador - Acceso completo a todos los módulos del sistema", false, true);
 
-  // ════════ CREAR/VERIFICAR ROL USER ════════
-  let userRole = await Role.findOne({
-    tenantId: tid,
-    name: { $regex: /^user$/i },
-  });
+  // 2. Responsable de Proyecto (Sistema)
+  const responsablePerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view", "project_responsible:eligible"];
+  await ensureRole(tid, "Responsable de Proyecto", responsablePerms, "Rol de responsable de proyectos", false, true);
 
-  if (!userRole) {
-    console.log(`[RoleInit] Creating USER role for tenant: ${tid}`);
-    userRole = await Role.create({
-      tenantId: tid,
-      name: "user",
-      description: "Usuario estándar - Sin permisos por defecto, deben asignarse manualmente",
-      permissions: USER_PERMISSIONS,
-      isDefault: true,
-    });
-    console.log(`[RoleInit] ✅ USER role created: ${userRole._id}`);
-  } else {
-    console.log(`[RoleInit] ✔️ USER role already exists: ${userRole._id}`);
+  // 3. Mobile-Coordinador (Sistema)
+  await ensureRole(tid, "Mobile-Coordinador", MOBILE_COORDINATOR_PERMISSIONS, "Rol de coordinador para app mobile", false, true);
 
-    // Actualizar permisos y configuración
-    let needsUpdate = false;
+  // 4. Mobile-Colaborador (Sistema)
+  await ensureRole(tid, "Mobile-Colaborador", MOBILE_COLLABORATOR_PERMISSIONS, "Rol de colaborador para app mobile", false, true);
 
-    if (!userRole.isDefault) {
-      userRole.isDefault = true;
-      needsUpdate = true;
-    }
-
-    // Actualizar permisos si faltan algunos esenciales (no sobreescribir para permitir personalización)
-    const currentPerms = new Set(userRole.permissions);
-    const missingPerms = USER_PERMISSIONS.filter(p => !currentPerms.has(p));
-
-    if (missingPerms.length > 0) {
-      userRole.permissions = [...userRole.permissions, ...missingPerms];
-      needsUpdate = true;
-      console.log(`[RoleInit] ♻️ Adding missing permissions to USER role: ${missingPerms.join(", ")}`);
-    }
-
-    if (needsUpdate) {
-      await userRole.save();
-      console.log(`[RoleInit] ♻️ USER role updated`);
-    }
-  }
-
-  // ════════ CREAR/VERIFICAR ROL ADMIN ════════
-  let adminRole = await Role.findOne({
-    tenantId: tid,
-    name: { $regex: /^admin$/i },
-  });
-
-  if (!adminRole) {
-    console.log(`[RoleInit] Creating ADMIN role for tenant: ${tid}`);
-    adminRole = await Role.create({
-      tenantId: tid,
-      name: "admin",
-      description: "Administrador - Acceso completo a todos los módulos del sistema",
-      permissions: ADMIN_PERMISSIONS,
-      isDefault: false,
-    });
-    console.log(`[RoleInit] ✅ ADMIN role created: ${adminRole._id}`);
-  } else {
-    console.log(`[RoleInit] ✔️ ADMIN role already exists: ${adminRole._id}`);
-
-    // Actualizar permisos y configuración
-    let needsUpdate = false;
-
-    if (adminRole.isDefault) {
-      adminRole.isDefault = false;
-      needsUpdate = true;
-    }
-
-    // Actualizar permisos si faltan algunos esenciales (no sobreescribir para permitir personalización)
-    const currentPerms = new Set(adminRole.permissions);
-    const missingPerms = ADMIN_PERMISSIONS.filter(p => !currentPerms.has(p));
-
-    if (missingPerms.length > 0) {
-      adminRole.permissions = [...adminRole.permissions, ...missingPerms];
-      needsUpdate = true;
-      console.log(`[RoleInit] ♻️ Adding missing permissions to ADMIN role: ${missingPerms.join(", ")}`);
-    }
-
-    if (needsUpdate) {
-      await adminRole.save();
-      console.log(`[RoleInit] ♻️ ADMIN role updated`);
-    }
-  }
-
-  const roleCount = await Role.countDocuments({ tenantId: tid });
-  console.log(`[RoleInit] Total roles for tenant ${tid}: ${roleCount}`);
-
-  return { userRole, adminRole };
+  // 5. User (Por defecto)
+  await ensureRole(tid, "User", USER_PERMISSIONS, "Usuario estándar - Sin permisos por defecto", true, false);
 }
 
 /**
@@ -241,77 +208,10 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
 }
 
 /**
- * Asegura que un tenant tenga los roles mobile configurados correctamente
+ * Deprecated: Use ensureDefaultRoles which now handles mobile roles as system roles
  */
-export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Promise<{
-  collaboratorRole: any;
-  coordinatorRole: any;
-}> {
-  const tid = new Types.ObjectId(tenantId);
-
-  console.log(`[RoleInit] Ensuring mobile roles for tenant: ${tid}`);
-
-  // ════════ CREAR/VERIFICAR ROL MOBILE COLABORADOR ════════
-  let collaboratorRole = await Role.findOne({
-    tenantId: tid,
-    name: { $regex: /^Mobile - Colaborador$/i },
-  });
-
-  if (!collaboratorRole) {
-    console.log(`[RoleInit] Creating MOBILE COLLABORATOR role for tenant: ${tid}`);
-    collaboratorRole = await Role.create({
-      tenantId: tid,
-      name: "Mobile - Colaborador",
-      description: "Colaborador de la app mobile - Acceso a funciones básicas",
-      permissions: MOBILE_COLLABORATOR_PERMISSIONS,
-      isDefault: false,
-    });
-    console.log(`[RoleInit] ✅ MOBILE COLLABORATOR role created: ${collaboratorRole._id}`);
-  } else {
-    console.log(`[RoleInit] ✔️ MOBILE COLLABORATOR role already exists: ${collaboratorRole._id}`);
-
-    // Actualizar permisos si faltan algunos esenciales
-    const currentPerms = new Set(collaboratorRole.permissions);
-    const missingPerms = MOBILE_COLLABORATOR_PERMISSIONS.filter(p => !currentPerms.has(p));
-
-    if (missingPerms.length > 0) {
-      collaboratorRole.permissions = [...collaboratorRole.permissions, ...missingPerms];
-      await collaboratorRole.save();
-      console.log(`[RoleInit] ♻️ Added missing permissions to MOBILE COLLABORATOR role`);
-    }
-  }
-
-  // ════════ CREAR/VERIFICAR ROL MOBILE COORDINADOR ════════
-  let coordinatorRole = await Role.findOne({
-    tenantId: tid,
-    name: { $regex: /^Mobile - Coordinador$/i },
-  });
-
-  if (!coordinatorRole) {
-    console.log(`[RoleInit] Creating MOBILE COORDINATOR role for tenant: ${tid}`);
-    coordinatorRole = await Role.create({
-      tenantId: tid,
-      name: "Mobile - Coordinador",
-      description: "Coordinador de la app mobile - Acceso a funciones avanzadas de gestión",
-      permissions: MOBILE_COORDINATOR_PERMISSIONS,
-      isDefault: false,
-    });
-    console.log(`[RoleInit] ✅ MOBILE COORDINATOR role created: ${coordinatorRole._id}`);
-  } else {
-    console.log(`[RoleInit] ✔️ MOBILE COORDINATOR role already exists: ${coordinatorRole._id}`);
-
-    // Actualizar permisos si faltan algunos esenciales
-    const currentPerms = new Set(coordinatorRole.permissions);
-    const missingPerms = MOBILE_COORDINATOR_PERMISSIONS.filter(p => !currentPerms.has(p));
-
-    if (missingPerms.length > 0) {
-      coordinatorRole.permissions = [...coordinatorRole.permissions, ...missingPerms];
-      await coordinatorRole.save();
-      console.log(`[RoleInit] ♻️ Added missing permissions to MOBILE COORDINATOR role`);
-    }
-  }
-
-  return { collaboratorRole, coordinatorRole };
+export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Promise<void> {
+  return ensureDefaultRoles(tenantId);
 }
 
 /**

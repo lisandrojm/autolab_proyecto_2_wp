@@ -707,8 +707,10 @@ export const ProjectTeamPage: React.FC = () => {
                   )}
                 </div>
                 {(() => {
-                  const projectRespId = (project?.metadataResolutions as any)?.responsable?._id || project?.metadataResolutions?.responsable?.id || project?.metadata?.responsableId || (project?.metadata as any)?.id_responsable;
-                  const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
+                  const projectRespId = project?.metadata?.responsableId;
+                  const userMetaId = user.metadata?.id;
+                  const isReallyResponsable = projectRespId && userMetaId && Number(projectRespId) === Number(userMetaId);
+                  
                   if (isReallyResponsable) {
                     return <span className="w-fit text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap border-green-500/30 text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400">Responsable de Proyecto</span>;
                   }

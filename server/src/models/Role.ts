@@ -11,6 +11,7 @@ export interface IRole extends Document {
    */
   permissions: string[];
   isDefault: boolean;
+  isSystem: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,7 @@ const roleSchema = new Schema<IRole>(
     // Formato: "modulo:view" para acceso total al módulo
     permissions: { type: [String], default: [] },
     isDefault: { type: Boolean, default: false },
+    isSystem: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -591,7 +591,10 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
       const resolutions: any = {};
 
       if (responsableId) {
-        const user = await User.findOne({ "metadata.id": responsableId }).select("firstName lastName email").lean();
+        const user = await User.findOne({ 
+          tenantId: req.tenantObjectId,
+          "metadata.id": responsableId 
+        }).select("firstName lastName email").lean();
         if (user) resolutions.responsable = user;
       }
 

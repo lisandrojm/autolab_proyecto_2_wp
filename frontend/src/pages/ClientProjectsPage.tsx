@@ -8,12 +8,13 @@ import { areasAPI, Area } from "../api/areas";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitProjectsChanged } from "../utils/navbarEvents";
-import { faPlus, faEdit, faTrash, faBriefcase, faBuilding, faTable, faGrip, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faBriefcase, faBuilding, faTable, faGrip, faLayerGroup, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { Card } from "../components/ui/Card";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { InfoModal } from "../components/ui/InfoModal";
 import { getImageUrl } from "../utils/imageHelpers";
 
 const HELP_KEY = "clientProjects" as const;
@@ -88,6 +89,7 @@ export const ClientProjectsPage: React.FC = () => {
 
   // ⓘ estado del modal de información
   const [openInfo, setOpenInfo] = useState(false);
+  const [showResponsableInfo, setShowResponsableInfo] = useState(false);
   const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
@@ -509,7 +511,16 @@ export const ClientProjectsPage: React.FC = () => {
                     </div>
 
                     <div className="pt-2">
-                      <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Responsable del Proyecto *</label>
+                      <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                        Responsable del Proyecto
+                        <button 
+                          type="button"
+                          onClick={() => setShowResponsableInfo(true)}
+                          className="text-blue-500 hover:text-blue-600 transition-colors"
+                        >
+                          <FontAwesomeIcon icon={faInfoCircle} />
+                        </button>
+                      </label>
                       <select
                         className="input-field py-2.5"
                         required
@@ -991,6 +1002,38 @@ export const ClientProjectsPage: React.FC = () => {
           </button>
         </div>
       )}
+      {/* Modal Informativo Responsable */}
+      <InfoModal
+        isOpen={showResponsableInfo}
+        onClose={() => setShowResponsableInfo(false)}
+        title="Responsable de Proyecto"
+        subtitle="Información sobre la selección de responsables"
+        size="sm"
+        zIndex={100}
+        actions={[
+          { label: "Entendido", onClick: () => setShowResponsableInfo(false), variant: "primary" }
+        ]}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Para que un usuario aparezca en esta lista, debe cumplir con los siguientes requisitos de sistema:
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>Estado Activo:</strong> El usuario debe estar marcado como activo en el módulo de Usuarios.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>Rol de Sistema:</strong> Debe tener asignado el rol "Responsable de Proyecto" o un rol con permisos de elegibilidad.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </InfoModal>
     </PageLayout>
   );
 };

@@ -811,6 +811,17 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
     if (!isSuperAdmin) {
       query.tenantId = req.tenantObjectId;
     }
+    const userToDelete = await User.findOne(query);
+
+    if (!userToDelete) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (userToDelete.isSystem) {
+      res.status(403).json({ error: "No se puede eliminar un usuario del sistema protegido." });
+      return;
+    }
 
     const user = await User.findOneAndDelete(query);
 

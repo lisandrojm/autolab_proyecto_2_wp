@@ -110,6 +110,7 @@ export interface IUser extends Document {
   updatedAt: Date;
   vacationDays: { lawDays: number; extraDays: number; carryOverDays: number; totalDays: number };
   seniorityAtEndOfYear: number;
+  isSystem: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
   closeYear(maxDiasArrastre?: number): Promise<void>;
   name: string; // Keep name for backward compat if needed, or derived
@@ -138,6 +139,7 @@ const userSchema = new Schema<IUser>(
     extraVacationDays: { type: Number, default: 0 },
     carryOverVacationDays: { type: Number, default: 0 },
     lastLoginAt: { type: Date },
+    isSystem: { type: Boolean, default: false },
     name: { type: String }, // Optional compatibility field
     metadata: {
       id: Number,

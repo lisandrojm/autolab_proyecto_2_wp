@@ -158,7 +158,7 @@ async function ensureTenant({ name, slug }: { name: string; slug: string }) {
   return tenant;
 }
 
-async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "", isDefault = false) {
+async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: string[] = [], description = "", isDefault = false, isSystem = false) {
   let role = await Role.findOne({ tenantId, name: { $regex: new RegExp(`^${name}$`, "i") } });
   if (!role) {
     role = await Role.create({
@@ -167,8 +167,9 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
       description: description || `${name} role`,
       permissions,
       isDefault,
+      isSystem,
     });
-    console.log(`✅ Created role: ${name} (perms: ${permissions.length}, default: ${isDefault})`);
+    console.log(`✅ Created role: ${name} (perms: ${permissions.length}, default: ${isDefault}, system: ${isSystem})`);
   } else {
     // Sync permissions, description and isDefault
     let hasChanges = false;
@@ -192,6 +193,12 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
     // Check isDefault
     if (role.isDefault !== isDefault) {
       role.isDefault = isDefault;
+      hasChanges = true;
+    }
+
+    // Check isSystem
+    if (role.isSystem !== isSystem) {
+      role.isSystem = isSystem;
       hasChanges = true;
     }
 
@@ -219,8 +226,9 @@ async function ensureUser(params: {
   hireDate?: Date;
   extraVacationDays?: number;
   carryOverVacationDays?: number;
+  isSystem?: boolean;
 }) {
-  const { tenantId, email, password, roleNames, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0, carryOverVacationDays = 0 } = params;
+  const { tenantId, email, password, roleNames, firstName, lastName, isActive = true, positionId, levelId, areaId, hireDate = new Date(), extraVacationDays = 0, carryOverVacationDays = 0, isSystem = false } = params;
 
   let user = await User.findOne({ tenantId, email });
 
@@ -258,6 +266,10 @@ async function ensureUser(params: {
       hireDate,
       extraVacationDays,
       carryOverVacationDays,
+      isSystem,
+      metadata: {
+        activo: isActive,
+      },
     });
     await user.save();
 
@@ -280,6 +292,10 @@ async function ensureUser(params: {
 
     if (rolesChanged) {
       user.roles = wantedRoleIds; // Enforce exact seed roles
+      isModified = true;
+    }
+    if (user.isSystem !== isSystem) {
+      user.isSystem = isSystem;
       isModified = true;
     }
     if (user.firstName !== firstName) {
@@ -455,6 +471,7 @@ export async function ensureSuperAdmin() {
       firstName: "Super",
       lastName: "Admin",
       isActive: true,
+      isSystem: true,
     });
 
     console.log("✅ SuperAdmin ready: superadmin@example.com / superadmin123");
@@ -506,22 +523,25 @@ export async function seedOnStart() {
     console.log("🧹 Note: VacationCounter is now embedded in Vacation model.");
 
     // ---- ROLES ----
-    // ---- ROLES ----
     console.log("👥 Seeding Roles...");
 
-    // 1. Admin
+    // 1. Admin (Sistema)
     const adminPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "admin_areas:view", "admin_positions:view", "admin_levels:view", "admin_users:view", "admin_roles:view", "config_orders:view", "config_vacations:view", "config_activity_logs:view", "config_pdf_templates:view", "mobile_collaborator:view"];
-    await ensureRole(tenantId, "Admin", adminPerms, "Admin role", false);
+    await ensureRole(tenantId, "Admin", adminPerms, "Rol de administrador del sistema", false, true);
 
-    // 2. User
+    // 2. Responsable de Proyecto (Sistema)
+    const responsablePerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view", "project_responsible:eligible"];
+    await ensureRole(tenantId, "Responsable de Proyecto", responsablePerms, "Rol de responsable de proyectos", false, true);
+
+    // 3. Mobile-Coordinador (Sistema)
+    await ensureRole(tenantId, "Mobile-Coordinador", ["mobile_coordinator:view"], "Rol de coordinador para app mobile", false, true);
+
+    // 4. Mobile-Colaborador (Sistema)
+    await ensureRole(tenantId, "Mobile-Colaborador", ["mobile_collaborator:view"], "Rol de colaborador para app mobile", false, true);
+
+    // 5. User (No sistema, por defecto)
     const userPerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view"];
-    await ensureRole(tenantId, "User", userPerms, "User role", true);
-
-    // 3. Mobile-Coordinador
-    await ensureRole(tenantId, "Mobile-Coordinador", ["mobile_coordinator:view"], "Mobile-Coordinador role", false);
-
-    // 4. Mobile-Colaborador
-    await ensureRole(tenantId, "Mobile-Colaborador", ["mobile_collaborator:view"], "Mobile-Colaborador role", false);
+    await ensureRole(tenantId, "User", userPerms, "User role", true, false);
 
     console.log("✅ Roles seeded");
 
@@ -826,6 +846,7 @@ export async function seedOnStart() {
       areaId: areaMap["Libertador"],
       hireDate: new Date("2019-01-01"),
       extraVacationDays: 5,
+      isSystem: true,
     });
     const adminId = String(adminUser._id);
     console.log(`👤 Admin assigned: Position=${positionDirector.name}, Level=${levelDirectorNacional.name}, Area=Libertador`);

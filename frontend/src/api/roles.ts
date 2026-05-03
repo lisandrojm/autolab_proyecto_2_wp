@@ -21,6 +21,7 @@ export interface Role {
   description?: string;
   permissions: string[];
   isDefault: boolean;
+  isSystem: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -63,6 +64,7 @@ function normalizeRole(raw: any): Role {
     description: raw?.description ?? "",
     permissions: Array.isArray(raw?.permissions) ? raw.permissions : [],
     isDefault: Boolean(raw?.isDefault),
+    isSystem: Boolean(raw?.isSystem),
     createdAt: String(raw?.createdAt ?? ""),
     updatedAt: String(raw?.updatedAt ?? ""),
   };

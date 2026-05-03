@@ -495,9 +495,10 @@ export const RolesPage: React.FC = () => {
           <div className="space-y-4">
             {/* Badge siempre presente */}
             <div className="flex items-center gap-2">
+              {viewRole.tenant?.name && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewRole.tenant.name}</span>}
+              {viewRole.isSystem && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-orange-500/10 text-orange-500 border border-orange-500/50">Sistema</span>}
               <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${viewRole.isDefault ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" : "bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300"}`}>{viewRole.isDefault ? "Por defecto" : "Personalizado"}</span>
-              {viewRole.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">SuperAdmin</span>}
-              {viewRole.tenant?.name && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{viewRole.tenant.name}</span>}
+              {viewRole.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800">SuperAdmin</span>}
             </div>
 
             <div>
@@ -748,6 +749,24 @@ export const RolesPage: React.FC = () => {
                       icon: faUserShield,
                       // Badge SIEMPRE visible en las cards
                       badges: [
+                        ...(role.tenant && role.tenant.name
+                          ? [
+                              {
+                                text: role.tenant.name,
+                                variant: "default" as const,
+                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800",
+                              },
+                            ]
+                          : []),
+                        ...(role.isSystem
+                          ? [
+                              {
+                                text: "Sistema",
+                                variant: "default" as const,
+                                className: "bg-orange-500/10 text-orange-500 border border-orange-500/50",
+                              },
+                            ]
+                          : []),
                         ...(role.isDefault
                           ? [
                               {
@@ -761,15 +780,6 @@ export const RolesPage: React.FC = () => {
                               {
                                 text: "SuperAdmin",
                                 variant: "warning" as const,
-                              },
-                            ]
-                          : []),
-                        ...(role.tenant && role.tenant.name
-                          ? [
-                              {
-                                text: role.tenant.name,
-                                variant: "default" as const,
-                                className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
                               },
                             ]
                           : []),
@@ -799,7 +809,7 @@ export const RolesPage: React.FC = () => {
                               title: "Editar",
                               variant: "default",
                             },
-                            ...(hasPermission("admin_roles:view")
+                            ...(hasPermission("admin_roles:view") && !role.isSystem
                               ? [
                                   {
                                     icon: faTrash,
@@ -809,6 +819,19 @@ export const RolesPage: React.FC = () => {
                                     },
                                     title: "Eliminar",
                                     variant: "default" as const,
+                                  },
+                                ]
+                              : []),
+                            ...(role.isSystem
+                              ? [
+                                  {
+                                    icon: faLock,
+                                    onClick: (e: React.MouseEvent) => {
+                                      e.stopPropagation();
+                                    },
+                                    title: "Rol de sistema protegido",
+                                    variant: "default" as const,
+                                    disabled: true,
                                   },
                                 ]
                               : []),
@@ -851,8 +874,9 @@ export const RolesPage: React.FC = () => {
                             <div className="flex flex-col gap-1">
                               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                 {role.name}
-                                {role.isDefault && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">Default</span>}
                                 {role.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">SA</span>}
+                                {role.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
+                                {role.isDefault && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">Default</span>}
                               </span>
                               {role.description && <span className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</span>}
                             </div>
@@ -867,7 +891,7 @@ export const RolesPage: React.FC = () => {
                               <span className="text-sm text-gray-600 dark:text-gray-400">{role.permissions.length} permisos</span>
                             )}
                           </td>
-                          <td className="px-6 py-4">{role.tenant && role.tenant.name ? <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{role.tenant.name}</span> : <span className="text-xs text-gray-400">—</span>}</td>
+                          <td className="px-6 py-4">{role.tenant && role.tenant.name ? <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{role.tenant.name}</span> : <span className="text-xs text-gray-400">—</span>}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                               {!isSuperAdminRole && (
@@ -882,7 +906,7 @@ export const RolesPage: React.FC = () => {
                                   >
                                     <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                                   </button>
-                                  {hasPermission("admin_roles:view") && (
+                                  {hasPermission("admin_roles:view") && !role.isSystem && (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -893,6 +917,11 @@ export const RolesPage: React.FC = () => {
                                     >
                                       <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                                     </button>
+                                  )}
+                                  {role.isSystem && (
+                                    <div className="p-1.5 text-gray-400" title="Rol de sistema protegido">
+                                      <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                                    </div>
                                   )}
                                 </>
                               )}

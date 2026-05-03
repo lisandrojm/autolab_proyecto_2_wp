@@ -1,6 +1,6 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faUserShield, faLayerGroup, faUserTie, faUserGraduate, faClock, faBuilding, faIdCard, faBriefcase, faFileContract, faUmbrellaBeach, faChevronDown, faChevronUp, faLock } from "@fortawesome/free-solid-svg-icons";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
 import { Client } from "../../api/clients";
@@ -177,6 +177,15 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               ]
             : []),
           { text: user.metadata?.activo ? "Activo" : "Inactivo", variant: user.metadata?.activo ? "green" : "destructive" },
+          ...(user.isSystem
+            ? [
+                {
+                  text: "Sistema",
+                  variant: "default" as const,
+                  className: "bg-orange-500/10 text-orange-500 border border-orange-500/50",
+                },
+              ]
+            : []),
           ...(getUserVacationStatus(user._id)
             ? [
                 {
@@ -235,8 +244,9 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
           Rol/es de Sistema
         </label>
         {(() => {
-          const projectRespId = (projectContext?.metadataResolutions as any)?.responsable?._id || projectContext?.metadataResolutions?.responsable?.id || projectContext?.metadata?.responsableId || (projectContext?.metadata as any)?.id_responsable;
-          const isReallyResponsable = projectRespId && user.metadata?.id && String(projectRespId) === String(user.metadata.id);
+          const projectRespId = projectContext?.metadata?.responsableId;
+          const userMetaId = user.metadata?.id;
+          const isReallyResponsable = projectRespId && userMetaId && Number(projectRespId) === Number(userMetaId);
 
           const filteredRoles = user.roles.filter((r) => {
             const isResponsableRole = r.name.toLowerCase().includes("responsable");
