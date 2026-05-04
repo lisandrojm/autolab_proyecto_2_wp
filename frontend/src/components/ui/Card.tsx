@@ -40,7 +40,7 @@ type BreadcrumbsProps = {
 };
 
 interface CardHeaderProps {
-  title: string;
+  title: React.ReactNode;
   subtitle?: string;
   icon?: IconDefinition;
   iconClassName?: string;

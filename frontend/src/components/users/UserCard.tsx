@@ -156,17 +156,53 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
       })
     : null;
 
+  const isSolicitud = user.metadata?.isSolicitud;
+  const fullName = isSolicitud && user.metadata?.fullName ? user.metadata.fullName : user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0];
+
+  // Helper for Role Frame badges
+  const roleFrameBadges = (user.metadata?.rolesFrameIds || user.metadata?.roles_frame || []).map((rfId: any) => {
+    const id = typeof rfId === "object" ? rfId?._id : rfId;
+    const rf = allRoleFrames.find((item) => item._id === id);
+    return rf ? { text: rf.name, variant: "default" as const, className: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-800" } : null;
+  }).filter(Boolean);
+
+  // Helper for Project/Client badges in Solicitud
+  const solicitudProjectBadges: any[] = [];
+  if (isSolicitud && user.metadata?.projectIds) {
+    user.metadata.projectIds.forEach((pId: any) => {
+      const id = typeof pId === "object" ? pId?._id : pId;
+      const project = allProjects.find(p => p._id === id);
+      if (project) {
+        solicitudProjectBadges.push({ text: project.name, variant: "cyan" as const });
+        const client = allClients.find(c => c._id === (typeof project.clientId === "object" ? (project.clientId as any)?._id : project.clientId));
+        if (client) {
+          solicitudProjectBadges.push({ text: client.name, variant: "blue" as const });
+        }
+      }
+    });
+  }
+
   return (
     <Card
       key={user._id}
       onClick={onClick}
-      className={`h-full hover:scale-105 hover:shadow-lg transition-all duration-200 ${onClick ? "cursor-pointer" : ""}`}
+      className={`h-full hover:scale-105 hover:shadow-lg transition-all duration-200 ${onClick ? "cursor-pointer" : ""} ${isSolicitud ? "border-amber-200 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-900/10" : ""}`}
       header={{
-        title: user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0],
+        title: (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="truncate">{fullName}</span>
+            {roleFrameBadges.map((badge, idx) => (
+              <span key={idx} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight shadow-sm ${badge?.className}`}>
+                {badge?.text}
+              </span>
+            ))}
+          </div>
+        ),
         subtitle: user.email,
         icon: faUser,
-        iconClassName: "text-blue-600",
+        iconClassName: isSolicitud ? "text-amber-600" : "text-blue-600",
         badges: [
+          ...(isSolicitud ? [{ text: "Solicitud de Alta", variant: "warning" as const }] : []),
           ...(user.tenant && user.tenant.name
             ? [
                 {
@@ -177,6 +213,7 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
               ]
             : []),
           { text: user.metadata?.activo ? "Activo" : "Inactivo", variant: user.metadata?.activo ? "green" : "destructive" },
+          ...solicitudProjectBadges,
           ...(user.isSystem
             ? [
                 {
