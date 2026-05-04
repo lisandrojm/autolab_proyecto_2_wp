@@ -241,19 +241,31 @@ connectDB()
     }
 
     if (USE_HTTPS) {
-      const keyPath = env.SSL_KEY_PATH!;
-      const certPath = env.SSL_CERT_PATH!;
-      const sslOptions = {
-        key: fs.readFileSync(keyPath),
-        cert: fs.readFileSync(certPath),
-      };
-      https.createServer(sslOptions, app).listen(PORT, () => {
-        console.log(`🚀 HTTPS Server running on port ${PORT}`);
-        console.log(`📱 Environment: ${env.NODE_ENV}`);
-        console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
-        console.log(`🩺 Health:        https://localhost:${PORT}/api/v1/health`);
-        console.log(`🌍 Env info:       https://localhost:${PORT}/api/v1/env`);
-      });
+      const keyPath = env.SSL_KEY_PATH;
+      const certPath = env.SSL_CERT_PATH;
+
+      if (keyPath && certPath && fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+        const sslOptions = {
+          key: fs.readFileSync(keyPath),
+          cert: fs.readFileSync(certPath),
+        };
+        https.createServer(sslOptions, app).listen(PORT, () => {
+          console.log(`🚀 HTTPS Server running on port ${PORT}`);
+          console.log(`📱 Environment: ${env.NODE_ENV}`);
+          console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
+          console.log(`🩺 Health:        https://localhost:${PORT}/api/v1/health`);
+          console.log(`🌍 Env info:       https://localhost:${PORT}/api/v1/env`);
+        });
+      } else {
+        console.warn("⚠️  SSL Certificates not found or paths not configured. Falling back to HTTP.");
+        http.createServer(app).listen(PORT, () => {
+          console.log(`🚀 HTTP Server (Fallback) running on port ${PORT}`);
+          console.log(`📱 Environment: ${env.NODE_ENV}`);
+          console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
+          console.log(`🩺 Health:        http://localhost:${PORT}/api/v1/health`);
+          console.log(`🌍 Env info:       http://localhost:${PORT}/api/v1/env`);
+        });
+      }
     } else {
       http.createServer(app).listen(PORT, () => {
         console.log(`🚀 HTTP Server running on port ${PORT}`);
