@@ -142,11 +142,21 @@ router.get("/users/:id", async (req: AuthenticatedRequest & TenantRequest, res) 
       .select("-password")
       .populate("roles", "name description")
       .populate("projectIds", "name")
-      .populate("turnos", "name startTime endTime days");
+      .populate("turnos", "name startTime endTime days")
+      .populate({
+        path: "metadata.projects",
+        populate: { path: "projectId", select: "name status" },
+      })
+      .lean();
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
+    }
+
+    const userObj = user as any;
+    if (userObj.metadata && Array.isArray(userObj.metadata.projects)) {
+      userObj.metadata.projects = userObj.metadata.projects.filter((up: any) => up && up.projectId);
     }
 
     const profile = await UserProfile.findOne({

@@ -1,22 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faEnvelope, 
-  faPhone, 
-  faBriefcase, 
-  faCalendar, 
-  faSignOutAlt, 
-  faUserCheck, 
-  faBuilding, 
-  faIdCard, 
-  faClock, 
-  faLayerGroup, 
-  faFileContract, 
-  faMoneyBillWave,
-  faChevronDown,
-  faCheckCircle,
-  faUserShield
-} from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 import { useProfile } from "../hooks/useProfile";
@@ -30,33 +14,32 @@ export default function Profile() {
 
   if (loading) return null;
 
-  const isMobileCoordinator = user?.roles?.some(r => r.toLowerCase().includes("coordinador"));
-  const isMobileCollaborator = user?.roles?.some(r => r.toLowerCase().includes("colaborador"));
+  const isMobileCoordinator = user?.roles?.some((r) => r.toLowerCase().includes("coordinador"));
+  const isMobileCollaborator = user?.roles?.some((r) => r.toLowerCase().includes("colaborador"));
 
   const userRole = isMobileCoordinator ? "Mobile-Coordinador" : isMobileCollaborator ? "Mobile-Colaborador" : "Usuario";
-  const roleColor = isMobileCoordinator 
-    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" 
-    : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
+  const roleColor = isMobileCoordinator ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
 
   // 1. Process Projects and Contracts
   const userProjects = profile?.metadata?.projects || [];
-  
+
   const getProjectDetails = (proj: any) => {
     if (!proj) return null;
-    
+
     // Find active contract or just the first one
-    const activeContract = proj.contracts?.find((c: any) => {
-      const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-      if (endDate) endDate.setHours(23, 59, 59, 999);
-      return !endDate || endDate.getTime() >= new Date().getTime();
-    }) || proj.contracts?.[0];
+    const activeContract =
+      proj.contracts?.find((c: any) => {
+        const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+        if (endDate) endDate.setHours(23, 59, 59, 999);
+        return !endDate || endDate.getTime() >= new Date().getTime();
+      }) || proj.contracts?.[0];
 
     const isResponsable = Number(proj.metadata?.responsableId) === Number(profile?.metadata?.id);
 
     // Extract shifts names for the header or summary
     const shiftNames: string[] = [];
     const detailedShifts: any[] = [];
-    
+
     if (activeContract?.areaShiftAssignments) {
       activeContract.areaShiftAssignments.forEach((asa: any) => {
         // Handle shiftIds (array of objects or IDs)
@@ -67,7 +50,7 @@ export default function Profile() {
             detailedShifts.push({
               name,
               time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : s.time || "Sin horario",
-              area: asa.nombre_area || asa.areaName || "Sin área"
+              area: asa.nombre_area || asa.areaName || "Sin área",
             });
           });
         }
@@ -79,7 +62,7 @@ export default function Profile() {
             detailedShifts.push({
               name,
               time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : "Sin horario",
-              area: asa.nombre_area || asa.areaName || "Sin área"
+              area: asa.nombre_area || asa.areaName || "Sin área",
             });
           });
         }
@@ -94,17 +77,13 @@ export default function Profile() {
       sede: activeContract?.nombre_sede || "Sin sede",
       roleFrame: activeContract?.nombre_rol_frame || proj.nombre_rol_frame || "Sin rol frame",
       area: activeContract?.nombre_area || "Sin área",
-      schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? 
-        `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : 
-        "Sin horario",
+      schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "Sin horario",
       isResponsable,
       contractType: activeContract?.nombre_contrato || "Sin contrato",
       salary: activeContract?.sueldo_mano,
-      dates: activeContract?.fecha_alta_contrato ? 
-        `${format(new Date(activeContract.fecha_alta_contrato), "dd/MM/yy")} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), "dd/MM/yy") : "Actualidad"}` : 
-        "Sin fechas",
+      dates: activeContract?.fecha_alta_contrato ? `${format(new Date(activeContract.fecha_alta_contrato), "dd/MM/yy")} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), "dd/MM/yy") : "Actualidad"}` : "Sin fechas",
       shiftsText: uniqueShiftNames || activeContract?.nombre_turno || "Sin turno",
-      detailedShifts
+      detailedShifts,
     };
   };
 
@@ -160,7 +139,9 @@ export default function Profile() {
               <p className="text-[9px] font-black uppercase tracking-tighter">{userRole}</p>
             </div>
           </div>
-          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-none">{profile?.firstName} {profile?.lastName}</p>
+          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-none">
+            {profile?.firstName} {profile?.lastName}
+          </p>
           <p className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mt-1.5">ID: {profile?._id?.slice(-6).toUpperCase()}</p>
         </div>
         <button onClick={handleLogout} className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-500 flex items-center justify-center border border-rose-100 dark:border-rose-900/50">
@@ -197,7 +178,7 @@ export default function Profile() {
           <h3 className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Historial y Contacto</h3>
           <div className="flex-1 h-[1px] bg-slate-100 dark:bg-slate-800"></div>
         </div>
-        
+
         <div className="grid grid-cols-1 gap-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-700">
@@ -232,25 +213,21 @@ export default function Profile() {
       {/* Project Details Section - Compact version */}
       <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm space-y-4 border border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
-            Asignación
-          </h3>
+          <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">Asignación</h3>
           {userProjects.length > 1 && (
             <div className="relative">
-              <select 
-                className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-[10px] font-black pr-8 text-primary focus:ring-2 focus:ring-primary/20 shadow-sm"
-                value={selectedProjectIndex}
-                onChange={(e) => setSelectedProjectIndex(Number(e.target.value))}
-              >
+              <select className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-[10px] font-black pr-8 text-primary focus:ring-2 focus:ring-primary/20 shadow-sm" value={selectedProjectIndex} onChange={(e) => setSelectedProjectIndex(Number(e.target.value))}>
                 {userProjects.map((p, idx) => (
-                  <option key={idx} value={idx}>{p.nombre_proyecto || p.name || `Proyecto ${idx + 1}`}</option>
+                  <option key={idx} value={idx}>
+                    {p.nombre_proyecto || p.name || `Proyecto ${idx + 1}`}
+                  </option>
                 ))}
               </select>
               <FontAwesomeIcon icon={faChevronDown} className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-slate-400 pointer-events-none" />
             </div>
           )}
         </div>
- 
+
         {selectedProjectInfo ? (
           <div key={selectedProjectIndex} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {/* Project Header Compact */}
@@ -301,9 +278,7 @@ export default function Profile() {
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 mt-2">
                 <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Sueldo en mano</p>
-                <p className="text-lg font-black text-slate-900 dark:text-slate-100">
-                  $ {selectedProjectInfo.salary ? Number(selectedProjectInfo.salary).toLocaleString("es-ES") : "N/A"}
-                </p>
+                <p className="text-lg font-black text-slate-900 dark:text-slate-100">$ {selectedProjectInfo.salary ? Number(selectedProjectInfo.salary).toLocaleString("es-ES") : "N/A"}</p>
               </div>
             </div>
 
