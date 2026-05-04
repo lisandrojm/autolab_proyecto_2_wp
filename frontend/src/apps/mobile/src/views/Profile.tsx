@@ -232,7 +232,7 @@ export default function Profile() {
       {/* Project Details Section - Compact version */}
       <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm space-y-4 border border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <h3 className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+          <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
             Asignación
           </h3>
           {userProjects.length > 1 && (
@@ -250,11 +250,11 @@ export default function Profile() {
             </div>
           )}
         </div>
-
+ 
         {selectedProjectInfo ? (
           <div key={selectedProjectIndex} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {/* Project Header Compact */}
-            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="text-[8px] font-black text-primary uppercase tracking-widest">{selectedProjectInfo.client}</span>
                 <span className="text-primary/20">/</span>
