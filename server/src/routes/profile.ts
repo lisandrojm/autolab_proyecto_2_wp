@@ -37,7 +37,32 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     // Fetch user first to get details for profile creation if needed
     let user;
     try {
-      user = await User.findById(userId).populate("metadata.projects");
+      user = await User.findById(userId).populate({
+        path: "metadata.projects",
+        populate: { path: "projectId", select: "name status" },
+      });
+
+      // FILTER: Only show projects that exist and have active contracts
+      if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
+        const now = new Date();
+        user.metadata.projects = user.metadata.projects.filter((up: any) => {
+          // 1. Project must exist
+          if (!up || !up.projectId) return false;
+
+          // 2. Must have at least one active contract (no fecha_baja or fecha_baja in future)
+          const hasActiveContract =
+            !up.contracts ||
+            up.contracts.length === 0 ||
+            up.contracts.some((c: any) => {
+              if (!c.fecha_baja_contrato) return true;
+              const endDate = new Date(c.fecha_baja_contrato);
+              endDate.setHours(23, 59, 59, 999);
+              return endDate >= now;
+            });
+
+          return hasActiveContract;
+        });
+      }
     } catch (e) {
       console.error(`Error fetching user ${userId}:`, e);
     }
@@ -311,7 +336,10 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
 
     // 1. Get User for Vacation Days (calculated virtual) & Hire Date
     const User = (await import("../models/User.js")).User;
-    const user = await User.findById(userId).populate("metadata.projects");
+    const user = await User.findById(userId).populate({
+      path: "metadata.projects",
+      populate: { path: "projectId", select: "name status" },
+    });
 
     // 2. Get Profile for other stats (daysWorked) if needed
     const profile = await UserProfile.findOne({
@@ -327,7 +355,7 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     let calculatedTotalDays = 0;
     if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
       calculatedTotalDays = user.metadata.projects.reduce((acc: number, p: any) => {
-        if (!p || !p.contracts || !Array.isArray(p.contracts)) return acc;
+        if (!p || !p.projectId || !p.contracts || !Array.isArray(p.contracts)) return acc;
         return (
           acc +
           p.contracts.reduce((cAcc: number, c: any) => {

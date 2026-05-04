@@ -763,6 +763,25 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
       $pull: { proyectos: project._id },
     });
 
+    // --- CLEANUP ASSOCIATED DATA ---
+    // 1. Get all UserProject documents associated with this project
+    const userProjects = await UserProject.find({ projectId: project._id }).select("_id");
+    const userProjectIds = userProjects.map((up) => up._id);
+
+    // 2. Remove UserProject references from all users metadata and projectIds
+    await User.updateMany(
+      { tenantId: req.tenantObjectId },
+      {
+        $pull: {
+          "metadata.projects": { $in: userProjectIds },
+          projectIds: project._id,
+        },
+      }
+    );
+
+    // 3. Delete the UserProject documents themselves
+    await UserProject.deleteMany({ projectId: project._id });
+
     res.json({ message: "Project deleted successfully" });
   } catch (error) {
     console.error("Delete project error:", error);
