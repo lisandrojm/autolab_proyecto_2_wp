@@ -120,19 +120,23 @@ async function ensureRole(tenantId: Types.ObjectId, name: string, permissions: s
 /**
  * Asegura que un tenant tenga los roles de sistema configurados correctamente
  */
-export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Promise<void> {
+export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Promise<{ adminRole: any; userRole: any }> {
   const tid = new Types.ObjectId(tenantId);
 
   // ════════ SKIP FOR SUPERADMIN TENANT ════════
   const { Tenant } = await import("../models/Tenant.js");
   const tenant = await Tenant.findById(tid);
+
   if (tenant?.isSystem || tenant?.slug === "superadmin") {
-    console.log(`[RoleInit] Skipping default roles for system tenant: ${tenant.slug}`);
-    return;
+    console.log(`[RoleInit] Skipping default roles creation for system tenant: ${tenant?.slug}`);
+    // Aún así necesitamos devolver los roles si existen para evitar errores en los callers
+    const adminRole = await Role.findOne({ tenantId: tid, name: { $regex: /^Admin$/i } });
+    const userRole = await Role.findOne({ tenantId: tid, name: { $regex: /^User$/i } });
+    return { adminRole, userRole };
   }
 
   // 1. Admin (Sistema)
-  await ensureRole(tid, "Admin", ADMIN_PERMISSIONS, "Administrador - Acceso completo a todos los módulos del sistema", false, true);
+  const adminRole = await ensureRole(tid, "Admin", ADMIN_PERMISSIONS, "Administrador - Acceso completo a todos los módulos del sistema", false, true);
 
   // 2. Responsable de Proyecto (Sistema)
   const responsablePerms = ["client:view", "admin_clients:view", "admin_orders:view", "admin_vacations:view", "admin_activity_logs:view", "mobile_collaborator:view", "project_responsible:eligible"];
@@ -145,7 +149,9 @@ export async function ensureDefaultRoles(tenantId: Types.ObjectId | string): Pro
   await ensureRole(tid, "Mobile-Colaborador", MOBILE_COLLABORATOR_PERMISSIONS, "Rol de colaborador para app mobile", false, true);
 
   // 5. User (Por defecto)
-  await ensureRole(tid, "User", USER_PERMISSIONS, "Usuario estándar - Sin permisos por defecto", true, false);
+  const userRole = await ensureRole(tid, "User", USER_PERMISSIONS, "Usuario estándar - Sin permisos por defecto", true, false);
+
+  return { adminRole, userRole };
 }
 
 /**
@@ -211,7 +217,7 @@ export async function migrateRolePermissions(tenantId: Types.ObjectId | string):
  * Deprecated: Use ensureDefaultRoles which now handles mobile roles as system roles
  */
 export async function ensureMobileRoles(tenantId: Types.ObjectId | string): Promise<void> {
-  return ensureDefaultRoles(tenantId);
+  await ensureDefaultRoles(tenantId);
 }
 
 /**
