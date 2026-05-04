@@ -1,5 +1,22 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faPhone, faMapMarkerAlt, faBriefcase, faCalendar, faSignOutAlt, faCog, faShield, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faUserTie, faUserGraduate, faFileContract, faMoneyBillWave } from "@fortawesome/free-solid-svg-icons";
+import { 
+  faEnvelope, 
+  faPhone, 
+  faBriefcase, 
+  faCalendar, 
+  faSignOutAlt, 
+  faUserCheck, 
+  faBuilding, 
+  faIdCard, 
+  faClock, 
+  faLayerGroup, 
+  faFileContract, 
+  faMoneyBillWave,
+  faChevronDown,
+  faCheckCircle,
+  faUserShield
+} from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 import { useProfile } from "../hooks/useProfile";
@@ -8,83 +25,92 @@ import { es } from "date-fns/locale";
 
 export default function Profile() {
   const { profile, stats, loading } = useProfile();
+  const { user, logout } = useAuthStore();
+  const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
 
-  const { user, hasPermission, logout } = useAuthStore();
+  if (loading) return null;
 
-  const isMobileCoordinator = hasPermission("mobile_coordinator:view");
-  const isMobileCollaborator = hasPermission("mobile_collaborator:view");
+  const isMobileCoordinator = user?.roles?.some(r => r.toLowerCase().includes("coordinador"));
+  const isMobileCollaborator = user?.roles?.some(r => r.toLowerCase().includes("colaborador"));
 
-  const userRole = isMobileCoordinator ? "Coordinador" : isMobileCollaborator ? "Colaborador" : "Usuario";
-  const roleColor = isMobileCoordinator ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
+  const userRole = isMobileCoordinator ? "Mobile-Coordinador" : isMobileCollaborator ? "Mobile-Colaborador" : "Usuario";
+  const roleColor = isMobileCoordinator 
+    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" 
+    : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
 
-  // Helper to extract active contract info (similar to UsersPage logic)
-  const getActiveContractInfo = () => {
-    if (!profile?.metadata?.projects) return { type: "Sin contrato activo", seat: "Sin sede", schedule: "Sin horario", project: "Sin proyecto", dates: "Sin fechas", salary: "N/A" };
+  // 1. Process Projects and Contracts
+  const userProjects = profile?.metadata?.projects || [];
+  
+  const getProjectDetails = (proj: any) => {
+    if (!proj) return null;
+    
+    // Find active contract or just the first one
+    const activeContract = proj.contracts?.find((c: any) => {
+      const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
+      if (endDate) endDate.setHours(23, 59, 59, 999);
+      return !endDate || endDate.getTime() >= new Date().getTime();
+    }) || proj.contracts?.[0];
 
-    let info = { type: null as string | null, seat: null as string | null, schedule: null as string | null, project: null as string | null, dates: null as string | null, salary: null as string | null };
+    const isResponsable = Number(proj.metadata?.responsableId) === Number(profile?.metadata?.id);
 
-    profile.metadata.projects.forEach((proj: any) => {
-      if (proj.contracts) {
-        proj.contracts.forEach((c: any) => {
-          const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-          // Set end date to end of day to include the full day
-          if (endDate) endDate.setHours(23, 59, 59, 999);
-
-          const isActive = !endDate || endDate.getTime() >= new Date().getTime();
-
-          if (isActive) {
-            // Prioritize metadata values - check both field names
-            const contractType = c.nombre_contrato || c.tipo_contrato;
-            if (contractType) info.type = contractType;
-            if (c.nombre_sede) info.seat = c.nombre_sede;
-            if (c.sueldo_mano) info.salary = String(c.sueldo_mano);
-
-            // Horario: check for 'horario_laboral' or 'horas_semanales'
-            if (c.horario_laboral) {
-              info.schedule = c.horario_laboral;
-            } else if (c.horas_semanales) {
-              info.schedule = `${c.horas_semanales} hs`;
-            }
-
-            // Fechas
-            if (c.fecha_alta_contrato) {
-              const start = format(new Date(c.fecha_alta_contrato), "yyyy-MM-dd");
-              // Use original string or formatted date for display
-              const end = c.fecha_baja_contrato ? format(new Date(c.fecha_baja_contrato), "yyyy-MM-dd") : "Actualidad";
-              info.dates = `${start} - ${end}`;
-            }
-
-            // Try to find project name if available in basic project data, or use what we have
-            if (proj.name) info.project = proj.name;
-          }
-        });
-      }
-    });
-
-    // Fallback using externalInfo if metadata extraction failed for key fields
-    if (!info.type && profile?.externalInfo?.contracts && profile.externalInfo.contracts.length > 0) {
-      info.type = profile.externalInfo.contracts[0];
+    // Extract shifts names for the header or summary
+    const shiftNames: string[] = [];
+    const detailedShifts: any[] = [];
+    
+    if (activeContract?.areaShiftAssignments) {
+      activeContract.areaShiftAssignments.forEach((asa: any) => {
+        // Handle shiftIds (array of objects or IDs)
+        if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
+          asa.shiftIds.forEach((s: any) => {
+            const name = s.name || s.nombre || (typeof s === "string" ? s : "Sin nombre");
+            shiftNames.push(name);
+            detailedShifts.push({
+              name,
+              time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : s.time || "Sin horario",
+              area: asa.nombre_area || asa.areaName || "Sin área"
+            });
+          });
+        }
+        // Fallback to asa.shifts if shiftIds is not present
+        else if (asa.shifts) {
+          asa.shifts.forEach((s: any) => {
+            const name = s.nombre || s.name;
+            shiftNames.push(name);
+            detailedShifts.push({
+              name,
+              time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : "Sin horario",
+              area: asa.nombre_area || asa.areaName || "Sin área"
+            });
+          });
+        }
+      });
     }
-    if (!info.schedule && profile?.externalInfo?.schedules && profile.externalInfo.schedules.length > 0) {
-      info.schedule = profile.externalInfo.schedules[0];
-    }
+
+    const uniqueShiftNames = Array.from(new Set(shiftNames)).join(", ");
 
     return {
-      type: info.type || "Sin contrato activo",
-      seat: info.seat || "Sin sede",
-      schedule: info.schedule || "Sin horario",
-      project: profile.projectIds && profile.projectIds.length > 0 ? info.project || "Asignado" : "Sin proyecto",
-      dates: info.dates || "Sin fechas",
-      salary: info.salary || "N/A",
+      name: proj.nombre_proyecto || proj.name || "Sin nombre",
+      client: proj.nombre_cliente || "Sin cliente",
+      sede: activeContract?.nombre_sede || "Sin sede",
+      roleFrame: activeContract?.nombre_rol_frame || proj.nombre_rol_frame || "Sin rol frame",
+      area: activeContract?.nombre_area || "Sin área",
+      schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? 
+        `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : 
+        "Sin horario",
+      isResponsable,
+      contractType: activeContract?.nombre_contrato || "Sin contrato",
+      salary: activeContract?.sueldo_mano,
+      dates: activeContract?.fecha_alta_contrato ? 
+        `${format(new Date(activeContract.fecha_alta_contrato), "dd/MM/yy")} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), "dd/MM/yy") : "Actualidad"}` : 
+        "Sin fechas",
+      shiftsText: uniqueShiftNames || activeContract?.nombre_turno || "Sin turno",
+      detailedShifts
     };
   };
 
-  const contractInfo = getActiveContractInfo();
+  const selectedProjectInfo = getProjectDetails(userProjects[selectedProjectIndex]);
 
-  // Format hire date
-  const hireDateFormatted = profile?.hireDate ? format(new Date(profile.hireDate), "dd MMM yyyy", { locale: es }) : "N/A";
-
-  // Calculate detailed seniority (logic from UsersPage)
+  // 2. Calculate Seniority
   const calculateTotalSeniority = () => {
     if (!profile?.metadata?.projects) return { totalDays: 0, text: "0 días" };
 
@@ -102,278 +128,220 @@ export default function Profile() {
     if (totalDays === 0) return { totalDays: 0, text: "0 días" };
 
     const years = Math.floor(totalDays / 365);
-    const remainingAfterYears = totalDays % 365;
-    const months = Math.floor(remainingAfterYears / 30);
-    const remainingDays = remainingAfterYears % 30;
+    const months = Math.floor((totalDays % 365) / 30);
+    const days = totalDays % 30;
 
     const parts = [];
     if (years > 0) parts.push(`${years} ${years === 1 ? "año" : "años"}`);
     if (months > 0) parts.push(`${months} ${months === 1 ? "mes" : "meses"}`);
-    if (remainingDays > 0) parts.push(`${remainingDays} ${remainingDays === 1 ? "día" : "días"}`);
+    if (days > 0) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
 
-    const text = parts.length === 0 ? "0 días" : parts.length === 1 ? parts[0] : parts.length === 2 ? `${parts[0]} y ${parts[1]}` : `${parts[0]}, ${parts[1]} y ${parts[2]}`;
-
-    return { totalDays, text };
+    return { totalDays, text: parts.join(", ") };
   };
 
-  const seniorityData = calculateTotalSeniority();
-  // We use the simple seniorityText for the header overview (which uses years)
-  // But for the stats card we want the detailed text
-
-  // User Stats
-  // User Stats
-  const userStats = [
-    { label: "Antigüedad Total", value: seniorityData.text, subValue: `(${seniorityData.totalDays} días en total)`, icon: faClock },
-    {
-      label: "Vacaciones Disponibles",
-      value: stats?.vacations?.available !== undefined ? stats.vacations.available : "0",
-      icon: faBriefcase,
-    },
-  ];
-
-  /* 
-    Mapping requested fields to Profile UI:
-    - Ingreso: profile.hireDate
-    - Antigüedad Total: profile.seniorityYears
-    - Sede: contractInfo.seat
-    - Rol/es Frame: profile.externalInfo?.rolFrames
-    - Contrato: contractInfo.type
-    - Horario: contractInfo.schedule (if available) -> externalInfo.schedules might be better
-    - Proyecto Actual: profile.projectIds (names?)
-    - Área: profile.areaName
-    - Cargo: profile.positionName
-    - Nivel: profile.levelName
-    - Reglas: vacationRulesMeta (minDias, diasCorridos)
-  */
-
-  const realUserInfo = {
-    name: profile?.firstName && profile?.lastName ? `${profile.firstName} ${profile.lastName}` : user?.firstName || "Usuario",
-    position: profile?.positionName || "Sin Cargo",
-    department: profile?.areaName || "Sin Área", // Using Area as Department equivalent
-    email: profile?.email || user?.email || "",
-    phone: profile?.phone || "Sin teléfono",
-    location: contractInfo.seat, // Using Seat as Location
-    startDate: hireDateFormatted,
-    employeeId: profile?._id?.slice(-8).toUpperCase() || "ID-???",
-    level: profile?.levelName || "Sin Nivel",
-    seniority: seniorityData.text,
-    roleFrame: profile?.externalInfo?.rolFrames?.[0] || "Sin Rol/es Frame",
-    contractType: contractInfo.type,
-    activeProject: stats?.project || contractInfo.project || "Sin proyecto activo",
-    schedule: contractInfo.schedule || profile?.externalInfo?.schedules?.[0] || "Sin horario",
-    dates: contractInfo.dates,
-    salary: contractInfo.salary,
-    rules: {
-      minDays: stats?.vacationRulesMeta?.minDiasSource || "N/A",
-      continuous: stats?.vacationRulesMeta?.diasCorridosSource || "N/A",
-    },
-  };
+  const seniority = calculateTotalSeniority();
 
   const handleLogout = async () => {
-    const result = await sweetAlert.confirm("¿Cerrar sesión?", "¿Estás seguro de que deseas salir de la aplicación?", "Sí, cerrar sesión", "Cancelar");
-
+    const result = await sweetAlert.confirm("¿Cerrar sesión?", "¿Estás seguro de que deseas salir?", "Sí, cerrar sesión", "Cancelar");
     if (result.isConfirmed) {
       logout();
       await sweetAlert.success("Sesión cerrada", "Has salido correctamente");
     }
   };
 
-  const handleSettings = async () => {
-    await sweetAlert.info("Próximamente", "Esta función estará disponible pronto");
-  };
-
-  const handlePrivacy = async () => {
-    await sweetAlert.info("Próximamente", "Esta función estará disponible pronto");
-  };
-
   return (
-    <div className="flex-1 pb-24">
-      <div className="px-4 pt-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Mi Perfil</h1>
-          <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded text-red-600 dark:text-red-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors">
-            <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900/70 rounded-xl p-6 shadow-sm mb-6">
-          <div className="flex flex-col items-center mb-6">
-            <div
-              className="w-20 h-20 rounded bg-cover bg-center bg-no-repeat mb-4 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-3xl"
-              style={{
-                backgroundImage: profile?.profilePhotoUrl ? `url("${profile.profilePhotoUrl}")` : undefined,
-              }}
-            >
-              {!profile?.profilePhotoUrl && <span>{realUserInfo.name.charAt(0)}</span>}
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">{realUserInfo.name}</h2>
-            <p className="text-base text-slate-500 dark:text-slate-400 mb-1">{realUserInfo.roleFrame}</p>
-            <div className="flex gap-2 mt-4">
-              <div className={`px-3 py-1.5 rounded flex items-center gap-1.5 ${roleColor}`}>
-                <FontAwesomeIcon icon={faUserCheck} className="w-4 h-4" />
-                <p className="text-sm font-semibold">{userRole}</p>
-              </div>
-              <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded">
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">ID: {realUserInfo.employeeId}</p>
-              </div>
+    <div className="flex-1 pb-24 px-4 pt-4 space-y-4 animate-in fade-in duration-500">
+      {/* Compact Header Section */}
+      <div className="flex items-center justify-between bg-white dark:bg-slate-900/70 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Mi Perfil</h1>
+            <div className={`px-2 py-0.5 rounded-md flex items-center gap-1 ${roleColor}`}>
+              <p className="text-[9px] font-black uppercase tracking-tighter">{userRole}</p>
             </div>
           </div>
+          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-none">{profile?.firstName} {profile?.lastName}</p>
+          <p className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest mt-1.5">ID: {profile?._id?.slice(-6).toUpperCase()}</p>
+        </div>
+        <button onClick={handleLogout} className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-500 flex items-center justify-center border border-rose-100 dark:border-rose-900/50">
+          <FontAwesomeIcon icon={faSignOutAlt} />
+        </button>
+      </div>
 
-          <div className="space-y-3">
-            {/* ASIGNACIÓN (Assignment) */}
-            <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 mt-4 ml-1">Asignación Actual</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Proyecto */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
-                <FontAwesomeIcon icon={faBriefcase} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Proyecto/s Actual/es</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.activeProject}</p>
-                </div>
-              </div>
+      {/* Stats Section - Compact Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-500">
+            <FontAwesomeIcon icon={faClock} size="sm" />
+          </div>
+          <div>
+            <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">{seniority.text || "0 días"}</p>
+            <p className="text-[9px] text-slate-400 uppercase font-black tracking-tighter">Antigüedad</p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
+            <FontAwesomeIcon icon={faBriefcase} size="sm" />
+          </div>
+          <div>
+            <p className="text-lg font-black text-slate-900 dark:text-slate-100 leading-tight">{stats?.vacations?.available || 0}</p>
+            <p className="text-[9px] text-slate-400 uppercase font-black tracking-tighter">Vacaciones</p>
+          </div>
+        </div>
+      </div>
 
-              {/* Sede */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faBuilding} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Sede</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.location}</p>
-                </div>
-              </div>
-
-              {/* Rol/es Frame */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faIdCard} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Rol/es Frame</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.roleFrame}</p>
-                </div>
-              </div>
+      {/* History & Contact - More compact */}
+      <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm space-y-3 border border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-[1px] bg-slate-100 dark:bg-slate-800"></div>
+          <h3 className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Historial y Contacto</h3>
+          <div className="flex-1 h-[1px] bg-slate-100 dark:bg-slate-800"></div>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-700">
+              <FontAwesomeIcon icon={faCalendar} size="sm" />
             </div>
-
-            {/* DATOS DE PUESTO (Job Definition) */}
-            {/*             <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 mt-4 ml-1">Puesto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faUserTie} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Cargo</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.position}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faUserGraduate} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Nivel</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.level}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
-                <FontAwesomeIcon icon={faLayerGroup} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Área</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.department}</p>
-                </div>
-              </div>
-            </div> */}
-
-            {/* CONTRATO (Contract) */}
-            <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 mt-4 ml-1">Detalles de Contrato</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Tipo de Contrato */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
-                <FontAwesomeIcon icon={faFileContract} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Tipo de Contrato</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.contractType}</p>
-                </div>
-              </div>
-
-              {/* Horario */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Horario</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.schedule}</p>
-                </div>
-              </div>
-
-              {/* Fechas */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Vigencia</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.dates}</p>
-                </div>
-              </div>
-
-              {/* Sueldo */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
-                <FontAwesomeIcon icon={faMoneyBillWave} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Sueldo en mano</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.salary !== "N/A" && typeof realUserInfo.salary === "string" ? `$ ${!isNaN(Number(realUserInfo.salary.replace(/[,.]/g, ""))) ? Number(realUserInfo.salary.replace(/[,.]/g, "")).toLocaleString("es-ES") : realUserInfo.salary}` : "N/A"}</p>
-                </div>
-              </div>
+            <div className="flex justify-between flex-1 items-center">
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Ingreso</p>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.hireDate ? format(new Date(profile.hireDate), "dd MMM yyyy", { locale: es }) : "N/A"}</p>
             </div>
-
-            {/* HISTORIAL Y CONTACTO */}
-            <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 mt-4 ml-1">Historial y Contacto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Fecha de ingreso */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faBriefcase} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Fecha de ingreso</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.startDate}</p>
-                </div>
-              </div>
-
-              {/* Antigüedad */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50">
-                <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Antigüedad</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.seniority}</p>
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
-                <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Email</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 md:truncate">{realUserInfo.email}</p>
-                </div>
-              </div>
-
-              {/* Teléfono */}
-              <div className="flex items-center gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/50 col-span-1 md:col-span-2">
-                <FontAwesomeIcon icon={faPhone} className="w-5 h-5 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Teléfono</p>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{realUserInfo.phone}</p>
-                </div>
-              </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-700">
+              <FontAwesomeIcon icon={faEnvelope} size="sm" />
+            </div>
+            <div className="flex justify-between flex-1 items-center overflow-hidden">
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Email</p>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate ml-4">{profile?.email}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-700">
+              <FontAwesomeIcon icon={faPhone} size="sm" />
+            </div>
+            <div className="flex justify-between flex-1 items-center">
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Teléfono</p>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.phone || "Sin teléfono"}</p>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {userStats.map((stat, index) => {
-            const icon = stat.icon;
-            return (
-              <div key={index} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm flex flex-col justify-between h-full">
-                <div>
-                  <FontAwesomeIcon icon={icon} className="w-6 h-6 text-primary mb-2" />
-                  <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-0 leading-tight">{stat.value}</p>
-                  {(stat as any).subValue && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{(stat as any).subValue}</p>}
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{stat.label}</p>
-              </div>
-            );
-          })}
+      {/* Project Details Section - Compact version */}
+      <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm space-y-4 border border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+            Asignación
+          </h3>
+          {userProjects.length > 1 && (
+            <div className="relative">
+              <select 
+                className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-[10px] font-black pr-8 text-primary focus:ring-2 focus:ring-primary/20 shadow-sm"
+                value={selectedProjectIndex}
+                onChange={(e) => setSelectedProjectIndex(Number(e.target.value))}
+              >
+                {userProjects.map((p, idx) => (
+                  <option key={idx} value={idx}>{p.nombre_proyecto || p.name || `Proyecto ${idx + 1}`}</option>
+                ))}
+              </select>
+              <FontAwesomeIcon icon={faChevronDown} className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-slate-400 pointer-events-none" />
+            </div>
+          )}
         </div>
+
+        {selectedProjectInfo ? (
+          <div key={selectedProjectIndex} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {/* Project Header Compact */}
+            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-[8px] font-black text-primary uppercase tracking-widest">{selectedProjectInfo.client}</span>
+                <span className="text-primary/20">/</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{selectedProjectInfo.area}</span>
+              </div>
+              <p className="text-base font-black text-slate-900 dark:text-slate-100 leading-tight mb-2">{selectedProjectInfo.name}</p>
+              {selectedProjectInfo.isResponsable && (
+                <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-500 text-white text-[8px] font-black uppercase tracking-wider">
+                  <FontAwesomeIcon icon={faUserShield} size="xs" />
+                  Responsable
+                </div>
+              )}
+            </div>
+
+            {/* Grid details Compact */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50/50 dark:bg-slate-800/30 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                <p className="text-[8px] font-black text-slate-400 uppercase flex items-center gap-1.5 tracking-widest mb-1">
+                  <FontAwesomeIcon icon={faBuilding} className="text-slate-300" /> Sede
+                </p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{selectedProjectInfo.sede}</p>
+              </div>
+              <div className="bg-slate-50/50 dark:bg-slate-800/30 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                <p className="text-[8px] font-black text-slate-400 uppercase flex items-center gap-1.5 tracking-widest mb-1">
+                  <FontAwesomeIcon icon={faIdCard} className="text-slate-300" /> Rol Frame
+                </p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{selectedProjectInfo.roleFrame}</p>
+              </div>
+            </div>
+
+            {/* Contract Info List Compact */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Contrato</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{selectedProjectInfo.contractType}</p>
+              </div>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Vigencia</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{selectedProjectInfo.dates}</p>
+              </div>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Horario</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{selectedProjectInfo.schedule}</p>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 mt-2">
+                <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Sueldo en mano</p>
+                <p className="text-lg font-black text-slate-900 dark:text-slate-100">
+                  $ {selectedProjectInfo.salary ? Number(selectedProjectInfo.salary).toLocaleString("es-ES") : "N/A"}
+                </p>
+              </div>
+            </div>
+
+            {/* Turnos Section Compact */}
+            <div className="space-y-2">
+              <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Turnos Asignados</p>
+              {selectedProjectInfo.detailedShifts.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {selectedProjectInfo.detailedShifts.map((shift, sidx) => (
+                    <div key={sidx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-[10px]">
+                          <FontAwesomeIcon icon={faLayerGroup} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase leading-none">{shift.name}</p>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">{shift.area}</p>
+                        </div>
+                      </div>
+                      <div className="px-2 py-1 rounded-md bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600">
+                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 tracking-tighter">{shift.time}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                  <p className="text-[10px] text-slate-400 italic font-medium">Sin turnos asignados</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="py-10 text-center space-y-3">
+            <FontAwesomeIcon icon={faBriefcase} className="text-slate-200 dark:text-slate-800 text-2xl" />
+            <p className="text-[10px] text-slate-400 italic font-medium">Sin proyectos asignados</p>
+          </div>
+        )}
       </div>
     </div>
   );
