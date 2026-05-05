@@ -985,33 +985,21 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     });
 
     if (!userProject) {
-      // New assignment
       userProject = new UserProject({
-        projectId,
-        userId,
+        projectId: project._id,
+        userId: user._id,
         externalProjectId: enrichedContract.proyecto_id,
         externalEmployeeId: enrichedContract.empleado_id,
         nombre_proyecto: project.name,
         nombre_rol_frame: rolFrameName,
         contracts: [enrichedContract],
       });
-    } else if (isUpdate) {
-      // Update mode: replace the last contract with the new data
-      if (userProject.contracts.length > 0) {
-        userProject.contracts[userProject.contracts.length - 1] = enrichedContract;
-      } else {
-        userProject.contracts.push(enrichedContract);
-      }
-      // Sync IDs
-      userProject.projectId = project._id;
-      userProject.userId = user._id;
-      if (enrichedContract.proyecto_id) userProject.externalProjectId = enrichedContract.proyecto_id;
-      if (enrichedContract.empleado_id) userProject.externalEmployeeId = enrichedContract.empleado_id;
-      if (rolFrameName) userProject.nombre_rol_frame = rolFrameName;
     } else {
-      // Add to contracts history (new contract for existing project assignment)
-      userProject.contracts.push(enrichedContract);
-      // Ensure IDs are correctly synced
+      if (isUpdate && userProject.contracts.length > 0) {
+        userProject.contracts[userProject.contracts.length - 1] = enrichedContract as any;
+      } else {
+        userProject.contracts.push(enrichedContract as any);
+      }
       userProject.projectId = project._id;
       userProject.userId = user._id;
       if (enrichedContract.proyecto_id) userProject.externalProjectId = enrichedContract.proyecto_id;
@@ -1021,26 +1009,34 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
 
     await userProject.save();
 
-    // 3. Sync internal arrays (Project.assignedUsers and User.projectIds)
-    // Update teamConfig in project for UI/listing purposes
-    await Project.findByIdAndUpdate(projectId, { 
-      $addToSet: { assignedUsers: user._id },
-      $pull: { teamConfig: { userId: user._id } }
-    });
-    
-    await Project.findByIdAndUpdate(projectId, {
-      $push: { 
-        teamConfig: {
-          userId: user._id,
-          areaId: isValidId(contract.areaId) ? new Types.ObjectId(contract.areaId) : null,
-          shiftId: isValidId(contract.shiftId) ? new Types.ObjectId(contract.shiftId) : null,
-          areaShiftAssignments: sanitizedAssignments,
-          canRegister: true,
-          useProjectSchedule: true
-        }
-      }
-    });
+    // 3. Sync internal arrays in Project and User
+    // Update assignedUsers
+    if (!project.assignedUsers.some(id => id.toString() === user._id.toString())) {
+      project.assignedUsers.push(user._id);
+    }
 
+    // Update teamConfig (replace if exists)
+    if (!project.teamConfig) project.teamConfig = [];
+    const configIndex = project.teamConfig.findIndex(c => c.userId.toString() === user._id.toString());
+    
+    const newConfig = {
+      userId: user._id,
+      areaId: isValidId(contract.areaId) ? new Types.ObjectId(contract.areaId) : undefined,
+      shiftId: isValidId(contract.shiftId) ? new Types.ObjectId(contract.shiftId) : undefined,
+      areaShiftAssignments: sanitizedAssignments,
+      canRegister: true,
+      useProjectSchedule: true
+    };
+
+    if (configIndex > -1) {
+      project.teamConfig[configIndex] = newConfig as any;
+    } else {
+      project.teamConfig.push(newConfig as any);
+    }
+
+    await project.save();
+
+    // Update User metadata and projectIds
     await User.findByIdAndUpdate(userId, { 
       $addToSet: { 
         projectIds: project._id,
@@ -1053,8 +1049,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     console.error("Assign member error CRASH:", error);
     res.status(500).json({ 
       error: "Internal server error during assignment",
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+      details: error.message
     });
   }
 });
