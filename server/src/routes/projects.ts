@@ -1052,6 +1052,33 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
 
     res.json({ message: isUpdate ? "Member updated successfully" : "Member assigned successfully", userProject });
   } catch (error: any) {
+    // Handle duplicate key error by finding the existing document and updating it
+    if (error.code === 11000) {
+      try {
+        console.log("[AssignMember] E11000 duplicate key, attempting findOneAndUpdate fallback...");
+        const { projectId } = req.params;
+        const { userId, contract, isUpdate: isUpd } = req.body;
+        
+        // Find the conflicting document by any matching criteria
+        const existing = await UserProject.findOne({
+          $or: [
+            { projectId, userId },
+            { externalProjectId: contract?.externalProjectId, externalEmployeeId: contract?.externalEmployeeId },
+          ],
+        });
+        
+        if (existing) {
+          // Update the existing document's internal IDs to match
+          existing.projectId = new Types.ObjectId(projectId);
+          existing.userId = new Types.ObjectId(userId);
+          await existing.save();
+          return res.json({ message: "Member updated successfully (resolved conflict)", userProject: existing });
+        }
+      } catch (retryError: any) {
+        console.error("Assign member retry also failed:", retryError);
+      }
+    }
+    
     console.error("Assign member error CRASH:", error);
     res.status(500).json({ 
       error: "Internal server error during assignment",

@@ -260,6 +260,7 @@ class UsersAPI {
       email?: string;
       areaId?: string;
       clientId?: string;
+      projectId?: string;
       metadataActivo?: string;
       isSolicitud?: string;
     } = {},
@@ -271,6 +272,7 @@ class UsersAPI {
     if (params.email) searchParams.append("email", params.email);
     if (params.areaId) searchParams.append("areaId", params.areaId);
     if (params.clientId) searchParams.append("clientId", params.clientId);
+    if (params.projectId) searchParams.append("projectId", params.projectId);
     if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
     if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
 

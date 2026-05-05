@@ -169,7 +169,32 @@ export const ProjectTeamPage: React.FC = () => {
           setTeamConfig(projectData.teamConfig || []);
         }
 
-        setAllUsers(usersData.users);
+        // Set initial users from the project query
+        let teamUsers = usersData.users;
+        
+        // Check for users in project.assignedUsers that weren't returned by the query
+        // This handles cases where the user's projectIds field is out of sync
+        const currentProject = projectData; // may have been updated by cleanup
+        const assignedIds = ((currentProject.assignedUsers as any[]) || []).map((u: any) => typeof u === "string" ? u : u._id);
+        const loadedIds = new Set(teamUsers.map((u: User) => u._id));
+        const missingIds = assignedIds.filter((id: string) => !loadedIds.has(id));
+        
+        if (missingIds.length > 0) {
+          console.log(`📋 Fetching ${missingIds.length} missing team members by ID...`);
+          const missingUsers = await Promise.all(
+            missingIds.map(async (id: string) => {
+              try {
+                return await usersAPI.get(id);
+              } catch {
+                return null;
+              }
+            })
+          );
+          const validMissing = missingUsers.filter((u): u is User => u !== null);
+          teamUsers = [...teamUsers, ...validMissing];
+        }
+        
+        setAllUsers(teamUsers);
         setVacations(vacationsData);
         setAllAreas(areasData);
 
@@ -195,7 +220,7 @@ export const ProjectTeamPage: React.FC = () => {
 
         // Build user lookup map
         const lookupMap = new Map<number | string, string>();
-        usersData.users.forEach((u: User) => {
+        teamUsers.forEach((u: User) => {
           const metaId = (u.metadata as any)?.id;
           if (metaId) {
             const name = u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : u.email.split("@")[0];
