@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { Shift } from "../models/Shift.js";
 
 /**
- * Asegura que un tenant tenga el turno Mañana configurado correctamente
+ * Asegura que un tenant tenga el turno Oficina configurado correctamente
  */
 export async function ensureDefaultShifts(tenantId: Types.ObjectId | string): Promise<void> {
   const tid = new Types.ObjectId(tenantId);
