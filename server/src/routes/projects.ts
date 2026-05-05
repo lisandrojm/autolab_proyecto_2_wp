@@ -979,9 +979,15 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     };
 
     // 2. Find or Create UserProject (assignment)
+    // Search by internal IDs first, then also by external IDs to prevent duplicate key errors
+    const extProjId = enrichedContract.proyecto_id;
+    const extEmpId = enrichedContract.empleado_id;
+    
     let userProject = await UserProject.findOne({
-      projectId,
-      userId,
+      $or: [
+        { projectId, userId },
+        ...(extProjId && extEmpId ? [{ externalProjectId: extProjId, externalEmployeeId: extEmpId }] : []),
+      ],
     });
 
     if (!userProject) {
