@@ -1,0 +1,22 @@
+import "dotenv/config";
+export declare const env: {
+    NODE_ENV?: "test" | "development" | "production";
+    PORT?: number;
+    USE_HTTPS?: boolean;
+    SSL_KEY_PATH?: string;
+    SSL_CERT_PATH?: string;
+    MONGO_URI?: string;
+    MONGO_DB_NAME?: string;
+    JWT_SECRET?: string;
+    JWT_EXPIRES_IN?: string;
+    CORS_ORIGIN?: string;
+    TENANCY_HEADER?: string;
+    SEED_TENANT_SLUG?: string;
+    SEED_ON_START?: string;
+    SEED_ADMIN_EMAIL?: string;
+    SEED_ADMIN_PASS?: string;
+    SEED_CLIENT_EMAIL?: string;
+    SEED_CLIENT_PASS?: string;
+    DEFAULT_TENANT_USER_PASSWORD?: string;
+    API_URL?: string;
+};
