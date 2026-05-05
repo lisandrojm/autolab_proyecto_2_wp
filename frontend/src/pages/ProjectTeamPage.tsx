@@ -636,8 +636,15 @@ export const ProjectTeamPage: React.FC = () => {
       setSelectedUserForWizard(null);
       setShowAddModal(false);
     } catch (error: any) {
-      console.error("Error assigning member:", error);
-      sweetAlert.error("Error", error.response?.data?.error || "No se pudo agregar al miembro.");
+      console.error("Assign member error:", error);
+      let errorMsg = "Internal server error during assignment";
+      if (error.response?.data?.error) {
+        errorMsg = error.response.data.error;
+        if (error.response?.data?.details) {
+           errorMsg += `\nDetalles: ${error.response.data.details}`;
+        }
+      }
+      sweetAlert.error("Error", errorMsg);
     } finally {
       setLoading(false);
     }
