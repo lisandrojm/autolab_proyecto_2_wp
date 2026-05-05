@@ -466,7 +466,7 @@ export const ProjectTeamPage: React.FC = () => {
   /* ------------------------------- Actions -------------------------------- */
 
   const handleOpenWizard = (userId: string) => {
-    const user = allUsers.find((u) => u._id === userId);
+    const user = allUsers.find((u) => u._id === userId) || candidateUsers.find((u) => u._id === userId);
     if (!user) return;
 
     // Attempt to find existing data to pre-fill from user history
@@ -1272,11 +1272,7 @@ export const ProjectTeamPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="shrink-0 pt-2 flex justify-end">
-                <button onClick={() => setShowAddModal(false)} className="btn-ghost">
-                  Cerrar
-                </button>
-              </div>
+
             </div>
           </Modal>
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
 import { sweetAlert } from "../utils/sweetAlert";
 import { useProfile } from "../hooks/useProfile";
@@ -49,8 +49,8 @@ export default function Profile() {
             shiftNames.push(name);
             detailedShifts.push({
               name,
-              time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : s.time || "Sin horario",
-              area: asa.nombre_area || asa.areaName || "Sin área",
+              time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : (s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : s.time || "Sin horario"),
+              area: asa.nombre_area || asa.areaName || asa.areaId?.name || "Sin área",
             });
           });
         }
@@ -76,7 +76,7 @@ export default function Profile() {
       client: proj.nombre_cliente || "Sin cliente",
       sede: activeContract?.nombre_sede || "Sin sede",
       roleFrame: activeContract?.nombre_rol_frame || proj.nombre_rol_frame || "Sin rol frame",
-      area: activeContract?.nombre_area || "Sin área",
+      area: activeContract?.nombre_area || proj.nombre_area || "Sin área",
       schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "Sin horario",
       isResponsable,
       contractType: activeContract?.nombre_contrato || "Sin contrato",
@@ -234,16 +234,37 @@ export default function Profile() {
             <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="text-[8px] font-black text-primary uppercase tracking-widest">{selectedProjectInfo.client}</span>
-                <span className="text-primary/20">/</span>
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{selectedProjectInfo.area}</span>
               </div>
               <p className="text-base font-black text-slate-900 dark:text-slate-100 leading-tight mb-2">{selectedProjectInfo.name}</p>
-              {selectedProjectInfo.isResponsable && (
-                <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-green-500 text-white text-[8px] font-black uppercase tracking-wider">
-                  <FontAwesomeIcon icon={faUserShield} size="xs" />
-                  Responsable
-                </div>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {selectedProjectInfo.isResponsable ? (
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500 text-white text-[8px] font-black uppercase tracking-wider shadow-sm">
+                    <FontAwesomeIcon icon={faUserShield} size="xs" />
+                    Responsable de Proyecto
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[8px] font-black uppercase tracking-wider shadow-sm">
+                    <FontAwesomeIcon icon={faUsers} size="xs" />
+                    Equipo de Proyecto
+                  </div>
+                )}
+                
+                {profile?.roleNames?.map((role: string, idx: number) => {
+                  const lowerRole = role.toLowerCase();
+                  const isCoord = lowerRole.includes("coordinador");
+                  const isColab = lowerRole.includes("colaborador");
+                  
+                  let badgeStyles = "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
+                  if (isCoord) badgeStyles = "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800";
+                  if (isColab) badgeStyles = "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800";
+
+                  return (
+                    <div key={idx} className={`inline-flex items-center px-2 py-1 rounded-md border text-[8px] font-black uppercase tracking-wider ${badgeStyles}`}>
+                      {role}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Grid details Compact */}

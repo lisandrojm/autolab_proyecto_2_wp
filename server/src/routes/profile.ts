@@ -39,7 +39,29 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     try {
       user = await User.findById(userId).populate({
         path: "metadata.projects",
-        populate: { path: "projectId", select: "name status" },
+        populate: [
+          {
+            path: "projectId",
+            select: "name status clientId",
+            populate: { path: "clientId", select: "name" },
+          },
+          {
+            path: "contracts.areaId",
+            select: "name",
+          },
+          {
+            path: "contracts.areaShiftAssignments.areaId",
+            select: "name",
+          },
+          {
+            path: "contracts.areaShiftAssignments.shiftIds",
+            select: "name startTime endTime",
+          },
+          {
+            path: "areaId",
+            select: "name",
+          },
+        ],
       });
 
       // FILTER: Only show projects that exist and have active contracts
@@ -208,7 +230,33 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       projectDates: Array.from(userProjectDates),
     };
 
-    const metadata = user?.metadata;
+    const metadata = user?.metadata ? user.metadata.toObject() : undefined;
+    if (metadata && metadata.projects && Array.isArray(metadata.projects)) {
+      metadata.projects.forEach((up: any) => {
+        // Enrich Project Name if missing
+        if (!up.nombre_proyecto && up.projectId?.name) {
+          up.nombre_proyecto = up.projectId.name;
+        }
+        // Enrich Client Name if missing (from populated projectId.clientId)
+        if (!up.nombre_cliente && up.projectId?.clientId?.name) {
+          up.nombre_cliente = up.projectId.clientId.name;
+        }
+
+        // Enrich Area Name if missing (from populated areaId)
+        if (!up.nombre_area && up.areaId?.name) {
+          up.nombre_area = up.areaId.name;
+        }
+
+        // Enrich Areas in contracts if missing (from populated contracts.areaId)
+        if (up.contracts && Array.isArray(up.contracts)) {
+          up.contracts.forEach((c: any) => {
+            if (!c.nombre_area && c.areaId?.name) {
+              c.nombre_area = c.areaId.name;
+            }
+          });
+        }
+      });
+    }
     // -------------------------------------------------------------------------
     // Contract Check Logic: Disable Vacations button if contract type is blacklist
     // -------------------------------------------------------------------------
@@ -338,7 +386,29 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     const User = (await import("../models/User.js")).User;
     const user = await User.findById(userId).populate({
       path: "metadata.projects",
-      populate: { path: "projectId", select: "name status" },
+      populate: [
+        {
+          path: "projectId",
+          select: "name status clientId",
+          populate: { path: "clientId", select: "name" },
+        },
+        {
+          path: "contracts.areaId",
+          select: "name",
+        },
+        {
+          path: "contracts.areaShiftAssignments.areaId",
+          select: "name",
+        },
+        {
+          path: "contracts.areaShiftAssignments.shiftIds",
+          select: "name startTime endTime",
+        },
+        {
+          path: "areaId",
+          select: "name",
+        },
+      ],
     });
 
     // 2. Get Profile for other stats (daysWorked) if needed
