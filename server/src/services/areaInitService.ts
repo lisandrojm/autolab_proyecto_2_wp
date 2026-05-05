@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { Area } from "../models/Area.js";
 
 /**
- * Asegura que un tenant tenga el área Coordinador configurada correctamente
+ * Asegura que un tenant tenga el área Coordinacion configurada correctamente
  */
 export async function ensureDefaultAreas(tenantId: Types.ObjectId | string): Promise<void> {
   const tid = new Types.ObjectId(tenantId);
@@ -14,20 +14,38 @@ export async function ensureDefaultAreas(tenantId: Types.ObjectId | string): Pro
     return;
   }
 
-  const name = "Coordinador";
+  const name = "Coordinacion";
+  const oldName = "Coordinador";
+
+  // 1. Check if "Coordinacion" already exists
   let area = await Area.findOne({
     tenantId: tid,
     name: { $regex: new RegExp(`^${name}$`, "i") },
   });
 
   if (!area) {
-    console.log(`[AreaInit] Creating ${name} area for tenant: ${tid}`);
-    await Area.create({
+    // 2. If "Coordinacion" doesn't exist, check if there's a system "Coordinador" we should rename
+    const oldArea = await Area.findOne({
       tenantId: tid,
-      name,
-      description: "Área de coordinación",
-      isSystem: true,
+      name: { $regex: new RegExp(`^${oldName}$`, "i") },
+      isSystem: true
     });
+
+    if (oldArea) {
+      console.log(`[AreaInit] Renaming ${oldName} to ${name} for tenant: ${tid}`);
+      oldArea.name = name;
+      await oldArea.save();
+      area = oldArea;
+    } else {
+      // 3. Create "Coordinacion" if neither exists
+      console.log(`[AreaInit] Creating ${name} area for tenant: ${tid}`);
+      area = await Area.create({
+        tenantId: tid,
+        name,
+        description: "Área de coordinación",
+        isSystem: true,
+      });
+    }
   } else if (!area.isSystem) {
     console.log(`[AreaInit] Marking existing ${name} area as system for tenant: ${tid}`);
     area.isSystem = true;
@@ -36,7 +54,7 @@ export async function ensureDefaultAreas(tenantId: Types.ObjectId | string): Pro
 }
 
 /**
- * Verifica que todos los tenants existentes tengan las áreas correctas
+ * Enforces that the "Coordinacion" area is present in the project with all active shifts.
  */
 export async function ensureAllTenantsHaveDefaultAreas(): Promise<void> {
   try {
