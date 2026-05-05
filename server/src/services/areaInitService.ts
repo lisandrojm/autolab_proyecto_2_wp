@@ -54,7 +54,7 @@ export async function ensureDefaultAreas(tenantId: Types.ObjectId | string): Pro
 }
 
 /**
- * Enforces that the "Coordinacion" area is present in the project with all active shifts.
+ * Verifica que todos los tenants existentes tengan las áreas correctas
  */
 export async function ensureAllTenantsHaveDefaultAreas(): Promise<void> {
   try {

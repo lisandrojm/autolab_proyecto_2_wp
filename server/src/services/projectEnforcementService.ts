@@ -4,19 +4,20 @@ import { Shift } from "../models/Shift.js";
 import { IProject } from "../models/Project.js";
 
 /**
- * Enforces that the "Coordinador" area is present in the project with all active shifts.
+ * Enforces that the "Coordinacion" area is present in the project with all active shifts.
  */
 export async function enforceCoordinatorArea(project: IProject): Promise<void> {
   const tenantId = project.tenantId;
 
-  // 1. Find the "Coordinador" area for this tenant
+  // 1. Find the "Coordinacion" area for this tenant
   const coordinatorArea = await Area.findOne({
     tenantId,
-    name: { $regex: /^Coordinador$/i },
+    name: { $regex: /^(Coordinacion|Coordinador)$/i },
+    isSystem: true
   });
 
   if (!coordinatorArea) {
-    console.warn(`[ProjectEnforcement] Coordinador area not found for tenant ${tenantId}`);
+    console.warn(`[ProjectEnforcement] Coordinacion area not found for tenant ${tenantId}`);
     return;
   }
 
@@ -53,7 +54,7 @@ export async function enforceCoordinatorArea(project: IProject): Promise<void> {
     // Update existing area to have all shifts
     project.areasConfig[existingIndex].shiftIds = allShiftIds;
   } else {
-    // Add the "Coordinador" area with all shifts
+    // Add the "Coordinacion" area with all shifts
     project.areasConfig.push({
       areaId: coordinatorArea._id as Types.ObjectId,
       shiftIds: allShiftIds,
