@@ -1488,32 +1488,6 @@ export const ProjectTeamPage: React.FC = () => {
                     <div className="space-y-3">
                       {(() => {
                         const isCoordinadorRole = (selectedUserForWizard?.roles || []).some((r: any) => r.name.toLowerCase().includes("mobile-coordinador"));
-
-                        return (project?.areasConfig || []).map((ac: any) => {
-                          const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                          const areaObj = allAreas.find((a) => a._id === aId);
-                          const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
-                          const isCoordinadorArea = areaObj?.isSystem || aName?.toLowerCase().includes("coordinador");
-                          const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
-
-                          const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
-                          const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id)));
-
-                        // Current assignment for this area
-                        const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
-                        const selectedShiftIds = currentAssignment?.shiftIds || [];
-                        const isAreaActive = selectedShiftIds.length > 0;
-
-                        // Collect ALL selected shift data across ALL areas for overlap detection
-                        // Track areaId so we can exclude only same-area entries, not same-shift-id entries
-                        const allSelectedShiftData: { areaId: string; shiftId: string; name: string; start: string; end: string; days: number[] }[] = [];
-                        wizardData.areaShiftAssignments.forEach((asa) => {
-                          asa.shiftIds.forEach((sid) => {
-                            const sh = allShifts.find((s) => String(s._id) === sid);
-                            if (sh) allSelectedShiftData.push({ areaId: asa.areaId, shiftId: sid, name: sh.name, start: sh.startTime, end: sh.endTime, days: sh.days || [] });
-                          });
-                        });
-
                         // Helper to check time overlap
                         const timeToMinutes = (t: string) => {
                           const [h, m] = t.split(":").map(Number);
@@ -1533,6 +1507,30 @@ export const ProjectTeamPage: React.FC = () => {
                           if (d1.length === 0 || d2.length === 0) return true; // if no days configured, assume overlap
                           return d1.some((d) => d2.includes(d));
                         };
+
+                        return (project?.areasConfig || []).map((ac: any) => {
+                          const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+                          const areaObj = allAreas.find((a) => a._id === aId);
+                          const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
+                          const isCoordinadorArea = areaObj?.isSystem || aName?.toLowerCase().includes("coordinador");
+                          const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
+
+                          const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
+                          const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id)));
+
+                        // Current assignment for this area
+                        const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
+                        const selectedShiftIds = currentAssignment?.shiftIds || [];
+                        const isAreaActive = selectedShiftIds.length > 0;
+
+                        // Collect ALL selected shift data across ALL areas for overlap detection
+                        const allSelectedShiftData: { areaId: string; shiftId: string; name: string; start: string; end: string; days: number[] }[] = [];
+                        wizardData.areaShiftAssignments.forEach((asa) => {
+                          asa.shiftIds.forEach((sid) => {
+                            const sh = allShifts.find((s) => String(s._id) === sid);
+                            if (sh) allSelectedShiftData.push({ areaId: asa.areaId, shiftId: sid, name: sh.name, start: sh.startTime, end: sh.endTime, days: sh.days || [] });
+                          });
+                        });
 
                         return (
                           <div key={aId} className={`rounded-xl border transition-all ${isAreaActive ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10" : isAreaRestricted ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10 opacity-75" : "border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20"}`}>
@@ -1564,9 +1562,8 @@ export const ProjectTeamPage: React.FC = () => {
                               {shiftsForArea.map((shift) => {
                                 const isSelected = selectedShiftIds.includes(String(shift._id));
 
-                                // Check if this shift overlaps with shifts selected in OTHER areas
-                                // Skip entries from the SAME area (aId) — only cross-area conflicts matter
-                                const overlappingWith = allSelectedShiftData.find((sel) => sel.areaId !== aId && timesOverlap(shift.startTime, shift.endTime, sel.start, sel.end) && daysOverlap(shift.days || [], sel.days));
+                                // Check if this shift overlaps with ANY currently selected shift
+                                const overlappingWith = allSelectedShiftData.find((sel) => (sel.areaId !== aId || sel.shiftId !== String(shift._id)) && timesOverlap(shift.startTime, shift.endTime, sel.start, sel.end) && daysOverlap(shift.days || [], sel.days));
                                 const isBlocked = !isSelected && !!overlappingWith;
 
                                 const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
@@ -1575,13 +1572,13 @@ export const ProjectTeamPage: React.FC = () => {
                                   <button
                                     key={shift._id}
                                     type="button"
-                                    disabled={isBlocked || isAreaRestricted}
+                                    disabled={isAreaRestricted}
                                     onClick={() => {
                                       setWizardData((prev) => {
-                                        const assignments = [...prev.areaShiftAssignments];
-                                        const idx = assignments.findIndex((a) => a.areaId === aId);
+                                        let assignments = [...prev.areaShiftAssignments];
 
                                         if (isSelected) {
+                                          const idx = assignments.findIndex((a) => a.areaId === aId);
                                           if (idx !== -1) {
                                             assignments[idx] = {
                                               ...assignments[idx],
@@ -1590,6 +1587,21 @@ export const ProjectTeamPage: React.FC = () => {
                                             if (assignments[idx].shiftIds.length === 0) assignments.splice(idx, 1);
                                           }
                                         } else {
+                                          // AUTO-DEACTIVATE OVERLAPPING SHIFTS
+                                          assignments = assignments
+                                            .map((a) => ({
+                                              ...a,
+                                              shiftIds: a.shiftIds.filter((sid) => {
+                                                const sh = allShifts.find((s) => String(s._id) === sid);
+                                                if (!sh) return true;
+                                                const overlaps = timesOverlap(shift.startTime, shift.endTime, sh.startTime, sh.endTime) && daysOverlap(shift.days || [], sh.days);
+                                                return !overlaps;
+                                              }),
+                                            }))
+                                            .filter((a) => a.shiftIds.length > 0);
+
+                                          // Add the new shift
+                                          const idx = assignments.findIndex((a) => a.areaId === aId);
                                           if (idx !== -1) {
                                             assignments[idx] = {
                                               ...assignments[idx],
@@ -1611,7 +1623,7 @@ export const ProjectTeamPage: React.FC = () => {
                                         };
                                       });
                                     }}
-                                    className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50" : isBlocked ? "bg-gray-100 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-50" : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}
+                                    className={`px-3 py-2 rounded-xl border transition-all flex flex-col min-w-[120px] cursor-pointer ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-400/50" : isBlocked ? "bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 hover:border-blue-300 dark:hover:border-blue-600 opacity-80" : "bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"}`}
                                     title={isBlocked ? `Se superpone con "${overlappingWith?.name}"` : shift.name}
                                   >
                                     <span className={`text-xs font-bold uppercase tracking-wider ${isSelected ? "text-blue-700 dark:text-blue-400" : isBlocked ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-200"}`}>{shift.name}</span>
