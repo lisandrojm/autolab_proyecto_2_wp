@@ -53,10 +53,15 @@ export interface IProject extends Document {
   teamConfig?: {
     userId: Types.ObjectId;
     canRegister: boolean;
-    // Individual work schedule for this user in this project
-    useProjectSchedule?: boolean; // If true, use project's workSchedule. Default true.
-    startTime?: string; // "HH:mm" format - overrides project schedule
-    endTime?: string; // "HH:mm" format - overrides project schedule
+    useProjectSchedule?: boolean;
+    startTime?: string;
+    endTime?: string;
+    areaId?: Types.ObjectId;
+    shiftId?: Types.ObjectId;
+    areaShiftAssignments?: {
+      areaId: Types.ObjectId;
+      shiftIds: Types.ObjectId[];
+    }[];
   }[];
   favorite?: boolean;
   vacationConfig?: {
@@ -123,6 +128,14 @@ const projectSchema = new Schema<IProject>(
         useProjectSchedule: { type: Boolean, default: true }, // Use project's schedule by default
         startTime: { type: String }, // "HH:mm" format
         endTime: { type: String }, // "HH:mm" format
+        areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+        shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
+        areaShiftAssignments: [
+          {
+            areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+            shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+          },
+        ],
       },
     ],
 

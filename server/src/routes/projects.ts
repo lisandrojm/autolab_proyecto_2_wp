@@ -949,8 +949,20 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       if (rfInfo) rolFrameName = rfInfo.name;
     }
 
+    // Sanitize areaShiftAssignments to ensure valid ObjectIds
+    let sanitizedAssignments = [];
+    if (contract.areaShiftAssignments && Array.isArray(contract.areaShiftAssignments)) {
+      sanitizedAssignments = contract.areaShiftAssignments
+        .map((asa: any) => ({
+          areaId: isValidId(asa.areaId) ? new Types.ObjectId(asa.areaId) : null,
+          shiftIds: (asa.shiftIds || []).filter(isValidId).map((id: string) => new Types.ObjectId(id))
+        }))
+        .filter((asa: any) => asa.areaId !== null);
+    }
+
     const enrichedContract = {
       ...contract,
+      areaShiftAssignments: sanitizedAssignments,
       nombre_sede: sede?.name || "Sin sede",
       nombre_categoria_sat: cat?.name || "Sin categoria",
       nombre_estado_empleado: estado?.name || "Activo",
@@ -1013,18 +1025,18 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     // Update teamConfig in project for UI/listing purposes
     await Project.findByIdAndUpdate(projectId, { 
       $addToSet: { assignedUsers: user._id },
-      $pull: { teamConfig: { userId: user._id } } // Remove old config if exists
+      $pull: { teamConfig: { userId: user._id } }
     });
     
     await Project.findByIdAndUpdate(projectId, {
       $push: { 
         teamConfig: {
           userId: user._id,
-          areaId: contract.areaId,
-          shiftId: contract.shiftId,
-          areaShiftAssignments: contract.areaShiftAssignments || [],
-          canRegister: true, // Default
-          useProjectSchedule: true // Default
+          areaId: isValidId(contract.areaId) ? new Types.ObjectId(contract.areaId) : null,
+          shiftId: isValidId(contract.shiftId) ? new Types.ObjectId(contract.shiftId) : null,
+          areaShiftAssignments: sanitizedAssignments,
+          canRegister: true,
+          useProjectSchedule: true
         }
       }
     });
