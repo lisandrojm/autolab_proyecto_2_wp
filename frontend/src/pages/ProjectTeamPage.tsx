@@ -1544,7 +1544,7 @@ export const ProjectTeamPage: React.FC = () => {
                           const aId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
                           const areaObj = allAreas.find((a) => a._id === aId);
                           const aName = typeof ac.areaId === "object" ? ac.areaId?.name : areaObj?.name;
-                          const isCoordinadorArea = areaObj?.isSystem || aName?.toLowerCase().includes("coordinador");
+                          const isCoordinadorArea = areaObj?.isSystem;
                           const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
 
                           const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));

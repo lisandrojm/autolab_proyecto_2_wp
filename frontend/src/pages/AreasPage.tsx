@@ -364,7 +364,7 @@ export const AreasPage: React.FC = () => {
                                 variant: "default" as const,
                                 className: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800",
                               },
-                              ...(area.isSystem || area.name.toLowerCase() === "coordinador"
+                              ...(area.isSystem
                                 ? [
                                     {
                                       text: "Sistema",
@@ -374,7 +374,7 @@ export const AreasPage: React.FC = () => {
                                   ]
                                 : []),
                             ]
-                          : area.isSystem || area.name.toLowerCase() === "coordinador"
+                          : area.isSystem
                           ? [
                               {
                                 text: "Sistema",
@@ -465,7 +465,7 @@ export const AreasPage: React.FC = () => {
                               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
                               <div className="flex items-center gap-2">
                                 {area.tenant && area.tenant.name && <span className="text-[10px] text-gray-500">{area.tenant.name}</span>}
-                                {(area.isSystem || area.name.toLowerCase() === "coordinador") && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
+                                {area.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
                               </div>
 
                             </div>
@@ -490,7 +490,7 @@ export const AreasPage: React.FC = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                               </button>
-                              {!(area.isSystem || area.name.toLowerCase() === "coordinador") ? (
+                              {!area.isSystem ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();

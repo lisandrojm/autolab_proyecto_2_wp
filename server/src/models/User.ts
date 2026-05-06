@@ -97,9 +97,6 @@ export interface IUser extends Document {
   clientIds: Types.ObjectId[];
   projectIds: Types.ObjectId[];
   tenantId: Types.ObjectId;
-  positionId?: Types.ObjectId;
-  levelId?: Types.ObjectId;
-  areaId?: Types.ObjectId;
   firstName?: string;
   lastName?: string;
   lastLoginAt?: Date;

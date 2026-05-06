@@ -17,7 +17,6 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
-import { ensureAllTenantsHaveDefaultAreas } from "./services/areaInitService.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -207,14 +206,6 @@ connectDB()
       console.log("✅ Role verification completed successfully");
     } catch (error) {
       console.error("❌ Role verification failed:", error);
-    }
-
-    try {
-      console.log("🔍 Verifying all tenants have default areas...");
-      await ensureAllTenantsHaveDefaultAreas();
-      console.log("✅ Area verification completed successfully");
-    } catch (error) {
-      console.error("❌ Area verification failed:", error);
     }
 
     try {

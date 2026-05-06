@@ -126,23 +126,7 @@ export const ProjectsPage: React.FC = () => {
       setAvailableShifts(shifts);
       setAvailableAreas(areas);
 
-      // Pre-select Coordinación if not already in config
-      const coordNames = ["coordinador", "coordinación", "coordinacion"];
-      const coordinadorArea = areas.find(a => coordNames.includes(a.name.toLowerCase()));
-      
-      if (coordinadorArea) {
-        setFormData(prev => {
-          const hasCoordinador = prev.areasConfig.some(ac => ac.areaId === coordinadorArea._id);
-          if (hasCoordinador) return prev;
-          return {
-            ...prev,
-            areasConfig: [
-              ...prev.areasConfig,
-              { areaId: coordinadorArea._id, shiftIds: shifts.map(s => s._id) }
-            ]
-          };
-        });
-      }
+
     } catch (err) {
       console.error("Error fetching aux data:", err);
     }
@@ -579,7 +563,7 @@ export const ProjectsPage: React.FC = () => {
                           <div>
                             <div className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
                               {area.name}
-                            {(area.isSystem || ["coordinador", "coordinación", "coordinacion"].includes(area.name.toLowerCase())) && (
+                            {area.isSystem && (
                                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 uppercase tracking-wider">
                                  Sistema
                                </span>
@@ -601,7 +585,7 @@ export const ProjectsPage: React.FC = () => {
                           >
                             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                           </button>
-                          {!(area.isSystem || ["coordinador", "coordinación", "coordinacion"].includes(area.name.toLowerCase())) && (
+                          {!area.isSystem && (
 
                             <button
                               type="button"

@@ -28,16 +28,14 @@ router.get("/availability", async (req, res) => {
     const userId = req.user!.userId;
     const user = await User.findById(userId).populate("metadata.projects");
 
-    let userAreaId = user.areaId;
+    let userAreaId: string | null = null;
 
-    // Fallback: If user has no areaId, try to find it via UserProfile department
-    if (!userAreaId) {
-      const profile = await UserProfile.findOne({ userId, tenantId });
-      if (profile && profile.department) {
-        const area = await Area.findOne({ tenantId, name: profile.department });
-        if (area) {
-          userAreaId = area._id as any;
-        }
+    // Resolve areaId via UserProfile department (Standardized way now)
+    const profile = await UserProfile.findOne({ userId, tenantId });
+    if (profile && profile.department) {
+      const area = await Area.findOne({ tenantId, name: profile.department });
+      if (area) {
+        userAreaId = area._id as any;
       }
     }
 
@@ -77,20 +75,17 @@ router.get("/availability", async (req, res) => {
         }
       }
 
-      // 2. Position Check
+      // 2. Position Check (Legacy field removed, skip or check profile)
       if (matches && rule.positionId) {
-        score++;
-        if (!user.positionId || user.positionId.toString() !== rule.positionId.toString()) {
-          matches = false;
-        }
+        // Since user.positionId is gone, we skip this for now or could match profile.position
+        // For strict decoupling we ignore this or return false if rule is specific.
+        // Let's assume rules should now use profile fields or project fields.
+        matches = false; 
       }
 
-      // 3. Level Check
+      // 3. Level Check (Legacy field removed, skip)
       if (matches && rule.levelId) {
-        score++;
-        if (!user.levelId || user.levelId.toString() !== rule.levelId.toString()) {
-          matches = false;
-        }
+        matches = false;
       }
 
       // 4. Project Check
@@ -159,11 +154,11 @@ router.get("/availability", async (req, res) => {
       // Areas: If rule has specific area, check that. If Any, check user area.
       const areasToCheck = rule.areaId ? [rule.areaId] : userAreaId ? [userAreaId] : [];
 
-      // Positions
-      const positionsToCheck = rule.positionId ? [rule.positionId] : user.positionId ? [user.positionId] : [];
+      // Positions (Legacy field removed)
+      const positionsToCheck = [undefined];
 
-      // Levels
-      const levelsToCheck = rule.levelId ? [rule.levelId] : user.levelId ? [user.levelId] : [];
+      // Levels (Legacy field removed)
+      const levelsToCheck = [undefined];
 
       // RoleFrames (Complex, let's keep basic logic for now or iterate if possible)
       // For now, if rule has RF, we use it. If Any, we ignore RF constraint (global to all roles) OR matching user metadata?
@@ -203,9 +198,13 @@ router.get("/availability", async (req, res) => {
               const query: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
 
               if (pId) query.projectIds = pId;
-              if (aId) query.areaId = aId;
               if (posId) query.positionId = posId;
               if (lId) query.levelId = lId;
+
+              if (aId) {
+                const usersInArea = await UserProject.find({ areaId: aId }).distinct("userId");
+                query._id = { $in: usersInArea, $ne: userId };
+              }
 
               // Handle RoleFrame if specific rule exists
               if (rule.roleFrameId) {
@@ -222,7 +221,6 @@ router.get("/availability", async (req, res) => {
                 }
               }
 
-              // If Rule "Any" meant "Per Scope", we are now checking "This Scope".
               // Query DB for users in this scope
               const matchingUsers = await User.find(query).select("_id metadata").populate("metadata.projects");
               const matchingUserIds = matchingUsers.map((u) => u._id);
@@ -554,20 +552,10 @@ router.post("/", async (req, res) => {
     const profile = await UserProfile.findOne({ userId, tenantId });
 
     // Fetch Position Name
-    let positionName = "Sin Cargo";
-    if (user.positionId) {
-      const pos = await Position.findById(user.positionId);
-      if (pos) positionName = pos.name;
-    } else if (profile?.position) {
-      positionName = profile.position;
-    }
+    let positionName = profile?.position || "Sin Cargo";
 
     // Fetch Level Name
     let levelName = "Sin Nivel";
-    if (user.levelId) {
-      const lvl = await Level.findById(user.levelId);
-      if (lvl) levelName = lvl.name;
-    }
 
     const userName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : profile ? `${profile.firstName} ${profile.lastName}` : "Usuario";
 
@@ -600,14 +588,14 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Ya tienes una solicitud de vacaciones activa en este rango de fechas." });
     }
 
-    // New Multi-Criteria Overlap Check
+    // Check Overlap Rules
     const vacConfig = await VacationConfig.findOne({ tenantId });
     if (vacConfig && vacConfig.overlaps && vacConfig.overlaps.length > 0) {
-      // Determine explicit or fallback area
-      let userAreaId = user.areaId;
-      if (!userAreaId && profile?.department) {
+      // Determine area via profile department
+      let userAreaId: any = null;
+      if (profile?.department) {
         const area = await Area.findOne({ tenantId, name: profile.department });
-        if (area) userAreaId = area._id as any;
+        if (area) userAreaId = area._id;
       }
 
       const RoleFrame = (await import("../models/RoleFrame.js")).RoleFrame;
@@ -630,12 +618,11 @@ router.post("/", async (req, res) => {
           if (!userAreaId || userAreaId.toString() !== rule.areaId.toString()) matches = false;
         }
         if (matches && rule.positionId) {
-          score++;
-          if (!user.positionId || user.positionId.toString() !== rule.positionId.toString()) matches = false;
+          // Legacy positionId removed from User
+          matches = false;
         }
         if (matches && rule.levelId) {
-          score++;
-          if (!user.levelId || user.levelId.toString() !== rule.levelId.toString()) matches = false;
+          matches = false;
         }
         if (matches && rule.projectId) {
           score++;
@@ -687,9 +674,13 @@ router.post("/", async (req, res) => {
               for (const lId of finalLevels) {
                 const otherUsersQuery: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
                 if (pId) otherUsersQuery.projectIds = pId;
-                if (aId) otherUsersQuery.areaId = aId;
                 if (posId) otherUsersQuery.positionId = posId;
                 if (lId) otherUsersQuery.levelId = lId;
+
+                if (aId) {
+                  const usersInArea = await UserProject.find({ areaId: aId }).distinct("userId");
+                  otherUsersQuery._id = { $in: usersInArea, $ne: userId };
+                }
 
                 if (rule.roleFrameId) {
                   const rf = await RoleFrame.findById(rule.roleFrameId);

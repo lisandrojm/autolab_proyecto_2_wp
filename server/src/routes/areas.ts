@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { Area } from "../models/Area.js";
 import { User } from "../models/User.js";
+import { Project } from "../models/Project.js";
+import UserProject from "../models/UserProject.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
@@ -224,16 +226,36 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
-    // Verificar si el area está asignada a usuarios
-    const usersWithArea = await User.countDocuments({
-      areaId: areaId,
-      tenantId: req.tenantObjectId,
-    });
+    // Verificar si el area está asignada a proyectos o configuraciones de proyecto
+    const [projectsWithArea, userProjectsWithArea] = await Promise.all([
+      Project.countDocuments({
+        $or: [
+          { "areasConfig.areaId": areaId },
+          { "teamConfig.areaId": areaId },
+          { "teamConfig.areaShiftAssignments.areaId": areaId },
+          { "coordinatorAssignments.areaId": areaId }
+        ],
+        tenantId: req.tenantObjectId,
+      }),
+      UserProject.countDocuments({
+        $or: [
+          { areaId: areaId },
+          { "contracts.areaId": areaId },
+          { "contracts.areaShiftAssignments.areaId": areaId }
+        ]
+        // tenantId doesn't exist on UserProject, but it's linked to users who are in tenants. 
+        // For simplicity we check global as areaId is unique enough, but better to filter by projectId if possible.
+        // However, UserProject is a cross-tenant collection in this schema (no tenantId field).
+      })
+    ]);
 
-    if (usersWithArea > 0) {
+    const totalProjectAssignments = projectsWithArea + userProjectsWithArea;
+
+    if (totalProjectAssignments > 0) {
       res.status(409).json({
-        error: `No se puede eliminar esta área porque está asignada a ${usersWithArea} usuario(s)`,
-        usersCount: usersWithArea,
+        error: `No se puede eliminar esta área porque está siendo usada en ${totalProjectAssignments} proyecto(s) o asignación(es) activa(s)`,
+        projectsCount: projectsWithArea,
+        userProjectsCount: userProjectsWithArea
       });
       return;
     }
@@ -249,16 +271,14 @@ router.delete("/:id", requireTenant, authenticateToken, requirePermission("admin
       return;
     }
 
-    const area = await Area.findOneAndDelete({
-      _id: areaId,
-      tenantId: req.tenantObjectId,
-    });
+    // 3. Proceder a la eliminación
+    await Area.deleteOne({ _id: areaId, tenantId: req.tenantObjectId });
 
-
-    if (!area) {
-      res.status(404).json({ error: "Área no encontrada" });
-      return;
-    }
+    // 4. Limpiar referencias en usuarios (nulificar areaId si existe)
+    await User.updateMany(
+      { areaId: areaId, tenantId: req.tenantObjectId },
+      { $unset: { areaId: "" } }
+    );
 
     res.json({ message: "Área eliminada correctamente" });
   } catch (error) {

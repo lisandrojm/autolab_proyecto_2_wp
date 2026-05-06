@@ -118,51 +118,9 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
     let areaName = profile.department || "";
     let areaMembers = 0;
 
-    if (user && user.areaId) {
-      try {
-        const area = await Area.findById(user.areaId);
-        if (area) {
-          areaName = area.name;
-          // Count members in this area
-          areaMembers = await User.countDocuments({
-            tenantId: req.tenantObjectId,
-            areaId: user.areaId,
-            isActive: true,
-          });
-        } else {
-          console.warn(`Area not found for user ${userId} with areaId ${user.areaId}`);
-        }
-      } catch (areaError) {
-        console.error("Error fetching area info:", areaError);
-      }
-    }
-
     let positionName = profile.position || "";
-    if (user && user.positionId) {
-      try {
-        const position = await Position.findById(user.positionId);
-        if (position) {
-          positionName = position.name;
-        }
-      } catch (posError) {
-        console.error("Error fetching position info:", posError);
-      }
-    }
 
     let levelName = "";
-    if (user && user.levelId) {
-      try {
-        const Level = (await import("../models/Level.js")).Level;
-        // user.levelId can be object or string based on population
-        const lvlId = (user.levelId as any)._id || user.levelId;
-        const level = await Level.findById(lvlId);
-        if (level) {
-          levelName = level.name;
-        }
-      } catch (lvlError) {
-        console.error("Error fetching level info:", lvlError);
-      }
-    }
 
     // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
     // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)

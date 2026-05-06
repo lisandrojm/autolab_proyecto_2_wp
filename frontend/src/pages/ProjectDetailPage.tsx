@@ -173,22 +173,7 @@ export const ProjectDetailPage: React.FC = () => {
       setAvailableShifts(shifts);
       setAvailableAreas(areas);
 
-      // Ensure Coordinación is in projectForm.areasConfig
-      const coordNames = ["coordinador", "coordinación", "coordinacion"];
-      const coordinadorArea = areas.find(a => coordNames.includes(a.name.toLowerCase()));
-      if (coordinadorArea) {
-        setProjectForm(prev => {
-          const hasCoordinador = prev.areasConfig.some(ac => ac.areaId === coordinadorArea._id);
-          if (hasCoordinador) return prev;
-          return {
-            ...prev,
-            areasConfig: [
-              ...prev.areasConfig,
-              { areaId: coordinadorArea._id, shiftIds: shifts.map(s => s._id) }
-            ]
-          };
-        });
-      }
+
     } catch (err) {
       console.error("Error fetching aux data:", err);
     }
@@ -220,31 +205,7 @@ export const ProjectDetailPage: React.FC = () => {
     setSelectedAreaId("");
     setShowModal(true);
 
-    // Ensure Coordinador is in the project when editing
-    if (availableAreas.length > 0 && availableShifts.length > 0) {
-      const coordNames = ["coordinador", "coordinación", "coordinacion"];
-      const coordinadorArea = availableAreas.find(a => coordNames.includes(a.name.toLowerCase()));
-      if (coordinadorArea) {
-        setProjectForm(prev => {
-          const areaConfigIndex = prev.areasConfig.findIndex(ac => ac.areaId === coordinadorArea._id);
-          if (areaConfigIndex > -1) {
-            // Update existing to have all shifts
-            const newConfig = [...prev.areasConfig];
-            newConfig[areaConfigIndex].shiftIds = availableShifts.map(s => s._id);
-            return { ...prev, areasConfig: newConfig };
-          } else {
-            // Add it
-            return {
-              ...prev,
-              areasConfig: [
-                ...prev.areasConfig,
-                { areaId: coordinadorArea._id, shiftIds: availableShifts.map(s => s._id) }
-              ]
-            };
-          }
-        });
-      }
-    }
+
   };
 
   useEffect(() => {
@@ -547,7 +508,7 @@ export const ProjectDetailPage: React.FC = () => {
                               <div>
                                 <div className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
                                   {area.name}
-                                  {(area.isSystem || ["coordinador", "coordinación", "coordinacion"].includes(area.name.toLowerCase())) && (
+                                  {area.isSystem && (
                                     <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 uppercase tracking-wider">
                                       Sistema
                                     </span>
@@ -569,7 +530,7 @@ export const ProjectDetailPage: React.FC = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                               </button>
-                              {!(area.isSystem || ["coordinador", "coordinación", "coordinacion"].includes(area.name.toLowerCase())) && (
+                              {!area.isSystem && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -835,10 +796,10 @@ export const ProjectDetailPage: React.FC = () => {
                             <div key={i} className="p-3 rounded-xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800">
                               <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight mb-2 flex items-center gap-2">
                                 {typeof ac.areaId === "object" ? ac.areaId.name : "..."}
-                                {((typeof ac.areaId === "object" && (ac.areaId.isSystem || ac.areaId.name.toLowerCase() === "coordinador")) || 
+                                {((typeof ac.areaId === "object" && ac.areaId.isSystem) || 
                                   (() => {
                                     const a = availableAreas.find(a => a._id === ac.areaId);
-                                    return a && (a.isSystem || a.name.toLowerCase() === "coordinador");
+                                    return a && a.isSystem;
                                   })()) && (
                                   <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 uppercase tracking-wider">
                                     Sistema
