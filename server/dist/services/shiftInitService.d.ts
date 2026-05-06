@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 /**
- * Asegura que un tenant tenga el turno Mañana configurado correctamente
+ * Asegura que un tenant tenga el turno Oficina configurado correctamente
  */
 export declare function ensureDefaultShifts(tenantId: Types.ObjectId | string): Promise<void>;
 /**

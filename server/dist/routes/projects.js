@@ -13,7 +13,6 @@ import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
-import { enforceCoordinatorArea } from "../services/projectEnforcementService.js";
 const router = Router();
 const createProjectSchema = z.object({
     name: z.string().min(1),
@@ -455,7 +454,6 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
             sedeId: data.metadata?.sedeId,
             centroCostoId: data.metadata?.centroCostoId,
         };
-        await enforceCoordinatorArea(project);
         await project.save();
         // Actualizar el cliente para incluir el proyecto
         await Client.findByIdAndUpdate(clientObjectId, { $push: { proyectos: project._id } });
@@ -635,7 +633,6 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
                 currentProject.metadata.clienteId = Number(updatedClient.externalId);
             }
         }
-        await enforceCoordinatorArea(currentProject);
         await currentProject.save();
         res.json(currentProject);
     }
@@ -670,6 +667,19 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
         await Client.findByIdAndUpdate(project.clientId, {
             $pull: { proyectos: project._id },
         });
+        // --- CLEANUP ASSOCIATED DATA ---
+        // 1. Get all UserProject documents associated with this project
+        const userProjects = await UserProject.find({ projectId: project._id }).select("_id");
+        const userProjectIds = userProjects.map((up) => up._id);
+        // 2. Remove UserProject references from all users metadata and projectIds
+        await User.updateMany({ tenantId: req.tenantObjectId }, {
+            $pull: {
+                "metadata.projects": { $in: userProjectIds },
+                projectIds: project._id,
+            },
+        });
+        // 3. Delete the UserProject documents themselves
+        await UserProject.deleteMany({ projectId: project._id });
         res.json({ message: "Project deleted successfully" });
     }
     catch (error) {
@@ -814,8 +824,19 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             if (rfInfo)
                 rolFrameName = rfInfo.name;
         }
+        // Sanitize areaShiftAssignments to ensure valid ObjectIds
+        let sanitizedAssignments = [];
+        if (contract.areaShiftAssignments && Array.isArray(contract.areaShiftAssignments)) {
+            sanitizedAssignments = contract.areaShiftAssignments
+                .map((asa) => ({
+                areaId: isValidId(asa.areaId) ? new Types.ObjectId(asa.areaId) : null,
+                shiftIds: (asa.shiftIds || []).filter(isValidId).map((id) => new Types.ObjectId(id))
+            }))
+                .filter((asa) => asa.areaId !== null);
+        }
         const enrichedContract = {
             ...contract,
+            areaShiftAssignments: sanitizedAssignments,
             nombre_sede: sede?.name || "Sin sede",
             nombre_categoria_sat: cat?.name || "Sin categoria",
             nombre_estado_empleado: estado?.name || "Activo",
@@ -831,15 +852,19 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             empleado_id: user.metadata?.id,
         };
         // 2. Find or Create UserProject (assignment)
+        // Search by internal IDs first, then also by external IDs to prevent duplicate key errors
+        const extProjId = enrichedContract.proyecto_id;
+        const extEmpId = enrichedContract.empleado_id;
         let userProject = await UserProject.findOne({
-            projectId,
-            userId,
+            $or: [
+                { projectId, userId },
+                ...(extProjId && extEmpId ? [{ externalProjectId: extProjId, externalEmployeeId: extEmpId }] : []),
+            ],
         });
         if (!userProject) {
-            // New assignment
             userProject = new UserProject({
-                projectId,
-                userId,
+                projectId: project._id,
+                userId: user._id,
                 externalProjectId: enrichedContract.proyecto_id,
                 externalEmployeeId: enrichedContract.empleado_id,
                 nombre_proyecto: project.name,
@@ -847,28 +872,13 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 contracts: [enrichedContract],
             });
         }
-        else if (isUpdate) {
-            // Update mode: replace the last contract with the new data
-            if (userProject.contracts.length > 0) {
+        else {
+            if (isUpdate && userProject.contracts.length > 0) {
                 userProject.contracts[userProject.contracts.length - 1] = enrichedContract;
             }
             else {
                 userProject.contracts.push(enrichedContract);
             }
-            // Sync IDs
-            userProject.projectId = project._id;
-            userProject.userId = user._id;
-            if (enrichedContract.proyecto_id)
-                userProject.externalProjectId = enrichedContract.proyecto_id;
-            if (enrichedContract.empleado_id)
-                userProject.externalEmployeeId = enrichedContract.empleado_id;
-            if (rolFrameName)
-                userProject.nombre_rol_frame = rolFrameName;
-        }
-        else {
-            // Add to contracts history (new contract for existing project assignment)
-            userProject.contracts.push(enrichedContract);
-            // Ensure IDs are correctly synced
             userProject.projectId = project._id;
             userProject.userId = user._id;
             if (enrichedContract.proyecto_id)
@@ -879,24 +889,31 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 userProject.nombre_rol_frame = rolFrameName;
         }
         await userProject.save();
-        // 3. Sync internal arrays (Project.assignedUsers and User.projectIds)
-        // Update teamConfig in project for UI/listing purposes
-        await Project.findByIdAndUpdate(projectId, {
-            $addToSet: { assignedUsers: user._id },
-            $pull: { teamConfig: { userId: user._id } } // Remove old config if exists
-        });
-        await Project.findByIdAndUpdate(projectId, {
-            $push: {
-                teamConfig: {
-                    userId: user._id,
-                    areaId: contract.areaId,
-                    shiftId: contract.shiftId,
-                    areaShiftAssignments: contract.areaShiftAssignments || [],
-                    canRegister: true, // Default
-                    useProjectSchedule: true // Default
-                }
-            }
-        });
+        // 3. Sync internal arrays in Project and User
+        // Update assignedUsers
+        if (!project.assignedUsers.some(id => id.toString() === user._id.toString())) {
+            project.assignedUsers.push(user._id);
+        }
+        // Update teamConfig (replace if exists)
+        if (!project.teamConfig)
+            project.teamConfig = [];
+        const configIndex = project.teamConfig.findIndex(c => c.userId.toString() === user._id.toString());
+        const newConfig = {
+            userId: user._id,
+            areaId: isValidId(contract.areaId) ? new Types.ObjectId(contract.areaId) : undefined,
+            shiftId: isValidId(contract.shiftId) ? new Types.ObjectId(contract.shiftId) : undefined,
+            areaShiftAssignments: sanitizedAssignments,
+            canRegister: true,
+            useProjectSchedule: true
+        };
+        if (configIndex > -1) {
+            project.teamConfig[configIndex] = newConfig;
+        }
+        else {
+            project.teamConfig.push(newConfig);
+        }
+        await project.save();
+        // Update User metadata and projectIds
         await User.findByIdAndUpdate(userId, {
             $addToSet: {
                 projectIds: project._id,
@@ -906,11 +923,35 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         res.json({ message: isUpdate ? "Member updated successfully" : "Member assigned successfully", userProject });
     }
     catch (error) {
+        // Handle duplicate key error by finding the existing document and updating it
+        if (error.code === 11000) {
+            try {
+                console.log("[AssignMember] E11000 duplicate key, attempting findOneAndUpdate fallback...");
+                const { projectId } = req.params;
+                const { userId, contract, isUpdate: isUpd } = req.body;
+                // Find the conflicting document by any matching criteria
+                const existing = await UserProject.findOne({
+                    $or: [
+                        { projectId, userId },
+                        { externalProjectId: contract?.externalProjectId, externalEmployeeId: contract?.externalEmployeeId },
+                    ],
+                });
+                if (existing) {
+                    // Update the existing document's internal IDs to match
+                    existing.projectId = new Types.ObjectId(projectId);
+                    existing.userId = new Types.ObjectId(userId);
+                    await existing.save();
+                    return res.json({ message: "Member updated successfully (resolved conflict)", userProject: existing });
+                }
+            }
+            catch (retryError) {
+                console.error("Assign member retry also failed:", retryError);
+            }
+        }
         console.error("Assign member error CRASH:", error);
         res.status(500).json({
             error: "Internal server error during assignment",
-            details: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            details: error.message
         });
     }
 });

@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
 /**
- * Asegura que un tenant tenga el área Coordinador configurada correctamente
+ * No longer creates default areas. Logic removed as requested.
  */
 export declare function ensureDefaultAreas(tenantId: Types.ObjectId | string): Promise<void>;
 /**
- * Verifica que todos los tenants existentes tengan las áreas correctas
+ * No longer verifies areas for all tenants.
  */
 export declare function ensureAllTenantsHaveDefaultAreas(): Promise<void>;

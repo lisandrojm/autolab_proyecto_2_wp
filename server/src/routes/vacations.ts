@@ -660,8 +660,8 @@ router.post("/", async (req, res) => {
 
         const projectsToCheck = rule.projectId ? [rule.projectId] : user.projectIds?.length ? user.projectIds : [];
         const areasToCheck = rule.areaId ? [rule.areaId] : userAreaId ? [userAreaId] : [];
-        const positionsToCheck = rule.positionId ? [rule.positionId] : user.positionId ? [user.positionId] : [];
-        const levelsToCheck = rule.levelId ? [rule.levelId] : user.levelId ? [user.levelId] : [];
+        const positionsToCheck = [undefined];
+        const levelsToCheck = [undefined];
 
         const finalProjects = projectsToCheck.length > 0 ? projectsToCheck : [undefined];
         const finalAreas = areasToCheck.length > 0 ? areasToCheck : [undefined];
@@ -674,8 +674,6 @@ router.post("/", async (req, res) => {
               for (const lId of finalLevels) {
                 const otherUsersQuery: any = { tenantId, "metadata.activo": true, _id: { $ne: userId } };
                 if (pId) otherUsersQuery.projectIds = pId;
-                if (posId) otherUsersQuery.positionId = posId;
-                if (lId) otherUsersQuery.levelId = lId;
 
                 if (aId) {
                   const usersInArea = await UserProject.find({ areaId: aId }).distinct("userId");

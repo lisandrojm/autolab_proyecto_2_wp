@@ -492,32 +492,16 @@ router.get("/stats", async (req: AuthenticatedRequest & TenantRequest, res) => {
     let effectiveVacationConfig: any = undefined;
     let vacationConfigSource = "Global";
 
-    // A. Check Position (Highest Priority)
-    if (user.positionId) {
-      try {
-        const Position = (await import("../models/Position.js")).Position;
-        // User.positionId can be object or string depending on population, usually ID in raw find
-        const posId = user.positionId._id || user.positionId;
-        const position = await Position.findById(posId).select("name vacationConfig").lean();
-        if (position) {
-          positionName = position.name;
-          if (position.vacationConfig && !position.vacationConfig.useGlobalConfig) {
-            effectiveVacationConfig = position.vacationConfig;
-            vacationConfigSource = "Cargo";
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching position for stats:", err);
-      }
+    // A. Check Position (Legacy field removed, using profile.position as name only)
+    if (profile.position) {
+      positionName = profile.position;
     }
 
-    // B. Check Area (Second Priority)
-    if (!effectiveVacationConfig && user.areaId) {
+    // B. Check Area (Legacy field removed, using profile.department to resolve)
+    if (!effectiveVacationConfig && profile.department) {
       try {
         const Area = (await import("../models/Area.js")).Area;
-        // User.areaId can be object or string
-        const arId = user.areaId._id || user.areaId;
-        const area = await Area.findById(arId).select("name vacationConfig").lean();
+        const area = await Area.findOne({ tenantId, name: profile.department }).select("name vacationConfig").lean();
         if (area) {
           areaName = area.name;
           if (area.vacationConfig && !area.vacationConfig.useGlobalConfig) {

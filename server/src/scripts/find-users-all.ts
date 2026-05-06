@@ -19,7 +19,7 @@ async function run() {
   let count = 0;
   for (const u of allUsers) {
     // Accessing raw object to see if areaId exists even if not in schema
-    const raw = u.toObject();
+    const raw = u.toObject() as any;
     if (String(raw.areaId) === areaId) {
       console.log(`- Found user: ${u.firstName} ${u.lastName} (${u.email}), areaId: ${raw.areaId}`);
       count++;

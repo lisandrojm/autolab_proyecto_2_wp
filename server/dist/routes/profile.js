@@ -2,8 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { UserProfile } from "../models/UserProfile.js";
 import { User } from "../models/User.js";
-import { Area } from "../models/Area.js";
-import { Position } from "../models/Position.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 const router = Router();
@@ -29,7 +27,52 @@ router.get("/", async (req, res) => {
         // Fetch user first to get details for profile creation if needed
         let user;
         try {
-            user = await User.findById(userId).populate("metadata.projects");
+            user = await User.findById(userId).populate({
+                path: "metadata.projects",
+                populate: [
+                    {
+                        path: "projectId",
+                        select: "name status clientId",
+                        populate: { path: "clientId", select: "name" },
+                    },
+                    {
+                        path: "contracts.areaId",
+                        select: "name",
+                    },
+                    {
+                        path: "contracts.areaShiftAssignments.areaId",
+                        select: "name",
+                    },
+                    {
+                        path: "contracts.areaShiftAssignments.shiftIds",
+                        select: "name startTime endTime",
+                    },
+                    {
+                        path: "areaId",
+                        select: "name",
+                    },
+                ],
+            });
+            // FILTER: Only show projects that exist and have active contracts
+            if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
+                const now = new Date();
+                user.metadata.projects = user.metadata.projects.filter((up) => {
+                    // 1. Project must exist
+                    if (!up || !up.projectId)
+                        return false;
+                    // 2. Must have at least one active contract (no fecha_baja or fecha_baja in future)
+                    const hasActiveContract = !up.contracts ||
+                        up.contracts.length === 0 ||
+                        up.contracts.some((c) => {
+                            if (!c.fecha_baja_contrato)
+                                return true;
+                            const endDate = new Date(c.fecha_baja_contrato);
+                            endDate.setHours(23, 59, 59, 999);
+                            return endDate >= now;
+                        });
+                    return hasActiveContract;
+                });
+            }
         }
         catch (e) {
             console.error(`Error fetching user ${userId}:`, e);
@@ -59,53 +102,8 @@ router.get("/", async (req, res) => {
         }
         let areaName = profile.department || "";
         let areaMembers = 0;
-        if (user && user.areaId) {
-            try {
-                const area = await Area.findById(user.areaId);
-                if (area) {
-                    areaName = area.name;
-                    // Count members in this area
-                    areaMembers = await User.countDocuments({
-                        tenantId: req.tenantObjectId,
-                        areaId: user.areaId,
-                        isActive: true,
-                    });
-                }
-                else {
-                    console.warn(`Area not found for user ${userId} with areaId ${user.areaId}`);
-                }
-            }
-            catch (areaError) {
-                console.error("Error fetching area info:", areaError);
-            }
-        }
         let positionName = profile.position || "";
-        if (user && user.positionId) {
-            try {
-                const position = await Position.findById(user.positionId);
-                if (position) {
-                    positionName = position.name;
-                }
-            }
-            catch (posError) {
-                console.error("Error fetching position info:", posError);
-            }
-        }
         let levelName = "";
-        if (user && user.levelId) {
-            try {
-                const Level = (await import("../models/Level.js")).Level;
-                // user.levelId can be object or string based on population
-                const lvlId = user.levelId._id || user.levelId;
-                const level = await Level.findById(lvlId);
-                if (level) {
-                    levelName = level.name;
-                }
-            }
-            catch (lvlError) {
-                console.error("Error fetching level info:", lvlError);
-            }
-        }
         // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
         // Ensure hireDate is present (fallback to user's hireDate if profile doesn't have it)
         if (!profile.hireDate && user?.hireDate) {
@@ -170,7 +168,31 @@ router.get("/", async (req, res) => {
             schedules: Array.from(userSchedules),
             projectDates: Array.from(userProjectDates),
         };
-        const metadata = user?.metadata;
+        const metadata = user?.metadata ? user.metadata.toObject() : undefined;
+        if (metadata && metadata.projects && Array.isArray(metadata.projects)) {
+            metadata.projects.forEach((up) => {
+                // Enrich Project Name if missing
+                if (!up.nombre_proyecto && up.projectId?.name) {
+                    up.nombre_proyecto = up.projectId.name;
+                }
+                // Enrich Client Name if missing (from populated projectId.clientId)
+                if (!up.nombre_cliente && up.projectId?.clientId?.name) {
+                    up.nombre_cliente = up.projectId.clientId.name;
+                }
+                // Enrich Area Name if missing (from populated areaId)
+                if (!up.nombre_area && up.areaId?.name) {
+                    up.nombre_area = up.areaId.name;
+                }
+                // Enrich Areas in contracts if missing (from populated contracts.areaId)
+                if (up.contracts && Array.isArray(up.contracts)) {
+                    up.contracts.forEach((c) => {
+                        if (!c.nombre_area && c.areaId?.name) {
+                            c.nombre_area = c.areaId.name;
+                        }
+                    });
+                }
+            });
+        }
         // -------------------------------------------------------------------------
         // Contract Check Logic: Disable Vacations button if contract type is blacklist
         // -------------------------------------------------------------------------
@@ -287,7 +309,32 @@ router.get("/stats", async (req, res) => {
         let areaName = "";
         // 1. Get User for Vacation Days (calculated virtual) & Hire Date
         const User = (await import("../models/User.js")).User;
-        const user = await User.findById(userId).populate("metadata.projects");
+        const user = await User.findById(userId).populate({
+            path: "metadata.projects",
+            populate: [
+                {
+                    path: "projectId",
+                    select: "name status clientId",
+                    populate: { path: "clientId", select: "name" },
+                },
+                {
+                    path: "contracts.areaId",
+                    select: "name",
+                },
+                {
+                    path: "contracts.areaShiftAssignments.areaId",
+                    select: "name",
+                },
+                {
+                    path: "contracts.areaShiftAssignments.shiftIds",
+                    select: "name startTime endTime",
+                },
+                {
+                    path: "areaId",
+                    select: "name",
+                },
+            ],
+        });
         // 2. Get Profile for other stats (daysWorked) if needed
         const profile = await UserProfile.findOne({
             tenantId,
@@ -300,7 +347,7 @@ router.get("/stats", async (req, res) => {
         let calculatedTotalDays = 0;
         if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
             calculatedTotalDays = user.metadata.projects.reduce((acc, p) => {
-                if (!p || !p.contracts || !Array.isArray(p.contracts))
+                if (!p || !p.projectId || !p.contracts || !Array.isArray(p.contracts))
                     return acc;
                 return (acc +
                     p.contracts.reduce((cAcc, c) => {
@@ -396,32 +443,15 @@ router.get("/stats", async (req, res) => {
         let projectName = "Sin Proyecto";
         let effectiveVacationConfig = undefined;
         let vacationConfigSource = "Global";
-        // A. Check Position (Highest Priority)
-        if (user.positionId) {
-            try {
-                const Position = (await import("../models/Position.js")).Position;
-                // User.positionId can be object or string depending on population, usually ID in raw find
-                const posId = user.positionId._id || user.positionId;
-                const position = await Position.findById(posId).select("name vacationConfig").lean();
-                if (position) {
-                    positionName = position.name;
-                    if (position.vacationConfig && !position.vacationConfig.useGlobalConfig) {
-                        effectiveVacationConfig = position.vacationConfig;
-                        vacationConfigSource = "Cargo";
-                    }
-                }
-            }
-            catch (err) {
-                console.error("Error fetching position for stats:", err);
-            }
+        // A. Check Position (Legacy field removed, using profile.position as name only)
+        if (profile.position) {
+            positionName = profile.position;
         }
-        // B. Check Area (Second Priority)
-        if (!effectiveVacationConfig && user.areaId) {
+        // B. Check Area (Legacy field removed, using profile.department to resolve)
+        if (!effectiveVacationConfig && profile.department) {
             try {
                 const Area = (await import("../models/Area.js")).Area;
-                // User.areaId can be object or string
-                const arId = user.areaId._id || user.areaId;
-                const area = await Area.findById(arId).select("name vacationConfig").lean();
+                const area = await Area.findOne({ tenantId, name: profile.department }).select("name vacationConfig").lean();
                 if (area) {
                     areaName = area.name;
                     if (area.vacationConfig && !area.vacationConfig.useGlobalConfig) {

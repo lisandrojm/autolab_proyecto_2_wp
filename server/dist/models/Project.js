@@ -25,6 +25,14 @@ const projectSchema = new Schema({
             useProjectSchedule: { type: Boolean, default: true }, // Use project's schedule by default
             startTime: { type: String }, // "HH:mm" format
             endTime: { type: String }, // "HH:mm" format
+            areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+            shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
+            areaShiftAssignments: [
+                {
+                    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+                    shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+                },
+            ],
         },
     ],
     favorite: { type: Boolean, default: false, index: true },

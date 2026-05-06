@@ -197,6 +197,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
                 { path: "positionId", select: "name description", model: Position },
                 { path: "levelId", select: "name description", model: Level },
                 { path: "areaId", select: "name description", model: Area },
+                { path: "projectId", select: "name status", model: Project },
             ],
         })
             .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
@@ -205,8 +206,15 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
             .limit(limitNum)
             .lean();
         const [users, total] = await Promise.all([query.exec(), User.countDocuments(filter).exec()]);
+        // Filter out projects that no longer exist for each user
+        const cleanedUsers = users.map((u) => {
+            if (u.metadata?.projects && Array.isArray(u.metadata.projects)) {
+                u.metadata.projects = u.metadata.projects.filter((up) => up && up.projectId);
+            }
+            return u;
+        });
         // Fast enrichment using populated data
-        const enrichedUsers = users.map((userObj) => {
+        const enrichedUsers = cleanedUsers.map((userObj) => {
             const userSedeNames = new Set();
             const userRolFrameNames = new Set();
             if (userObj.metadata?.projects && Array.isArray(userObj.metadata.projects)) {
@@ -407,14 +415,20 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
                 { path: "positionId", select: "name description", model: Position },
                 { path: "levelId", select: "name description", model: Level },
                 { path: "areaId", select: "name description", model: Area },
+                { path: "projectId", select: "name status", model: "Project" },
             ],
         })
-            .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame });
+            .populate({ path: "metadata.roles_frame", select: "name", model: RoleFrame })
+            .lean();
         if (!user) {
             res.status(404).json({ error: "User not found" });
             return;
         }
-        res.json(user);
+        const userObj = user;
+        if (userObj.metadata && Array.isArray(userObj.metadata.projects)) {
+            userObj.metadata.projects = userObj.metadata.projects.filter((up) => up && up.projectId);
+        }
+        res.json(userObj);
     }
     catch (error) {
         console.error("Get user error:", error);

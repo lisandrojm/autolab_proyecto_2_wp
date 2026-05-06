@@ -15,7 +15,6 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
-import { ensureAllTenantsHaveDefaultAreas } from "./services/areaInitService.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
@@ -181,14 +180,6 @@ connectDB()
         console.error("❌ Role verification failed:", error);
     }
     try {
-        console.log("🔍 Verifying all tenants have default areas...");
-        await ensureAllTenantsHaveDefaultAreas();
-        console.log("✅ Area verification completed successfully");
-    }
-    catch (error) {
-        console.error("❌ Area verification failed:", error);
-    }
-    try {
         console.log("🔍 Verifying all tenants have default shifts...");
         await ensureAllTenantsHaveDefaultShifts();
         console.log("✅ Shift verification completed successfully");
@@ -209,17 +200,29 @@ connectDB()
     if (USE_HTTPS) {
         const keyPath = env.SSL_KEY_PATH;
         const certPath = env.SSL_CERT_PATH;
-        const sslOptions = {
-            key: fs.readFileSync(keyPath),
-            cert: fs.readFileSync(certPath),
-        };
-        https.createServer(sslOptions, app).listen(PORT, () => {
-            console.log(`🚀 HTTPS Server running on port ${PORT}`);
-            console.log(`📱 Environment: ${env.NODE_ENV}`);
-            console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
-            console.log(`🩺 Health:        https://localhost:${PORT}/api/v1/health`);
-            console.log(`🌍 Env info:       https://localhost:${PORT}/api/v1/env`);
-        });
+        if (keyPath && certPath && fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+            const sslOptions = {
+                key: fs.readFileSync(keyPath),
+                cert: fs.readFileSync(certPath),
+            };
+            https.createServer(sslOptions, app).listen(PORT, () => {
+                console.log(`🚀 HTTPS Server running on port ${PORT}`);
+                console.log(`📱 Environment: ${env.NODE_ENV}`);
+                console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
+                console.log(`🩺 Health:        https://localhost:${PORT}/api/v1/health`);
+                console.log(`🌍 Env info:       https://localhost:${PORT}/api/v1/env`);
+            });
+        }
+        else {
+            console.warn("⚠️  SSL Certificates not found or paths not configured. Falling back to HTTP.");
+            http.createServer(app).listen(PORT, () => {
+                console.log(`🚀 HTTP Server (Fallback) running on port ${PORT}`);
+                console.log(`📱 Environment: ${env.NODE_ENV}`);
+                console.log(`🔗 CORS origins (env): ${ENV_ALLOWED.join(", ") || "(none)"}`);
+                console.log(`🩺 Health:        http://localhost:${PORT}/api/v1/health`);
+                console.log(`🌍 Env info:       http://localhost:${PORT}/api/v1/env`);
+            });
+        }
     }
     else {
         http.createServer(app).listen(PORT, () => {

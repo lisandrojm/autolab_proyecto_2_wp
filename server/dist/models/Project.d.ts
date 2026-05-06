@@ -51,6 +51,12 @@ export interface IProject extends Document {
         useProjectSchedule?: boolean;
         startTime?: string;
         endTime?: string;
+        areaId?: Types.ObjectId;
+        shiftId?: Types.ObjectId;
+        areaShiftAssignments?: {
+            areaId: Types.ObjectId;
+            shiftIds: Types.ObjectId[];
+        }[];
     }[];
     favorite?: boolean;
     vacationConfig?: {
