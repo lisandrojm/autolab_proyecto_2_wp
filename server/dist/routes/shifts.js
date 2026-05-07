@@ -6,6 +6,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 const router = Router();
 const createShiftSchema = z.object({
     name: z.string().min(1).max(100),
@@ -52,7 +53,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
             filter.tenantId = tenantId;
         }
         if (name) {
-            filter.name = { $regex: name, $options: "i" };
+            filter.name = createFuzzySearchRegex(name);
         }
         const skip = (Number(page) - 1) * Number(limit);
         const [shifts, total] = await Promise.all([

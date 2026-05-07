@@ -8,9 +8,28 @@
 export const createFuzzySearchRegex = (query: string): string => {
   if (!query) return "";
   
-  // Remove spaces from the query and escape special regex characters
-  const normalizedQuery = query.trim().replace(/\s+/g, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Normalize query: lowercase, trim, remove internal spaces, remove accents
+  const normalizedQuery = query
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escape special regex chars
   
-  // Create a regex that allows optional whitespace between every character
-  return normalizedQuery.split("").join("\\s*");
+  // Define accent map
+  const accentMap: Record<string, string> = {
+    'a': '[aáàäâ]',
+    'e': '[eéèëê]',
+    'i': '[iíìïî]',
+    'o': '[oóòöô]',
+    'u': '[uúùüû]',
+    'n': '[nñ]'
+  };
+
+  // Create regex with optional whitespace and accent awareness
+  return normalizedQuery
+    .split("")
+    .map(char => accentMap[char] || char)
+    .join("\\s*");
 };

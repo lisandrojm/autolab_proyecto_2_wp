@@ -28,6 +28,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 const router = Router();
 const createUserSchema = z.object({
     email: z.string().email(),
@@ -96,7 +97,8 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
             andConditions.push({ tenantId: req.tenantObjectId });
         }
         if (email) {
-            const searchRegex = { $regex: String(email), $options: "i" };
+            const fuzzySearch = createFuzzySearchRegex(String(email));
+            const searchRegex = { $regex: fuzzySearch, $options: "i" };
             andConditions.push({
                 $or: [
                     { email: searchRegex },
@@ -115,7 +117,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
                                         { $ifNull: ["$lastName", ""] }
                                     ]
                                 },
-                                regex: String(email),
+                                regex: fuzzySearch,
                                 options: "i"
                             }
                         }
@@ -130,7 +132,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
                                         { $ifNull: ["$metadata.apellido", ""] }
                                     ]
                                 },
-                                regex: String(email),
+                                regex: fuzzySearch,
                                 options: "i"
                             }
                         }

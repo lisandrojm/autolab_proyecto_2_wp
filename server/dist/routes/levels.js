@@ -7,6 +7,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 const router = Router();
 const createLevelSchema = z
     .object({
@@ -65,7 +66,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_level
             filter.tenantId = tenantId;
         }
         if (name) {
-            filter.name = { $regex: name, $options: "i" };
+            filter.name = { $regex: createFuzzySearchRegex(String(name)), $options: "i" };
         }
         if (positionId) {
             const posObjId = toObjectIdOrNull(positionId);

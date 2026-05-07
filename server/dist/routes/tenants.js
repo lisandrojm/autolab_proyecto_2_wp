@@ -6,6 +6,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requirePlatform } from "../middleware/requirePlatform.js";
 import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 const router = Router();
 const createTenantSchema = z.object({
     name: z.string().min(1).max(100),
@@ -70,10 +71,11 @@ router.get("/", authenticateToken, requirePlatform(), async (req, res) => {
         const { page = 1, limit = 20, name, status } = req.query;
         const filter = {};
         if (name) {
+            const fuzzyRegex = createFuzzySearchRegex(name);
             filter.$or = [
-                { name: { $regex: name, $options: 'i' } },
-                { slug: { $regex: name, $options: 'i' } },
-                { 'company.legalName': { $regex: name, $options: 'i' } }
+                { name: fuzzyRegex },
+                { slug: fuzzyRegex },
+                { 'company.legalName': fuzzyRegex }
             ];
         }
         if (status === 'active' || status === 'inactive') {

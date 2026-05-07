@@ -7,6 +7,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 const router = Router();
 const createPositionSchema = z.object({
     name: z.string().min(1).max(100),
@@ -58,7 +59,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_posit
             filter.tenantId = tenantId;
         }
         if (name) {
-            filter.name = { $regex: name, $options: "i" };
+            filter.name = { $regex: createFuzzySearchRegex(String(name)), $options: "i" };
         }
         const skip = (Number(page) - 1) * Number(limit);
         const [positions, total] = await Promise.all([Position.find(filter).populate("tenantId", "name slug").sort({ name: 1 }).skip(skip).limit(Number(limit)), Position.countDocuments(filter)]);
