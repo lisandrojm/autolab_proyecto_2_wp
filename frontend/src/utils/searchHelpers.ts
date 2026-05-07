@@ -12,11 +12,14 @@ export const fuzzyMatch = (target: string | null | undefined, query: string): bo
   const normalize = (str: string) => 
     str.toLowerCase()
        .normalize("NFD")
-       .replace(/[\u0300-\u036f]/g, "")
-       .replace(/\s+/g, "");
+       .replace(/[\u0300-\u036f]/g, "");
 
-  const normalizedQuery = normalize(query);
-  const normalizedTarget = normalize(target);
+  const normalizedTarget = normalize(target).replace(/\s+/g, "");
+  const queryWords = query.trim().split(/\s+/);
   
-  return normalizedTarget.includes(normalizedQuery);
+  // Check if every word in the query is present in the normalized target
+  return queryWords.every(word => {
+    const normalizedWord = normalize(word);
+    return normalizedTarget.includes(normalizedWord);
+  });
 };

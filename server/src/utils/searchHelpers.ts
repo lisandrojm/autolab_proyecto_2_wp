@@ -8,16 +8,8 @@
 export const createFuzzySearchRegex = (query: string): string => {
   if (!query) return "";
   
-  // Normalize query: lowercase, trim, remove internal spaces, remove accents
-  const normalizedQuery = query
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escape special regex chars
+  const queryWords = query.trim().split(/\s+/);
   
-  // Define accent map
   const accentMap: Record<string, string> = {
     'a': '[aáàäâ]',
     'e': '[eéèëê]',
@@ -27,9 +19,23 @@ export const createFuzzySearchRegex = (query: string): string => {
     'n': '[nñ]'
   };
 
-  // Create regex with optional whitespace and accent awareness
-  return normalizedQuery
-    .split("")
-    .map(char => accentMap[char] || char)
-    .join("\\s*");
+  const processWord = (word: string) => {
+    return word
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .split("")
+      .map(char => accentMap[char] || char)
+      .join("\\s*");
+  };
+
+  if (queryWords.length === 1) {
+    return processWord(queryWords[0]);
+  }
+
+  // For multiple words, use lookaheads to ensure all words are present in any order
+  return queryWords
+    .map(word => `(?=.*${processWord(word)})`)
+    .join("");
 };
