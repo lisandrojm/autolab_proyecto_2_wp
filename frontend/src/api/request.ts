@@ -27,6 +27,7 @@ export interface ActivityReport {
   attendance: AttendanceRecord[];
   projectId?: any;
   areaId?: any;
+  shiftId?: any;
   submittedAt: string;
   userId?: any;
   tenantId: string;

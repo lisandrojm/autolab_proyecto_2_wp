@@ -6,6 +6,8 @@ import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfi
 import { activityReportsAPI, ActivityReport } from "../../../../api/request";
 import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
+import { areasAPI, Area } from "../../../../api/areas";
+import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
@@ -23,7 +25,7 @@ interface EmployeeOption {
   positionName?: string;
   isActive?: boolean;
   hasActiveContract?: boolean;
-  metadataProjects?: Array<{ projectId: string; roleFrame: string; hasActiveContract: boolean; contractStartTime?: string; contractEndTime?: string }>;
+  metadataProjects?: Array<{ projectId: string; roleFrame: string; hasActiveContract: boolean; contractStartTime?: string; contractEndTime?: string; areaId?: string; shiftId?: string }>;
 }
 
 interface LocalAttendanceRecord {
@@ -257,6 +259,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   });
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedAreaId, setSelectedAreaId] = useState<string>("");
+  const [selectedShiftId, setSelectedShiftId] = useState<string>("");
   const [hasActivity, setHasActivity] = useState<boolean | null>(null);
   const [comments, setComments] = useState("");
 
@@ -303,6 +307,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [allProjectsCache, setAllProjectsCache] = useState<Project[]>([]);
+  const [allAreas, setAllAreas] = useState<Area[]>([]);
+  const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [reports, setReports] = useState<ActivityReport[]>([]);
 
   // Calendar State
@@ -376,6 +382,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   hasActiveContract: hasActive,
                   contractStartTime: activeContract?.hora_inicio || undefined,
                   contractEndTime: activeContract?.hora_fin || undefined,
+                  areaId: p.areaId || activeContract?.areaId || undefined,
+                  shiftId: p.shiftId || activeContract?.shiftId || undefined,
                 };
               }) || [],
           })),
@@ -390,6 +398,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         setAllProjectsCache(allProjects);
       } catch (e) {
         console.error("Error loading projects", e);
+      }
+      
+      // 4. Fetch Areas & Shifts
+      try {
+        const [areas, shifts] = await Promise.all([areasAPI.listAll(), shiftsAPI.getAll()]);
+        setAllAreas(areas);
+        setAllShifts(shifts);
+      } catch (e) {
+        console.error("Error loading areas/shifts", e);
       }
 
       fetchReports();
@@ -444,9 +461,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     return employees.filter((e) => {
       if (!e.projectIds || !e.projectIds.includes(selectedProjectId)) return false;
       const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
-      return projMeta ? projMeta.hasActiveContract : false; // Only show personnel with active contracts for this project
+      if (!projMeta || !projMeta.hasActiveContract) return false;
+
+      // Filter by Area if selected
+      if (selectedAreaId && projMeta.areaId !== selectedAreaId) return false;
+      // Filter by Shift if selected
+      if (selectedShiftId && projMeta.shiftId !== selectedShiftId) return false;
+
+      return true;
     });
-  }, [employees, selectedProjectId]);
+  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId]);
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
@@ -1086,6 +1110,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         comments,
         attendance,
         projectId: selectedProjectId || undefined,
+        areaId: selectedAreaId || undefined,
+        shiftId: selectedShiftId || undefined,
       };
 
       if (selectedReportId) {
@@ -1123,6 +1149,20 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       setSelectedProjectId(pId);
     } else {
       setSelectedProjectId("");
+    }
+
+    if (report.areaId) {
+      const aId = typeof report.areaId === "object" ? report.areaId._id : report.areaId;
+      setSelectedAreaId(aId);
+    } else {
+      setSelectedAreaId("");
+    }
+
+    if (report.shiftId) {
+      const sId = typeof report.shiftId === "object" ? report.shiftId._id : report.shiftId;
+      setSelectedShiftId(sId);
+    } else {
+      setSelectedShiftId("");
     }
 
     setComments(report.comments || "");
@@ -1315,6 +1355,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 value={selectedProjectId}
                                 onChange={(e) => {
                                   setSelectedProjectId(e.target.value);
+                                  setSelectedAreaId("");
+                                  setSelectedShiftId("");
                                   setDraftTypeId("");
                                 }}
                                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -1329,6 +1371,57 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded text-sm">No hay proyectos asignados.</div>
                             )}
                           </div>
+
+                          {/* Area Selector */}
+                          {selectedProjectId && selectedProject?.areasConfig && selectedProject.areasConfig.length > 0 && (
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Área | Turno</label>
+                              <select
+                                value={selectedAreaId}
+                                onChange={(e) => {
+                                  setSelectedAreaId(e.target.value);
+                                  setSelectedShiftId("");
+                                }}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                              >
+                                <option value="">Todas las Áreas | Turnos</option>
+                                {selectedProject.areasConfig.map((ac) => {
+                                  const area = allAreas.find((a) => a._id === (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId));
+                                  return (
+                                    <option key={area?._id || ac.areaId} value={area?._id || ac.areaId}>
+                                      {area?.name || "Cargando..."}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          )}
+
+                          {/* Shift Selector */}
+                          {selectedAreaId && (() => {
+                            const areaConfig = selectedProject?.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
+                            return areaConfig && areaConfig.shiftIds && areaConfig.shiftIds.length > 0;
+                          })() && (
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
+                              <select
+                                value={selectedShiftId}
+                                onChange={(e) => setSelectedShiftId(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                              >
+                                <option value="">Todos los Turnos</option>
+                                {selectedProject?.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId)?.shiftIds.map((sId: any) => {
+                                  const shiftId = typeof sId === "object" ? sId?._id : sId;
+                                  const shift = allShifts.find((s) => s._id === shiftId);
+                                  return (
+                                    <option key={shiftId} value={shiftId}>
+                                      {shift?.name || "Cargando..."}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          )}
 
                           {/* Date - Moved Below Project */}
                           <div>
@@ -1471,7 +1564,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <div className="flex items-center justify-center w-8 h-8 rounded bg-blue-500/10 text-blue-500">
                           <FontAwesomeIcon icon={faBriefcase} className="text-lg" />
                         </div>
-                        <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                        <div className="flex flex-col flex-1 overflow-hidden">
                           <h3 className="text-lg sm:text-xl font-bold text-white truncate flex items-center gap-2 mb-0 leading-tight">
                             <span className="shrink-0">{typeof selectedProject.clientId === "object" && selectedProject.clientId.name ? selectedProject.clientId.name : "Cliente"}</span>
                             <span className="font-extrabold mx-1">|</span>
@@ -1480,6 +1573,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               <FontAwesomeIcon icon={faInfoCircle} className="text-sm" />
                             </button>
                           </h3>
+                          {(selectedAreaId || selectedShiftId) && (
+                            <div className="flex gap-2 mt-1">
+                              {selectedAreaId && (
+                                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
+                                  <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                  {allAreas.find(a => a._id === selectedAreaId)?.name || "Área | Turno"}
+                                </span>
+                              )}
+                              {selectedShiftId && (
+                                <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
+                                  <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                                  {allShifts.find(s => s._id === selectedShiftId)?.name || "Turno"}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1530,11 +1639,21 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
                                             {currentEmp.name}
                                           </h3>
-                                          <div className="flex items-center gap-2 mt-1 ml-10">
+                                          <div className="flex flex-wrap items-center gap-2 mt-1 ml-10">
                                             <span className="text-xs text-slate-500 dark:text-gray-400">{currentEmp.positionName || "Colaborador"}</span>
                                             {(() => {
-                                              const roleFrame = currentEmp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
-                                              return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider">{roleFrame}</span> : null;
+                                              const projMeta = currentEmp.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                                              const roleFrame = projMeta?.roleFrame;
+                                              const empArea = allAreas.find(a => a._id === projMeta?.areaId)?.name;
+                                              const empShift = allShifts.find(s => s._id === projMeta?.shiftId)?.name;
+
+                                              return (
+                                                <>
+                                                  {roleFrame && <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider">{roleFrame}</span>}
+                                                  {empArea && <span className="bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-0.5 rounded dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">{empArea}</span>}
+                                                  {empShift && <span className="bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-0.5 rounded dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">{empShift}</span>}
+                                                </>
+                                              );
                                             })()}
                                           </div>
                                         </div>
@@ -1711,7 +1830,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               ? employees.filter((e) => {
                                                   if (!e.projectIds?.includes(selectedProjectId)) return false;
                                                   const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
-                                                  return projMeta ? projMeta.hasActiveContract : false;
+                                                  if (!projMeta || !projMeta.hasActiveContract) return false;
+                                                  
+                                                  // Area/Shift filter
+                                                  if (selectedAreaId && projMeta.areaId !== selectedAreaId) return false;
+                                                  if (selectedShiftId && projMeta.shiftId !== selectedShiftId) return false;
+                                                  
+                                                  return true;
                                                 })
                                               : [];
                                             const availableEmployees = filteredByProject.filter((e) => !entries.find((entry) => entry.employeeId === e.id));

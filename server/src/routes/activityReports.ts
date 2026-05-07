@@ -32,6 +32,7 @@ const createReportSchema = z.object({
   attendance: z.array(attendanceSchema).optional(),
   projectId: z.string().optional(),
   areaId: z.string().optional(),
+  shiftId: z.string().optional(),
 });
 
 router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -62,6 +63,7 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
         },
       })
       .populate("areaId", "name")
+      .populate("shiftId", "name")
       .populate("attendance.employeeId", "firstName lastName")
       .populate("attendance.replacementId", "firstName lastName");
 
@@ -114,6 +116,8 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
       userId,
     })
       .populate("projectId", "name")
+      .populate("areaId", "name")
+      .populate("shiftId", "name")
       .populate("attendance.employeeId", "firstName lastName")
       .populate("attendance.replacementId", "firstName lastName");
 

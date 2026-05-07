@@ -32,6 +32,7 @@ export interface IRequest extends Document {
   date: string; // YYYY-MM-DD
   projectId?: Types.ObjectId;
   areaId?: Types.ObjectId;
+  shiftId?: Types.ObjectId;
   hasActivity: boolean;
   comments?: string;
   attendance: Types.DocumentArray<any>;
@@ -46,6 +47,7 @@ const requestSchema = new Schema<IRequest>(
     date: { type: String, required: true }, // Format YYYY-MM-DD
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     areaId: { type: Schema.Types.ObjectId, ref: "Area" }, // Optional linkage to Area
+    shiftId: { type: Schema.Types.ObjectId, ref: "Shift" }, // Optional linkage to Shift
     hasActivity: { type: Boolean, default: true },
     comments: { type: String },
     attendance: [attendanceRecordSchema],

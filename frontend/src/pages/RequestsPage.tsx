@@ -16,6 +16,8 @@ import { activityReportsAPI } from "../api/request";
 import { activityLogTypesAPI, RequestConfig } from "../api/requestConfig";
 import { usersAPI, User } from "../api/users";
 import { projectsAPI } from "../api/projects";
+import { areasAPI } from "../api/areas";
+import { shiftsAPI } from "../api/shifts";
 import { sweetAlert } from "../utils/sweetAlert";
 
 interface ActivityReport extends Omit<BaseActivityReport, "id"> {
@@ -26,14 +28,6 @@ interface ActivityReport extends Omit<BaseActivityReport, "id"> {
 }
 
 // ... reusing MOCK_AREAS and MOCK_REPORTS ...
-const MOCK_AREAS = [
-  { id: "1", name: "Editores" },
-  { id: "2", name: "Libertador" },
-  { id: "3", name: "Peinado y Maquillaje" },
-  { id: "4", name: "Técnica Mañana" },
-  { id: "5", name: "Técnica Noche" },
-  { id: "6", name: "Vestuario" },
-];
 
 const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attendance }) => {
   return (
@@ -179,12 +173,15 @@ export const RequestsPage: React.FC = () => {
   const [reports, setReports] = useState<ActivityReport[]>([]);
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [allProjects, setAllProjects] = useState<{ id: string; name: string }[]>([]);
+  const [allProjects, setAllProjects] = useState<{ id: string; name: string; areasConfig?: any[] }[]>([]);
+  const [allAreas, setAllAreas] = useState<{ id: string; name: string }[]>([]);
+  const [allShifts, setAllShifts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
   const [dateFilter, setDateFilter] = useState("daily"); // daily, weekly, monthly
   const [areaFilter, setAreaFilter] = useState("all");
+  const [shiftFilter, setShiftFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showStatsModal, setShowStatsModal] = useState(false);
@@ -201,12 +198,16 @@ export const RequestsPage: React.FC = () => {
       result = result.filter((r) => r.areaId === areaFilter);
     }
 
+    if (shiftFilter !== "all") {
+      result = result.filter((r) => r.shiftId === shiftFilter);
+    }
+
     if (projectFilter !== "all") {
       result = result.filter((r) => r.projectIdRaw === projectFilter);
     }
 
     return result;
-  }, [reports, searchTerm, areaFilter, projectFilter]);
+  }, [reports, searchTerm, areaFilter, projectFilter, shiftFilter]);
 
   // Check for URL params to auto-open report detail
   useEffect(() => {
@@ -228,14 +229,34 @@ export const RequestsPage: React.FC = () => {
     fetchLogTypes();
     fetchUsers();
     fetchProjects();
+    fetchAreas();
+    fetchShifts();
   }, []);
 
   const fetchProjects = async () => {
     try {
       const data = await projectsAPI.listAll();
-      setAllProjects(data.map((p: any) => ({ id: p._id, name: p.name })));
+      setAllProjects(data.map((p: any) => ({ id: p._id, name: p.name, areasConfig: p.areasConfig })));
     } catch (e) {
       console.error("Error loading projects", e);
+    }
+  };
+
+  const fetchAreas = async () => {
+    try {
+      const data = await areasAPI.getAll();
+      setAllAreas(data.map((a: any) => ({ id: a._id, name: a.name })));
+    } catch (e) {
+      console.error("Error loading areas", e);
+    }
+  };
+
+  const fetchShifts = async () => {
+    try {
+      const data = await shiftsAPI.getAll();
+      setAllShifts(data.map((s: any) => ({ id: s._id, name: s.name })));
+    } catch (e) {
+      console.error("Error loading shifts", e);
     }
   };
 
@@ -271,6 +292,9 @@ export const RequestsPage: React.FC = () => {
         projectIdRaw: r.projectId?._id || (typeof r.projectId === "string" ? r.projectId : ""),
         projectName: r.projectId?.name || "Sin Proyecto",
         areaId: r.areaId?._id || "",
+        areaName: r.areaId?.name || "",
+        shiftId: r.shiftId?._id || "",
+        shiftName: r.shiftId?.name || "",
         status: "sent" as "sent", // Default status for now
         submittedBy: `${r.userId?.firstName || ""} ${r.userId?.lastName || ""}`.trim(),
         submittedAt: r.createdAt || r.submittedAt,
@@ -468,17 +492,27 @@ export const RequestsPage: React.FC = () => {
               ]}
               onClick={() => handleViewDetail(report)}
             >
-              <div className="flex flex-col gap-2 mt-2">
-                <div>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-                    <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
-                    {report.projectName}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                  <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
+                  {report.projectName}
+                </span>
+                {report.areaName && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                    <FontAwesomeIcon icon={faLayerGroup} className="text-indigo-400 text-[10px]" />
+                    {report.areaName}
                   </span>
-                </div>
+                )}
+                {report.shiftName && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
+                    <FontAwesomeIcon icon={faClock} className="text-purple-400 text-[10px]" />
+                    {report.shiftName}
+                  </span>
+                )}
+              </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-medium">{report.attendance.length}</span> registros de asistencia
                 </div>
-              </div>
             </CardItemGeneric>
           );
         })}
@@ -686,7 +720,15 @@ export const RequestsPage: React.FC = () => {
 
           <div className="relative">
             <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+            <select
+              value={projectFilter}
+              onChange={(e) => {
+                setProjectFilter(e.target.value);
+                setAreaFilter("all");
+                setShiftFilter("all");
+              }}
+              className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
+            >
               <option value="all">Todos los Proyectos</option>
               {allProjects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -698,13 +740,63 @@ export const RequestsPage: React.FC = () => {
 
           <div className="relative">
             <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
-              <option value="all">Todas las Areas</option>
-              {MOCK_AREAS.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
+            <select
+              value={areaFilter}
+              onChange={(e) => {
+                setAreaFilter(e.target.value);
+                setShiftFilter("all");
+              }}
+              className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none"
+            >
+              <option value="all">Todas las Áreas | Turnos</option>
+              {(() => {
+                if (projectFilter === "all") {
+                  return allAreas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ));
+                }
+                const proj = allProjects.find((p) => p.id === projectFilter);
+                if (!proj?.areasConfig) return null;
+                return proj.areasConfig.map((ac: any) => {
+                  const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+                  const area = allAreas.find((a) => a.id === areaId);
+                  return (
+                    <option key={areaId} value={areaId}>
+                      {area?.name || "Área " + areaId.slice(-4)}
+                    </option>
+                  );
+                });
+              })()}
+            </select>
+          </div>
+
+          <div className="relative">
+            <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <select value={shiftFilter} onChange={(e) => setShiftFilter(e.target.value)} className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none">
+              <option value="all">Todos los Turnos</option>
+              {(() => {
+                if (projectFilter === "all" || areaFilter === "all") {
+                  return allShifts.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ));
+                }
+                const proj = allProjects.find((p) => p.id === projectFilter);
+                const areaCfg = proj?.areasConfig?.find((ac: any) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === areaFilter);
+                if (!areaCfg?.shiftIds) return null;
+                return areaCfg.shiftIds.map((sId: any) => {
+                  const shiftId = typeof sId === "object" ? sId?._id : sId;
+                  const shift = allShifts.find((s) => s.id === shiftId);
+                  return (
+                    <option key={shiftId} value={shiftId}>
+                      {shift?.name || "Turno " + shiftId.slice(-4)}
+                    </option>
+                  );
+                });
+              })()}
             </select>
           </div>
 
@@ -779,10 +871,28 @@ export const RequestsPage: React.FC = () => {
                       })()}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
-                        <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-xs" />
-                        {report.projectName}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 w-fit">
+                          <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
+                          {report.projectName}
+                        </span>
+                        {(report.areaName || report.shiftName) && (
+                          <div className="flex gap-1">
+                            {report.areaName && (
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                <FontAwesomeIcon icon={faLayerGroup} className="text-[9px]" />
+                                {report.areaName}
+                              </span>
+                            )}
+                            {report.shiftName && (
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                <FontAwesomeIcon icon={faClock} className="text-[9px]" />
+                                {report.shiftName}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
