@@ -6,6 +6,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdArray, toObjectIdOrNull } from "../utils/mongoIds.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 
 const router = Router();
 
@@ -60,7 +61,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_roles
     }
 
     if (name) {
-      filter.name = { $regex: name, $options: "i" };
+      filter.name = { $regex: createFuzzySearchRegex(String(name)), $options: "i" };
     }
 
     // Si se proporciona _id, validar que sea un ObjectId válido

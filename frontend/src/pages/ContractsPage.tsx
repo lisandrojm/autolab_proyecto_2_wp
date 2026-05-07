@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { usersAPI, User } from "../api/users";
 import { infoAPI } from "../api/info";
@@ -170,8 +171,7 @@ export const ContractsPage: React.FC = () => {
 
   const filteredContracts = useMemo(() => {
     return allContracts.filter((c) => {
-      const lower = searchTerm.toLowerCase();
-      const matchesSearch = !searchTerm || c.userName.toLowerCase().includes(lower) || c.userEmail.toLowerCase().includes(lower) || c.projectName.toLowerCase().includes(lower) || c.nombre_contrato.toLowerCase().includes(lower);
+      const matchesSearch = !searchTerm || fuzzyMatch(c.userName, searchTerm) || fuzzyMatch(c.userEmail, searchTerm) || fuzzyMatch(c.projectName, searchTerm) || fuzzyMatch(c.nombre_contrato, searchTerm);
       const matchesProject = projectFilter === "all" || c.projectName === projectFilter;
       return matchesSearch && matchesProject;
     });

@@ -6,6 +6,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 
 const router = Router();
 
@@ -60,7 +61,7 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
     }
 
     if (name) {
-      filter.name = { $regex: name, $options: "i" };
+      filter.name = createFuzzySearchRegex(name as string);
     }
 
     const skip = (Number(page) - 1) * Number(limit);

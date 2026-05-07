@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -227,7 +228,7 @@ export const ClientsPage: React.FC = () => {
   const filteredClients = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return clients.filter((c) => {
-      const matchesSearch = q.length === 0 || c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || (c.company || "").toLowerCase().includes(q) || (c.industry || "").toLowerCase().includes(q);
+      const matchesSearch = q.length === 0 || fuzzyMatch(c.name || "", q) || fuzzyMatch(c.email || "", q) || fuzzyMatch(c.company || "", q) || fuzzyMatch(c.industry || "", q);
 
       const matchesStatus = filterStatus === "all" ? true : c.status === filterStatus;
 

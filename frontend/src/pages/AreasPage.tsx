@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { areasAPI, Area } from "../api/areas";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -158,7 +159,7 @@ export const AreasPage: React.FC = () => {
 
   const filteredAreas = areas.filter((a) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || a.name.toLowerCase().includes(q) || (a.description || "").toLowerCase().includes(q);
+    const matchesSearch = q.length === 0 || fuzzyMatch(a.name, q) || fuzzyMatch(a.description || "", q);
 
     let matchesDate = true;
     if (startDate || endDate) {

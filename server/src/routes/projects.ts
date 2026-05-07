@@ -14,6 +14,7 @@ import { Area } from "../models/Area.js";
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Shift } from "../models/Shift.js";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 
 const router = Router();
 
@@ -125,7 +126,7 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
     };
 
     if (q) {
-      filter.name = { $regex: q, $options: "i" };
+      filter.name = { $regex: createFuzzySearchRegex(String(q)), $options: "i" };
     }
 
     const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());
@@ -402,7 +403,7 @@ router.get(
       }
 
       if (q) {
-        filter.name = { $regex: q, $options: "i" };
+        filter.name = { $regex: createFuzzySearchRegex(String(q)), $options: "i" };
       }
 
       const userRoles = (req.user?.roles || []).map((r) => r.toString().toLowerCase());

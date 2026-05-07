@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { levelsAPI, Level, LevelFormData as APILevelFormData } from "../api/levels";
 import { positionsAPI, Position } from "../api/positions";
@@ -195,7 +196,7 @@ export const LevelsPage: React.FC = () => {
 
   const filteredLevels = levels.filter((l) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || l.name.toLowerCase().includes(q) || (l.description || "").toLowerCase().includes(q);
+    const matchesSearch = q.length === 0 || fuzzyMatch(l.name, q) || fuzzyMatch(l.description || "", q);
 
     let matchesDate = true;
     if (startDate || endDate) {

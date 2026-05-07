@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { positionsAPI, Position } from "../api/positions";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -166,7 +167,7 @@ export const PositionsPage: React.FC = () => {
 
   const filteredPositions = positions.filter((p) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || p.name.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q);
+    const matchesSearch = q.length === 0 || fuzzyMatch(p.name, q) || fuzzyMatch(p.description || "", q);
 
     let matchesDate = true;
     if (startDate || endDate) {

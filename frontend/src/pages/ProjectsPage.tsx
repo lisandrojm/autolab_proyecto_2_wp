@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useNavigate } from "react-router-dom";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
@@ -148,10 +149,10 @@ export const ProjectsPage: React.FC = () => {
       const clientName = (typeof p.clientId === "object" ? p.clientId.name : clientMap.get(p.clientId)?.name)?.toLowerCase() || "";
       const responsableName = p.metadataResolutions?.responsable?.name?.toLowerCase() || "";
       
-      return projectName.includes(lowerSearch) || 
-             projectDescription.includes(lowerSearch) ||
-             clientName.includes(lowerSearch) || 
-             responsableName.includes(lowerSearch);
+      return fuzzyMatch(p.name, lowerSearch) || 
+             fuzzyMatch(p.description || "", lowerSearch) ||
+             fuzzyMatch(typeof p.clientId === "object" ? p.clientId.name : clientMap.get(p.clientId)?.name || "", lowerSearch) || 
+             fuzzyMatch(p.metadataResolutions?.responsable?.name || "", lowerSearch);
     });
   }, [projects, searchTerm, clientMap]);
 

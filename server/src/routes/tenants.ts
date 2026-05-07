@@ -9,6 +9,7 @@ import { requirePlatform } from "../middleware/requirePlatform.js";
 import { ensureDefaultRoles } from "../services/roleInitService.js";
 import { env } from "../config/env.js";
 import { Types } from "mongoose";
+import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 
 const router = Router();
 
@@ -85,10 +86,11 @@ router.get("/",
       const filter: any = {};
 
       if (name) {
+        const fuzzyRegex = createFuzzySearchRegex(name as string);
         filter.$or = [
-          { name: { $regex: name, $options: 'i' } },
-          { slug: { $regex: name, $options: 'i' } },
-          { 'company.legalName': { $regex: name, $options: 'i' } }
+          { name: fuzzyRegex },
+          { slug: fuzzyRegex },
+          { 'company.legalName': fuzzyRegex }
         ];
       }
 

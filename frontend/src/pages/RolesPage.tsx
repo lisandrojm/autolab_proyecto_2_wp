@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useAuthStore } from "../stores/authStore";
 import { rolesAPI, Role } from "../api/roles";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -374,7 +375,7 @@ export const RolesPage: React.FC = () => {
 
   const filteredRoles = roles.filter((r) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || r.name.toLowerCase().includes(q) || (r.description || "").toLowerCase().includes(q);
+    const matchesSearch = q.length === 0 || fuzzyMatch(r.name, q) || fuzzyMatch(r.description || "", q);
     const matchesStatus = filterStatus === "all" ? true : filterStatus === "default" ? r.isDefault : !r.isDefault;
 
     // Filtro de fechas (createdAt)

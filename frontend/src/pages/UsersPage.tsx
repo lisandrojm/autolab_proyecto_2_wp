@@ -23,6 +23,7 @@ import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
+import { fuzzyMatch } from "../utils/searchHelpers";
 
 const HELP_KEY = "users" as const;
 
@@ -1658,7 +1659,7 @@ export const UsersPage: React.FC = () => {
                       <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50/50 dark:bg-gray-900/30">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                           {allRoleFrames
-                            .filter((rf) => rf.name.toLowerCase().includes(roleFrameSearch.toLowerCase()))
+                            .filter((rf) => fuzzyMatch(rf.name, roleFrameSearch))
                             .map((rf) => (
                               <label key={rf._id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.rolesFrameIds?.includes(rf._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-300"}`}>
                                 <input
@@ -1673,7 +1674,7 @@ export const UsersPage: React.FC = () => {
                                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{rf.name}</span>
                               </label>
                             ))}
-                          {allRoleFrames.filter((rf) => rf.name.toLowerCase().includes(roleFrameSearch.toLowerCase())).length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>}
+                          {allRoleFrames.filter((rf) => fuzzyMatch(rf.name, roleFrameSearch)).length === 0 && <div className="col-span-full py-8 text-center text-xs text-gray-500 italic">No se encontraron especialidades que coincidan con "{roleFrameSearch}"</div>}
                         </div>
                       </div>
                     </div>

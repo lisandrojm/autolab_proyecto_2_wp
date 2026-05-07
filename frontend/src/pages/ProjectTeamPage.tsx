@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axiosConfig";
 import { projectsAPI, Project } from "../api/projects";
@@ -336,10 +337,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       // 2. Search Term (name or email only)
       if (searchTerm) {
-        const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
-        const email = user.email.toLowerCase();
-        const search = searchTerm.toLowerCase();
-        if (!fullName.includes(search) && !email.includes(search)) return false;
+        if (!fuzzyMatch(`${user.firstName || ""} ${user.lastName || ""}`, searchTerm) && !fuzzyMatch(user.email, searchTerm)) return false;
       }
 
       // 3. Filter by Role
@@ -376,10 +374,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       // Search Filter
       if (searchTermTeam) {
-        const search = searchTermTeam.toLowerCase();
-        const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
-        const email = user.email.toLowerCase();
-        if (!fullName.includes(search) && !email.includes(search)) return false;
+        if (!fuzzyMatch(`${user.firstName || ""} ${user.lastName || ""}`, searchTermTeam) && !fuzzyMatch(user.email, searchTermTeam)) return false;
       }
 
       return true;
@@ -854,6 +849,40 @@ export const ProjectTeamPage: React.FC = () => {
           })()}
         </td>
         <td className="px-4 py-3">
+          {(() => {
+            const myCoordinatedAssignments = project?.coordinatorAssignments?.filter((asm) => {
+              const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+              return String(uid) === String(user._id);
+            }) || [];
+
+            if (myCoordinatedAssignments.length === 0) return <span className="text-xs text-gray-400">—</span>;
+
+            const coordAreaDataMap = new Map<string, { id: string; name: string }>();
+            myCoordinatedAssignments.forEach((asm) => {
+              const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+              const aName = typeof asm.areaId === "object" ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
+              if (aid && aName) {
+                coordAreaDataMap.set(String(aid), { id: String(aid), name: aName });
+              }
+            });
+
+            const coordAreaData = Array.from(coordAreaDataMap.values());
+
+            return (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {coordAreaData.map((ad, i) => (
+                  <div key={i} className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all">
+                    <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
+                    <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name })} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
+                      +
+                    </button>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </td>
+        <td className="px-4 py-3">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-gray-700 dark:text-gray-300">{activeContract?.nombre_contrato || "-"}</span>
             {activeContract?.reemplazo && (
@@ -1068,6 +1097,7 @@ export const ProjectTeamPage: React.FC = () => {
                               <th className="px-4 py-3 font-semibold">Rol/es Frame</th>
                               <th className="px-4 py-3 font-semibold">Estado</th>
                               <th className="px-4 py-3 font-semibold">Área / Turno</th>
+                              <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">Área/Turno Coordinada</th>
                               <th className="px-4 py-3 font-semibold">Contrato</th>
                               <th className="px-4 py-3 font-semibold">Horario</th>
                               <th className="px-4 py-3 font-semibold text-right">Acciones</th>

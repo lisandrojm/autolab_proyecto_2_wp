@@ -1,5 +1,6 @@
 // ... imports
 import React, { useState, useMemo } from "react";
+import { fuzzyMatch } from "../utils/searchHelpers";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -193,8 +194,7 @@ export const RequestsPage: React.FC = () => {
     let result = reports;
 
     if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      result = result.filter((r) => (r.reportNumber || "").toLowerCase().includes(lower) || r.projectName.toLowerCase().includes(lower) || r.submittedBy.toLowerCase().includes(lower));
+      result = result.filter((r) => fuzzyMatch(r.reportNumber || "", searchTerm) || fuzzyMatch(r.projectName, searchTerm) || fuzzyMatch(r.submittedBy, searchTerm));
     }
 
     if (areaFilter !== "all") {
