@@ -9,8 +9,14 @@ export const fuzzyMatch = (target: string | null | undefined, query: string): bo
   if (!query) return true;
   if (!target) return false;
   
-  const normalizedQuery = query.toLowerCase().replace(/\s+/g, "");
-  const normalizedTarget = target.toLowerCase().replace(/\s+/g, "");
+  const normalize = (str: string) => 
+    str.toLowerCase()
+       .normalize("NFD")
+       .replace(/[\u0300-\u036f]/g, "")
+       .replace(/\s+/g, "");
+
+  const normalizedQuery = normalize(query);
+  const normalizedTarget = normalize(target);
   
   return normalizedTarget.includes(normalizedQuery);
 };
