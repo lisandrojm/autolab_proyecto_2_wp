@@ -141,9 +141,8 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       .sort({ requestedAt: -1 })
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata",
+        select: "firstName lastName email metadata",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "metadata.projects", model: "UserProject" },
         ],
       })
@@ -231,9 +230,8 @@ router.get("/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
     })
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata",
+        select: "firstName lastName email metadata",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "metadata.projects", model: "UserProject" },
         ],
       })
@@ -513,9 +511,8 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata",
+        select: "firstName lastName email metadata",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "metadata.projects", model: "UserProject" },
         ],
       })
@@ -600,9 +597,8 @@ router.put("/:id", uploadOrderImage, async (req: AuthenticatedRequest & TenantRe
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata",
+        select: "firstName lastName email metadata",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "metadata.projects", model: "UserProject" },
         ],
       })
@@ -659,9 +655,8 @@ router.patch("/:id/upload-document", uploadDocument, async (req: AuthenticatedRe
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata",
+        select: "firstName lastName email metadata",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "metadata.projects", model: "UserProject" },
         ],
       })
