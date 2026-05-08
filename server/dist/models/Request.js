@@ -27,6 +27,7 @@ const requestSchema = new Schema({
     date: { type: String, required: true }, // Format YYYY-MM-DD
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     areaId: { type: Schema.Types.ObjectId, ref: "Area" }, // Optional linkage to Area
+    shiftId: { type: Schema.Types.ObjectId, ref: "Shift" }, // Optional linkage to Shift
     hasActivity: { type: Boolean, default: true },
     comments: { type: String },
     attendance: [attendanceRecordSchema],

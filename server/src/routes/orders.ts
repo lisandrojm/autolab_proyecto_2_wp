@@ -14,6 +14,7 @@ import { Role } from "../models/Role.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import UserProject from "../models/UserProject.js";
 
 const router = Router();
 
@@ -412,6 +413,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
+    let order: any;
     try {
       order = new Order(orderData);
 

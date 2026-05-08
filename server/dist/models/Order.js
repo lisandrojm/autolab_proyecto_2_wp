@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import { getNextOrderNumber } from "../utils/orderHelpers.js";
+import { Tenant } from "./Tenant.js";
 // Schemas embebidos para Documentos y Acciones Futuras
 const EmbeddedDocumentSchema = new Schema({
     type: { type: String, enum: ["contract", "payroll", "certificate", "other"], required: true },
@@ -83,7 +84,6 @@ orderSchema.pre("validate", async function (next) {
     let attempt = 0;
     while (attempt < maxRetries) {
         try {
-            const Tenant = mongoose.model("Tenant");
             const tenant = await Tenant.findById(this.tenantId);
             if (!tenant) {
                 throw new Error("Tenant not found");

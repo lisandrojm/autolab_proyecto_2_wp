@@ -6,6 +6,7 @@ export interface IRequest extends Document {
     date: string;
     projectId?: Types.ObjectId;
     areaId?: Types.ObjectId;
+    shiftId?: Types.ObjectId;
     hasActivity: boolean;
     comments?: string;
     attendance: Types.DocumentArray<any>;

@@ -1,5 +1,4 @@
-import { Order } from "../models/Order.js";
-import { Types } from "mongoose";
+import { Types, model, models } from "mongoose";
 
 export function getPlainOrderNumber(orderNumber: string | undefined | null): string {
   if (!orderNumber) return "";
@@ -16,7 +15,8 @@ export function getFormattedOrderNumber(orderNumber: string | undefined | null):
 }
 
 export async function getNextOrderNumber(tenantId: Types.ObjectId, prefix: string): Promise<string> {
-  const lastOrder = await Order.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec();
+  const OrderModel = models.Order || model("Order");
+  const lastOrder = await OrderModel.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec();
 
   let nextSequence = 1;
 
