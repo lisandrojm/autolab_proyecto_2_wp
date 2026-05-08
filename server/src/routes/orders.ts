@@ -343,8 +343,10 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
           const used = existingOrders.reduce((sum, o) => sum + (o.daysRequested || 0), 0);
 
           if (used + (data.daysRequested || 0) > max) {
-            throw new Error(`El pedido excede el límite de días para "${label}". Máximo: ${max}, Usados: ${used}, Solicitados: ${data.daysRequested}`);
+            res.status(400).json({ error: `El pedido excede el límite de días para "${label}". Máximo: ${max}, Usados: ${used}, Solicitados: ${data.daysRequested}` });
+            return true; // Indica que hubo error
           }
+          return false;
         };
 
         // 1. Check Subtype limits
@@ -352,14 +354,16 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
           for (const subId of data.subcategories) {
             const subtype = category.config.subtipos.find((st: any) => st.id === subId);
             if (subtype && subtype.maxDays) {
-              await checkLimit(subId, subtype.maxDays, subtype.label);
+              const hasError = await checkLimit(subId, subtype.maxDays, subtype.label);
+              if (hasError) return;
             }
           }
         }
 
         // 2. Check Global Category limit
         if (category.maxDays) {
-          await checkLimit(null, category.maxDays, category.name);
+          const hasError = await checkLimit(null, category.maxDays, category.name);
+          if (hasError) return;
         }
       }
       // -------------------------------
@@ -408,89 +412,85 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       }
     }
 
-    const session = await mongoose.startSession();
-    let order: any;
-
     try {
-      await session.withTransaction(async () => {
-        order = new Order(orderData);
+      order = new Order(orderData);
 
-        if (data.categoryId) {
-          const category = await OrderConfig.findById(data.categoryId);
+      if (data.categoryId) {
+        const category = await OrderConfig.findById(data.categoryId);
 
-          const shouldCreateOrderFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
+        const shouldCreateOrderFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
 
-          if (shouldCreateOrderFutureAction) {
-            const actionType = category.futureActionType || "sinVencimiento";
+        if (shouldCreateOrderFutureAction) {
+          const actionType = category.futureActionType || "sinVencimiento";
 
-            const futureActionData: any = {
-              requiereAccionFutura: true,
-              tipoAccionFutura: actionType,
-              descripcionAccion: category.actionText || "Acción requerida por categoría",
-              responsableAccion: "usuario",
-              estadoAccion: "pendiente",
-              fechaCreacionAccion: new Date(),
-            };
+          const futureActionData: any = {
+            requiereAccionFutura: true,
+            tipoAccionFutura: actionType,
+            descripcionAccion: category.actionText || "Acción requerida por categoría",
+            responsableAccion: "usuario",
+            estadoAccion: "pendiente",
+            fechaCreacionAccion: new Date(),
+          };
 
-            switch (actionType) {
-              case "documento":
-                if (category.documentoRequerido) {
-                  futureActionData.documentoRequerido = category.documentoRequerido;
-                }
-                if (data.futureActionDocumento) {
-                  futureActionData.documentoRequerido = data.futureActionDocumento;
-                }
-                if (documentoUrl) {
-                  futureActionData.documentoUrl = documentoUrl;
-                  futureActionData.estadoAccion = "documento_presentado";
-                } else {
-                  futureActionData.estadoAccion = "pendiente_documento";
-                }
-                if (category.deadlineMode === "plazoDias" && category.plazoDias) {
-                  futureActionData.plazoDias = category.plazoDias;
-                  futureActionData.deadlineMode = "plazoDias";
-                } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
-                  futureActionData.fechaLimite = new Date(category.fechaLimite);
-                  futureActionData.deadlineMode = "fechaEspecifica";
-                } else if (data.futureActionPlazoDias) {
-                  futureActionData.plazoDias = data.futureActionPlazoDias;
-                  futureActionData.deadlineMode = "plazoDias";
-                } else if (data.futureActionFechaLimite) {
-                  futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
-                  futureActionData.deadlineMode = "fechaEspecifica";
-                }
-                break;
+          switch (actionType) {
+            case "documento":
+              if (category.documentoRequerido) {
+                futureActionData.documentoRequerido = category.documentoRequerido;
+              }
+              if (data.futureActionDocumento) {
+                futureActionData.documentoRequerido = data.futureActionDocumento;
+              }
+              if (documentoUrl) {
+                futureActionData.documentoUrl = documentoUrl;
+                futureActionData.estadoAccion = "documento_presentado";
+              } else {
+                futureActionData.estadoAccion = "pendiente_documento";
+              }
+              if (category.deadlineMode === "plazoDias" && category.plazoDias) {
+                futureActionData.plazoDias = category.plazoDias;
+                futureActionData.deadlineMode = "plazoDias";
+              } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
+                futureActionData.fechaLimite = new Date(category.fechaLimite);
+                futureActionData.deadlineMode = "fechaEspecifica";
+              } else if (data.futureActionPlazoDias) {
+                futureActionData.plazoDias = data.futureActionPlazoDias;
+                futureActionData.deadlineMode = "plazoDias";
+              } else if (data.futureActionFechaLimite) {
+                futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+                futureActionData.deadlineMode = "fechaEspecifica";
+              }
+              break;
 
-              case "otra":
-                if (category.tituloAccion) {
-                  futureActionData.descripcionAccion = category.tituloAccion;
-                }
-                if (category.deadlineMode === "plazoDias" && category.plazoDias) {
-                  futureActionData.plazoDias = category.plazoDias;
-                  futureActionData.deadlineMode = "plazoDias";
-                } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
-                  futureActionData.fechaLimite = new Date(category.fechaLimite);
-                  futureActionData.deadlineMode = "fechaEspecifica";
-                } else if (data.futureActionPlazoDias) {
-                  futureActionData.plazoDias = data.futureActionPlazoDias;
-                  futureActionData.deadlineMode = "plazoDias";
-                } else if (data.futureActionFechaLimite) {
-                  futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
-                  futureActionData.deadlineMode = "fechaEspecifica";
-                } else {
-                  futureActionData.deadlineMode = "none";
-                }
-                break;
-            }
-
-            order.futureActions.push(futureActionData);
+            case "otra":
+              if (category.tituloAccion) {
+                futureActionData.descripcionAccion = category.tituloAccion;
+              }
+              if (category.deadlineMode === "plazoDias" && category.plazoDias) {
+                futureActionData.plazoDias = category.plazoDias;
+                futureActionData.deadlineMode = "plazoDias";
+              } else if (category.deadlineMode === "fechaEspecifica" && category.fechaLimite) {
+                futureActionData.fechaLimite = new Date(category.fechaLimite);
+                futureActionData.deadlineMode = "fechaEspecifica";
+              } else if (data.futureActionPlazoDias) {
+                futureActionData.plazoDias = data.futureActionPlazoDias;
+                futureActionData.deadlineMode = "plazoDias";
+              } else if (data.futureActionFechaLimite) {
+                futureActionData.fechaLimite = new Date(data.futureActionFechaLimite);
+                futureActionData.deadlineMode = "fechaEspecifica";
+              } else {
+                futureActionData.deadlineMode = "none";
+              }
+              break;
           }
-        }
 
-        await order.save({ session });
-      });
-    } finally {
-      await session.endSession();
+          order.futureActions.push(futureActionData);
+        }
+      }
+
+      await order.save();
+    } catch (saveError) {
+      console.error("Error saving order:", saveError);
+      throw saveError;
     }
 
     const categoryDoc = data.categoryId ? await OrderConfig.findById(data.categoryId) : null;

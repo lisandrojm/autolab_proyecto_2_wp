@@ -541,7 +541,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="overflow-y-auto p-4">
+              <form id="order-form" onSubmit={handleSubmit} className="overflow-y-auto p-4">
                 <div className="space-y-4">
                   {/* Debug Contract Badge */}
                   {detectedContractName && <div className="mb-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">Contrato: {detectedContractName}</div>}
@@ -694,7 +694,7 @@ export default function Orders({ onNavigate }: OrdersProps) {
                   <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded h-10 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
                     Cancelar
                   </button>
-                  <button type="button" onClick={() => (window.document.querySelector('form button[type="submit"]') as HTMLButtonElement)?.click()} disabled={submitting} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
+                  <button type="submit" form="order-form" disabled={submitting} className="flex-1 rounded h-10 bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
                     {submitting ? "Enviando..." : "Enviar Pedido"}
                   </button>
                 </div>
