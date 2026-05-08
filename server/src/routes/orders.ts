@@ -150,9 +150,9 @@ router.get("/", async (req: AuthenticatedRequest & TenantRequest, res) => {
       .populate("categoryId");
 
     res.json(orders);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get orders error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: error.message || "Internal server error" });
   }
 });
 

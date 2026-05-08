@@ -1,4 +1,4 @@
-import { Order } from "../models/Order.js";
+import { model, models } from "mongoose";
 export function getPlainOrderNumber(orderNumber) {
     if (!orderNumber)
         return "";
@@ -13,7 +13,8 @@ export function getFormattedOrderNumber(orderNumber) {
     return plain ? `#${plain}` : "";
 }
 export async function getNextOrderNumber(tenantId, prefix) {
-    const lastOrder = await Order.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec();
+    const OrderModel = models.Order || model("Order");
+    const lastOrder = (await OrderModel.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec());
     let nextSequence = 1;
     if (lastOrder?.orderNumber) {
         const match = lastOrder.orderNumber.match(/-ORD-(\d+)$/);

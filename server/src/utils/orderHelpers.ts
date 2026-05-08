@@ -16,7 +16,7 @@ export function getFormattedOrderNumber(orderNumber: string | undefined | null):
 
 export async function getNextOrderNumber(tenantId: Types.ObjectId, prefix: string): Promise<string> {
   const OrderModel = models.Order || model("Order");
-  const lastOrder = await OrderModel.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec();
+  const lastOrder = (await OrderModel.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec()) as any;
 
   let nextSequence = 1;
 

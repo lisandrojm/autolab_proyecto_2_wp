@@ -140,7 +140,7 @@ router.get("/", async (req, res) => {
     }
     catch (error) {
         console.error("Get orders error:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: error.message || "Internal server error" });
     }
 });
 router.get("/stats", async (req, res) => {
@@ -366,13 +366,14 @@ router.post("/", uploadOrderImage, async (req, res) => {
                 orderData.signatureStatus = "pending";
             }
         }
+        let order;
         try {
             order = new Order(orderData);
             if (data.categoryId) {
                 const category = await OrderConfig.findById(data.categoryId);
                 const shouldCreateOrderFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
                 if (shouldCreateOrderFutureAction) {
-                    const actionType = category.futureActionType || "sinVencimiento";
+                    const actionType = category.futureActionType || "otra";
                     const futureActionData = {
                         requiereAccionFutura: true,
                         tipoAccionFutura: actionType,
@@ -478,8 +479,12 @@ router.post("/", uploadOrderImage, async (req, res) => {
             res.status(400).json({ error: "Invalid data", details: error.errors });
             return;
         }
+        if (error.name === "ValidationError") {
+            res.status(400).json({ error: "Validation Error", details: error.message });
+            return;
+        }
         console.error("Create order error:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: error.message || "Internal server error" });
     }
 });
 router.put("/:id", uploadOrderImage, async (req, res) => {
