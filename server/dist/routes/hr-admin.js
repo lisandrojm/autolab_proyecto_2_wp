@@ -79,7 +79,7 @@ router.get("/users", async (req, res) => {
         const { page = 1, limit = 1000, department, isActive } = req.query;
         const filter = { tenantId: req.tenantObjectId };
         const skip = (Number(page) - 1) * Number(limit);
-        const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").populate("turnos", "name startTime endTime days").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(), User.countDocuments(filter)]);
+        const [users, total] = await Promise.all([User.find(filter).select("-password").populate("roles", "name").populate("projectIds", "name").sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(), User.countDocuments(filter)]);
         const userIds = users.map((u) => u._id);
         const profiles = await UserProfile.find({
             tenantId: req.tenantObjectId,
@@ -122,7 +122,6 @@ router.get("/users/:id", async (req, res) => {
             .select("-password")
             .populate("roles", "name description")
             .populate("projectIds", "name")
-            .populate("turnos", "name startTime endTime days")
             .populate({
             path: "metadata.projects",
             populate: { path: "projectId", select: "name status" },

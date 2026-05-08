@@ -249,10 +249,8 @@ router.get("/orders", async (req: AuthenticatedRequest & TenantRequest, res) => 
         .limit(Number(limit))
         .populate({
           path: "userId",
-          select: "firstName lastName email positionId metadata clientIds projectIds turnos",
+          select: "firstName lastName email metadata clientIds projectIds",
           populate: [
-            { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-            { path: "positionId", select: "name" },
             { path: "clientIds", select: "name", model: "Client" },
             {
               path: "projectIds",
@@ -343,10 +341,8 @@ router.post("/orders", uploadOrderImage, async (req: AuthenticatedRequest & Tena
         const populatedOrder = await Order.findById(order._id)
           .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds turnos",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-              { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-              { path: "positionId", select: "name" },
               { path: "clientIds", select: "name" },
               {
                 path: "metadata.projects",
@@ -451,10 +447,8 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
     const populatedOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds turnos",
+        select: "firstName lastName email metadata clientIds",
         populate: [
-          { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-          { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
             path: "metadata.projects",
@@ -672,9 +666,8 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds",
+        select: "firstName lastName email metadata clientIds",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
             path: "metadata.projects",
@@ -763,10 +756,8 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds turnos",
+        select: "firstName lastName email metadata clientIds",
         populate: [
-          { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-          { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
             path: "metadata.projects",
@@ -840,9 +831,8 @@ router.put("/orders/:id/reject", async (req: AuthenticatedRequest & TenantReques
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds",
+        select: "firstName lastName email metadata clientIds",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
             path: "metadata.projects",
@@ -905,9 +895,8 @@ router.put("/orders/:id/deliver", async (req: AuthenticatedRequest & TenantReque
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds",
+        select: "firstName lastName email metadata clientIds",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
             path: "metadata.projects",
@@ -976,9 +965,8 @@ router.put("/orders/:id/send-signature", async (req: AuthenticatedRequest & Tena
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds",
+        select: "firstName lastName email metadata clientIds",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
             path: "metadata.projects",
@@ -1050,9 +1038,8 @@ router.put("/orders/:id/mark-signed", async (req: AuthenticatedRequest & TenantR
     const finalOrder = await Order.findById(order._id)
       .populate({
         path: "userId",
-        select: "firstName lastName email positionId metadata clientIds",
+        select: "firstName lastName email metadata clientIds",
         populate: [
-          { path: "positionId", select: "name" },
           { path: "clientIds", select: "name", model: "Client" },
           {
             path: "metadata.projects",

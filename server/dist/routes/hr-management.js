@@ -223,10 +223,8 @@ router.get("/orders", async (req, res) => {
                 .limit(Number(limit))
                 .populate({
                 path: "userId",
-                select: "firstName lastName email positionId metadata clientIds projectIds turnos",
+                select: "firstName lastName email metadata clientIds projectIds",
                 populate: [
-                    { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-                    { path: "positionId", select: "name" },
                     { path: "clientIds", select: "name", model: "Client" },
                     {
                         path: "projectIds",
@@ -308,10 +306,8 @@ router.post("/orders", uploadOrderImage, async (req, res) => {
                 const populatedOrder = await Order.findById(order._id)
                     .populate({
                     path: "userId",
-                    select: "firstName lastName email positionId metadata clientIds turnos",
+                    select: "firstName lastName email metadata clientIds",
                     populate: [
-                        { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-                        { path: "positionId", select: "name" },
                         { path: "clientIds", select: "name" },
                         {
                             path: "metadata.projects",
@@ -405,10 +401,8 @@ router.put("/orders/:id", uploadOrderImage, async (req, res) => {
         const populatedOrder = await Order.findById(order._id)
             .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds turnos",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-                { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-                { path: "positionId", select: "name" },
                 { path: "clientIds", select: "name", model: "Client" },
                 {
                     path: "metadata.projects",
@@ -612,9 +606,8 @@ router.put("/orders/:id/pre-approve", async (req, res) => {
         const finalOrder = await Order.findById(order._id)
             .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-                { path: "positionId", select: "name" },
                 { path: "clientIds", select: "name", model: "Client" },
                 {
                     path: "metadata.projects",
@@ -692,10 +685,8 @@ router.put("/orders/:id/approve", async (req, res) => {
         const finalOrder = await Order.findById(order._id)
             .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds turnos",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-                { path: "turnos", select: "name startTime endTime days", model: "Shift" },
-                { path: "positionId", select: "name" },
                 { path: "clientIds", select: "name", model: "Client" },
                 {
                     path: "metadata.projects",
@@ -762,9 +753,8 @@ router.put("/orders/:id/reject", async (req, res) => {
         const finalOrder = await Order.findById(order._id)
             .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-                { path: "positionId", select: "name" },
                 { path: "clientIds", select: "name", model: "Client" },
                 {
                     path: "metadata.projects",
@@ -819,9 +809,8 @@ router.put("/orders/:id/deliver", async (req, res) => {
         const finalOrder = await Order.findById(order._id)
             .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-                { path: "positionId", select: "name" },
                 { path: "clientIds", select: "name", model: "Client" },
                 {
                     path: "metadata.projects",
@@ -881,9 +870,8 @@ router.put("/orders/:id/send-signature", async (req, res) => {
         const finalOrder = await Order.findById(order._id)
             .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-                { path: "positionId", select: "name" },
                 { path: "clientIds", select: "name", model: "Client" },
                 {
                     path: "metadata.projects",
@@ -945,9 +933,8 @@ router.put("/orders/:id/mark-signed", async (req, res) => {
         const finalOrder = await Order.findById(order._id)
             .populate({
             path: "userId",
-            select: "firstName lastName email positionId metadata clientIds",
+            select: "firstName lastName email metadata clientIds",
             populate: [
-                { path: "positionId", select: "name" },
                 { path: "clientIds", select: "name", model: "Client" },
                 {
                     path: "metadata.projects",
