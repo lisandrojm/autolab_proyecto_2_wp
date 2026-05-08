@@ -3,9 +3,10 @@ import { Order } from "./dist/models/Order.js";
 import UserProject from "./dist/models/UserProject.js";
 import { User } from "./dist/models/User.js";
 import { OrderConfig } from "./dist/models/OrderConfig.js";
+import { Tenant } from "./dist/models/Tenant.js";
 
 async function test() {
-  await mongoose.connect("mongodb://localhost:27017/autolab");
+  await mongoose.connect("mongodb+srv://lisandrojm_db_user:yKwTIl8vUqpVbSLw@autolab.n2rqx6g.mongodb.net/", { dbName: "weprodu_production_integration" });
   try {
     console.log("Connected to DB...");
     const orders = await Order.find().limit(1)

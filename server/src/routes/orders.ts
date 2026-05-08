@@ -15,6 +15,7 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
 import UserProject from "../models/UserProject.js";
+import "../models/Position.js";
 
 const router = Router();
 

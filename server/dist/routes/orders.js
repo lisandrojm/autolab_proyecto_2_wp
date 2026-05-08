@@ -14,6 +14,7 @@ import { Role } from "../models/Role.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import "../models/Position.js";
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
