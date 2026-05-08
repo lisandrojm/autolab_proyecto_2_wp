@@ -423,7 +423,7 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
         const shouldCreateOrderFutureAction = category?.requiresAction && (!category.requiresUserConfirmation || data.actionCompleted);
 
         if (shouldCreateOrderFutureAction) {
-          const actionType = category.futureActionType || "sinVencimiento";
+          const actionType = category.futureActionType || "otra";
 
           const futureActionData: any = {
             requiereAccionFutura: true,
@@ -522,13 +522,17 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
       .populate("categoryId");
 
     res.status(201).json(populatedOrder);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });
       return;
     }
+    if (error.name === "ValidationError") {
+      res.status(400).json({ error: "Validation Error", details: error.message });
+      return;
+    }
     console.error("Create order error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: error.message || "Internal server error" });
   }
 });
 
