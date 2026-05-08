@@ -1,4 +1,4 @@
-import { model, models } from "mongoose";
+import mongoose from "mongoose";
 export function getPlainOrderNumber(orderNumber) {
     if (!orderNumber)
         return "";
@@ -13,7 +13,7 @@ export function getFormattedOrderNumber(orderNumber) {
     return plain ? `#${plain}` : "";
 }
 export async function getNextOrderNumber(tenantId, prefix) {
-    const OrderModel = models.Order || model("Order");
+    const OrderModel = mongoose.models.Order || mongoose.model("Order");
     const lastOrder = (await OrderModel.findOne({ tenantId }).sort({ orderNumber: -1 }).select("orderNumber").lean().exec());
     let nextSequence = 1;
     if (lastOrder?.orderNumber) {
