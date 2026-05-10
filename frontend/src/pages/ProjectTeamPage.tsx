@@ -264,21 +264,27 @@ export const ProjectTeamPage: React.FC = () => {
     }
 
     const delayDebounceFn = setTimeout(async () => {
-      if (searchTerm.length < 2) {
+      // If we have 1 character, don't search yet to avoid noise
+      if (searchTerm.length === 1) {
         setCandidateUsers([]);
         return;
       }
 
       try {
         setSearchingCandidates(true);
-        const response = await usersAPI.list({ email: searchTerm, limit: 50 });
+        // Fetch active users. If searchTerm is empty, it returns first page of active users.
+        const params: any = { limit: 500, metadataActivo: "true" };
+        if (searchTerm.length >= 2) {
+          params.email = searchTerm;
+        }
+        const response = await usersAPI.list(params);
         setCandidateUsers(response.users);
       } catch (error) {
         console.error("Error fetching candidates:", error);
       } finally {
         setSearchingCandidates(false);
       }
-    }, 500);
+    }, searchTerm.length >= 2 ? 500 : 0); // No debounce for initial load or empty search
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, showAddModal]);
@@ -329,14 +335,15 @@ export const ProjectTeamPage: React.FC = () => {
 
   // Filtered Users (candidates to add) - only search by name or email
    const filteredCandidates = useMemo(() => {
-    // If we have a search term, use candidateUsers, otherwise use allUsers (which only contains team members now)
-    const source = searchTerm.length >= 2 ? candidateUsers : allUsers;
+    // When in Add Modal, we use candidateUsers (which contains active users from API)
+    const source = showAddModal ? candidateUsers : allUsers;
+    
     return source.filter((user) => {
       // 1. Exclude already assigned
       if (assignedUserIds.includes(user._id)) return false;
 
       // 2. Search Term (name or email only)
-      if (searchTerm) {
+      if (searchTerm && searchTerm.length >= 2) {
         if (!fuzzyMatch(`${user.firstName || ""} ${user.lastName || ""}`, searchTerm) && !fuzzyMatch(user.email, searchTerm)) return false;
       }
 
@@ -361,7 +368,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       return true;
     });
-  }, [allUsers, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject]);
+  }, [allUsers, candidateUsers, showAddModal, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject]);
 
   const teamMembers = useMemo(() => {
     const members = assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
@@ -1154,7 +1161,7 @@ export const ProjectTeamPage: React.FC = () => {
 
           {/* Modals */}
 
-          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Diponibles para asignar (${filteredCandidates.length})`} size="xl">
+          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Disponibles para asignar (${filteredCandidates.length})`} size="xl">
             <div className="space-y-4 max-h-[85vh] flex flex-col">
               <div className="flex flex-col gap-3 shrink-0">
                 <div className="flex items-center gap-2">
