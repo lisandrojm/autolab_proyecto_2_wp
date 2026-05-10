@@ -43,7 +43,9 @@ export const shiftsAPI = {
 
   getAll: async (): Promise<Shift[]> => {
     const response = await axios.get("/shifts", { params: { limit: 1000 } });
-    return response.data.shifts || [];
+    const shifts = response.data.shifts || [];
+    // Ensure shifts are sorted by the order field defined in Admin Usuarios / Turnos
+    return shifts.sort((a: Shift, b: Shift) => (a.order ?? 0) - (b.order ?? 0));
   },
 
   getById: async (id: string): Promise<Shift> => {

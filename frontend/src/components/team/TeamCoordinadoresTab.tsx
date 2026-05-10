@@ -81,7 +81,8 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
       const matchedShifts = (config.shiftIds || []).map(s => {
         const sId = typeof s === "object" ? s._id : s;
         return shifts.find(sh => sh._id === sId);
-      }).filter((s): s is Shift => !!s);
+      }).filter((s): s is Shift => !!s)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
       if (matchedShifts.length > 0) {
         groups.push({ area, shifts: matchedShifts });

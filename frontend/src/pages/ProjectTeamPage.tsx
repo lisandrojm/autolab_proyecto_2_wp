@@ -1715,7 +1715,7 @@ export const ProjectTeamPage: React.FC = () => {
                           const isAreaRestricted = isCoordinadorArea && !isCoordinadorRole;
 
                           const shiftIdsForArea = (ac.shiftIds || []).map((s: any) => String(typeof s === "object" ? s._id : s));
-                          const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id)));
+                          const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
                         // Current assignment for this area
                         const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId);
