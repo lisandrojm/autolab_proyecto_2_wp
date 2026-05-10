@@ -163,13 +163,6 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
   };
 
   const saveAssignments = async () => {
-    if (validationItems.unassignedCount > 0) {
-      sweetAlert.error(
-        "Acción no permitida",
-        "Todas las combinaciones de Área y Turno deben tener un coordinador asignado antes de poder guardar."
-      );
-      return;
-    }
 
     try {
       setIsSaving(true);
@@ -203,8 +196,8 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
       {actionPortalTarget && createPortal(
         <button
           onClick={saveAssignments}
-          disabled={isSaving || validationItems.unassignedCount > 0}
-          className={`btn-primary flex items-center justify-center text-sm p-2 gap-2 w-full sm:w-auto text-white ${isSaving || validationItems.unassignedCount > 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={isSaving}
+          className={`btn-primary flex items-center justify-center text-sm p-2 gap-2 w-full sm:w-auto text-white ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <FontAwesomeIcon icon={faSave} className="h-3 w-3 lg:h-4 lg:w-4" />
           <span>{isSaving ? "Guardando..." : "Guardar Roles"}</span>
@@ -280,7 +273,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                                     value={currentUserId}
                                     onChange={(e) => handleAssignmentChange(area._id, shift._id, e.target.value)}
                                   >
-                                    <option value="">Seleccionar coordinador...</option>
+                                    <option value="">Sin coordinador</option>
                                     {eligibleCoordinators.map((u) => (
                                       <option key={u._id} value={u._id}>
                                         {u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}

@@ -9,7 +9,7 @@ import { projectsAPI, Project } from "../../../../api/projects";
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -456,6 +456,20 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   }, [profile, allProjectsCache]);
 
   const selectedProject = useMemo(() => userProjects.find((p) => p._id === selectedProjectId), [userProjects, selectedProjectId]);
+
+  // Check if the coordinator has any assigned shifts in the selected project
+  const hasCoordinatorAssignments = useMemo(() => {
+    if (!selectedProject) return true;
+    const allAssignments = selectedProject.coordinatorAssignments || [];
+    // If no coordinator assignments configured at all, no restriction
+    if (allAssignments.length === 0) return true;
+    // If there ARE assignments, check if the current user is among them
+    const myAssignments = allAssignments.filter((asm: any) => {
+      const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+      return String(uid) === String(profile?.userId || profile?._id);
+    });
+    return myAssignments.length > 0;
+  }, [selectedProject, profile]);
   const projectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
     return employees.filter((e) => {
@@ -1382,7 +1396,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   setSelectedAreaId(e.target.value);
                                   setSelectedShiftId("");
                                 }}
-                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                disabled={!hasCoordinatorAssignments}
+                                className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}
                               >
                                 <option value="">Todas las Áreas | Turnos</option>
                                 {selectedProject.areasConfig.map((ac) => {
@@ -1407,7 +1422,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               <select
                                 value={selectedShiftId}
                                 onChange={(e) => setSelectedShiftId(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                disabled={!hasCoordinatorAssignments}
+                                className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}
                               >
                                 <option value="">Todos los Turnos</option>
                                 {selectedProject?.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId)?.shiftIds.map((sId: any) => {
@@ -1426,12 +1442,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           {/* Date - Moved Below Project */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fecha del Reporte</label>
-                            <div onClick={() => selectedProjectId && setCalendarOpen(true)} className={`relative w-full px-4 py-2 border rounded flex items-center justify-between transition-colors ${!selectedProjectId ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 cursor-pointer focus-within:ring-2 focus-within:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500"}`}>
+                            <div onClick={() => selectedProjectId && hasCoordinatorAssignments && setCalendarOpen(true)} className={`relative w-full px-4 py-2 border rounded flex items-center justify-between transition-colors ${!selectedProjectId || !hasCoordinatorAssignments ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 cursor-pointer focus-within:ring-2 focus-within:ring-blue-500 hover:border-gray-400 dark:hover:border-gray-500"}`}>
                               <span className={`text-sm ${!reportDate ? "text-gray-400" : "text-gray-900 dark:text-white"}`}>{reportDate ? new Date(reportDate + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Seleccionar fecha"}</span>
                               <FontAwesomeIcon icon={faCalendar} className="text-gray-400" />
                             </div>
                             {!selectedProjectId && <p className="text-xs text-orange-500 mt-1">Selecciona un proyecto primero</p>}
                           </div>
+
+                          {/* No coordinator assignments alert */}
+                          {selectedProjectId && !hasCoordinatorAssignments && (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0 mt-0.5">
+                                <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-600 dark:text-amber-400 text-sm" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Usted no tiene asignado ningún turno.</p>
+                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Comuníquese con administración.</p>
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
 
@@ -1560,12 +1589,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                     {/* Sticky Project Info Bar - Moved below select as requested */}
                     {selectedProject && (
-                      <div id="sticky-project-header" className="px-4 py-3 bg-slate-900/95 dark:bg-slate-900 border-b border-slate-800 backdrop-blur-md flex items-center gap-3 sticky -mx-4 top-[-20px] z-30 flex-shrink-0">
-                        <div className="flex items-center justify-center w-8 h-8 rounded bg-blue-500/10 text-blue-500">
-                          <FontAwesomeIcon icon={faBriefcase} className="text-lg" />
-                        </div>
-                        <div className="flex flex-col flex-1 overflow-hidden">
-                          <h3 className="text-lg sm:text-xl font-bold text-white truncate flex items-center gap-2 mb-0 leading-tight">
+                      <div id="sticky-project-header" className="px-4 py-3 bg-slate-900/95 dark:bg-slate-900 border-b border-slate-800 backdrop-blur-md sticky -mx-4 top-[-20px] z-30 flex-shrink-0 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded bg-blue-500/10 text-blue-500 shrink-0">
+                            <FontAwesomeIcon icon={faBriefcase} className="text-lg" />
+                          </div>
+                          <h3 className="text-lg sm:text-xl font-bold text-white truncate flex items-center gap-2 mb-0 leading-tight flex-1">
                             <span className="shrink-0">{typeof selectedProject.clientId === "object" && selectedProject.clientId.name ? selectedProject.clientId.name : "Cliente"}</span>
                             <span className="font-extrabold mx-1">|</span>
                             <span className="truncate">{selectedProject.name}</span>
@@ -1573,22 +1602,83 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               <FontAwesomeIcon icon={faInfoCircle} className="text-sm" />
                             </button>
                           </h3>
-                          {(selectedAreaId || selectedShiftId) && (
-                            <div className="flex gap-2 mt-1">
-                              {selectedAreaId && (
-                                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
-                                  <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                  {allAreas.find(a => a._id === selectedAreaId)?.name || "Área | Turno"}
-                                </span>
-                              )}
-                              {selectedShiftId && (
+                        </div>
+
+                        {/* Detail: Coordinator's assigned Area | Turno */}
+                        <div className="pl-11 space-y-1.5">
+                          {selectedAreaId ? (
+                            /* User manually selected a specific area */
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
+                                <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                {allAreas.find(a => a._id === selectedAreaId)?.name || "Área"}
+                              </span>
+                              {selectedShiftId ? (
                                 <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px]" />
                                   {allShifts.find(s => s._id === selectedShiftId)?.name || "Turno"}
                                 </span>
+                              ) : (
+                                /* Area selected but all shifts — show all shifts for this area */
+                                (() => {
+                                  const areaConfig = selectedProject.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
+                                  const shiftIds = (areaConfig?.shiftIds || []).map((s: any) => typeof s === "object" ? s._id : s);
+                                  const shiftsForArea = allShifts.filter(s => shiftIds.includes(s._id)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                                  return shiftsForArea.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {shiftsForArea.map(s => (
+                                        <span key={s._id} className="text-[10px] bg-purple-500/15 text-purple-300/80 px-1.5 py-0.5 rounded border border-purple-500/20 flex items-center gap-1 font-medium">
+                                          <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                                          {s.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : null;
+                                })()
                               )}
                             </div>
-                          )}
+                          ) : (() => {
+                            /* No area selected — show the coordinator's own assigned area/shift combos */
+                            const myAssignments = (selectedProject.coordinatorAssignments || []).filter((asm: any) => {
+                              const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                              return String(uid) === String(profile?.userId || profile?._id);
+                            });
+                            if (myAssignments.length === 0) return null;
+
+                            /* Group by area */
+                            const groupedByArea = new Map<string, { areaName: string; shifts: { _id: string; name: string; order?: number }[] }>();
+                            myAssignments.forEach((asm: any) => {
+                              const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+                              const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+                              if (!groupedByArea.has(aId)) {
+                                const areaName = allAreas.find(a => a._id === aId)?.name || "Área";
+                                groupedByArea.set(aId, { areaName, shifts: [] });
+                              }
+                              const shift = allShifts.find(s => s._id === sId);
+                              if (shift && !groupedByArea.get(aId)!.shifts.some(s => s._id === shift._id)) {
+                                groupedByArea.get(aId)!.shifts.push({ _id: shift._id, name: shift.name, order: shift.order });
+                              }
+                            });
+
+                            return (
+                              <div className="space-y-1">
+                                {Array.from(groupedByArea.entries()).map(([aId, { areaName, shifts }]) => (
+                                  <div key={aId} className="flex flex-wrap items-center gap-1">
+                                    <span className="text-[10px] bg-indigo-500/15 text-indigo-300/80 px-1.5 py-0.5 rounded border border-indigo-500/20 flex items-center gap-1 font-semibold uppercase tracking-wider">
+                                      <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                      {areaName}
+                                    </span>
+                                    {shifts.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map(s => (
+                                      <span key={s._id} className="text-[10px] bg-purple-500/10 text-purple-300/70 px-1.5 py-0.5 rounded border border-purple-500/15 flex items-center gap-1 font-medium">
+                                        <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                                        {s.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
@@ -2219,7 +2309,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 {!isFastEntryEnabled && wizardIndex >= -1 ? (
                   <div className="flex gap-3 items-center w-full">
                     {wizardIndex === -1 ? (
-                      <button onClick={startWizard} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-md transition-all active:scale-95 text-sm md:text-base">
+                      <button onClick={startWizard} disabled={!hasCoordinatorAssignments} className={`w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-md transition-all active:scale-95 text-sm md:text-base ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed !bg-gray-500 hover:!bg-gray-500 shadow-none" : ""}`}>
                         Comenzar Reporte
                       </button>
                     ) : (
