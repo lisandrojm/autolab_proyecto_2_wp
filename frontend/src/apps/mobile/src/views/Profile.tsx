@@ -71,6 +71,24 @@ export default function Profile() {
 
     const uniqueShiftNames = Array.from(new Set(shiftNames)).join(", ");
 
+    const coordinatedShifts: any[] = [];
+    if (proj.coordinatorAssignments) {
+      proj.coordinatorAssignments.forEach((asm: any) => {
+        const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+        const profileUid = user?._id || profile?._id || profile?.userId;
+
+        if (String(uid) === String(profileUid)) {
+          coordinatedShifts.push({
+            name: asm.shiftId?.name || asm.shiftId?.nombre || (typeof asm.shiftId === "string" ? asm.shiftId : "Turno"),
+            time: asm.shiftId?.startTime && asm.shiftId?.endTime
+              ? `${asm.shiftId.startTime} - ${asm.shiftId.endTime}`
+              : (asm.shiftId?.hora_inicio && asm.shiftId?.hora_fin ? `${asm.shiftId.hora_inicio} - ${asm.shiftId.hora_fin}` : "Sin horario"),
+            area: asm.areaId?.name || asm.areaId?.nombre || (typeof asm.areaId === "string" ? asm.areaId : "Área"),
+          });
+        }
+      });
+    }
+
     return {
       name: proj.nombre_proyecto || proj.name || "Sin nombre",
       client: proj.nombre_cliente || "Sin cliente",
@@ -84,6 +102,7 @@ export default function Profile() {
       dates: activeContract?.fecha_alta_contrato ? `${format(new Date(activeContract.fecha_alta_contrato), "dd/MM/yy")} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), "dd/MM/yy") : "Actualidad"}` : "Sin fechas",
       shiftsText: uniqueShiftNames || activeContract?.nombre_turno || "Sin turno",
       detailedShifts,
+      coordinatedShifts,
     };
   };
 
@@ -303,31 +322,65 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Turnos Section Compact */}
-            <div className="space-y-2">
-              <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Turnos Asignados</p>
-              {selectedProjectInfo.detailedShifts.length > 0 ? (
-                <div className="grid grid-cols-1 gap-2">
-                  {selectedProjectInfo.detailedShifts.map((shift, sidx) => (
-                    <div key={sidx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-[10px]">
-                          <FontAwesomeIcon icon={faLayerGroup} />
+            {/* Turnos Sections */}
+            <div className="space-y-4">
+              {/* Standard Assigned Shifts */}
+              <div className="space-y-2">
+                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno</p>
+                {selectedProjectInfo.detailedShifts.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2">
+                    {selectedProjectInfo.detailedShifts.map((shift, sidx) => (
+                      <div key={sidx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 text-[10px]">
+                            <FontAwesomeIcon icon={faLayerGroup} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase leading-none">{shift.name}</p>
+                            <p className="text-[8px] font-bold text-indigo-600 dark:text-indigo-400 uppercase mt-0.5">{shift.area}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase leading-none">{shift.name}</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">{shift.area}</p>
+                        <div className="px-2 py-1 rounded-md bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600">
+                          <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 tracking-tighter">{shift.time}</span>
                         </div>
                       </div>
-                      <div className="px-2 py-1 rounded-md bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600">
-                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 tracking-tighter">{shift.time}</span>
-                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                    <p className="text-[10px] text-slate-400 italic font-medium">Sin turnos asignados</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Coordinated Shifts - Only for coordinators */}
+              {isMobileCoordinator && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno Coordinada</p>
+                  {selectedProjectInfo.coordinatedShifts.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      {selectedProjectInfo.coordinatedShifts.map((shift, sidx) => (
+                        <div key={sidx} className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 text-[10px]">
+                              <FontAwesomeIcon icon={faUserTie} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase leading-none">{shift.name}</p>
+                              <p className="text-[8px] font-bold text-amber-600 dark:text-amber-400 uppercase mt-0.5">{shift.area}</p>
+                            </div>
+                          </div>
+                          <div className="px-2 py-1 rounded-md bg-white dark:bg-slate-700 shadow-sm border border-amber-100 dark:border-amber-800/30">
+                            <span className="text-[10px] font-black text-amber-700 dark:text-amber-300 tracking-tighter">{shift.time}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
-                  <p className="text-[10px] text-slate-400 italic font-medium">Sin turnos asignados</p>
+                  ) : (
+                    <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                      <p className="text-[10px] text-slate-400 italic font-medium">Sin turnos asignados</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
