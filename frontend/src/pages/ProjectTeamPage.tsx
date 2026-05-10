@@ -17,7 +17,7 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { getHelp } from "../data/help/helpContent";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUser, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faChevronDown, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { TeamSolicitudesTab } from "../components/team/TeamSolicitudesTab";
 import { TeamCoordinadoresTab } from "../components/team/TeamCoordinadoresTab";
@@ -108,6 +108,7 @@ export const ProjectTeamPage: React.FC = () => {
   const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
   const [activeTab, setActiveTab] = useState<"equipo" | "solicitudes" | "coordinadores">("equipo");
   const [solicitudesCount, setSolicitudesCount] = useState(0);
+  const [showCandidatesInfo, setShowCandidatesInfo] = useState(false);
 
   // Persistence for view mode
   useEffect(() => {
@@ -332,6 +333,8 @@ export const ProjectTeamPage: React.FC = () => {
     // Retornamos un set único de IDs
     return Array.from(new Set([...fromProject, ...fromUsers]));
   }, [project, projectId, allUsers]);
+
+  const activeAddFiltersCount = useMemo(() => [filterRole, filterRoleFrame, filterProject].filter(Boolean).length, [filterRole, filterRoleFrame, filterProject]);
 
   // Filtered Users (candidates to add) - only search by name or email
    const filteredCandidates = useMemo(() => {
@@ -1161,7 +1164,25 @@ export const ProjectTeamPage: React.FC = () => {
 
           {/* Modals */}
 
-          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Agregar Miembros al Equipo" subtitle={`Disponibles para asignar (${filteredCandidates.length})`} size="xl">
+          <Modal 
+            isOpen={showAddModal} 
+            onClose={() => setShowAddModal(false)} 
+            title="Agregar Miembros al Equipo" 
+            subtitle={
+              <div className="flex items-center gap-2">
+                <span>Disponibles para asignar ({filteredCandidates.length})</span>
+                <button 
+                  type="button"
+                  onClick={() => setShowCandidatesInfo(true)}
+                  className="text-gray-400 hover:text-blue-500 transition-colors"
+                  title="¿Qué usuarios se muestran?"
+                >
+                  <FontAwesomeIcon icon={faInfoCircle} className="text-xs" />
+                </button>
+              </div>
+            } 
+            size="xl"
+          >
             <div className="space-y-4 max-h-[85vh] flex flex-col">
               <div className="flex flex-col gap-3 shrink-0">
                 <div className="flex items-center gap-2">
@@ -1171,55 +1192,53 @@ export const ProjectTeamPage: React.FC = () => {
                     </div>
                     <input type="text" placeholder="Buscar usuario por nombre o email..." className="input-field pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
                   </div>
-                  <button onClick={() => setShowFilters(!showFilters)} className={`px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${showFilters ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}>
+                  <button 
+                    onClick={() => setShowFilters(true)} 
+                    className={`relative px-4 py-2 rounded-lg border transition-all flex items-center gap-2 text-sm font-medium ${activeAddFiltersCount > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}
+                  >
                     <FontAwesomeIcon icon={faFilter} className="text-xs" />
                     Filtros
-                    {(filterRole || filterRoleFrame || filterProject) && <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>}
+                    {activeAddFiltersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800 shadow-sm">
+                        {activeAddFiltersCount}
+                      </span>
+                    )}
                   </button>
                 </div>
 
-                {showFilters && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2 duration-200">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol</label>
-                      <select className="input-field py-1.5 h-auto text-xs" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-                        <option value="">Todos los Roles</option>
-                        {Array.from(new Set(allUsers.flatMap((u) => (u.roles || []).map((r) => r.name))))
-                          .sort()
-                          .map((roleName) => (
-                            <option key={roleName} value={roleName}>
-                              {roleName}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol/es Frame</label>
-                      <select className="input-field py-1.5 h-auto text-xs" value={filterRoleFrame} onChange={(e) => setFilterRoleFrame(e.target.value)}>
-                        <option value="">Todos los Rol Frames</option>
-                        {allRoleFrames.map((rf) => (
-                          <option key={rf._id} value={rf.name}>
-                            {rf.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Proyecto/s</label>
-                      <select className="input-field py-1.5 h-auto text-xs" value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
-                        <option value="">Todos los Proyectos</option>
-                        {Array.from(new Set(allUsers.flatMap((u) => (u.metadata?.projects || []).map((p) => p.nombre_proyecto))))
-                          .filter(Boolean)
-                          .sort()
-                          .map((projectName) => (
-                            <option key={projectName} value={projectName}>
-                              {projectName}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
+                {/* Filter Badges */}
+                {activeAddFiltersCount > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 mt-1 px-1">
+                    {filterRole && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        <span className="opacity-60">Rol:</span> {filterRole}
+                        <button onClick={() => setFilterRole("")} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                          <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                        </button>
+                      </span>
+                    )}
+                    {filterRoleFrame && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                        <span className="opacity-60">Role Frame:</span> {filterRoleFrame}
+                        <button onClick={() => setFilterRoleFrame("")} className="hover:text-purple-900 dark:hover:text-purple-100 transition-colors">
+                          <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                        </button>
+                      </span>
+                    )}
+                    {filterProject && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+                        <span className="opacity-60">Proyecto:</span> {filterProject}
+                        <button onClick={() => setFilterProject("")} className="hover:text-green-900 dark:hover:text-green-100 transition-colors">
+                          <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                        </button>
+                      </span>
+                    )}
+                    <button 
+                      onClick={() => { setFilterRole(""); setFilterRoleFrame(""); setFilterProject(""); }}
+                      className="text-[10px] text-gray-500 hover:text-red-500 font-bold ml-1 transition-colors uppercase tracking-wider"
+                    >
+                      Limpiar Todo
+                    </button>
                   </div>
                 )}
               </div>
@@ -1294,7 +1313,13 @@ export const ProjectTeamPage: React.FC = () => {
                                 })}
                               </div>
                             </td>
-                            <td className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{rolFrame}</td>
+                            <td className="px-4 py-3">
+                              {rolFrame && rolFrame !== "-" ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">{rolFrame}</span>
+                              ) : (
+                                <span className="text-xs text-gray-400">-</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-0.5">
                                 {activeProjects.length > 0 ? (
@@ -1342,6 +1367,111 @@ export const ProjectTeamPage: React.FC = () => {
               </div>
 
 
+            </div>
+          </Modal>
+
+          {/* Candidates Filter Modal */}
+          <Modal
+            isOpen={showFilters}
+            onClose={() => setShowFilters(false)}
+            title="Filtros Avanzados"
+            subtitle="Configura los filtros para refinar los candidatos"
+            size="sm"
+            footer={
+              <div className="flex items-center justify-between w-full">
+                <button 
+                  onClick={() => { setFilterRole(""); setFilterRoleFrame(""); setFilterProject(""); setShowFilters(false); }}
+                  className="btn-secondary"
+                >
+                  Limpiar Todo
+                </button>
+                <button onClick={() => setShowFilters(false)} className="btn-primary">
+                  Aplicar
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol</label>
+                <div className="relative">
+                  <select className="input-field py-2 w-full text-xs pr-8" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+                    <option value="">Todos los Roles</option>
+                    {Array.from(new Set(allUsers.flatMap((u) => (u.roles || []).map((r) => r.name))))
+                      .sort()
+                      .map((roleName) => (
+                        <option key={roleName} value={roleName}>
+                          {roleName}
+                        </option>
+                      ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Rol/es Frame</label>
+                <div className="relative">
+                  <select className="input-field py-2 w-full text-xs pr-8" value={filterRoleFrame} onChange={(e) => setFilterRoleFrame(e.target.value)}>
+                    <option value="">Todos los Rol Frames</option>
+                    {allRoleFrames.map((rf) => (
+                      <option key={rf._id} value={rf.name}>
+                        {rf.name}
+                      </option>
+                    ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Filtrar por Proyecto/s</label>
+                <div className="relative">
+                  <select className="input-field py-2 w-full text-xs pr-8" value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
+                    <option value="">Todos los Proyectos</option>
+                    {Array.from(new Set(allUsers.flatMap((u) => (u.metadata?.projects || []).map((p) => p.nombre_proyecto))))
+                      .filter(Boolean)
+                      .sort()
+                      .map((projectName) => (
+                        <option key={projectName} value={projectName}>
+                          {projectName}
+                        </option>
+                      ))}
+                  </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
+              </div>
+
+              {activeAddFiltersCount > 0 && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                  <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                    Tienes <strong>{activeAddFiltersCount}</strong> filtro{activeAddFiltersCount > 1 ? "s" : ""} aplicado{activeAddFiltersCount > 1 ? "s" : ""}.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Modal>
+
+          {/* Info Modal for Candidates */}
+          <Modal
+            isOpen={showCandidatesInfo}
+            onClose={() => setShowCandidatesInfo(false)}
+            title="Usuarios Disponibles"
+            size="md"
+          >
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
+                <FontAwesomeIcon icon={faInfoCircle} className="text-blue-600 dark:text-blue-400 mt-1" />
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="font-bold mb-2">¿Quiénes aparecen en esta lista?</p>
+                  <p>La lista muestra a todos los <strong>usuarios activos</strong> de la plataforma que actualmente <strong>no forman parte del equipo</strong> de este proyecto.</p>
+                </div>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400 ml-4 list-disc">
+                <li>Usuarios con estado "Activo" en sus metadatos.</li>
+                <li>Se excluyen usuarios que ya están asignados a este proyecto.</li>
+                <li>Puedes buscar por nombre o email para filtrar resultados específicos.</li>
+              </ul>
             </div>
           </Modal>
 
