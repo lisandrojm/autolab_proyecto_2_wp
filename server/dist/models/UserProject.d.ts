@@ -11,6 +11,10 @@ interface IContract {
     sueldo_jornada: number;
     sueldo_mano: number;
     sueldo_mano_texto: string;
+    sueldo_diario_neto: number;
+    diferencia_diaria_neto: number;
+    sueldo_neto: number;
+    sueldo_bruto: number;
     reemplazo: boolean | null;
     empleado_id_reemplezado: number | null;
     observaciones: string;
