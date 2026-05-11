@@ -130,7 +130,7 @@ export const vacationsAPI = {
   },
 
   regeneratePDF: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.post(`/hr-admin/vacations/${id}/regenerate-pdf`);
+    const response = await axios.post(`/vacations/${id}/regenerate-pdf`);
     return response.data;
   },
 };
