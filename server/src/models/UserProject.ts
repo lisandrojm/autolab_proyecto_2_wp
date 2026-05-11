@@ -13,6 +13,10 @@ interface IContract {
   sueldo_jornada: number;
   sueldo_mano: number;
   sueldo_mano_texto: string;
+  sueldo_diario_neto: number;
+  diferencia_diaria_neto: number;
+  sueldo_neto: number;
+  sueldo_bruto: number;
   reemplazo: boolean | null;
   empleado_id_reemplezado: number | null;
   observaciones: string;
@@ -71,6 +75,10 @@ const contractSchema = new Schema<IContract>(
     sueldo_jornada: { type: Number },
     sueldo_mano: { type: Number },
     sueldo_mano_texto: { type: String },
+    sueldo_diario_neto: { type: Number },
+    diferencia_diaria_neto: { type: Number },
+    sueldo_neto: { type: Number },
+    sueldo_bruto: { type: Number },
     reemplazo: { type: Boolean },
     empleado_id_reemplezado: { type: Number },
     observaciones: { type: String },

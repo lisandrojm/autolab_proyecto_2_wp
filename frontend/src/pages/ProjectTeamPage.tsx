@@ -90,6 +90,8 @@ export const ProjectTeamPage: React.FC = () => {
     sueldo_jornada: 0,
     sueldo_mano: 0,
     sueldo_mano_texto: "",
+    sueldo_diario_neto: 0,
+    diferencia_diaria_neto: 0,
     sueldo_neto: 0,
     sueldo_bruto: 0,
     // Step 3: Extras
@@ -129,6 +131,26 @@ export const ProjectTeamPage: React.FC = () => {
   }, []);
 
   const effectiveViewMode = isLg ? viewMode : "cards";
+  
+  /* -------------------------- Auto-Calculations --------------------------- */
+  useEffect(() => {
+    const sueldo_mano = wizardData.sueldo_jornada * wizardData.cantidad_jornadas_laborales;
+    const sueldo_diario_neto = Number((wizardData.sueldo_neto / 30).toFixed(2));
+    const diferencia_diaria_neto = Number((wizardData.sueldo_jornada - sueldo_diario_neto).toFixed(2));
+
+    if (
+      sueldo_mano !== wizardData.sueldo_mano ||
+      sueldo_diario_neto !== wizardData.sueldo_diario_neto ||
+      diferencia_diaria_neto !== wizardData.diferencia_diaria_neto
+    ) {
+      setWizardData((prev) => ({
+        ...prev,
+        sueldo_mano,
+        sueldo_diario_neto,
+        diferencia_diaria_neto,
+      }));
+    }
+  }, [wizardData.sueldo_jornada, wizardData.cantidad_jornadas_laborales, wizardData.sueldo_neto]);
 
   /* ------------------------------ Fetchers ------------------------------- */
 
@@ -600,6 +622,8 @@ export const ProjectTeamPage: React.FC = () => {
       sueldo_jornada: lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
       sueldo_mano_texto: lastContract?.sueldo_mano_texto || "",
+      sueldo_diario_neto: lastContract?.sueldo_diario_neto || 0,
+      diferencia_diaria_neto: lastContract?.diferencia_diaria_neto || 0,
       sueldo_neto: lastContract?.sueldo_neto || 0,
       sueldo_bruto: lastContract?.sueldo_bruto || 0,
       sede_id: initialSedeId,
@@ -1944,6 +1968,17 @@ export const ProjectTeamPage: React.FC = () => {
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano texto *</label>
                     <input type="text" className="input-field w-full" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} onChange={(e) => setWizardData((prev) => ({ ...prev, sueldo_mano_texto: e.target.value }))} />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo diario neto</label>
+                      <input type="number" step="0.01" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_diario_neto} readOnly />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Diferencia diaria neto</label>
+                      <input type="number" step="0.01" className={`input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed ${wizardData.diferencia_diaria_neto < 0 ? "text-red-500 font-bold" : "text-green-500 font-bold"}`} value={wizardData.diferencia_diaria_neto} readOnly />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
