@@ -1033,7 +1033,7 @@ router.put("/:id/pre-approve", async (req: any, res) => {
       }
     }
 
-    if (templateId) {
+    if (templateId && templateId.toString().trim() !== "") {
       try {
         const template = await Pdf.findOne({
           _id: templateId,

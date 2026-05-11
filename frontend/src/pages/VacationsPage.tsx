@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSearch, faFilter, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase, faExclamationTriangle, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { vacationsAPI } from "../api/vacations";
 import { projectsAPI, Project } from "../api/projects";
 import { clientsAPI, Client } from "../api/clients";
@@ -58,6 +58,7 @@ export const VacationsPage: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isRegeneratingPdf, setIsRegeneratingPdf] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages] = useState(1);
@@ -277,6 +278,48 @@ export const VacationsPage: React.FC = () => {
       await loadRecords(); // Refresh to be sure
     } catch (error: any) {
       await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo eliminar la solicitud");
+    }
+  };
+
+  const handleRegeneratePdf = async (id: string) => {
+    try {
+      setIsRegeneratingPdf(true);
+      const item = await vacationsAPI.regeneratePDF(id);
+
+      // Transform API response
+      const transformed: VacationRequestMock = {
+        id: item._id,
+        numeroPedido: item.vacationNumber || item._id,
+        reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds) ? item.vacationRuleIds.map((rule: any) => (typeof rule === "object" && rule.name ? rule.name : "")).filter((name: string) => name !== "") : [],
+        solicitante: {
+          nombre: item.userName || "Usuario",
+          cargo: item.position || "-",
+        },
+        estado: item.status || "pending",
+        firmaEstado: item.signatureStatus || "not_required",
+        fechaSolicitud: item.createdAt,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        diasSolicitados: item.daysRequested || 0,
+        requiresSignature: item.requiresSignature || false,
+        signatureNotifiedAt: item.signatureNotifiedAt,
+        pdfPreAprobacionUrl: item.pdfPreAprobacionUrl,
+        userProject: item.userProject || "-",
+        userRoleFrame: item.userRoleFrame || "-",
+        projectsInfo: item.projectsInfo || [],
+        userSnapshot: item.userSnapshot || { sedes: [], rolFrames: [], clients: [], projects: [], rolesFrameIds: [] },
+      };
+
+      // Update state
+      setMockVacations((prev) => prev.map((v) => (v.id === id ? transformed : v)));
+      setSelectedVacation(transformed);
+
+      sweetAlert.success("¡Éxito!", "El PDF ha sido regenerado correctamente");
+    } catch (error: any) {
+      console.error("Error regenerating PDF:", error);
+      sweetAlert.error("Error", error.response?.data?.error || "No se pudo regenerar el PDF");
+    } finally {
+      setIsRegeneratingPdf(false);
     }
   };
 
@@ -1114,20 +1157,41 @@ export const VacationsPage: React.FC = () => {
                 </div>
               )}
 
-              {selectedVacation.pdfPreAprobacionUrl && (
-                <div className="border-slate-200 dark:border-slate-700">
-                  <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
-                    <FontAwesomeIcon icon={faDownload} />
-                    Descargar PDF
-                    <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
-                  </a>
+              {selectedVacation.pdfPreAprobacionUrl ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <a href={`${import.meta.env.VITE_API_URL}${selectedVacation.pdfPreAprobacionUrl}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded hover:bg-violet-700 dark:bg-violet-800 dark:hover:bg-violet-600 transition-colors font-medium shadow-sm text-sm">
+                      <FontAwesomeIcon icon={faDownload} />
+                      Descargar PDF
+                      <FontAwesomeIcon icon={faFilePdf} className="text-lg" />
+                    </a>
+                    <button onClick={() => handleRegeneratePdf(selectedVacation.id)} disabled={isRegeneratingPdf} className="p-2.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50" title="Regenerar documento PDF">
+                      <FontAwesomeIcon icon={isRegeneratingPdf ? faSpinner : faRotateRight} spin={isRegeneratingPdf} />
+                    </button>
+                  </div>
                   {selectedVacation.estado === "pre_approved" && (
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-2">
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-1 flex items-center gap-2">
                       <FontAwesomeIcon icon={faCheckCircle} />
                       Su pdf fue generado.
                     </p>
                   )}
                 </div>
+              ) : (
+                selectedVacation.estado === "pre_approved" && (
+                  <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
+                    <div className="flex items-start gap-3">
+                      <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-300">PDF no disponible</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Hubo un problema al generar el PDF de pre-aprobación o no se encontró una plantilla.</p>
+                        <button onClick={() => handleRegeneratePdf(selectedVacation.id)} disabled={isRegeneratingPdf} className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1">
+                          <FontAwesomeIcon icon={isRegeneratingPdf ? faSpinner : faRotateRight} spin={isRegeneratingPdf} />
+                          {isRegeneratingPdf ? "Generando..." : "Intentar generar PDF ahora"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
               )}
 
               <div className="flex gap-10">
