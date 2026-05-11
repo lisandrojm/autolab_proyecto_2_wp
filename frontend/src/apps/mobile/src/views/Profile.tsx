@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
@@ -6,13 +6,41 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { useProfile } from "../hooks/useProfile";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { projectsAPI, Project } from "../../../../api/projects";
+import { areasAPI, Area } from "../../../../api/areas";
+import { shiftsAPI, Shift } from "../../../../api/shifts";
 
 export default function Profile() {
   const { profile, stats, loading } = useProfile();
   const { user, logout } = useAuthStore();
-  const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
+   const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [allAreas, setAllAreas] = useState<Area[]>([]);
+  const [allShifts, setAllShifts] = useState<Shift[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
-  if (loading) return null;
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setIsLoadingProjects(true);
+        const [projects, areas, shifts] = await Promise.all([
+          projectsAPI.listAll(),
+          areasAPI.getAll(),
+          shiftsAPI.getAll()
+        ]);
+        setAllProjects(projects);
+        setAllAreas(areas);
+        setAllShifts(shifts);
+      } catch (err) {
+        console.error("Error fetching projects for profile:", err);
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  if (loading || isLoadingProjects) return null;
 
   const isMobileCoordinator = user?.roles?.some((r) => r.toLowerCase().includes("coordinador"));
   const isMobileCollaborator = user?.roles?.some((r) => r.toLowerCase().includes("colaborador"));
@@ -25,6 +53,9 @@ export default function Profile() {
 
   const getProjectDetails = (proj: any) => {
     if (!proj) return null;
+
+    const findArea = (id: string) => allAreas.find(a => a._id === id);
+    const findShift = (id: string) => allShifts.find(s => s._id === id);
 
     // Find active contract or just the first one
     const activeContract =
@@ -72,18 +103,27 @@ export default function Profile() {
     const uniqueShiftNames = Array.from(new Set(shiftNames)).join(", ");
 
     const coordinatedShifts: any[] = [];
-    if (proj.coordinatorAssignments) {
+    if (proj.coordinatorAssignments && Array.isArray(proj.coordinatorAssignments)) {
       proj.coordinatorAssignments.forEach((asm: any) => {
-        const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-        const profileUid = user?._id || profile?._id || profile?.userId;
+        // Extract assignment user ID (can be object with _id or id, or just string)
+        const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId) : asm.userId;
+        
+        // Extract current user ID from best available source
+        const profileUid = profile?.userId || profile?._id || user?._id;
 
-        if (String(uid) === String(profileUid)) {
+        if (uid && profileUid && String(uid) === String(profileUid)) {
+          const areaId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+          const shiftId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+          
+          const areaObj = (asm.areaId && typeof asm.areaId === "object" && asm.areaId.name) ? asm.areaId : findArea(areaId);
+          const shiftObj = (asm.shiftId && typeof asm.shiftId === "object" && asm.shiftId.name) ? asm.shiftId : findShift(shiftId);
+
           coordinatedShifts.push({
-            name: asm.shiftId?.name || asm.shiftId?.nombre || (typeof asm.shiftId === "string" ? asm.shiftId : "Turno"),
-            time: asm.shiftId?.startTime && asm.shiftId?.endTime
-              ? `${asm.shiftId.startTime} - ${asm.shiftId.endTime}`
-              : (asm.shiftId?.hora_inicio && asm.shiftId?.hora_fin ? `${asm.shiftId.hora_inicio} - ${asm.shiftId.hora_fin}` : "Sin horario"),
-            area: asm.areaId?.name || asm.areaId?.nombre || (typeof asm.areaId === "string" ? asm.areaId : "Área"),
+            name: shiftObj?.name || shiftObj?.nombre || shiftId || "Turno",
+            time: (shiftObj?.startTime && shiftObj?.endTime)
+              ? `${shiftObj.startTime} - ${shiftObj.endTime}`
+              : (shiftObj?.hora_inicio && shiftObj?.hora_fin ? `${shiftObj.hora_inicio} - ${shiftObj.hora_fin}` : "Sin horario"),
+            area: areaObj?.name || areaObj?.nombre || areaId || "Área",
           });
         }
       });
@@ -106,7 +146,24 @@ export default function Profile() {
     };
   };
 
-  const selectedProjectInfo = getProjectDetails(userProjects[selectedProjectIndex]);
+  const currentProjectSummary = profile?.metadata?.projects?.[selectedProjectIndex];
+  
+  // Find the full project data using various possible ID fields
+  const fullProjectData = allProjects.find(p => 
+    (currentProjectSummary?._id && p._id === currentProjectSummary._id) || 
+    (currentProjectSummary?.projectId && p._id === currentProjectSummary.projectId) ||
+    (currentProjectSummary?.projectId && p.projectId === currentProjectSummary.projectId) ||
+    (currentProjectSummary?.nombre_proyecto && p.name === currentProjectSummary.nombre_proyecto) ||
+    (currentProjectSummary?.name && p.name === currentProjectSummary.name)
+  );
+  
+  // Enrich the summary with full data (especially coordinatorAssignments)
+  const projectToProcess = fullProjectData ? { ...currentProjectSummary, ...fullProjectData } : currentProjectSummary;
+  const selectedProjectInfo = getProjectDetails(projectToProcess);
+
+  // Robust check for coordinated shifts within getProjectDetails logic (conceptually)
+  // We already modified getProjectDetails, but let's make the ID matching inside it even more robust in the next step if needed.
+  // For now, let's ensure the current logic uses the best possible user ID.
 
   // 2. Calculate Seniority
   const calculateTotalSeniority = () => {
