@@ -1426,15 +1426,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}
                               >
                                 <option value="">Todos los Turnos</option>
-                                {selectedProject?.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId)?.shiftIds.map((sId: any) => {
-                                  const shiftId = typeof sId === "object" ? sId?._id : sId;
-                                  const shift = allShifts.find((s) => s._id === shiftId);
-                                  return (
-                                    <option key={shiftId} value={shiftId}>
-                                      {shift?.name || "Cargando..."}
-                                    </option>
-                                  );
-                                })}
+                                {(() => {
+                                  const areaConfig = selectedProject?.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
+                                  if (!areaConfig || !areaConfig.shiftIds) return null;
+                                  
+                                  return areaConfig.shiftIds
+                                    .map((sId: any) => {
+                                      const shiftId = typeof sId === "object" ? sId?._id : sId;
+                                      return allShifts.find((s) => s._id === shiftId);
+                                    })
+                                    .filter((s): s is Shift => !!s)
+                                    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+                                    .map((shift) => (
+                                      <option key={shift._id} value={shift._id}>
+                                        {shift.name || shift.nombre}
+                                      </option>
+                                    ));
+                                })()}
                               </select>
                             </div>
                           )}

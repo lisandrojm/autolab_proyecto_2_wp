@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faUserCheck, faBuilding, faIdCard, faClock, faLayerGroup, faFileContract, faMoneyBillWave, faChevronDown, faCheckCircle, faUserShield, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
@@ -18,38 +18,7 @@ export default function Profile() {
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setIsLoadingProjects(true);
-        const [projects, areas, shifts] = await Promise.all([
-          projectsAPI.listAll(),
-          areasAPI.getAll(),
-          shiftsAPI.getAll()
-        ]);
-        setAllProjects(projects);
-        setAllAreas(areas);
-        setAllShifts(shifts);
-      } catch (err) {
-        console.error("Error fetching projects for profile:", err);
-      } finally {
-        setIsLoadingProjects(false);
-      }
-    };
-    fetchProjects();
-  }, []);
-
-  if (loading || isLoadingProjects) return null;
-
-  const isMobileCoordinator = user?.roles?.some((r) => r.toLowerCase().includes("coordinador"));
-  const isMobileCollaborator = user?.roles?.some((r) => r.toLowerCase().includes("colaborador"));
-
-  const userRole = isMobileCoordinator ? "Mobile-Coordinador" : isMobileCollaborator ? "Mobile-Colaborador" : "Usuario";
-  const roleColor = isMobileCoordinator ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
-
-  // 1. Process Projects and Contracts
-  const userProjects = profile?.metadata?.projects || [];
+  const [currentFullProject, setCurrentFullProject] = useState<Project | null>(null);
 
   const getProjectDetails = (proj: any) => {
     if (!proj) return null;
@@ -67,75 +36,149 @@ export default function Profile() {
 
     const isResponsable = Number(proj.metadata?.responsableId) === Number(profile?.metadata?.id);
 
-    // Extract shifts names for the header or summary
     const shiftNames: string[] = [];
     const detailedShifts: any[] = [];
 
-    if (activeContract?.areaShiftAssignments) {
-      activeContract.areaShiftAssignments.forEach((asa: any) => {
-        // Handle shiftIds (array of objects or IDs)
-        if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
-          asa.shiftIds.forEach((s: any) => {
-            const name = s.name || s.nombre || (typeof s === "string" ? s : "Sin nombre");
-            shiftNames.push(name);
-            detailedShifts.push({
-              name,
-              time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : (s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : s.time || "Sin horario"),
-              area: asa.nombre_area || asa.areaName || asa.areaId?.name || "Sin área",
-            });
-          });
-        }
-        // Fallback to asa.shifts if shiftIds is not present
-        else if (asa.shifts) {
-          asa.shifts.forEach((s: any) => {
-            const name = s.nombre || s.name;
-            shiftNames.push(name);
-            detailedShifts.push({
-              name,
-              time: s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : "Sin horario",
-              area: asa.nombre_area || asa.areaName || "Sin área",
-            });
-          });
-        }
-      });
-    }
+    const myIds = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
 
-    const uniqueShiftNames = Array.from(new Set(shiftNames)).join(", ");
+    // Find ALL team configuration entries for this user with robust matching
+    const myTeamConfigs = proj.teamConfig?.filter((c: any) => {
+      const uid = typeof c.userId === "object" ? (c.userId?._id || c.userId?.id || c.userId?.userId || c.userId?.metadata?.id) : c.userId;
+      const myIdsMatch = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
+      
+      let isMatch = uid && myIdsMatch.includes(String(uid));
 
-    const coordinatedShifts: any[] = [];
+      // Fallback to Email match
+      if (!isMatch) {
+        const uEmail = typeof c.userId === "object" ? (c.userId?.email || c.userId?.correo) : null;
+        const myEmail = user?.email || profile?.email;
+        if (uEmail && myEmail && String(uEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
+      }
+
+      // Fallback to Name match
+      if (!isMatch) {
+        const uName = typeof c.userId === "object" ? (c.userId?.firstName && c.userId?.lastName ? `${c.userId.firstName} ${c.userId.lastName}` : (c.userId?.name || c.userId?.nombre)) : null;
+        const myName = user?.name || user?.nombre || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
+        if (uName && myName && uName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
+      }
+
+      return isMatch;
+    }) || [];
+
+    const coordinatedShiftsGrouped: any[] = [];
+    const coordinatedKeys = new Set<string>();
+
     if (proj.coordinatorAssignments && Array.isArray(proj.coordinatorAssignments)) {
-      proj.coordinatorAssignments.forEach((asm: any) => {
-        // 1. Match by ID (multiple sources)
-        const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId) : asm.userId;
-        const profileUid = profile?.userId || profile?._id || user?._id;
-        let isMatch = uid && profileUid && String(uid) === String(profileUid);
+      const grouped = new Map<string, { areaName: string; shifts: { name: string; time: string; order: number }[] }>();
 
-        // 2. Fallback to Email match if IDs don't work or are missing
+      proj.coordinatorAssignments.forEach((asm: any) => {
+        const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id) : asm.userId;
+        const myIdsMatch = [profile?.userId, profile?._id, user?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
+        
+        let isMatch = uid && myIdsMatch.includes(String(uid));
         if (!isMatch) {
-          const asmEmail = typeof asm.userId === "object" ? asm.userId?.email : null;
-          const myEmail = profile?.email || user?.email;
-          if (asmEmail && myEmail && asmEmail.toLowerCase() === myEmail.toLowerCase()) {
-            isMatch = true;
-          }
+          const asmEmail = typeof asm.userId === "object" ? (asm.userId?.email || asm.userId?.correo) : null;
+          const myEmail = user?.email || profile?.email;
+          if (asmEmail && myEmail && String(asmEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
+        }
+        if (!isMatch) {
+          const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : (asm.userId?.name || asm.userId?.nombre)) : null;
+          const myName = user?.name || user?.nombre || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
+          if (asmName && myName && asmName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
         }
 
         if (isMatch) {
-          const areaId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
-          const shiftId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+          const areaId = typeof asm.areaId === "object" ? (asm.areaId?._id || asm.areaId?.id) : asm.areaId;
+          const shiftId = typeof asm.shiftId === "object" ? (asm.shiftId?._id || asm.shiftId?.id) : asm.shiftId;
           
-          const areaObj = (asm.areaId && typeof asm.areaId === "object" && asm.areaId.name) ? asm.areaId : findArea(areaId);
-          const shiftObj = (asm.shiftId && typeof asm.shiftId === "object" && asm.shiftId.name) ? asm.shiftId : findShift(shiftId);
+          if (areaId && shiftId) {
+            coordinatedKeys.add(`${areaId}-${shiftId}`);
+          }
+          
+          const areaObj = (asm.areaId && typeof asm.areaId === "object" && (asm.areaId.name || asm.areaId.nombre)) ? asm.areaId : findArea(areaId);
+          const shiftObj = (asm.shiftId && typeof asm.shiftId === "object" && (asm.shiftId.name || asm.shiftId.nombre)) ? asm.shiftId : findShift(shiftId);
 
-          coordinatedShifts.push({
-            name: shiftObj?.name || shiftObj?.nombre || shiftId || "Turno",
-            time: (shiftObj?.startTime && shiftObj?.endTime)
-              ? `${shiftObj.startTime} - ${shiftObj.endTime}`
-              : (shiftObj?.hora_inicio && shiftObj?.hora_fin ? `${shiftObj.hora_inicio} - ${shiftObj.hora_fin}` : "Sin horario"),
-            area: areaObj?.name || areaObj?.nombre || areaId || "Área",
+          const aIdStr = String(areaId);
+          const areaName = areaObj?.name || areaObj?.nombre || "Área";
+          const shiftName = shiftObj?.name || shiftObj?.nombre || "Turno";
+
+          if (!grouped.has(aIdStr)) {
+            grouped.set(aIdStr, { areaName, shifts: [] });
+          }
+          
+          const shifts = grouped.get(aIdStr)!.shifts;
+          if (!shifts.some(s => s.name === shiftName)) {
+            shifts.push({
+              name: shiftName,
+              time: (shiftObj?.startTime && shiftObj?.endTime) ? `${shiftObj.startTime} - ${shiftObj.endTime}` : (shiftObj?.hora_inicio && shiftObj?.hora_fin ? `${shiftObj.hora_inicio} - ${shiftObj.hora_fin}` : "Sin horario"),
+              order: Number(shiftObj?.order) || 0
+            });
+          }
+        }
+      });
+
+      Array.from(grouped.entries()).forEach(([aId, data]) => {
+        data.shifts.sort((a, b) => a.order - b.order);
+        coordinatedShiftsGrouped.push({ areaId: aId, ...data });
+      });
+    }
+
+    // Collect all assignments from all matching team configs AND the active contract
+    let allStandardAssignments: any[] = [];
+    myTeamConfigs.forEach((tc: any) => {
+      if (tc.areaShiftAssignments && Array.isArray(tc.areaShiftAssignments)) {
+        allStandardAssignments = [...allStandardAssignments, ...tc.areaShiftAssignments];
+      }
+    });
+    if (activeContract?.areaShiftAssignments && Array.isArray(activeContract.areaShiftAssignments)) {
+      allStandardAssignments = [...allStandardAssignments, ...activeContract.areaShiftAssignments];
+    }
+
+    // Process and deduplicate standard assignments, excluding coordinated ones
+    if (allStandardAssignments.length > 0) {
+      const seenAssignments = new Set<string>();
+      
+      allStandardAssignments.forEach((asa: any) => {
+        const aId = typeof asa.areaId === "object" ? (asa.areaId?._id || asa.areaId?.id) : asa.areaId;
+        const areaObj = findArea(aId);
+        const areaName = areaObj?.name || areaObj?.nombre || asa.nombre_area || asa.areaName || "Área";
+        
+        const processShift = (s: any) => {
+          const shiftId = typeof s === "object" ? (s._id || s.id) : s;
+          const fullShift = findShift(shiftId);
+          const name = fullShift?.name || fullShift?.nombre || s.name || s.nombre || (typeof s === "string" ? s : "Turno");
+          
+          const uniqueKey = `${areaName}-${name}`.toLowerCase();
+          
+          // CRITICAL: If this shift is already in Coordinated (match by ID), skip it
+          if (aId && shiftId && coordinatedKeys.has(`${aId}-${shiftId}`)) return;
+          if (seenAssignments.has(uniqueKey)) return;
+          
+          seenAssignments.add(uniqueKey);
+
+          detailedShifts.push({
+            name,
+            time: fullShift?.hora_inicio && fullShift?.hora_fin ? `${fullShift.hora_inicio} - ${fullShift.hora_fin}` : (s.hora_inicio && s.hora_fin ? `${s.hora_inicio} - ${s.hora_fin}` : (s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : "Sin horario")),
+            area: areaName,
+            order: Number(fullShift?.order || s.order || 0)
           });
+          shiftNames.push(name);
+        };
+
+        if (asa.shiftIds && Array.isArray(asa.shiftIds)) {
+          asa.shiftIds.forEach(processShift);
+        } else if (asa.shiftId) {
+          processShift(asa.shiftId);
+        } else if (asa.shifts && Array.isArray(asa.shifts)) {
+          asa.shifts.forEach(processShift);
         }
       });
     }
+
+    // Sort standard detailedShifts list by order
+    detailedShifts.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const uniqueShiftNames = Array.from(new Set(shiftNames)).join(", ");
 
     return {
       name: proj.nombre_proyecto || proj.name || "Sin nombre",
@@ -150,27 +193,79 @@ export default function Profile() {
       dates: activeContract?.fecha_alta_contrato ? `${format(new Date(activeContract.fecha_alta_contrato), "dd/MM/yy")} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), "dd/MM/yy") : "Actualidad"}` : "Sin fechas",
       shiftsText: uniqueShiftNames || activeContract?.nombre_turno || "Sin turno",
       detailedShifts,
-      coordinatedShifts,
+      coordinatedShifts: coordinatedShiftsGrouped,
     };
   };
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setIsLoadingProjects(true);
+        const [projects, areas, shifts] = await Promise.all([
+          projectsAPI.listAll(),
+          areasAPI.listAll(),
+          shiftsAPI.getAll()
+        ]);
+        setAllProjects(projects);
+        setAllAreas(areas);
+        setAllShifts(shifts);
+      } catch (err) {
+        console.error("Error fetching projects for profile:", err);
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  useEffect(() => {
+    const fetchFullProject = async () => {
+      const currentProj = profile?.metadata?.projects?.[selectedProjectIndex];
+      const pid = currentProj?._id || currentProj?.projectId;
+      if (!pid) return;
+
+      try {
+        const fullProj = await projectsAPI.getProject(pid);
+        setCurrentFullProject(fullProj);
+      } catch (err) {
+        console.error("Error fetching full project details:", err);
+      }
+    };
+    if (profile?.metadata?.projects) {
+      fetchFullProject();
+    }
+  }, [selectedProjectIndex, profile]);
 
   const currentProjectSummary = profile?.metadata?.projects?.[selectedProjectIndex];
   const targetProjectId = currentProjectSummary?._id || currentProjectSummary?.projectId;
   const targetProjectName = currentProjectSummary?.nombre_proyecto || currentProjectSummary?.name;
-  
-  // Find the full project data using various possible ID fields or name
-  const fullProjectData = allProjects.find(p => 
-    (targetProjectId && (p._id === targetProjectId || p.projectId === targetProjectId)) || 
-    (targetProjectName && p.name === targetProjectName)
-  );
-  
-  // Enrich the summary with full data (especially coordinatorAssignments)
-  const projectToProcess = fullProjectData ? { ...currentProjectSummary, ...fullProjectData } : currentProjectSummary;
-  const selectedProjectInfo = getProjectDetails(projectToProcess);
 
-  // Robust check for coordinated shifts within getProjectDetails logic (conceptually)
-  // We already modified getProjectDetails, but let's make the ID matching inside it even more robust in the next step if needed.
-  // For now, let's ensure the current logic uses the best possible user ID.
+  const fullProjectDataFromCache = useMemo(() => {
+    if (!targetProjectId && !targetProjectName) return null;
+    return allProjects.find(p => 
+      (targetProjectId && String(p._id) === String(targetProjectId)) || 
+      (targetProjectName && (p.name === targetProjectName || p.nombre_proyecto === targetProjectName))
+    );
+  }, [allProjects, targetProjectId, targetProjectName]);
+
+  const projectToProcess = useMemo(() => {
+    if (!currentProjectSummary) return null;
+    return currentFullProject || fullProjectDataFromCache || currentProjectSummary;
+  }, [currentFullProject, fullProjectDataFromCache, currentProjectSummary]);
+
+  const selectedProjectInfo = useMemo(() => {
+    return getProjectDetails(projectToProcess);
+  }, [projectToProcess, profile, allAreas, allShifts]);
+
+  if (loading || isLoadingProjects) return null;
+
+  const isMobileCoordinator = user?.roles?.some((r) => r.toLowerCase().includes("coordinador"));
+  const isMobileCollaborator = user?.roles?.some((r) => r.toLowerCase().includes("colaborador"));
+
+  const userRole = isMobileCoordinator ? "Mobile-Coordinador" : isMobileCollaborator ? "Mobile-Colaborador" : "Usuario";
+  const roleColor = isMobileCoordinator ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800" : "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
+
+  const userProjects = profile?.metadata?.projects || [];
 
   // 2. Calculate Seniority
   const calculateTotalSeniority = () => {
@@ -392,23 +487,32 @@ export default function Profile() {
               <div className="space-y-2">
                 <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno</p>
                 {selectedProjectInfo.detailedShifts.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2">
-                    {selectedProjectInfo.detailedShifts.map((shift, sidx) => (
-                      <div key={sidx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 text-[10px]">
-                            <FontAwesomeIcon icon={faLayerGroup} />
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+                    <div className="space-y-3">
+                      {(() => {
+                        const grouped = new Map<string, { areaName: string; shifts: any[] }>();
+                        selectedProjectInfo.detailedShifts.forEach((s: any) => {
+                          if (!grouped.has(s.area)) grouped.set(s.area, { areaName: s.area, shifts: [] });
+                          grouped.get(s.area)!.shifts.push(s);
+                        });
+                        return Array.from(grouped.values()).map((group, gidx) => (
+                          <div key={gidx} className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[9px] bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
+                                <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                {group.areaName}
+                              </span>
+                              {group.shifts.map((s, sidx) => (
+                                <span key={sidx} className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-500/15 flex items-center gap-1 font-bold uppercase">
+                                  <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
+                                  {s.name}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase leading-none">{shift.name}</p>
-                            <p className="text-[8px] font-bold text-indigo-600 dark:text-indigo-400 uppercase mt-0.5">{shift.area}</p>
-                          </div>
-                        </div>
-                        <div className="px-2 py-1 rounded-md bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600">
-                          <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 tracking-tighter">{shift.time}</span>
-                        </div>
-                      </div>
-                    ))}
+                        ));
+                      })()}
+                    </div>
                   </div>
                 ) : (
                   <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
@@ -422,27 +526,29 @@ export default function Profile() {
                 <div className="space-y-2">
                   <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">Area / Turno Coordinada</p>
                   {selectedProjectInfo.coordinatedShifts.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-2">
-                      {selectedProjectInfo.coordinatedShifts.map((shift, sidx) => (
-                        <div key={sidx} className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50">
-                          <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 text-[10px]">
-                              <FontAwesomeIcon icon={faUserTie} />
-                            </div>
-                            <div>
-                              <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase leading-none">{shift.name}</p>
-                              <p className="text-[8px] font-bold text-amber-600 dark:text-amber-400 uppercase mt-0.5">{shift.area}</p>
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800">
+                      <div className="space-y-3">
+                        {selectedProjectInfo.coordinatedShifts.map((group: any, gidx: number) => (
+                          <div key={gidx} className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[9px] bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
+                                <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                {group.areaName}
+                              </span>
+                              {group.shifts.map((s: any, sidx: number) => (
+                                <span key={sidx} className="text-[9px] bg-purple-500/10 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded border border-purple-500/15 flex items-center gap-1 font-bold uppercase">
+                                  <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
+                                  {s.name}
+                                </span>
+                              ))}
                             </div>
                           </div>
-                          <div className="px-2 py-1 rounded-md bg-white dark:bg-slate-700 shadow-sm border border-amber-100 dark:border-amber-800/30">
-                            <span className="text-[10px] font-black text-amber-700 dark:text-amber-300 tracking-tighter">{shift.time}</span>
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-center">
-                      <p className="text-[10px] text-slate-400 italic font-medium">Sin turnos asignados</p>
+                      <p className="text-[10px] text-slate-400 italic font-medium">Sin turnos coordinados</p>
                     </div>
                   )}
                 </div>

@@ -849,7 +849,7 @@ export const ProjectTeamPage: React.FC = () => {
                 {areaData.map((ad, i) => (
                   <div key={i} className="group relative flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 pl-2 pr-1 py-1 rounded-lg border border-blue-100 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
                     <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                    <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name })} className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black" title="Ver turnos">
+                    <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' })} className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black" title="Ver turnos">
                       +
                     </button>
                   </div>
@@ -883,7 +883,7 @@ export const ProjectTeamPage: React.FC = () => {
                 {coordAreaData.map((ad, i) => (
                   <div key={i} className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all">
                     <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                    <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name })} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
+                    <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' })} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
                       +
                     </button>
                   </div>
@@ -1479,7 +1479,7 @@ export const ProjectTeamPage: React.FC = () => {
           <Modal
             isOpen={!!viewingShiftsData}
             onClose={() => setViewingShiftsData(null)}
-            title={`Turnos Asignados - ${viewingShiftsData?.areaName}`}
+            title={`Turnos ${viewingShiftsData?.assignmentType === 'coordinated' ? 'Coordinados' : 'Asignados'} - ${viewingShiftsData?.areaName}`}
             subtitle={
               viewingShiftsData ? (
                 <p className="text-lg font-black text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight">
@@ -1494,74 +1494,96 @@ export const ProjectTeamPage: React.FC = () => {
             <div className="space-y-4">
               {(() => {
                 if (!viewingShiftsData) return null;
-                const { user, areaId } = viewingShiftsData;
+                const { user, areaId, assignmentType } = viewingShiftsData;
                 let shifts: any[] = [];
 
-                // 1. Check structural coordinator assignments
-                if (project?.coordinatorAssignments) {
-                  const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
-                    const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-                    const aid = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
-                    return String(uid) === String(user._id) && String(aid) === String(areaId);
-                  });
-                  myCoordAsgn.forEach((asm) => {
-                    const sid = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
-                    const shift = allShifts.find((s) => String(s._id) === String(sid));
-                    if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) shifts.push(shift);
-                  });
-                }
+                // Helper to get coordinated shift IDs for exclusion
+                const getCoordinatedShiftIds = () => {
+                  if (!project?.coordinatorAssignments) return [];
+                  return project.coordinatorAssignments
+                    .filter((asm) => {
+                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                      return String(uid) === String(user._id) && String(aid) === String(areaId);
+                    })
+                    .map((asm) => typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId);
+                };
 
-                // 2. Check team configuration assignments (Wizard)
-                const userConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
-                const assignments = userConfig?.areaShiftAssignments || [];
-                const areaAssign = assignments.find((a: any) => {
-                  const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
-                  if (String(aid) === String(areaId)) return true;
+                const coordShiftIds = getCoordinatedShiftIds();
 
-                  // Secondary match: Check by area name if we have it
-                  const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
-                  const targetName = viewingShiftsData.areaName;
-                  return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
-                });
-
-                if (areaAssign) {
-                  const sids = areaAssign.shiftIds || [];
-                  sids.forEach((sid: any) => {
-                    const actualSid = typeof sid === "object" ? sid?._id : sid;
-                    const shift = allShifts.find((s) => String(s._id) === String(actualSid));
-                    if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
-                      shifts.push(shift);
-                    }
-                  });
-                }
-
-                // 3. Check user's contract history (metadata) - Same fallback as the table
-                if (shifts.length === 0) {
-                  const projectMeta = user.metadata?.projects?.find((p: any) => {
-                    const pId = p.projectId;
-                    const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
-                    return String(idToCheck) === String(project?._id);
-                  });
-                  const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
-
-                  if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
-                    const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
-                      const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
-                      if (String(aid) === String(areaId)) return true;
-                      const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
-                      const targetName = viewingShiftsData.areaName;
-                      return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
+                // 1. If viewing coordinated, check ONLY coordinatorAssignments
+                if (assignmentType === 'coordinated') {
+                  if (project?.coordinatorAssignments) {
+                    const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
+                      const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+                      const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+                      return String(uid) === String(user._id) && String(aid) === String(areaId);
                     });
+                    myCoordAsgn.forEach((asm) => {
+                      const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
+                      const shift = allShifts.find((s) => String(s._id) === String(sid));
+                      if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) shifts.push(shift);
+                    });
+                  }
+                } else {
+                  // 2. If viewing standard, check team configuration assignments (Wizard) and EXCLUDE coordinated ones
+                  const userConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
+                  const assignments = userConfig?.areaShiftAssignments || [];
+                  const areaAssign = assignments.find((a: any) => {
+                    const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                    if (String(aid) === String(areaId)) return true;
+                    const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+                    const targetName = viewingShiftsData.areaName;
+                    return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
+                  });
 
-                    if (fallbackAssign) {
-                      const sids = fallbackAssign.shiftIds || [];
-                      sids.forEach((sid: any) => {
-                        const actualSid = typeof sid === "object" ? sid?._id : sid;
-                        const shift = allShifts.find((s) => String(s._id) === String(actualSid));
-                        if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
-                          shifts.push(shift);
-                        }
+                  if (areaAssign) {
+                    const sids = areaAssign.shiftIds || [];
+                    sids.forEach((sid: any) => {
+                      const actualSid = typeof sid === "object" ? sid?._id : sid;
+                      
+                      // EXCLUDE if it's in coordinated
+                      if (coordShiftIds.includes(actualSid)) return;
+
+                      const shift = allShifts.find((s) => String(s._id) === String(actualSid));
+                      if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
+                        shifts.push(shift);
+                      }
+                    });
+                  }
+
+                  // 3. Check user's contract history (metadata) fallback
+                  if (shifts.length === 0) {
+                    const projectMeta = user.metadata?.projects?.find((p: any) => {
+                      const pId = p.projectId;
+                      const idToCheck = typeof pId === "object" ? (pId as any)?._id : pId;
+                      return String(idToCheck) === String(project?._id);
+                    });
+                    const activeContract = projectMeta?.contracts?.length ? projectMeta.contracts[projectMeta.contracts.length - 1] : null;
+
+                    if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
+                      const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
+                        const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+                        if (String(aid) === String(areaId)) return true;
+                        const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+                        const targetName = viewingShiftsData.areaName;
+                        return aData && targetName && aData.name.toLowerCase() === targetName.toLowerCase();
                       });
+
+                      if (fallbackAssign) {
+                        const sids = fallbackAssign.shiftIds || [];
+                        sids.forEach((sid: any) => {
+                          const actualSid = typeof sid === "object" ? sid?._id : sid;
+                          
+                          // EXCLUDE if it's in coordinated
+                          if (coordShiftIds.includes(actualSid)) return;
+
+                          const shift = allShifts.find((s) => String(s._id) === String(actualSid));
+                          if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
+                            shifts.push(shift);
+                          }
+                        });
+                      }
                     }
                   }
                 }
