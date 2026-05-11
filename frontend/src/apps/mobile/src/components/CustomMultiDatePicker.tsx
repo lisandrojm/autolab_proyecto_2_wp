@@ -22,7 +22,9 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
   const [viewDate, setViewDate] = useState(new Date());
   const [tempSelection, setTempSelection] = useState<string[]>([]);
 
-  const selectedDates = Array.isArray(value) ? value : value ? [value] : [];
+  const selectedDates = Array.isArray(value) 
+    ? value.filter(v => typeof v === "string") 
+    : (typeof value === "string" && value ? [value] : []);
 
   useEffect(() => {
     if (isOpen) {

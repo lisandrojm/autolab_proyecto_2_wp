@@ -20,7 +20,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({ label, value
 
   // Initialize viewDate from value if present
   useEffect(() => {
-    if (value) {
+    if (value && typeof value === "string") {
       const [y, m, d] = value.split("-").map(Number);
       setViewDate(new Date(y, m - 1, d));
     }
@@ -62,9 +62,8 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({ label, value
     <div className="relative">
       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{label}</label>
 
-      {/* Input Trigger */}
-      <div onClick={toggleCalendar} className={`flex items-center justify-between w-full px-4 py-2 bg-white dark:bg-slate-800 border rounded cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-blue-400"} ${value ? "border-slate-300 dark:border-slate-700" : "border-slate-300 dark:border-slate-700"}`}>
-        <span className={value ? "text-slate-900 dark:text-slate-100" : "text-slate-400"}>{value ? format(new Date(value + "T00:00:00"), "dd/MM/yyyy") : "dd/mm/aaaa"}</span>
+      <div onClick={toggleCalendar} className={`flex items-center justify-between w-full px-4 py-2 bg-white dark:bg-slate-800 border rounded cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-blue-400"} ${value && typeof value === "string" ? "border-slate-300 dark:border-slate-700" : "border-slate-300 dark:border-slate-700"}`}>
+        <span className={value && typeof value === "string" ? "text-slate-900 dark:text-slate-100" : "text-slate-400"}>{value && typeof value === "string" ? format(new Date(value + "T00:00:00"), "dd/MM/yyyy") : "dd/mm/aaaa"}</span>
         <FontAwesomeIcon icon={faCalendar} className="text-slate-400" />
       </div>
 
