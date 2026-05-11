@@ -105,13 +105,21 @@ export default function Profile() {
     const coordinatedShifts: any[] = [];
     if (proj.coordinatorAssignments && Array.isArray(proj.coordinatorAssignments)) {
       proj.coordinatorAssignments.forEach((asm: any) => {
-        // Extract assignment user ID (can be object with _id or id, or just string)
+        // 1. Match by ID (multiple sources)
         const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId) : asm.userId;
-        
-        // Extract current user ID from best available source
         const profileUid = profile?.userId || profile?._id || user?._id;
+        let isMatch = uid && profileUid && String(uid) === String(profileUid);
 
-        if (uid && profileUid && String(uid) === String(profileUid)) {
+        // 2. Fallback to Email match if IDs don't work or are missing
+        if (!isMatch) {
+          const asmEmail = typeof asm.userId === "object" ? asm.userId?.email : null;
+          const myEmail = profile?.email || user?.email;
+          if (asmEmail && myEmail && asmEmail.toLowerCase() === myEmail.toLowerCase()) {
+            isMatch = true;
+          }
+        }
+
+        if (isMatch) {
           const areaId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
           const shiftId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
           
@@ -147,14 +155,13 @@ export default function Profile() {
   };
 
   const currentProjectSummary = profile?.metadata?.projects?.[selectedProjectIndex];
+  const targetProjectId = currentProjectSummary?._id || currentProjectSummary?.projectId;
+  const targetProjectName = currentProjectSummary?.nombre_proyecto || currentProjectSummary?.name;
   
-  // Find the full project data using various possible ID fields
+  // Find the full project data using various possible ID fields or name
   const fullProjectData = allProjects.find(p => 
-    (currentProjectSummary?._id && p._id === currentProjectSummary._id) || 
-    (currentProjectSummary?.projectId && p._id === currentProjectSummary.projectId) ||
-    (currentProjectSummary?.projectId && p.projectId === currentProjectSummary.projectId) ||
-    (currentProjectSummary?.nombre_proyecto && p.name === currentProjectSummary.nombre_proyecto) ||
-    (currentProjectSummary?.name && p.name === currentProjectSummary.name)
+    (targetProjectId && (p._id === targetProjectId || p.projectId === targetProjectId)) || 
+    (targetProjectName && p.name === targetProjectName)
   );
   
   // Enrich the summary with full data (especially coordinatorAssignments)
