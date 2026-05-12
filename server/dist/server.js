@@ -1,4 +1,5 @@
 // Local + VPS según .env.development o .env.production
+// Trigger reload 1
 import "./config/env.js";
 import { env } from "./config/env.js";
 import express from "express";
@@ -162,7 +163,10 @@ app.use("/api/v1/user-projects", userProjectRoutes);
 // ───────────────── 404 + errores (al final) ─────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
-// ───────────────── Boot ─────────────────
+app.use("/api/v1/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date() });
+});
+// ───────────────── Routes ─────────────────
 connectDB()
     .then(async () => {
     try {
