@@ -12,28 +12,19 @@ import { UserProfile } from "../models/UserProfile.js";
 import { Area } from "../models/Area.js";
 import { Project } from "../models/Project.js";
 import UserProject from "../models/UserProject.js";
-import fs from "fs";
-import path from "path";
 const router = express.Router();
-// Apply authentication to all routes
-router.use(authenticateToken);
-console.log("[VACATIONS] Router initialized - regenerate-pdf route active");
-fs.appendFileSync(path.join(process.cwd(), "storage", "boot.log"), `[${new Date().toISOString()}] Vacations router loaded\n`);
-// POST /api/vacations/:id/regenerate-pdf - Regenerate a vacation PDF
+// POST /api/vacations/:id/regenerate-pdf - Regenerate a vacation PDF (Moved for debugging)
 router.post("/:id/regenerate-pdf", async (req, res) => {
     console.log("[VACATIONS] Regenerate PDF request for ID:", req.params.id);
     try {
-        const tenantId = req.tenantId;
-        const tenantObjectId = new Types.ObjectId(tenantId);
-        const vacation = await Vacation.findOne({
-            _id: req.params.id,
-            tenantId: tenantObjectId,
-        }).populate("userId");
+        const vacation = await Vacation.findById(req.params.id).populate("userId");
         if (!vacation) {
-            console.warn("[VACATIONS] Vacation not found for ID:", req.params.id, "and tenant:", tenantId);
+            console.warn("[VACATIONS] Vacation not found for ID:", req.params.id);
             res.status(404).json({ error: "Vacation request not found" });
             return;
         }
+        const tenantId = vacation.tenantId;
+        const tenantObjectId = vacation.tenantId;
         const tenant = await Tenant.findById(tenantObjectId);
         if (!tenant) {
             res.status(404).json({ error: "Tenant not found" });
@@ -92,6 +83,8 @@ router.post("/:id/regenerate-pdf", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// Apply authentication to all other routes
+router.use(authenticateToken);
 // GET /api/vacations/availability - Get dates that are fully booked for user's area
 router.get("/availability", async (req, res) => {
     try {
