@@ -15,12 +15,17 @@ import { Position } from "../models/Position.js";
 import { Area } from "../models/Area.js";
 import { Project } from "../models/Project.js";
 import UserProject from "../models/UserProject.js";
+import fs from "fs";
+import path from "path";
 import { Client } from "../models/Client.js";
 
 const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
+
+console.log("[VACATIONS] Router initialized - regenerate-pdf route active");
+fs.appendFileSync(path.join(process.cwd(), "storage", "boot.log"), `[${new Date().toISOString()}] Vacations router loaded\n`);
 
 // POST /api/vacations/:id/regenerate-pdf - Regenerate a vacation PDF
 router.post("/:id/regenerate-pdf", async (req: any, res) => {
