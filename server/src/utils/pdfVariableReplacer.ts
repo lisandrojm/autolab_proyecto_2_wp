@@ -241,6 +241,19 @@ export function prepareVacationVariables(vacation: IVacation, user: IUser, tenan
   const fechaHasta = formatDateOnly(vacation.endDate);
   const dias = vacation.daysRequested.toString();
 
+  // Additional vacation specific variables
+  const anio = vacation.startDate ? new Date(vacation.startDate).getFullYear().toString() : new Date().getFullYear().toString();
+  const fechaInicio = fechaDesde;
+  const fechaFin = fechaHasta;
+  
+  // Reintegro is usually the day after endDate
+  let fechaReintegro = "-";
+  if (vacation.endDate) {
+    const nextDay = new Date(vacation.endDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    fechaReintegro = formatDateOnly(nextDay);
+  }
+
   const numeroPedido = sanitizeHtml(vacationNumber || "-");
   const fechaSolicitud = formatDate(vacation.createdAt);
   const fechaAprobacion = formatDate(vacation.preApprovedAt);
@@ -254,6 +267,10 @@ export function prepareVacationVariables(vacation: IVacation, user: IUser, tenan
     fechaHasta,
     fechaUnica: "-",
     dias,
+    anio,
+    fechaInicio,
+    fechaFin,
+    fechaReintegro,
     nombreCompleto: sanitizeHtml(nombreCompleto),
     nombreUsuario: sanitizeHtml(nombreCompleto),
     numeroPedido,

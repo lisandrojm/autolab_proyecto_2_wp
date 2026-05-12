@@ -15,6 +15,79 @@ import UserProject from "../models/UserProject.js";
 const router = express.Router();
 // Apply authentication to all routes
 router.use(authenticateToken);
+// POST /api/vacations/:id/regenerate-pdf - Regenerate a vacation PDF
+router.post("/:id/regenerate-pdf", async (req, res) => {
+    console.log("[VACATIONS] Regenerate PDF request for ID:", req.params.id);
+    try {
+        const tenantId = req.tenantId;
+        const tenantObjectId = new Types.ObjectId(tenantId);
+        const vacation = await Vacation.findOne({
+            _id: req.params.id,
+            tenantId: tenantObjectId,
+        }).populate("userId");
+        if (!vacation) {
+            console.warn("[VACATIONS] Vacation not found for ID:", req.params.id, "and tenant:", tenantId);
+            res.status(404).json({ error: "Vacation request not found" });
+            return;
+        }
+        const tenant = await Tenant.findById(tenantObjectId);
+        if (!tenant) {
+            res.status(404).json({ error: "Tenant not found" });
+            return;
+        }
+        let templateId = vacation.rules?.pdfId;
+        if (!templateId || templateId.toString().trim() === "") {
+            const defaultTemplate = await Pdf.findOne({
+                tenantId: tenantObjectId,
+                code: { $regex: /^vacaciones$/i },
+                isActive: true
+            });
+            if (defaultTemplate) {
+                templateId = defaultTemplate._id.toString();
+            }
+        }
+        if (!templateId || templateId.toString().trim() === "") {
+            res.status(400).json({ error: "No se encontró una plantilla PDF configurada para esta solicitud" });
+            return;
+        }
+        const template = await Pdf.findOne({
+            _id: templateId,
+            tenantId: tenantObjectId,
+            isActive: true,
+        });
+        if (!template) {
+            res.status(404).json({ error: "Plantilla PDF no encontrada o inactiva" });
+            return;
+        }
+        const user = typeof vacation.userId === "object" && "firstName" in vacation.userId ? vacation.userId : await User.findById(vacation.userId);
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+        const pdfResult = await generateVacationPDF(vacation, template, user, tenantId.toString(), tenant.name, vacation.vacationNumber);
+        if (!pdfResult.success) {
+            res.status(500).json({ error: `Error al generar PDF: ${pdfResult.error}` });
+            return;
+        }
+        // Optional: delete old PDF if exists
+        if (vacation.pdfPreAprobacionUrl) {
+            try {
+                const { deletePdfFromStorage } = await import("../utils/pdfStorage.js");
+                await deletePdfFromStorage(vacation.pdfPreAprobacionUrl);
+            }
+            catch (e) {
+                console.warn("Could not delete old PDF:", e);
+            }
+        }
+        vacation.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+        await vacation.save();
+        res.json(vacation);
+    }
+    catch (error) {
+        console.error("Regenerate vacation PDF error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 // GET /api/vacations/availability - Get dates that are fully booked for user's area
 router.get("/availability", async (req, res) => {
     try {
@@ -914,38 +987,63 @@ router.put("/:id/pre-approve", async (req, res) => {
         vacation.preApprovedAt = new Date();
         await vacation.save();
         // Generate PDF
+        console.log("[VACATIONS] Pre-approved saved. Starting PDF generation for vacation:", vacation._id);
         let templateId = vacation.rules?.pdfId;
         // Fallback: Try to find default template if not specified in rules
-        if (!templateId) {
-            const defaultTemplate = await Pdf.findOne({ tenantId, code: "vacaciones", isActive: true });
+        if (!templateId || templateId.toString().trim() === "") {
+            console.log("[VACATIONS] No pdfId in rules, looking for default 'vacaciones' template");
+            const defaultTemplate = await Pdf.findOne({
+                tenantId: req.tenantObjectId,
+                code: { $regex: /^vacaciones$/i }, // Case insensitive match
+                isActive: true
+            });
             if (defaultTemplate) {
                 templateId = defaultTemplate._id.toString();
+                console.log("[VACATIONS] Found default template:", templateId);
+            }
+            else {
+                console.warn("[VACATIONS] Default 'vacaciones' template NOT found for tenant:", tenantId);
             }
         }
         if (templateId && templateId.toString().trim() !== "") {
             try {
                 const template = await Pdf.findOne({
                     _id: templateId,
-                    tenantId,
+                    tenantId: req.tenantObjectId,
                     isActive: true,
                 });
                 if (template) {
-                    const user = vacation.userId;
-                    const tenant = await Tenant.findById(tenantId);
-                    const tenantName = tenant?.name || tenant?.slug || "Organización";
-                    const result = await generateVacationPDF(vacation, template, user, tenantId.toString(), tenantName, vacation.vacationNumber);
-                    if (result.success && result.pdfUrl) {
-                        vacation.pdfPreAprobacionUrl = result.pdfUrl;
-                        await vacation.save();
+                    console.log("[VACATIONS] Template found. Resolving user...");
+                    // Robust user resolution
+                    const user = typeof vacation.userId === "object" && "firstName" in vacation.userId ? vacation.userId : await User.findById(vacation.userId);
+                    if (!user) {
+                        console.error("[VACATIONS] User NOT found for vacation:", vacation._id);
                     }
                     else {
-                        console.error("Error generating PDF for vacation:", result.error);
+                        const tenant = await Tenant.findById(req.tenantObjectId);
+                        const tenantName = tenant?.name || tenant?.slug || "Organización";
+                        console.log("[VACATIONS] Generating PDF with template:", template.name, "for user:", user.email);
+                        const result = await generateVacationPDF(vacation, template, user, req.tenantObjectId.toString(), tenantName, vacation.vacationNumber);
+                        if (result.success && result.pdfUrl) {
+                            console.log("[VACATIONS] PDF generated successfully:", result.pdfUrl);
+                            vacation.pdfPreAprobacionUrl = result.pdfUrl;
+                            await vacation.save();
+                        }
+                        else {
+                            console.error("[VACATIONS] Error generating PDF for vacation:", result.error);
+                        }
                     }
+                }
+                else {
+                    console.error("[VACATIONS] Template NOT found or inactive for ID:", templateId);
                 }
             }
             catch (pdfError) {
-                console.error("Error generating PDF for vacation:", pdfError);
+                console.error("[VACATIONS] Exception during PDF generation:", pdfError);
             }
+        }
+        else {
+            console.warn("[VACATIONS] No template ID resolved for PDF generation");
         }
         res.json(vacation);
     }
