@@ -218,10 +218,11 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
       .populate({
         path: "metadata.projects",
         model: UserProject,
+        select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts.fecha_baja_contrato contracts.nombre_contrato contracts.hora_inicio contracts.hora_fin", 
         populate: [
-          { path: "positionId", select: "name description", model: Position },
-          { path: "levelId", select: "name description", model: Level },
-          { path: "areaId", select: "name description", model: Area },
+          { path: "positionId", select: "name", model: Position },
+          { path: "levelId", select: "name", model: Level },
+          { path: "areaId", select: "name", model: Area },
           { path: "projectId", select: "name status", model: Project },
         ],
       })
@@ -398,13 +399,15 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
       .populate({
         path: "metadata.projects",
         model: UserProject,
+        select: "projectId positionId levelId areaId nombre_rol_frame contracts.fecha_baja_contrato", 
         populate: [
-          { path: "positionId", select: "name description", model: Position },
-          { path: "levelId", select: "name description", model: Level },
-          { path: "areaId", select: "name description", model: Area },
+          { path: "positionId", select: "name", model: Position },
+          { path: "levelId", select: "name", model: Level },
+          { path: "areaId", select: "name", model: Area },
         ],
       })
-      .sort({ firstName: 1, lastName: 1 });
+      .sort({ firstName: 1, lastName: 1 })
+      .lean();
 
     res.json(users);
   } catch (error) {

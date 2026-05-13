@@ -469,7 +469,7 @@ export const RequestsConfigPage: React.FC = () => {
                               {/* Additional Staff Toggle */}
                               <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Personal Adicional</span>
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Otros Presentes</span>
                                   <span className="text-[10px] text-gray-400">{allowsAdditionalStaff ? "Permite agregar personal externo" : "Solo personal asignado"}</span>
                                 </div>
                                 <button onClick={handleToggleAdditionalStaff} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${allowsAdditionalStaff ? "bg-green-600" : "bg-gray-300 dark:bg-gray-600"}`} title={allowsAdditionalStaff ? "Desactivar Personal Adicional" : "Activar Personal Adicional"}>

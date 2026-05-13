@@ -119,7 +119,8 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
   try {
     const { q } = req.query as { q?: string };
     const page = Number(req.query.page ?? 1);
-    const limit = Number(req.query.limit ?? 1000);
+    let limit = Number(req.query.limit ?? 50);
+    if (limit > 100) limit = 100; // Cap limit to 100 to prevent OOM/Timeouts
 
     const filter: any = {
       tenantId: req.tenantObjectId,
@@ -138,12 +139,23 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
       filter.assignedUsers = new Types.ObjectId(req.user!.userId);
     }
 
-    console.log(`[PROJECTS] List for tenant ${req.tenantId}, isAdmin=${isAdmin}`);
-    console.log(`[PROJECTS] Filter: ${JSON.stringify(filter)}`);
+    console.log(`[PROJECTS] List for tenant ${req.tenantId}, isAdmin=${isAdmin}, limit=${limit}`);
 
     const skip = (page - 1) * limit;
 
-    const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").populate("areasConfig.areaId").populate("areasConfig.shiftIds").lean(), Project.countDocuments(filter)]);
+    const [projects, total] = await Promise.all([
+      Project.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("clientId", "name")
+        .populate("turnos", "name")
+        .populate("areasConfig.areaId", "name")
+        .populate("areasConfig.shiftIds", "name")
+        .select("-objectives -workSchedule -teamConfig") // Exclude heavy/unused fields in list
+        .lean(),
+      Project.countDocuments(filter),
+    ]);
 
     // 2. Resolver clientes para proyectos que no tienen clientId pero sí metadata.clienteId
     const projectsToResolve = projects.filter((p) => !p.clientId && p.metadata?.clienteId);
@@ -367,7 +379,8 @@ router.get(
     try {
       const { q } = req.query as { q?: string };
       const page = Number(req.query.page ?? 1);
-      const limit = Number(req.query.limit ?? 1000);
+      let limit = Number(req.query.limit ?? 50);
+      if (limit > 100) limit = 100; // Cap limit to 100 to prevent server colapse
       const { clientId } = req.params;
 
       // Cast explícito a ObjectId
@@ -414,11 +427,23 @@ router.get(
         filter.assignedUsers = new Types.ObjectId(req.user!.userId);
       }
 
-      console.log(`[PROJECTS] List for client ${clientId} (externalId: ${externalId}), tenant ${req.tenantId}, isAdmin=${isAdmin}`);
+      console.log(`[PROJECTS] List for client ${clientId} (externalId: ${externalId}), tenant ${req.tenantId}, isAdmin=${isAdmin}, limit=${limit}`);
 
       const skip = (page - 1) * limit;
 
-      const [projects, total] = await Promise.all([Project.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("clientId", "name").populate("turnos").populate("areasConfig.areaId").populate("areasConfig.shiftIds").lean(), Project.countDocuments(filter)]);
+      const [projects, total] = await Promise.all([
+        Project.find(filter)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .populate("clientId", "name")
+          .populate("turnos", "name")
+          .populate("areasConfig.areaId", "name")
+          .populate("areasConfig.shiftIds", "name")
+          .select("-objectives -workSchedule -teamConfig")
+          .lean(),
+        Project.countDocuments(filter),
+      ]);
 
       // Bulk Sede Resolution
       const sedeIds = new Set<string>();

@@ -1465,14 +1465,21 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}
                               >
                                 <option value="">Todas las Áreas | Turnos</option>
-                                {selectedProject.areasConfig.map((ac) => {
-                                  const area = allAreas.find((a) => a._id === (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId));
-                                  return (
-                                    <option key={area?._id || ac.areaId} value={area?._id || ac.areaId}>
-                                      {area?.name || "Cargando..."}
-                                    </option>
-                                  );
-                                })}
+                                {selectedProject.areasConfig
+                                  .filter((ac) => {
+                                    if (profile?.role === "admin") return true;
+                                    const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+                                    return profile?.coordinatedAreaIds?.includes(areaId);
+                                  })
+                                  .map((ac) => {
+                                    const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+                                    const areaName = typeof ac.areaId === "object" ? ac.areaId?.name : allAreas.find((a) => a._id === areaId)?.name;
+                                    return (
+                                      <option key={areaId} value={areaId}>
+                                        {areaName || (isLoadingData ? "Cargando..." : "Área Desconocida")}
+                                      </option>
+                                    );
+                                  })}
                               </select>
                             </div>
                           )}
@@ -1494,13 +1501,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                     return areaConfig.shiftIds
                                       .map((sId: any) => {
                                         const shiftId = typeof sId === "object" ? sId?._id : sId;
-                                        return allShifts.find((s) => s._id === shiftId);
+                                        const shift = typeof sId === "object" ? sId : allShifts.find((s) => s._id === shiftId);
+                                        return shift;
                                       })
                                       .filter((s): s is Shift => !!s)
                                       .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
                                       .map((shift) => (
                                         <option key={shift._id} value={shift._id}>
-                                          {shift.name || shift.nombre}
+                                          {shift.name}
                                         </option>
                                       ));
                                   })()}
