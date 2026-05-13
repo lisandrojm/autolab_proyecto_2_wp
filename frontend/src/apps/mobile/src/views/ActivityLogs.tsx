@@ -463,19 +463,44 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const selectedProject = useMemo(() => userProjects.find((p) => p._id === selectedProjectId), [userProjects, selectedProjectId]);
 
+  const myCoordinatedCombinations = useMemo(() => {
+    if (!selectedProject || !profile) return [];
+    const userIdToCheck = profile.userId || profile._id;
+    return (selectedProject.coordinatorAssignments || [])
+      .filter((asm: any) => {
+        const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+        return String(uid) === String(userIdToCheck);
+      })
+      .map((asm: any) => ({
+        areaId: String(typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId),
+        shiftId: String(typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId),
+      }));
+  }, [selectedProject, profile]);
+
+  const coordinatedAreaIds = useMemo(() => {
+    const ids = new Set(myCoordinatedCombinations.map((c) => c.areaId));
+    return Array.from(ids);
+  }, [myCoordinatedCombinations]);
+
+  const coordinatedShiftIds = useMemo(() => {
+    if (!selectedAreaId) return [];
+    return myCoordinatedCombinations.filter((c) => c.areaId === selectedAreaId).map((c) => c.shiftId);
+  }, [myCoordinatedCombinations, selectedAreaId]);
+
   // Check if the coordinator has any assigned shifts in the selected project
   const hasCoordinatorAssignments = useMemo(() => {
-    if (!selectedProject) return true;
+    if (!selectedProject || !profile) return true;
+
+    const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
+    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+    if (isAdmin) return true;
+
     const allAssignments = selectedProject.coordinatorAssignments || [];
     // If no coordinator assignments configured at all, no restriction
     if (allAssignments.length === 0) return true;
-    // If there ARE assignments, check if the current user is among them
-    const myAssignments = allAssignments.filter((asm: any) => {
-      const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-      return String(uid) === String(profile?.userId || profile?._id);
-    });
-    return myAssignments.length > 0;
-  }, [selectedProject, profile]);
+
+    return coordinatedAreaIds.length > 0;
+  }, [selectedProject, profile, coordinatedAreaIds]);
   const projectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
     return employees.filter((e) => {
@@ -484,13 +509,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       if (!projMeta || !projMeta.hasActiveContract) return false;
 
       // Filter by Area if selected
-      if (selectedAreaId && projMeta.areaId !== selectedAreaId) return false;
-      // Filter by Shift if selected
-      if (selectedShiftId && projMeta.shiftId !== selectedShiftId) return false;
+      if (selectedAreaId) {
+        if (projMeta.areaId !== selectedAreaId) return false;
+        // Filter by Shift if selected
+        if (selectedShiftId && projMeta.shiftId !== selectedShiftId) return false;
+      } else {
+        // If "Todas", check if employee's area/shift is in my coordinated list
+        const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
+        const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+        if (!isAdmin) {
+          const isMine = myCoordinatedCombinations.some((c) => c.areaId === String(projMeta.areaId) && c.shiftId === String(projMeta.shiftId));
+          if (!isMine) return false;
+        }
+      }
 
       return true;
     });
-  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId]);
+  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile]);
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
@@ -1467,9 +1502,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 <option value="">Todas las Áreas | Turnos</option>
                                 {selectedProject.areasConfig
                                   .filter((ac) => {
-                                    if (profile?.role === "admin") return true;
+                                    const userRoles = (profile?.roleNames || []).map(r => r.toLowerCase());
+                                    const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+                                    if (isAdmin) return true;
+
                                     const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                                    return profile?.coordinatedAreaIds?.includes(areaId);
+                                    return coordinatedAreaIds.includes(String(areaId));
                                   })
                                   .map((ac) => {
                                     const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
@@ -1504,7 +1542,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                         const shift = typeof sId === "object" ? sId : allShifts.find((s) => s._id === shiftId);
                                         return shift;
                                       })
-                                      .filter((s): s is Shift => !!s)
+                                      .filter((s): s is Shift => {
+                                        if (!s) return false;
+                                        const userRoles = (profile?.roleNames || []).map(r => r.toLowerCase());
+                                        const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+                                        if (isAdmin) return true;
+
+                                        return coordinatedShiftIds.includes(String(s._id));
+                                      })
                                       .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
                                       .map((shift) => (
                                         <option key={shift._id} value={shift._id}>
@@ -1742,7 +1787,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 <div className="space-y-1">
                                   {Array.from(groupedByArea.entries()).map(([aId, { areaName, shifts }]) => (
                                     <div key={aId} className="flex flex-wrap items-center gap-1">
-                                      <span className="text-[10px] bg-indigo-500/15 text-indigo-300/80 px-1.5 py-0.5 rounded border border-indigo-500/20 flex items-center gap-1 font-semibold uppercase tracking-wider">
+                                      <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                         <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
                                         {areaName}
                                       </span>
