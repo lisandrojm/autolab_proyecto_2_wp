@@ -248,6 +248,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [submitting, setSubmitting] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showOtherPresentInfo, setShowOtherPresentInfo] = useState(false);
   const [viewingReport, setViewingReport] = useState<ActivityReport | null>(null);
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const [activeProjectTab, setActiveProjectTab] = useState<"info" | "schedule" | "team">("info");
@@ -321,6 +322,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const [selectedReplacementRoleFilters, setSelectedReplacementRoleFilters] = useState<string[]>([]);
   const [isReplacementRoleFilterModalOpen, setIsReplacementRoleFilterModalOpen] = useState(false);
+
+  const [selectedAdditionalRoleFilters, setSelectedAdditionalRoleFilters] = useState<string[]>([]);
+  const [isAdditionalRoleFilterModalOpen, setIsAdditionalRoleFilterModalOpen] = useState(false);
+  const [additionalStaffStatusFilter, setAdditionalStaffStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [additionalStaffFilterContractActive, setAdditionalStaffFilterContractActive] = useState(false);
 
   const formScrollRef = useRef<HTMLDivElement>(null);
 
@@ -399,7 +405,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       } catch (e) {
         console.error("Error loading projects", e);
       }
-      
+
       // 4. Fetch Areas & Shifts
       try {
         const [areas, shifts] = await Promise.all([areasAPI.listAll(), shiftsAPI.getAll()]);
@@ -730,8 +736,67 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   // Get employees NOT assigned to the current project (for additional staff selection)
   const nonProjectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
-    return employees.filter((e) => !e.projectIds || !e.projectIds.includes(selectedProjectId));
+    const filtered = employees.filter((e) => !e.projectIds || !e.projectIds.includes(selectedProjectId));
+    console.log("[DEBUG] nonProjectEmployees:", {
+      selectedProjectId,
+      totalEmployees: employees.length,
+      count: filtered.length,
+    });
+    return filtered;
   }, [employees, selectedProjectId]);
+
+  const filteredNonProjectEmployees = useMemo(() => {
+    const filtered = nonProjectEmployees.filter((emp) => {
+      const matchesSearch = additionalStaffSearchTerm ? emp.name.toLowerCase().includes(additionalStaffSearchTerm.toLowerCase()) : true;
+
+      // Role filtering with normalization (case-insensitive and trimmed)
+      const matchesRoles =
+        selectedAdditionalRoleFilters.length > 0
+          ? emp.metadataProjects?.some((m) => {
+              if (!m.roleFrame) return false;
+              const normalizedRole = m.roleFrame.trim().toLowerCase();
+              return selectedAdditionalRoleFilters.some((f) => f.trim().toLowerCase() === normalizedRole);
+            })
+          : true;
+
+      let matchesStatus = true;
+      if (additionalStaffStatusFilter === "active") {
+        matchesStatus = emp.isActive !== false;
+      } else if (additionalStaffStatusFilter === "inactive") {
+        matchesStatus = emp.isActive === false;
+      } else if (additionalStaffStatusFilter === "all") {
+        matchesStatus = true;
+      }
+
+      let matchesContract = true;
+      if (additionalStaffFilterContractActive) {
+        matchesContract = emp.hasActiveContract;
+      }
+
+      return matchesSearch && matchesRoles && matchesStatus && matchesContract;
+    });
+
+    console.log("[DEBUG] Filtered Additional Staff:", {
+      total: nonProjectEmployees.length,
+      filtered: filtered.length,
+      searchTerm: additionalStaffSearchTerm,
+      selectedRoles: selectedAdditionalRoleFilters,
+      statusFilter: additionalStaffStatusFilter,
+      contractActive: additionalStaffFilterContractActive,
+    });
+
+    return filtered;
+  }, [nonProjectEmployees, additionalStaffSearchTerm, selectedAdditionalRoleFilters, additionalStaffStatusFilter, additionalStaffFilterContractActive]);
+
+  const additionalStaffAvailableRoles = useMemo(() => {
+    const roles = new Set<string>();
+    nonProjectEmployees.forEach((e) => {
+      e.metadataProjects?.forEach((m) => {
+        if (m.roleFrame) roles.add(m.roleFrame.trim());
+      });
+    });
+    return Array.from(roles).sort();
+  }, [nonProjectEmployees]);
 
   const addRecordInternal = (employee: EmployeeOption, type: RequestConfig, replacementId?: string, overtimeHours?: number, notes?: string) => {
     const replacement = employees.find((e) => e.id === replacementId);
@@ -1413,39 +1478,35 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           )}
 
                           {/* Shift Selector */}
-                          {selectedAreaId && (() => {
-                            const areaConfig = selectedProject?.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
-                            return areaConfig && areaConfig.shiftIds && areaConfig.shiftIds.length > 0;
-                          })() && (
-                            <div className="animate-in fade-in slide-in-from-top-2">
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
-                              <select
-                                value={selectedShiftId}
-                                onChange={(e) => setSelectedShiftId(e.target.value)}
-                                disabled={!hasCoordinatorAssignments}
-                                className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}
-                              >
-                                <option value="">Todos los Turnos</option>
-                                {(() => {
-                                  const areaConfig = selectedProject?.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
-                                  if (!areaConfig || !areaConfig.shiftIds) return null;
-                                  
-                                  return areaConfig.shiftIds
-                                    .map((sId: any) => {
-                                      const shiftId = typeof sId === "object" ? sId?._id : sId;
-                                      return allShifts.find((s) => s._id === shiftId);
-                                    })
-                                    .filter((s): s is Shift => !!s)
-                                    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
-                                    .map((shift) => (
-                                      <option key={shift._id} value={shift._id}>
-                                        {shift.name || shift.nombre}
-                                      </option>
-                                    ));
-                                })()}
-                              </select>
-                            </div>
-                          )}
+                          {selectedAreaId &&
+                            (() => {
+                              const areaConfig = selectedProject?.areasConfig?.find((ac) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
+                              return areaConfig && areaConfig.shiftIds && areaConfig.shiftIds.length > 0;
+                            })() && (
+                              <div className="animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Turno</label>
+                                <select value={selectedShiftId} onChange={(e) => setSelectedShiftId(e.target.value)} disabled={!hasCoordinatorAssignments} className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${!hasCoordinatorAssignments ? "opacity-50 cursor-not-allowed" : ""}`}>
+                                  <option value="">Todos los Turnos</option>
+                                  {(() => {
+                                    const areaConfig = selectedProject?.areasConfig?.find((ac) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
+                                    if (!areaConfig || !areaConfig.shiftIds) return null;
+
+                                    return areaConfig.shiftIds
+                                      .map((sId: any) => {
+                                        const shiftId = typeof sId === "object" ? sId?._id : sId;
+                                        return allShifts.find((s) => s._id === shiftId);
+                                      })
+                                      .filter((s): s is Shift => !!s)
+                                      .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+                                      .map((shift) => (
+                                        <option key={shift._id} value={shift._id}>
+                                          {shift.name || shift.nombre}
+                                        </option>
+                                      ));
+                                  })()}
+                                </select>
+                              </div>
+                            )}
 
                           {/* Date - Moved Below Project */}
                           <div>
@@ -1619,22 +1680,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                 <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                {allAreas.find(a => a._id === selectedAreaId)?.name || "Área"}
+                                {allAreas.find((a) => a._id === selectedAreaId)?.name || "Área"}
                               </span>
                               {selectedShiftId ? (
                                 <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px]" />
-                                  {allShifts.find(s => s._id === selectedShiftId)?.name || "Turno"}
+                                  {allShifts.find((s) => s._id === selectedShiftId)?.name || "Turno"}
                                 </span>
                               ) : (
                                 /* Area selected but all shifts — show all shifts for this area */
                                 (() => {
-                                  const areaConfig = selectedProject.areasConfig?.find(ac => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
-                                  const shiftIds = (areaConfig?.shiftIds || []).map((s: any) => typeof s === "object" ? s._id : s);
-                                  const shiftsForArea = allShifts.filter(s => shiftIds.includes(s._id)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                                  const areaConfig = selectedProject.areasConfig?.find((ac) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
+                                  const shiftIds = (areaConfig?.shiftIds || []).map((s: any) => (typeof s === "object" ? s._id : s));
+                                  const shiftsForArea = allShifts.filter((s) => shiftIds.includes(s._id)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
                                   return shiftsForArea.length > 0 ? (
                                     <div className="flex flex-wrap gap-1">
-                                      {shiftsForArea.map(s => (
+                                      {shiftsForArea.map((s) => (
                                         <span key={s._id} className="text-[10px] bg-purple-500/15 text-purple-300/80 px-1.5 py-0.5 rounded border border-purple-500/20 flex items-center gap-1 font-medium">
                                           <FontAwesomeIcon icon={faClock} className="text-[8px]" />
                                           {s.name}
@@ -1645,48 +1706,52 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 })()
                               )}
                             </div>
-                          ) : (() => {
-                            /* No area selected — show the coordinator's own assigned area/shift combos */
-                            const myAssignments = (selectedProject.coordinatorAssignments || []).filter((asm: any) => {
-                              const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-                              return String(uid) === String(profile?.userId || profile?._id);
-                            });
-                            if (myAssignments.length === 0) return null;
+                          ) : (
+                            (() => {
+                              /* No area selected — show the coordinator's own assigned area/shift combos */
+                              const myAssignments = (selectedProject.coordinatorAssignments || []).filter((asm: any) => {
+                                const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+                                return String(uid) === String(profile?.userId || profile?._id);
+                              });
+                              if (myAssignments.length === 0) return null;
 
-                            /* Group by area */
-                            const groupedByArea = new Map<string, { areaName: string; shifts: { _id: string; name: string; order?: number }[] }>();
-                            myAssignments.forEach((asm: any) => {
-                              const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
-                              const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
-                              if (!groupedByArea.has(aId)) {
-                                const areaName = allAreas.find(a => a._id === aId)?.name || "Área";
-                                groupedByArea.set(aId, { areaName, shifts: [] });
-                              }
-                              const shift = allShifts.find(s => s._id === sId);
-                              if (shift && !groupedByArea.get(aId)!.shifts.some(s => s._id === shift._id)) {
-                                groupedByArea.get(aId)!.shifts.push({ _id: shift._id, name: shift.name, order: shift.order });
-                              }
-                            });
+                              /* Group by area */
+                              const groupedByArea = new Map<string, { areaName: string; shifts: { _id: string; name: string; order?: number }[] }>();
+                              myAssignments.forEach((asm: any) => {
+                                const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
+                                const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+                                if (!groupedByArea.has(aId)) {
+                                  const areaName = allAreas.find((a) => a._id === aId)?.name || "Área";
+                                  groupedByArea.set(aId, { areaName, shifts: [] });
+                                }
+                                const shift = allShifts.find((s) => s._id === sId);
+                                if (shift && !groupedByArea.get(aId)!.shifts.some((s) => s._id === shift._id)) {
+                                  groupedByArea.get(aId)!.shifts.push({ _id: shift._id, name: shift.name, order: shift.order });
+                                }
+                              });
 
-                            return (
-                              <div className="space-y-1">
-                                {Array.from(groupedByArea.entries()).map(([aId, { areaName, shifts }]) => (
-                                  <div key={aId} className="flex flex-wrap items-center gap-1">
-                                    <span className="text-[10px] bg-indigo-500/15 text-indigo-300/80 px-1.5 py-0.5 rounded border border-indigo-500/20 flex items-center gap-1 font-semibold uppercase tracking-wider">
-                                      <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                      {areaName}
-                                    </span>
-                                    {shifts.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map(s => (
-                                      <span key={s._id} className="text-[10px] bg-purple-500/10 text-purple-300/70 px-1.5 py-0.5 rounded border border-purple-500/15 flex items-center gap-1 font-medium">
-                                        <FontAwesomeIcon icon={faClock} className="text-[8px]" />
-                                        {s.name}
+                              return (
+                                <div className="space-y-1">
+                                  {Array.from(groupedByArea.entries()).map(([aId, { areaName, shifts }]) => (
+                                    <div key={aId} className="flex flex-wrap items-center gap-1">
+                                      <span className="text-[10px] bg-indigo-500/15 text-indigo-300/80 px-1.5 py-0.5 rounded border border-indigo-500/20 flex items-center gap-1 font-semibold uppercase tracking-wider">
+                                        <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
+                                        {areaName}
                                       </span>
-                                    ))}
-                                  </div>
-                                ))}
-                              </div>
-                            );
-                          })()}
+                                      {shifts
+                                        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                                        .map((s) => (
+                                          <span key={s._id} className="text-[10px] bg-purple-500/10 text-purple-300/70 px-1.5 py-0.5 rounded border border-purple-500/15 flex items-center gap-1 font-medium">
+                                            <FontAwesomeIcon icon={faClock} className="text-[8px]" />
+                                            {s.name}
+                                          </span>
+                                        ))}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()
+                          )}
                         </div>
                       </div>
                     )}
@@ -1742,8 +1807,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             {(() => {
                                               const projMeta = currentEmp.metadataProjects?.find((m) => m.projectId === selectedProjectId);
                                               const roleFrame = projMeta?.roleFrame;
-                                              const empArea = allAreas.find(a => a._id === projMeta?.areaId)?.name;
-                                              const empShift = allShifts.find(s => s._id === projMeta?.shiftId)?.name;
+                                              const empArea = allAreas.find((a) => a._id === projMeta?.areaId)?.name;
+                                              const empShift = allShifts.find((s) => s._id === projMeta?.shiftId)?.name;
 
                                               return (
                                                 <>
@@ -1764,12 +1829,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               <button
                                                 onClick={() => {
                                                   updateWizardEntry(currentEmp.id, { status: "present", typeId: undefined });
-                                                  setTimeout(() => {
-                                                    const otContainer = document.querySelector(".ot-container-row");
-                                                    if (otContainer) {
-                                                      otContainer.scrollIntoView({ behavior: "smooth", block: "start" });
-                                                    }
-                                                  }, 100);
                                                 }}
                                                 className={`flex-1 py-1 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${isPresent ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                               >
@@ -1800,12 +1859,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                         updateWizardEntry(currentEmp.id, { overtimeHours: 0 }); // Default 0
                                                       }
                                                       setActiveOvertimeModal("wizard");
-                                                      setTimeout(() => {
-                                                        const otDetails = document.querySelector(".ot-details-row");
-                                                        if (otDetails) {
-                                                          otDetails.scrollIntoView({ behavior: "smooth", block: "start" });
-                                                        }
-                                                      }, 100);
                                                     }}
                                                     className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${data.overtimeHours !== undefined ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                                   >
@@ -1929,11 +1982,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                   if (!e.projectIds?.includes(selectedProjectId)) return false;
                                                   const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
                                                   if (!projMeta || !projMeta.hasActiveContract) return false;
-                                                  
+
                                                   // Area/Shift filter
                                                   if (selectedAreaId && projMeta.areaId !== selectedAreaId) return false;
                                                   if (selectedShiftId && projMeta.shiftId !== selectedShiftId) return false;
-                                                  
+
                                                   return true;
                                                 })
                                               : [];
@@ -2148,12 +2201,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               setAttendanceStatus("present");
                                               setDraftTypeId("");
                                               setNoveltyCategory(null); // Clear old category state if any
-                                              setTimeout(() => {
-                                                const otContainer = document.querySelector(".ot-container-row");
-                                                if (otContainer) {
-                                                  otContainer.scrollIntoView({ behavior: "smooth", block: "start" });
-                                                }
-                                              }, 100);
                                             }}
                                             className={`flex-1 py-2 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${attendanceStatus === "present" ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                           >
@@ -2188,12 +2235,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                   if (overtimeType) setDraftTypeId(overtimeType._id);
                                                   if (!draftOvertimeHours) setDraftOvertimeHours(0);
                                                   setActiveOvertimeModal("fast-entry");
-                                                  setTimeout(() => {
-                                                    const otDetails = document.querySelector(".ot-details-row-fast");
-                                                    if (otDetails) {
-                                                      otDetails.scrollIntoView({ behavior: "smooth", block: "start" });
-                                                    }
-                                                  }, 100);
                                                 }}
                                                 className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${showOvertimeForm ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                                               >
@@ -3744,6 +3785,121 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         </div>
       </Modal>
 
+      {/* Role Filter Modal for Additional Staff */}
+      <Modal isOpen={isAdditionalRoleFilterModalOpen} onClose={() => setIsAdditionalRoleFilterModalOpen(false)} title="Filtros Avanzados" size="md" zIndex={100}>
+        <div className="flex flex-col max-h-[85vh]">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-slate-900/50">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Configura los filtros para refinar los resultados</p>
+          </div>
+
+          <div className="overflow-y-auto flex-1 p-6 space-y-8">
+            {/* User Status Section */}
+            <section className="space-y-4">
+              <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Filtrar por usuarios</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Usuarios Activos</span>
+                  <div className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={additionalStaffStatusFilter === "active"}
+                      onChange={() => setAdditionalStaffStatusFilter("active")}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Usuarios Inactivos</span>
+                  <div className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={additionalStaffStatusFilter === "inactive"}
+                      onChange={() => setAdditionalStaffStatusFilter("inactive")}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Todos los usuarios (Activos e Inactivos)</span>
+                  <div className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={additionalStaffStatusFilter === "all"}
+                      onChange={() => setAdditionalStaffStatusFilter("all")}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Role Frame Section */}
+            <section className="space-y-4">
+              <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Filtros por Categoría</h4>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Role Frame</label>
+                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {additionalStaffAvailableRoles.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No hay roles disponibles</p>
+                  ) : (
+                    additionalStaffAvailableRoles.map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => {
+                          if (selectedAdditionalRoleFilters.includes(role)) {
+                            setSelectedAdditionalRoleFilters((prev) => prev.filter((r) => r !== role));
+                          } else {
+                            setSelectedAdditionalRoleFilters((prev) => [...prev, role]);
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${selectedAdditionalRoleFilters.includes(role) ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-slate-800/40 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                      >
+                        <span className="text-sm font-bold">{role}</span>
+                        {selectedAdditionalRoleFilters.includes(role) && <FontAwesomeIcon icon={faCheck} className="text-xs" />}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Options Section */}
+            <section className="space-y-4 pb-4">
+              <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Opciones</h4>
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Contrato Activo</span>
+                <div className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={additionalStaffFilterContractActive} onChange={() => setAdditionalStaffFilterContractActive(!additionalStaffFilterContractActive)} />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-slate-900 flex gap-3">
+            <button
+              onClick={() => {
+                setSelectedAdditionalRoleFilters([]);
+                setAdditionalStaffStatusFilter("active");
+                setAdditionalStaffFilterContractActive(false);
+              }}
+              className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 transition-all text-sm"
+            >
+              Limpiar Todo
+            </button>
+            <button onClick={() => setIsAdditionalRoleFilterModalOpen(false)} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 transition-all active:scale-95 text-sm">
+              Aplicar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Additional Staff Modal */}
       <Modal
         isOpen={showAdditionalStaffModal}
@@ -3751,30 +3907,100 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           setShowAdditionalStaffModal(false);
           setSelectedAdditionalStaff([]);
           setAdditionalStaffSearchTerm("");
+          setSelectedAdditionalRoleFilters([]);
+          setAdditionalStaffStatusFilter("active");
+          setAdditionalStaffFilterContractActive(false);
         }}
-        title="Personal Adicional"
+        title={`Otros Presentes (${filteredNonProjectEmployees.length})`}
         size="md"
       >
         <div className="space-y-4">
           {/* Info Box */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 text-sm text-blue-800 dark:text-blue-200">
-            <p className="font-bold flex items-center gap-2 mb-1">
-              <FontAwesomeIcon icon={faUserPlus} />
-              ¿Agregar Personal Adicional?
-            </p>
-            <p className="leading-snug opacity-90">Puedes incluir colaboradores que no están asignados a este proyecto en el reporte de novedades.</p>
+          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <FontAwesomeIcon icon={faUserPlus} className="text-blue-500" />
+              ¿Agregar Otros Presentes?
+              <span className="text-slate-400 font-medium">({filteredNonProjectEmployees.length})</span>
+            </h3>
+            <button onClick={() => setShowOtherPresentInfo(true)} className="text-blue-600 dark:text-blue-400 hover:scale-110 transition-transform p-1">
+              <FontAwesomeIcon icon={faInfoCircle} />
+            </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative">
-            <input type="text" placeholder="Buscar personal..." className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 transition-shadow" value={additionalStaffSearchTerm} onChange={(e) => setAdditionalStaffSearchTerm(e.target.value)} />
+          {/* Search and Filter */}
+          <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 space-y-2">
+            {/* Active Filter Badges */}
+            {(selectedAdditionalRoleFilters.length > 0 || additionalStaffStatusFilter !== "active" || additionalStaffFilterContractActive) && (
+              <div className="flex flex-wrap gap-2 pb-1">
+                {/* Role Badges */}
+                {selectedAdditionalRoleFilters.map((role) => (
+                  <span key={role} className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-800">
+                    {role}
+                    <button onClick={() => setSelectedAdditionalRoleFilters((prev) => prev.filter((r) => r !== role))} className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                ))}
+
+                {/* Status Badges */}
+                {additionalStaffStatusFilter === "inactive" && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 text-[10px] font-bold border border-red-200 dark:border-red-800">
+                    Solo Inactivos
+                    <button onClick={() => setAdditionalStaffStatusFilter("active")} className="hover:text-red-900 dark:hover:text-red-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+                {additionalStaffStatusFilter === "all" && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-[10px] font-bold border border-gray-200 dark:border-gray-700">
+                    Todos los Usuarios
+                    <button onClick={() => setAdditionalStaffStatusFilter("active")} className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Contract Badge */}
+                {additionalStaffFilterContractActive && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-bold border border-amber-200 dark:border-amber-800">
+                    Contrato Activo
+                    <button onClick={() => setAdditionalStaffFilterContractActive(false)} className="hover:text-amber-900 dark:hover:text-amber-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+
+                <button
+                  onClick={() => {
+                    setSelectedAdditionalRoleFilters([]);
+                    setAdditionalStaffStatusFilter("active");
+                    setAdditionalStaffFilterContractActive(false);
+                  }}
+                  className="text-[10px] text-gray-500 hover:underline px-1"
+                >
+                  Limpiar
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input type="text" placeholder="Buscar personal..." className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 transition-shadow" value={additionalStaffSearchTerm} onChange={(e) => setAdditionalStaffSearchTerm(e.target.value)} />
+              </div>
+              <button
+                onClick={() => setIsAdditionalRoleFilterModalOpen(true)}
+                className={`px-4 border rounded-lg transition-colors flex items-center justify-center
+                  ${selectedAdditionalRoleFilters.length > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" : "bg-white border-gray-300 text-gray-700 dark:bg-slate-800 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"}`}
+              >
+                <FontAwesomeIcon icon={faFilter} />
+              </button>
+            </div>
           </div>
 
           {/* Staff List */}
           <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-            {nonProjectEmployees
-              .filter((emp) => (additionalStaffSearchTerm ? emp.name.toLowerCase().includes(additionalStaffSearchTerm.toLowerCase()) : true))
-              .map((emp) => {
+            {filteredNonProjectEmployees.map((emp) => {
                 const isSelected = selectedAdditionalStaff.includes(emp.id);
                 return (
                   <div
@@ -3789,9 +4015,18 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-800" : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50"}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isSelected ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"}`}>{emp.name.charAt(0)}</div>
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                          {(() => {
+                            const roleFrame = emp.metadataProjects?.find((m) => m.roleFrame)?.roleFrame;
+                            return roleFrame ? (
+                              <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider uppercase">
+                                {roleFrame}
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                         {emp.positionName && <p className="text-[10px] text-gray-500 dark:text-gray-400">{emp.positionName}</p>}
                       </div>
                     </div>
@@ -3799,7 +4034,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   </div>
                 );
               })}
-            {nonProjectEmployees.filter((emp) => (additionalStaffSearchTerm ? emp.name.toLowerCase().includes(additionalStaffSearchTerm.toLowerCase()) : true)).length === 0 && <div className="text-center py-8 text-gray-500 dark:text-gray-400">No hay personal adicional disponible</div>}
+            {filteredNonProjectEmployees.length === 0 && <div className="text-center py-8 text-gray-500 dark:text-gray-400">No hay personal adicional disponible</div>}
           </div>
 
           {/* Selected Count */}
@@ -3851,6 +4086,34 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             >
               <FontAwesomeIcon icon={faUserPlus} />
               Agregar y Continuar
+            </button>
+          </div>
+        </div>
+      </Modal>
+      
+      {/* Info Modal for Others Present */}
+      <Modal
+        isOpen={showOtherPresentInfo}
+        onClose={() => setShowOtherPresentInfo(false)}
+        title="Información"
+        size="sm"
+      >
+        <div className="space-y-4 p-1 text-center">
+          <div className="flex flex-col items-center gap-3 text-blue-600 dark:text-blue-400 mb-2">
+             <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <FontAwesomeIcon icon={faInfoCircle} className="text-2xl" />
+             </div>
+             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Otros Presentes</h3>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Puedes incluir colaboradores que no están asignados a este proyecto en el reporte de novedades.
+          </p>
+          <div className="pt-4">
+            <button 
+              onClick={() => setShowOtherPresentInfo(false)}
+              className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold shadow-lg transition-all active:scale-95"
+            >
+              Entendido
             </button>
           </div>
         </div>
