@@ -1519,6 +1519,7 @@ export const ProjectTeamPage: React.FC = () => {
               {(() => {
                 if (!viewingShiftsData) return null;
                 const { user, areaId, assignmentType } = viewingShiftsData;
+                const userConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
                 let shifts: any[] = [];
 
                 // Helper to get coordinated shift IDs for exclusion
@@ -1551,7 +1552,6 @@ export const ProjectTeamPage: React.FC = () => {
                   }
                 } else {
                   // 2. If viewing standard, check team configuration assignments (Wizard) and EXCLUDE coordinated ones
-                  const userConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
                   const assignments = userConfig?.areaShiftAssignments || [];
                   const areaAssign = assignments.find((a: any) => {
                     const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
