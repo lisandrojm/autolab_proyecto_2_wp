@@ -468,12 +468,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     const userIdToCheck = profile.userId || profile._id;
     return (selectedProject.coordinatorAssignments || [])
       .filter((asm: any) => {
-        const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-        return String(uid) === String(userIdToCheck);
+        const uid = typeof asm.userId === "object" && asm.userId?._id ? String(asm.userId._id) : String(asm.userId || "");
+        return uid === String(userIdToCheck);
       })
       .map((asm: any) => ({
-        areaId: String(typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId),
-        shiftId: String(typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId),
+        areaId: String(asm.areaId?._id || asm.areaId || ""),
+        shiftId: String(asm.shiftId?._id || asm.shiftId || ""),
       }));
   }, [selectedProject, profile]);
 
@@ -510,15 +510,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       // Filter by Area if selected
       if (selectedAreaId) {
-        if (projMeta.areaId !== selectedAreaId) return false;
+        if (String(projMeta.areaId?._id || projMeta.areaId || "") !== String(selectedAreaId)) return false;
         // Filter by Shift if selected
-        if (selectedShiftId && projMeta.shiftId !== selectedShiftId) return false;
+        if (selectedShiftId && String(projMeta.shiftId?._id || projMeta.shiftId || "") !== String(selectedShiftId)) return false;
       } else {
         // If "Todas", check if employee's area/shift is in my coordinated list
         const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
         const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
         if (!isAdmin) {
-          const isMine = myCoordinatedCombinations.some((c) => c.areaId === String(projMeta.areaId) && c.shiftId === String(projMeta.shiftId));
+          const isMine = myCoordinatedCombinations.some((c) => c.areaId === String(projMeta.areaId?._id || projMeta.areaId || "") && c.shiftId === String(projMeta.shiftId?._id || projMeta.shiftId || ""));
           if (!isMine) return false;
         }
       }
@@ -1502,16 +1502,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 <option value="">Todas las Áreas | Turnos</option>
                                 {selectedProject.areasConfig
                                   .filter((ac) => {
-                                    const userRoles = (profile?.roleNames || []).map(r => r.toLowerCase());
+                                    const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
                                     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
                                     if (isAdmin) return true;
 
-                                    const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                                    return coordinatedAreaIds.includes(String(areaId));
+                                    const areaId = String(ac.areaId?._id || ac.areaId || "");
+                                    return coordinatedAreaIds.includes(areaId);
                                   })
                                   .map((ac) => {
-                                    const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                                    const areaName = typeof ac.areaId === "object" ? ac.areaId?.name : allAreas.find((a) => a._id === areaId)?.name;
+                                    const areaId = String(ac.areaId?._id || ac.areaId || "");
+                                    const areaName = ac.areaId?.name || allAreas.find((a) => String(a._id) === areaId)?.name;
                                     return (
                                       <option key={areaId} value={areaId}>
                                         {areaName || (isLoadingData ? "Cargando..." : "Área Desconocida")}
@@ -1538,13 +1538,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
                                     return areaConfig.shiftIds
                                       .map((sId: any) => {
-                                        const shiftId = typeof sId === "object" ? sId?._id : sId;
-                                        const shift = typeof sId === "object" ? sId : allShifts.find((s) => s._id === shiftId);
+                                        const shiftId = String(sId?._id || sId || "");
+                                        const shift = sId?.name ? sId : allShifts.find((s) => String(s._id) === shiftId);
                                         return shift;
                                       })
                                       .filter((s): s is Shift => {
                                         if (!s) return false;
-                                        const userRoles = (profile?.roleNames || []).map(r => r.toLowerCase());
+                                        const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
                                         const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
                                         if (isAdmin) return true;
 
@@ -1733,19 +1733,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                 <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                {allAreas.find((a) => a._id === selectedAreaId)?.name || "Área"}
+                                {allAreas.find((a) => String(a._id) === String(selectedAreaId))?.name || "Área"}
                               </span>
                               {selectedShiftId ? (
                                 <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px]" />
-                                  {allShifts.find((s) => s._id === selectedShiftId)?.name || "Turno"}
+                                  {allShifts.find((s) => String(s._id) === String(selectedShiftId))?.name || "Turno"}
                                 </span>
                               ) : (
                                 /* Area selected but all shifts — show all shifts for this area */
                                 (() => {
-                                  const areaConfig = selectedProject.areasConfig?.find((ac) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === selectedAreaId);
-                                  const shiftIds = (areaConfig?.shiftIds || []).map((s: any) => (typeof s === "object" ? s._id : s));
-                                  const shiftsForArea = allShifts.filter((s) => shiftIds.includes(s._id)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                                  const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
+                                  const shiftIds = (areaConfig?.shiftIds || []).map((s: any) => String(s?._id || s || ""));
+                                  const shiftsForArea = allShifts.filter((s) => shiftIds.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
                                   return shiftsForArea.length > 0 ? (
                                     <div className="flex flex-wrap gap-1">
                                       {shiftsForArea.map((s) => (
@@ -1771,15 +1771,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               /* Group by area */
                               const groupedByArea = new Map<string, { areaName: string; shifts: { _id: string; name: string; order?: number }[] }>();
                               myAssignments.forEach((asm: any) => {
-                                const aId = typeof asm.areaId === "object" ? asm.areaId?._id : asm.areaId;
-                                const sId = typeof asm.shiftId === "object" ? asm.shiftId?._id : asm.shiftId;
+                                const aId = String(asm.areaId?._id || asm.areaId || "");
+                                const sId = String(asm.shiftId?._id || asm.shiftId || "");
                                 if (!groupedByArea.has(aId)) {
-                                  const areaName = allAreas.find((a) => a._id === aId)?.name || "Área";
+                                  const areaName = asm.areaId?.name || allAreas.find((a) => String(a._id) === aId)?.name || "Área";
                                   groupedByArea.set(aId, { areaName, shifts: [] });
                                 }
-                                const shift = allShifts.find((s) => s._id === sId);
-                                if (shift && !groupedByArea.get(aId)!.shifts.some((s) => s._id === shift._id)) {
-                                  groupedByArea.get(aId)!.shifts.push({ _id: shift._id, name: shift.name, order: shift.order });
+                                const shift = asm.shiftId?.name ? asm.shiftId : allShifts.find((s) => String(s._id) === sId);
+                                if (shift && !groupedByArea.get(aId)!.shifts.some((s) => String(s._id) === String(shift._id || shift))) {
+                                  groupedByArea.get(aId)!.shifts.push({ _id: String(shift._id || shift), name: shift.name, order: shift.order });
                                 }
                               });
 
@@ -1860,8 +1860,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             {(() => {
                                               const projMeta = currentEmp.metadataProjects?.find((m) => m.projectId === selectedProjectId);
                                               const roleFrame = projMeta?.roleFrame;
-                                              const empArea = allAreas.find((a) => a._id === projMeta?.areaId)?.name;
-                                              const empShift = allShifts.find((s) => s._id === projMeta?.shiftId)?.name;
+                                              const empArea = allAreas.find((a) => String(a._id) === String(projMeta?.areaId))?.name;
+                                              const empShift = allShifts.find((s) => String(s._id) === String(projMeta?.shiftId))?.name;
 
                                               return (
                                                 <>

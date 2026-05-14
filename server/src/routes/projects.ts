@@ -152,6 +152,9 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
         .populate("turnos", "name")
         .populate("areasConfig.areaId", "name")
         .populate("areasConfig.shiftIds", "name")
+        .populate("coordinatorAssignments.areaId", "name")
+        .populate("coordinatorAssignments.shiftId", "name")
+        .populate("coordinatorAssignments.userId", "firstName lastName email")
         .select("-objectives -workSchedule -teamConfig") // Exclude heavy/unused fields in list
         .lean(),
       Project.countDocuments(filter),
@@ -603,7 +606,16 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
       filter.assignedUsers = req.user!.userId;
     }
 
-    const project = await Project.findOne(filter).populate("clientId", "name email").populate("assignedUsers", "firstName lastName email").populate("turnos").populate("areasConfig.areaId").populate("areasConfig.shiftIds").lean();
+    const project = await Project.findOne(filter)
+      .populate("clientId", "name email")
+      .populate("assignedUsers", "firstName lastName email")
+      .populate("turnos")
+      .populate("areasConfig.areaId")
+      .populate("areasConfig.shiftIds")
+      .populate("coordinatorAssignments.areaId")
+      .populate("coordinatorAssignments.shiftId")
+      .populate("coordinatorAssignments.userId")
+      .lean();
 
     if (!project) {
       res.status(404).json({ error: "Project not found" });

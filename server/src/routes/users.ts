@@ -11,6 +11,7 @@ import UserProject from "../models/UserProject.js"; // This registers the model
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Area } from "../models/Area.js";
+import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
 import bcrypt from "bcryptjs";
 
@@ -399,11 +400,12 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
       .populate({
         path: "metadata.projects",
         model: UserProject,
-        select: "projectId positionId levelId areaId nombre_rol_frame contracts.fecha_baja_contrato", 
+        select: "projectId positionId levelId areaId shiftId nombre_rol_frame contracts.fecha_baja_contrato contracts.shiftId", 
         populate: [
           { path: "positionId", select: "name", model: Position },
           { path: "levelId", select: "name", model: Level },
           { path: "areaId", select: "name", model: Area },
+          { path: "shiftId", select: "name", model: Shift },
         ],
       })
       .sort({ firstName: 1, lastName: 1 })
