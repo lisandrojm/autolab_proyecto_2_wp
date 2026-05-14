@@ -17,6 +17,14 @@ interface VacationDetailModalProps {
   onRefresh?: () => Promise<void>;
 }
 
+// Helper to parse date string as local date (ignoring time/timezone)
+const getLocalDate = (dateString: string | undefined) => {
+  if (!dateString) return new Date();
+  const datePart = dateString.toString().split("T")[0];
+  const [year, month, day] = datePart.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export default function VacationDetailModal({ vacation, profile, isOpen, onClose, onRefresh }: VacationDetailModalProps) {
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -98,7 +106,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
     if (vacation.status === "delivered") {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const start = new Date(vacation.startDate);
+      const start = getLocalDate(vacation.startDate);
       start.setHours(0, 0, 0, 0);
 
       // If today is strictly after start date, do not show cancel button
@@ -226,7 +234,7 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
             if (vacation.status === "delivered") {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              const start = new Date(vacation.startDate);
+              const start = getLocalDate(vacation.startDate);
               start.setHours(0, 0, 0, 0);
 
               const daysRemaining = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));

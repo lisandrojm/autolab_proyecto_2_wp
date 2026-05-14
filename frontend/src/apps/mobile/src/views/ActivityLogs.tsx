@@ -1733,12 +1733,20 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                 <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
-                                {allAreas.find((a) => String(a._id) === String(selectedAreaId))?.name || "Área"}
+                                {(() => {
+                                  const ac = selectedProject.areasConfig?.find((x) => String(x.areaId?._id || x.areaId || "") === String(selectedAreaId));
+                                  return ac?.areaId?.name || allAreas.find((a) => String(a._id) === String(selectedAreaId))?.name || "Área";
+                                })()}
                               </span>
                               {selectedShiftId ? (
                                 <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px]" />
-                                  {allShifts.find((s) => String(s._id) === String(selectedShiftId))?.name || "Turno"}
+                                  {(() => {
+                                    const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
+                                    const s = areaConfig?.shiftIds?.find((s: any) => String(s?._id || s || "") === String(selectedShiftId));
+                                    const sName = typeof s === "object" ? s.name : undefined;
+                                    return sName || allShifts.find((s) => String(s._id) === String(selectedShiftId))?.name || "Turno";
+                                  })()}
                                 </span>
                               ) : (
                                 /* Area selected but all shifts — show all shifts for this area */
@@ -1774,10 +1782,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 const aId = String(asm.areaId?._id || asm.areaId || "");
                                 const sId = String(asm.shiftId?._id || asm.shiftId || "");
                                 if (!groupedByArea.has(aId)) {
-                                  const areaName = asm.areaId?.name || allAreas.find((a) => String(a._id) === aId)?.name || "Área";
+                                  const projectArea = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === aId)?.areaId;
+                                  const areaName = asm.areaId?.name || (typeof projectArea === "object" ? projectArea.name : undefined) || allAreas.find((a) => String(a._id) === aId)?.name || "Área";
                                   groupedByArea.set(aId, { areaName, shifts: [] });
                                 }
-                                const shift = asm.shiftId?.name ? asm.shiftId : allShifts.find((s) => String(s._id) === sId);
+                                const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === aId);
+                                const projectShift = areaConfig?.shiftIds?.find((s: any) => String(s?._id || s || "") === sId);
+                                const shift = asm.shiftId?.name ? asm.shiftId : (typeof projectShift === "object" ? projectShift : undefined) || allShifts.find((s) => String(s._id) === sId);
+
                                 if (shift && !groupedByArea.get(aId)!.shifts.some((s) => String(s._id) === String(shift._id || shift))) {
                                   groupedByArea.get(aId)!.shifts.push({ _id: String(shift._id || shift), name: shift.name, order: shift.order });
                                 }
@@ -1860,8 +1872,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             {(() => {
                                               const projMeta = currentEmp.metadataProjects?.find((m) => m.projectId === selectedProjectId);
                                               const roleFrame = projMeta?.roleFrame;
-                                              const empArea = allAreas.find((a) => String(a._id) === String(projMeta?.areaId))?.name;
-                                              const empShift = allShifts.find((s) => String(s._id) === String(projMeta?.shiftId))?.name;
+                                              const empArea = projMeta?.areaId?.name || allAreas.find((a) => String(a._id) === String(projMeta?.areaId?._id || projMeta?.areaId || ""))?.name;
+                                              const empShift = projMeta?.shiftId?.name || allShifts.find((s) => String(s._id) === String(projMeta?.shiftId?._id || projMeta?.shiftId || ""))?.name;
 
                                               return (
                                                 <>
