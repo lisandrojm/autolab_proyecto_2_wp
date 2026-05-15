@@ -527,32 +527,61 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   }, [selectedProject, profile, coordinatedAreaIds]);
   const projectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
-    return employees.filter((e) => {
+    
+    console.log("DEBUG projectEmployees - Evaluating for project:", selectedProjectId);
+    console.log("DEBUG myCoordinatedCombinations:", myCoordinatedCombinations);
+    
+    const filtered = employees.filter((e) => {
       if (!e.projectIds || !e.projectIds.includes(selectedProjectId)) return false;
+      
       const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
-      if (!projMeta || !projMeta.hasActiveContract) return false;
+      if (!projMeta || !projMeta.hasActiveContract) {
+        if (e.projectIds.includes(selectedProjectId)) {
+            console.log(`DEBUG: Employee ${e.name} rejected: no active contract in projMeta`, projMeta);
+        }
+        return false;
+      }
 
       // Filter by Area if selected
       if (selectedAreaId) {
-        if (String(projMeta.areaId?._id || projMeta.areaId || "") !== String(selectedAreaId)) return false;
+        const pAreaId = String(projMeta.areaId?._id || projMeta.areaId || "");
+        if (pAreaId !== String(selectedAreaId)) {
+          console.log(`DEBUG: Employee ${e.name} rejected: area mismatch. Expected ${selectedAreaId}, got ${pAreaId}`);
+          return false;
+        }
         // Filter by Shift if selected
-        if (selectedShiftId && String(projMeta.shiftId?._id || projMeta.shiftId || "") !== String(selectedShiftId)) return false;
+        if (selectedShiftId) {
+          const pShiftId = String(projMeta.shiftId?._id || projMeta.shiftId || "");
+          if (pShiftId !== String(selectedShiftId)) {
+            console.log(`DEBUG: Employee ${e.name} rejected: shift mismatch. Expected ${selectedShiftId}, got ${pShiftId}`);
+            return false;
+          }
+        }
       } else {
         // If "Todas", check if employee's area/shift is in my coordinated list
         const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
         const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
-        const allAssignments = selectedProject.coordinatorAssignments || [];
+        const allAssignments = selectedProject?.coordinatorAssignments || [];
         const noRestrictions = allAssignments.length === 0;
         
         if (!isAdmin && !noRestrictions) {
-          const isMine = myCoordinatedCombinations.some((c) => c.areaId === String(projMeta.areaId?._id || projMeta.areaId || "") && c.shiftId === String(projMeta.shiftId?._id || projMeta.shiftId || ""));
-          if (!isMine) return false;
+          const pAreaId = String(projMeta.areaId?._id || projMeta.areaId || "");
+          const pShiftId = String(projMeta.shiftId?._id || projMeta.shiftId || "");
+          const isMine = myCoordinatedCombinations.some((c) => c.areaId === pAreaId && c.shiftId === pShiftId);
+          if (!isMine) {
+            console.log(`DEBUG: Employee ${e.name} rejected: not in myCoordinatedCombinations. Their Area: ${pAreaId}, Shift: ${pShiftId}`);
+            return false;
+          }
         }
       }
 
+      console.log(`DEBUG: Employee ${e.name} ACCEPTED!`);
       return true;
     });
-  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile]);
+    
+    console.log("DEBUG projectEmployees - Total accepted:", filtered.length);
+    return filtered;
+  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject]);
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
