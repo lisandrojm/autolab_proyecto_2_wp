@@ -396,10 +396,11 @@ export const ProjectTeamPage: React.FC = () => {
   }, [allUsers, candidateUsers, showAddModal, assignedUserIds, searchTerm, filterRole, filterRoleFrame, filterProject]);
 
   const teamMembers = useMemo(() => {
-    const members = assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
+    return assignedUserIds.map((id) => allUsers.find((u) => u._id === id)).filter((u): u is User => !!u);
+  }, [assignedUserIds, allUsers]);
 
-    // Apply search filter if searchTermTeam is set
-    return members.filter((user) => {
+  const filteredTeamMembers = useMemo(() => {
+    return teamMembers.filter((user) => {
       // User Status Filter
       if (filterUserStatus === "active" && !user.metadata?.activo) return false;
       if (filterUserStatus === "inactive" && user.metadata?.activo) return false;
@@ -411,7 +412,7 @@ export const ProjectTeamPage: React.FC = () => {
 
       return true;
     });
-  }, [assignedUserIds, allUsers, searchTermTeam, filterUserStatus]);
+  }, [teamMembers, searchTermTeam, filterUserStatus]);
 
   const hasMobileCoordinator = useMemo(() => {
     return teamMembers.some((u) => u.roles?.some((r) => {
@@ -1107,10 +1108,10 @@ export const ProjectTeamPage: React.FC = () => {
 
 
                 {(() => {
-                  const coordinators = teamMembers.filter(checkIsCoordinator);
-                  const members = teamMembers.filter((u) => !checkIsCoordinator(u));
+                  const coordinators = filteredTeamMembers.filter(checkIsCoordinator);
+                  const members = filteredTeamMembers.filter((u) => !checkIsCoordinator(u));
 
-                  if (teamMembers.length === 0) {
+                  if (filteredTeamMembers.length === 0) {
                     return (
                       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-64 text-gray-500">
                         <FontAwesomeIcon icon={faUsers} className="h-12 w-12 mb-4 opacity-10" />
