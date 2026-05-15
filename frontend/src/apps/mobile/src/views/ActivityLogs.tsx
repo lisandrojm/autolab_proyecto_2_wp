@@ -369,7 +369,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             hasActiveContract: !!u.metadata?.projects?.some((p) =>
               p.contracts?.some((c) => {
                 if (!c.fecha_baja_contrato) return true;
-                const endDate = new Date(c.fecha_baja_contrato);
+                let endDate = new Date(c.fecha_baja_contrato);
+                if (isNaN(endDate.getTime()) && typeof c.fecha_baja_contrato === "string") {
+                  const parts = c.fecha_baja_contrato.split(/[-/]/);
+                  if (parts.length === 3 && parts[2].length === 4) {
+                    endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+                  }
+                }
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 return endDate >= today;
@@ -386,7 +392,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       if (!activeContract) activeContract = c;
                       return true;
                     }
-                    const endDate = new Date(c.fecha_baja_contrato);
+                    let endDate = new Date(c.fecha_baja_contrato);
+                    if (isNaN(endDate.getTime()) && typeof c.fecha_baja_contrato === "string") {
+                      const parts = c.fecha_baja_contrato.split(/[-/]/);
+                      if (parts.length === 3 && parts[2].length === 4) {
+                        endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+                      }
+                    }
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     const isActive = endDate >= today;
@@ -529,7 +541,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         // If "Todas", check if employee's area/shift is in my coordinated list
         const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
         const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
-        if (!isAdmin) {
+        const allAssignments = selectedProject.coordinatorAssignments || [];
+        const noRestrictions = allAssignments.length === 0;
+        
+        if (!isAdmin && !noRestrictions) {
           const isMine = myCoordinatedCombinations.some((c) => c.areaId === String(projMeta.areaId?._id || projMeta.areaId || "") && c.shiftId === String(projMeta.shiftId?._id || projMeta.shiftId || ""));
           if (!isMine) return false;
         }
