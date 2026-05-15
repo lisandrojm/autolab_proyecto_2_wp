@@ -356,7 +356,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       // 2. Fetch Employees
       try {
-        const users = await usersAPI.getDirectory({ status: "all" });
+        const usersResp = await usersAPI.list({ limit: 2000 });
+        const users = usersResp.users || [];
         setEmployees(
           users.map((u) => ({
             id: u._id,
@@ -526,36 +527,100 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     return coordinatedAreaIds.length > 0;
   }, [selectedProject, profile, coordinatedAreaIds]);
   const projectEmployees = useMemo(() => {
-    if (!selectedProjectId) return [];
+    if (!selectedProjectId || !selectedProject) return [];
     
+    // Fallback for Coordinators who get 403 on /users API: use populated assignedUsers
+    const sourceEmployees = employees.length > 0 ? employees : (selectedProject?.assignedUsers || [])
+      .filter((au: any) => typeof au === 'object' && au !== null)
+      .map((au: any) => ({
+        id: au._id,
+        name: `${au.firstName || ""} ${au.lastName || ""}`.trim() || au.email,
+        email: au.email,
+        isActive: true, // Optimistic assumption
+        projectIds: [selectedProjectId],
+        hasActiveContract: true, // Optimistic assumption
+        metadataProjects: [], // Area/Shift will fallback to teamConfig
+        roles: [],
+      }));
+
     console.log("DEBUG projectEmployees - Evaluating for project:", selectedProjectId);
     console.log("DEBUG myCoordinatedCombinations:", myCoordinatedCombinations);
     
-    const filtered = employees.filter((e) => {
-      if (!e.projectIds || !e.projectIds.some((p: any) => String(p._id || p) === String(selectedProjectId))) return false;
+    const filtered = sourceEmployees.filter((e) => {
+      if (!e.isActive) {
+        return false;
+      }
       
       const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
-      if (!projMeta || !projMeta.hasActiveContract) {
-        if (e.projectIds.includes(selectedProjectId)) {
-            console.log(`DEBUG: Employee ${e.name} rejected: no active contract in projMeta`, projMeta);
+      
+      // Determine ALL of employee's area and shift combinations
+      const employeeCombinations: { areaId: string; shiftId: string }[] = [];
+      
+      const teamConfigMember = selectedProject?.teamConfig?.find((c: any) => {
+        const cUserId = typeof c.userId === "object" ? c.userId?._id : c.userId;
+        return String(cUserId) === String(e.id);
+      });
+      
+      const isCoordGlobal = e.roles?.some((r) => r.name?.toLowerCase()?.includes("coordinador"));
+
+      if (teamConfigMember && teamConfigMember.areaShiftAssignments?.length > 0) {
+        teamConfigMember.areaShiftAssignments.forEach((asa: any) => {
+          const aId = String(asa.areaId?._id || asa.areaId || "");
+          if (asa.shiftIds && asa.shiftIds.length > 0) {
+            asa.shiftIds.forEach((sId: any) => {
+              employeeCombinations.push({ areaId: aId, shiftId: String(sId?._id || sId || "") });
+            });
+          } else {
+            employeeCombinations.push({ areaId: aId, shiftId: "" });
+          }
+        });
+      } else if (isCoordGlobal && selectedProject?.coordinatorAssignments) {
+        selectedProject.coordinatorAssignments.forEach((asm: any) => {
+          const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
+          if (String(uid) === String(e.id)) {
+            const aId = String(asm.areaId?._id || asm.areaId || "");
+            const sId = String(asm.shiftId?._id || asm.shiftId || "");
+            employeeCombinations.push({ areaId: aId, shiftId: sId });
+          }
+        });
+      } else {
+        const pAreaId = String(projMeta?.areaId?._id || projMeta?.areaId || "");
+        let pShiftId = String(projMeta?.shiftId?._id || projMeta?.shiftId || "");
+        
+        // Infer shiftId from contract hours if missing (workaround for /users API not selecting shiftId)
+        if (!pShiftId && projMeta?.contractStartTime && projMeta?.contractEndTime) {
+          const matchingShift = allShifts.find(s => s.startTime === projMeta.contractStartTime && s.endTime === projMeta.contractEndTime);
+          if (matchingShift) {
+            pShiftId = String(matchingShift._id || matchingShift.id);
+          }
         }
+        
+        employeeCombinations.push({ areaId: pAreaId, shiftId: pShiftId });
+      }
+
+      const isExplicitlyAssigned = !!teamConfigMember || selectedProject?.assignedUsers?.some((au: any) => {
+        const auId = typeof au === "object" ? au._id : au;
+        return String(auId) === String(e.id);
+      });
+      
+      const inProjectIds = e.projectIds && e.projectIds.some((p: any) => String(p._id || p) === String(selectedProjectId));
+
+      if (!isExplicitlyAssigned && !isCoordGlobal && !inProjectIds) {
+        console.log(`DEBUG: Employee ${e.name} rejected: not explicitly assigned and not coordGlobal and not in projectIds.`);
         return false;
       }
 
       // Filter by Area if selected
       if (selectedAreaId) {
-        const pAreaId = String(projMeta.areaId?._id || projMeta.areaId || "");
-        if (pAreaId !== String(selectedAreaId)) {
-          console.log(`DEBUG: Employee ${e.name} rejected: area mismatch. Expected ${selectedAreaId}, got ${pAreaId}`);
+        const hasMatch = employeeCombinations.some((combo) => {
+          if (combo.areaId !== String(selectedAreaId)) return false;
+          if (selectedShiftId && combo.shiftId !== String(selectedShiftId)) return false;
+          return true;
+        });
+        
+        if (!hasMatch) {
+          console.log(`DEBUG: Employee ${e.name} rejected: area/shift mismatch. Has combinations:`, employeeCombinations);
           return false;
-        }
-        // Filter by Shift if selected
-        if (selectedShiftId) {
-          const pShiftId = String(projMeta.shiftId?._id || projMeta.shiftId || "");
-          if (pShiftId !== String(selectedShiftId)) {
-            console.log(`DEBUG: Employee ${e.name} rejected: shift mismatch. Expected ${selectedShiftId}, got ${pShiftId}`);
-            return false;
-          }
         }
       } else {
         // If "Todas", check if employee's area/shift is in my coordinated list
@@ -565,11 +630,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const noRestrictions = allAssignments.length === 0;
         
         if (!isAdmin && !noRestrictions) {
-          const pAreaId = String(projMeta.areaId?._id || projMeta.areaId || "");
-          const pShiftId = String(projMeta.shiftId?._id || projMeta.shiftId || "");
-          const isMine = myCoordinatedCombinations.some((c) => c.areaId === pAreaId && c.shiftId === pShiftId);
+          const isMine = employeeCombinations.some((combo) => 
+            myCoordinatedCombinations.some((myCombo) => 
+              myCombo.areaId === combo.areaId && (myCombo.shiftId === combo.shiftId || !myCombo.shiftId || !combo.shiftId)
+            )
+          );
           if (!isMine) {
-            console.log(`DEBUG: Employee ${e.name} rejected: not in myCoordinatedCombinations. Their Area: ${pAreaId}, Shift: ${pShiftId}`);
+            console.log(`DEBUG: Employee ${e.name} rejected: not in myCoordinatedCombinations.`);
             return false;
           }
         }
@@ -581,7 +648,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     
     console.log("DEBUG projectEmployees - Total accepted:", filtered.length);
     return filtered;
-  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject]);
+  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts]);
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
@@ -1773,11 +1840,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 /* Area selected but all shifts — show all shifts for this area */
                                 (() => {
                                   const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
-                                  const shiftIds = (areaConfig?.shiftIds || []).map((s: any) => String(s?._id || s || ""));
-                                  const shiftsForArea = allShifts.filter((s) => shiftIds.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-                                  return shiftsForArea.length > 0 ? (
+                                  if (!areaConfig || !areaConfig.shiftIds) return null;
+                                  
+                                  const visibleShifts = areaConfig.shiftIds
+                                    .map((sId: any) => {
+                                      const shiftId = String(sId?._id || sId || "");
+                                      return sId?.name ? sId : allShifts.find((s) => String(s._id) === shiftId);
+                                    })
+                                    .filter((s: any): s is Shift => {
+                                      if (!s) return false;
+                                      const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
+                                      const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
+                                      if (isAdmin) return true;
+                                      return coordinatedShiftIds.includes(String(s._id));
+                                    })
+                                    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+
+                                  return visibleShifts.length > 0 ? (
                                     <div className="flex flex-wrap gap-1">
-                                      {shiftsForArea.map((s) => (
+                                      {visibleShifts.map((s) => (
                                         <span key={s._id} className="text-[10px] bg-purple-500/15 text-purple-300/80 px-1.5 py-0.5 rounded border border-purple-500/20 flex items-center gap-1 font-medium">
                                           <FontAwesomeIcon icon={faClock} className="text-[8px]" />
                                           {s.name}
