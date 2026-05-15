@@ -58,10 +58,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
     <div className="fixed inset-0 overflow-y-auto" style={{ zIndex }}>
       <div className={`flex min-h-screen items-center justify-center ${size === "full" ? "p-4" : isFullscreen ? "p-2" : "p-4"}`}>
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 h-vh h-vh" />
+        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 z-[1]" onClick={onClose} />
 
         {/* Panel */}
-        <div className={`relative bg-white dark:bg-gray-800 shadow-xl w-full ${getSizeClasses()} overflow-hidden flex flex-col ${size === "full" ? "rounded-xl" : "rounded-2xl"} ${!isFullscreen ? "max-h-[90vh]" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId}>
+        <div className={`relative z-[2] bg-white dark:bg-gray-800 shadow-xl w-full ${getSizeClasses()} overflow-hidden flex flex-col ${size === "full" ? "rounded-xl" : "rounded-2xl"} ${!isFullscreen ? "max-h-[90vh]" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId} onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           {customHeader ? (
             customHeader

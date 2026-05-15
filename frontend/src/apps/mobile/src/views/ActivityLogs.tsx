@@ -14,6 +14,7 @@ import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
 import { Modal } from "../components/Modal";
+import AdditionalStaffFiltersModal, { AdditionalStaffFilterValues } from "../components/AdditionalStaffFiltersModal";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 
 interface EmployeeOption {
@@ -298,6 +299,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showAdditionalStaffModal, setShowAdditionalStaffModal] = useState(false);
   const [selectedAdditionalStaff, setSelectedAdditionalStaff] = useState<string[]>([]);
   const [additionalStaffSearchTerm, setAdditionalStaffSearchTerm] = useState("");
+  const [debouncedAdditionalSearchTerm, setDebouncedAdditionalSearchTerm] = useState("");
+  const [additionalStaffVisibleCount, setAdditionalStaffVisibleCount] = useState(20);
 
   // Replacement Modal State
   const [showReplacementModal, setShowReplacementModal] = useState(false);
@@ -330,6 +333,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const formScrollRef = useRef<HTMLDivElement>(null);
 
+  // Debounce search input for additional staff to prevent re-filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAdditionalSearchTerm(additionalStaffSearchTerm);
+      setAdditionalStaffVisibleCount(20); // Reset pagination on search change
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [additionalStaffSearchTerm]);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -344,7 +356,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       // 2. Fetch Employees
       try {
-        const users = await usersAPI.getDirectory();
+        const users = await usersAPI.getDirectory({ status: "all" });
         setEmployees(
           users.map((u) => ({
             id: u._id,
@@ -353,7 +365,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             role: u.role,
             roles: u.roles,
             positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
-            isActive: u.isActive,
+            isActive: (u.metadata as any)?.activo !== false,
             hasActiveContract: !!u.metadata?.projects?.some((p) =>
               p.contracts?.some((c) => {
                 if (!c.fecha_baja_contrato) return true;
@@ -772,17 +784,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const nonProjectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
     const filtered = employees.filter((e) => !e.projectIds || !e.projectIds.includes(selectedProjectId));
-    console.log("[DEBUG] nonProjectEmployees:", {
-      selectedProjectId,
-      totalEmployees: employees.length,
-      count: filtered.length,
-    });
     return filtered;
   }, [employees, selectedProjectId]);
 
   const filteredNonProjectEmployees = useMemo(() => {
     const filtered = nonProjectEmployees.filter((emp) => {
-      const matchesSearch = additionalStaffSearchTerm ? emp.name.toLowerCase().includes(additionalStaffSearchTerm.toLowerCase()) : true;
+      const matchesSearch = debouncedAdditionalSearchTerm ? emp.name.toLowerCase().includes(debouncedAdditionalSearchTerm.toLowerCase()) : true;
 
       // Role filtering with normalization (case-insensitive and trimmed)
       const matchesRoles =
@@ -811,17 +818,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return matchesSearch && matchesRoles && matchesStatus && matchesContract;
     });
 
-    console.log("[DEBUG] Filtered Additional Staff:", {
-      total: nonProjectEmployees.length,
-      filtered: filtered.length,
-      searchTerm: additionalStaffSearchTerm,
-      selectedRoles: selectedAdditionalRoleFilters,
-      statusFilter: additionalStaffStatusFilter,
-      contractActive: additionalStaffFilterContractActive,
-    });
-
     return filtered;
-  }, [nonProjectEmployees, additionalStaffSearchTerm, selectedAdditionalRoleFilters, additionalStaffStatusFilter, additionalStaffFilterContractActive]);
+  }, [nonProjectEmployees, debouncedAdditionalSearchTerm, selectedAdditionalRoleFilters, additionalStaffStatusFilter, additionalStaffFilterContractActive]);
 
   const additionalStaffAvailableRoles = useMemo(() => {
     const roles = new Set<string>();
@@ -1111,14 +1109,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setEntries(newEntries);
     setHasActivity(hasAnomalies);
 
-    // Debug: log values to verify additional staff logic
-    console.log("[DEBUG] Additional Staff Check:", {
-      allowsAdditionalStaff,
-      nonProjectEmployeesCount: nonProjectEmployees.length,
-      selectedProjectConfig: selectedProject?.activityLogConfig,
-      shouldShowModal: allowsAdditionalStaff && nonProjectEmployees.length > 0,
-    });
-
     // If project allows additional staff, show additional staff modal first
     if (allowsAdditionalStaff && nonProjectEmployees.length > 0) {
       setShowAdditionalStaffModal(true);
@@ -1149,14 +1139,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return;
     }
 
-    // Debug: log values to verify additional staff logic (Fast Entry mode)
-    console.log("[DEBUG] Additional Staff Check (Fast Entry):", {
-      allowsAdditionalStaff,
-      nonProjectEmployeesCount: nonProjectEmployees.length,
-      selectedProjectConfig: selectedProject?.activityLogConfig,
-      shouldShowModal: allowsAdditionalStaff && nonProjectEmployees.length > 0,
-    });
-
     // If project allows additional staff, show additional staff modal first
     if (allowsAdditionalStaff && nonProjectEmployees.length > 0) {
       setShowAdditionalStaffModal(true);
@@ -1173,10 +1155,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       const proj = userProjects.find((p) => p._id === selectedProjectId);
 
-      // Iterate over ALL employees to ensure we save their schedule snapshot
-      for (const emp of employees) {
-        if (!emp.projectIds || !emp.projectIds.includes(selectedProjectId)) continue;
-
+      // Iterate over projectEmployees (already filtered by area/shift) to ensure we save their schedule snapshot
+      for (const emp of projectEmployees) {
         // Try to find if we have a specific entry (anomaly/overtime)
         const entry = entries.find((e) => e.employeeId === emp.id);
 
@@ -1210,9 +1190,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               overtimeHours: 0,
               scheduleInTime: schedIn,
               scheduleOutTime: schedOut,
-              // No inTime/outTime for standard present unless we want to copy schedule?
-              // User asked for "Entrada y Salida" to store "horario del proyecto".
-              // So saving it in scheduleInTime is correct.
             });
           }
         }
@@ -3242,6 +3219,30 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               <span className="text-gray-500 dark:text-gray-400">Proyecto:</span>
               <span className="font-semibold text-gray-900 dark:text-white">{userProjects.find((p) => p._id === selectedProjectId)?.name || "Sin Proyecto"}</span>
             </div>
+            {selectedAreaId && (
+              <div className="flex gap-2">
+                <span className="text-gray-500 dark:text-gray-400">Área:</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {(() => {
+                    const ac = selectedProject?.areasConfig?.find((x: any) => String(x.areaId?._id || x.areaId || "") === String(selectedAreaId));
+                    return ac?.areaId?.name || allAreas.find((a) => String(a._id) === String(selectedAreaId))?.name || "Área";
+                  })()}
+                </span>
+              </div>
+            )}
+            {selectedShiftId && (
+              <div className="flex gap-2">
+                <span className="text-gray-500 dark:text-gray-400">Turno:</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {(() => {
+                    const areaConfig = selectedProject?.areasConfig?.find((ac: any) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
+                    const s = areaConfig?.shiftIds?.find((s: any) => String(s?._id || s || "") === String(selectedShiftId));
+                    const sName = typeof s === "object" ? s.name : undefined;
+                    return sName || allShifts.find((s) => String(s._id) === String(selectedShiftId))?.name || "Turno";
+                  })()}
+                </span>
+              </div>
+            )}
           </div>
 
           {hasActivity ? (
@@ -3282,18 +3283,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               <div>
                 <h4 className="font-medium text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 pb-2 mb-2 flex justify-between items-center">
                   Equipo Asignado
-                  <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-[10px]">{employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)).length}</span>
+                  <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-[10px]">{projectEmployees.length}</span>
                 </h4>
                 <div className="max-h-60 overflow-y-auto space-y-0.5 pr-1">
-                  {employees
-                    .filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId))
-                    .map((emp) => (
+                  {projectEmployees.map((emp) => (
                       <div key={emp.id} className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors group">
                         <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 uppercase tracking-wide border border-blue-200 dark:border-blue-900/50">Presente</span>
                       </div>
                     ))}
-                  {employees.filter((e) => e.projectIds && e.projectIds.includes(selectedProjectId)).length === 0 && <p className="text-sm text-gray-500 italic text-center py-4">No hay colaboradores asignados a este proyecto.</p>}
+                  {projectEmployees.length === 0 && <p className="text-sm text-gray-500 italic text-center py-4">No hay colaboradores asignados a este proyecto.</p>}
                 </div>
               </div>
             </div>
@@ -3850,120 +3849,24 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         </div>
       </Modal>
 
-      {/* Role Filter Modal for Additional Staff */}
-      <Modal isOpen={isAdditionalRoleFilterModalOpen} onClose={() => setIsAdditionalRoleFilterModalOpen(false)} title="Filtros Avanzados" size="md" zIndex={100}>
-        <div className="flex flex-col max-h-[85vh]">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-slate-900/50">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Configura los filtros para refinar los resultados</p>
-          </div>
-
-          <div className="overflow-y-auto flex-1 p-6 space-y-8">
-            {/* User Status Section */}
-            <section className="space-y-4">
-              <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Filtrar por usuarios</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Usuarios Activos</span>
-                  <div className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={additionalStaffStatusFilter === "active"}
-                      onChange={() => setAdditionalStaffStatusFilter("active")}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Usuarios Inactivos</span>
-                  <div className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={additionalStaffStatusFilter === "inactive"}
-                      onChange={() => setAdditionalStaffStatusFilter("inactive")}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Todos los usuarios (Activos e Inactivos)</span>
-                  <div className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={additionalStaffStatusFilter === "all"}
-                      onChange={() => setAdditionalStaffStatusFilter("all")}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Role Frame Section */}
-            <section className="space-y-4">
-              <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Filtros por Categoría</h4>
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Role Frame</label>
-                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                  {additionalStaffAvailableRoles.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">No hay roles disponibles</p>
-                  ) : (
-                    additionalStaffAvailableRoles.map((role) => (
-                      <button
-                        key={role}
-                        onClick={() => {
-                          if (selectedAdditionalRoleFilters.includes(role)) {
-                            setSelectedAdditionalRoleFilters((prev) => prev.filter((r) => r !== role));
-                          } else {
-                            setSelectedAdditionalRoleFilters((prev) => [...prev, role]);
-                          }
-                        }}
-                        className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${selectedAdditionalRoleFilters.includes(role) ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-slate-800/40 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
-                      >
-                        <span className="text-sm font-bold">{role}</span>
-                        {selectedAdditionalRoleFilters.includes(role) && <FontAwesomeIcon icon={faCheck} className="text-xs" />}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* Options Section */}
-            <section className="space-y-4 pb-4">
-              <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Opciones</h4>
-              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Contrato Activo</span>
-                <div className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={additionalStaffFilterContractActive} onChange={() => setAdditionalStaffFilterContractActive(!additionalStaffFilterContractActive)} />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* Footer */}
-          <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-slate-900 flex gap-3">
-            <button
-              onClick={() => {
-                setSelectedAdditionalRoleFilters([]);
-                setAdditionalStaffStatusFilter("active");
-                setAdditionalStaffFilterContractActive(false);
-              }}
-              className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 transition-all text-sm"
-            >
-              Limpiar Todo
-            </button>
-            <button onClick={() => setIsAdditionalRoleFilterModalOpen(false)} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 transition-all active:scale-95 text-sm">
-              Aplicar
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {/* Role Filter Modal for Additional Staff — self-contained component to prevent parent re-renders */}
+      <AdditionalStaffFiltersModal
+        isOpen={isAdditionalRoleFilterModalOpen}
+        onClose={() => setIsAdditionalRoleFilterModalOpen(false)}
+        onApply={(filters: AdditionalStaffFilterValues) => {
+          setSelectedAdditionalRoleFilters(filters.roleFilters);
+          setAdditionalStaffStatusFilter(filters.statusFilter);
+          setAdditionalStaffFilterContractActive(filters.contractActive);
+          setAdditionalStaffVisibleCount(20);
+          setIsAdditionalRoleFilterModalOpen(false);
+        }}
+        availableRoles={additionalStaffAvailableRoles}
+        currentFilters={{
+          roleFilters: selectedAdditionalRoleFilters,
+          statusFilter: additionalStaffStatusFilter,
+          contractActive: additionalStaffFilterContractActive,
+        }}
+      />
 
       {/* Additional Staff Modal */}
       <Modal
@@ -4056,7 +3959,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               <button
                 onClick={() => setIsAdditionalRoleFilterModalOpen(true)}
                 className={`px-4 border rounded-lg transition-colors flex items-center justify-center
-                  ${selectedAdditionalRoleFilters.length > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" : "bg-white border-gray-300 text-gray-700 dark:bg-slate-800 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"}`}
+                  ${selectedAdditionalRoleFilters.length > 0 || additionalStaffStatusFilter !== "active" || additionalStaffFilterContractActive ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" : "bg-white border-gray-300 text-gray-700 dark:bg-slate-800 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"}`}
               >
                 <FontAwesomeIcon icon={faFilter} />
               </button>
@@ -4065,7 +3968,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
           {/* Staff List */}
           <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-            {filteredNonProjectEmployees.map((emp) => {
+            {filteredNonProjectEmployees.slice(0, additionalStaffVisibleCount).map((emp) => {
                 const isSelected = selectedAdditionalStaff.includes(emp.id);
                 return (
                   <div
@@ -4081,7 +3984,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   >
                     <div className="flex items-center gap-3">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
                           {(() => {
                             const roleFrame = emp.metadataProjects?.find((m) => m.roleFrame)?.roleFrame;
@@ -4091,6 +3994,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               </span>
                             ) : null;
                           })()}
+                          {emp.isActive === false ? (
+                            <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase">
+                              Inactivo
+                            </span>
+                          ) : (
+                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase">
+                              Activo
+                            </span>
+                          )}
                         </div>
                         {emp.positionName && <p className="text-[10px] text-gray-500 dark:text-gray-400">{emp.positionName}</p>}
                       </div>
@@ -4099,6 +4011,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   </div>
                 );
               })}
+            {/* Load More Button */}
+            {filteredNonProjectEmployees.length > additionalStaffVisibleCount && (
+              <button
+                onClick={() => setAdditionalStaffVisibleCount(prev => prev + 20)}
+                className="w-full py-2.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                Mostrar más ({filteredNonProjectEmployees.length - additionalStaffVisibleCount} restantes)
+              </button>
+            )}
             {filteredNonProjectEmployees.length === 0 && <div className="text-center py-8 text-gray-500 dark:text-gray-400">No hay personal adicional disponible</div>}
           </div>
 

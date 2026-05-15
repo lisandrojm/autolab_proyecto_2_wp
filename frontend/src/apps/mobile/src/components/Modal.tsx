@@ -41,7 +41,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
     <div className="fixed inset-0 overflow-y-auto" style={{ zIndex }}>
       <div className={`flex min-h-screen items-center justify-center ${isFullscreen ? "p-2" : "p-4"}`}>
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 h-vh" />
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 transition duration-200 h-vh" />
 
         {/* Panel */}
         <div className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full ${getSizeClasses()} ${isFullscreen ? "overflow-hidden flex flex-col" : "max-h-[95vh] overflow-y-auto"}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId}>

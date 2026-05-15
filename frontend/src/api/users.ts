@@ -332,8 +332,9 @@ class UsersAPI {
     emitUsersChanged("delete", id);
   }
 
-  async getDirectory(): Promise<User[]> {
-    const { data } = await axios.get("/users/directory", { headers: this.getHeaders() });
+  async getDirectory(params?: { status?: "active" | "inactive" | "all" }): Promise<User[]> {
+    const queryParams = params?.status ? `?status=${params.status}` : "";
+    const { data } = await axios.get(`/users/directory${queryParams}`, { headers: this.getHeaders() });
     return Array.isArray(data) ? data.map(normalizeUser) : [];
   }
 

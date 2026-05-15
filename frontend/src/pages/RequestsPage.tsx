@@ -4,7 +4,7 @@ import { fuzzyMatch } from "../utils/searchHelpers";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faFileText, faFilter, faSearch, faUser, faCalendar, faTrash, faUserSlash, faGrip, faTable, faBriefcase, faChartSimple, faClock, faChevronDown, faChevronUp, faFileLines, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { NewsReportsModal } from "../components/orders/news/NewsReportsModal";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CardItemGeneric } from "../components/ui/CardItemGeneric";
@@ -353,31 +353,33 @@ export const RequestsPage: React.FC = () => {
   const mergedAttendance = useMemo(() => {
     if (!selectedReport) return [];
 
-    // 1. Get filtered users for this project
+    // If the report has attendance records, those ARE the complete set for the report's scope
+    // (area/shift filtered). No need to pad with virtual "present" records from all project users.
+    if (selectedReport.attendance.length > 0) {
+      // Enrich with area names from user directory if available
+      return selectedReport.attendance
+        .map((record) => {
+          const empId = typeof record.employeeId === "object" && record.employeeId ? (record.employeeId as any)._id : record.employeeId;
+          const user = allUsers.find((u) => u._id === empId);
+          if (user) {
+            const aName = !user.areaId ? "-" : typeof user.areaId === "string" ? "Area " + user.areaId.slice(-4) : user.areaId.name;
+            return { ...record, areaName: aName };
+          }
+          return record;
+        })
+        .sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+    }
+
+    // Legacy fallback: If report has NO attendance records, build virtual list from all project users
     const targetProjId = selectedReport.projectIdRaw;
     const projectUsers = allUsers.filter((u) => u.projectIds?.some((p) => p._id === targetProjId));
 
-    // 2. Map users to attendance records
     const fullAttendance = projectUsers.map((user) => {
-      const existing = selectedReport.attendance.find((a) => {
-        const empId = typeof a.employeeId === "object" && a.employeeId ? (a.employeeId as any)._id : a.employeeId;
-        return empId === user._id;
-      });
-
-      // Helper to get area name
       const getAreaName = (u: User) => {
         if (!u.areaId) return "-";
         return typeof u.areaId === "string" ? "Area " + u.areaId.slice(-4) : u.areaId.name;
       };
 
-      if (existing) {
-        return {
-          ...existing,
-          areaName: getAreaName(user),
-        };
-      }
-
-      // Create default Present record
       return {
         id: `virtual-${user._id}`,
         employeeId: user._id,
@@ -389,24 +391,7 @@ export const RequestsPage: React.FC = () => {
       } as AttendanceRecord;
     });
 
-    // Also include any records in report that might NOT be in projectUsers
-    const processedIds = new Set(projectUsers.map((u) => u._id));
-    const orphans = selectedReport.attendance
-      .filter((a) => {
-        const empId = typeof a.employeeId === "object" && a.employeeId ? (a.employeeId as any)._id : a.employeeId;
-        return !processedIds.has(empId);
-      })
-      .map((orphan) => {
-        const empId = typeof orphan.employeeId === "object" && orphan.employeeId ? (orphan.employeeId as any)._id : orphan.employeeId;
-        const user = allUsers.find((u) => u._id === empId);
-        if (user) {
-          const aName = !user.areaId ? "-" : typeof user.areaId === "string" ? "Area " + user.areaId.slice(-4) : user.areaId.name;
-          return { ...orphan, areaName: aName };
-        }
-        return orphan;
-      });
-
-    return [...fullAttendance, ...orphans].sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+    return fullAttendance.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
   }, [selectedReport, allUsers]);
 
   // Help integration
@@ -837,6 +822,7 @@ export const RequestsPage: React.FC = () => {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Novedad</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Área | Turno</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
                     Registros
                   </th>
@@ -871,26 +857,27 @@ export const RequestsPage: React.FC = () => {
                       })()}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 w-fit">
-                          <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
-                          {report.projectName}
-                        </span>
-                        {(report.areaName || report.shiftName) && (
-                          <div className="flex gap-1">
-                            {report.areaName && (
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                <FontAwesomeIcon icon={faLayerGroup} className="text-[9px]" />
-                                {report.areaName}
-                              </span>
-                            )}
-                            {report.shiftName && (
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                <FontAwesomeIcon icon={faClock} className="text-[9px]" />
-                                {report.shiftName}
-                              </span>
-                            )}
-                          </div>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 w-fit">
+                        <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
+                        {report.projectName}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-wrap gap-1">
+                        {report.areaName && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+                            <FontAwesomeIcon icon={faLayerGroup} className="text-[9px]" />
+                            {report.areaName}
+                          </span>
+                        )}
+                        {report.shiftName && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
+                            <FontAwesomeIcon icon={faClock} className="text-[9px]" />
+                            {report.shiftName}
+                          </span>
+                        )}
+                        {!report.areaName && !report.shiftName && (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
                         )}
                       </div>
                     </td>

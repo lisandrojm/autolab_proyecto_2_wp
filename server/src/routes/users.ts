@@ -388,13 +388,23 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
   }
 });
 
-// GET /users/directory - Listar usuarios activos para selectores (Sin permiso de admin)
+// GET /users/directory - Listar usuarios del tenant para selectores (Sin permiso de admin)
+// Query params: ?status=active|inactive|all (default: active)
 router.get("/directory", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const users = await User.find({
-      tenantId: req.tenantObjectId,
-      "metadata.activo": true,
-    })
+    const filter: any = { tenantId: req.tenantObjectId };
+    const status = req.query.status as string | undefined;
+
+    if (status === "inactive") {
+      filter["metadata.activo"] = { $ne: true };
+    } else if (status === "all") {
+      // No filter on activo - return all users
+    } else {
+      // Default: active only
+      filter["metadata.activo"] = true;
+    }
+
+    const users = await User.find(filter)
       .select("firstName lastName email projectIds metadata")
       .populate("projectIds", "name")
       .populate({
