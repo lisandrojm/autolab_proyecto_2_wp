@@ -10,6 +10,7 @@ import UserProject from "../models/UserProject.js"; // This registers the model
 import { Position } from "../models/Position.js";
 import { Level } from "../models/Level.js";
 import { Area } from "../models/Area.js";
+import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
 import bcrypt from "bcryptjs";
 // Side-effect imports to be extra sure they are registered
@@ -195,10 +196,11 @@ router.get("/", requireTenant, authenticateToken, requirePermission("admin_users
             .populate({
             path: "metadata.projects",
             model: UserProject,
+            select: "projectId positionId levelId areaId nombre_rol_frame nombre_proyecto contracts.fecha_baja_contrato contracts.nombre_contrato contracts.hora_inicio contracts.hora_fin",
             populate: [
-                { path: "positionId", select: "name description", model: Position },
-                { path: "levelId", select: "name description", model: Level },
-                { path: "areaId", select: "name description", model: Area },
+                { path: "positionId", select: "name", model: Position },
+                { path: "levelId", select: "name", model: Level },
+                { path: "areaId", select: "name", model: Area },
                 { path: "projectId", select: "name status", model: Project },
             ],
         })
@@ -344,25 +346,38 @@ router.post("/", requireTenant, authenticateToken, requirePermission("admin_user
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// GET /users/directory - Listar usuarios activos para selectores (Sin permiso de admin)
+// GET /users/directory - Listar usuarios del tenant para selectores (Sin permiso de admin)
+// Query params: ?status=active|inactive|all (default: active)
 router.get("/directory", requireTenant, authenticateToken, async (req, res) => {
     try {
-        const users = await User.find({
-            tenantId: req.tenantObjectId,
-            "metadata.activo": true,
-        })
+        const filter = { tenantId: req.tenantObjectId };
+        const status = req.query.status;
+        if (status === "inactive") {
+            filter["metadata.activo"] = { $ne: true };
+        }
+        else if (status === "all") {
+            // No filter on activo - return all users
+        }
+        else {
+            // Default: active only
+            filter["metadata.activo"] = true;
+        }
+        const users = await User.find(filter)
             .select("firstName lastName email projectIds metadata")
             .populate("projectIds", "name")
             .populate({
             path: "metadata.projects",
             model: UserProject,
+            select: "projectId positionId levelId areaId shiftId nombre_rol_frame contracts.fecha_baja_contrato contracts.shiftId",
             populate: [
-                { path: "positionId", select: "name description", model: Position },
-                { path: "levelId", select: "name description", model: Level },
-                { path: "areaId", select: "name description", model: Area },
+                { path: "positionId", select: "name", model: Position },
+                { path: "levelId", select: "name", model: Level },
+                { path: "areaId", select: "name", model: Area },
+                { path: "shiftId", select: "name", model: Shift },
             ],
         })
-            .sort({ firstName: 1, lastName: 1 });
+            .sort({ firstName: 1, lastName: 1 })
+            .lean();
         res.json(users);
     }
     catch (error) {

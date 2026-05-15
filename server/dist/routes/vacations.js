@@ -393,31 +393,40 @@ router.get("/availability", async (req, res) => {
 router.get("/", async (req, res) => {
     try {
         const tenantId = req.tenantId;
-        const { mine } = req.query;
+        const { mine, page = 1, limit = 50 } = req.query;
+        let limitNum = Number(limit);
+        if (limitNum > 100)
+            limitNum = 100; // Cap limit
         const query = { tenantId };
-        // If 'mine' param is present, filter by current user
         if (mine === "true") {
             query.userId = req.user.userId;
         }
-        const vacations = await Vacation.find(query)
-            .populate({
-            path: "userId",
-            select: "firstName lastName email metadata projectIds clientIds",
-            populate: [
-                { path: "projectIds", populate: { path: "clientId" } },
-                { path: "clientIds" },
-                {
-                    path: "metadata.projects",
-                    model: UserProject,
-                    populate: {
-                        path: "projectId",
-                        populate: { path: "clientId" },
+        const skip = (Number(page) - 1) * limitNum;
+        const [vacations, total] = await Promise.all([
+            Vacation.find(query)
+                .populate({
+                path: "userId",
+                select: "firstName lastName email metadata projectIds clientIds",
+                populate: [
+                    { path: "projectIds", select: "name" },
+                    { path: "clientIds", select: "name" },
+                    {
+                        path: "metadata.projects",
+                        model: UserProject,
+                        select: "projectId nombre_proyecto nombre_rol_frame contracts.fecha_baja_contrato contracts.nombre_sede contracts.nombre_rol_frame",
+                        populate: {
+                            path: "projectId",
+                            select: "name",
+                        },
                     },
-                },
-            ],
-        })
-            .sort({ createdAt: -1 })
-            .lean();
+                ],
+            })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean(),
+            Vacation.countDocuments(query),
+        ]);
         const mappedVacations = vacations.map((v) => {
             const userObj = v.userId;
             let projectsInfo = [];
