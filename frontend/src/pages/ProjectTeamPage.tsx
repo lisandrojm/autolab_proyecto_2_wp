@@ -349,12 +349,8 @@ export const ProjectTeamPage: React.FC = () => {
     // 1. Usuarios explícitamente asignados en el objeto Proyecto
     const fromProject = ((project.assignedUsers as any[]) || []).map((u) => (typeof u === "string" ? u : u._id));
 
-    // 2. Usuarios que tienen este proyecto en sus metadatos (projectIds o metadata.projects)
-    const fromUsers = allUsers.filter((u) => u.projectIds?.some((p) => p._id === projectId) || u.metadata?.projects?.some((p) => p._id === projectId)).map((u) => u._id);
-
-    // Retornamos un set único de IDs
-    return Array.from(new Set([...fromProject, ...fromUsers]));
-  }, [project, projectId, allUsers]);
+    return Array.from(new Set(fromProject));
+  }, [project, projectId]);
 
   const activeAddFiltersCount = useMemo(() => [filterRole, filterRoleFrame, filterProject].filter(Boolean).length, [filterRole, filterRoleFrame, filterProject]);
 

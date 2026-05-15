@@ -532,7 +532,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     console.log("DEBUG myCoordinatedCombinations:", myCoordinatedCombinations);
     
     const filtered = employees.filter((e) => {
-      if (!e.projectIds || !e.projectIds.includes(selectedProjectId)) return false;
+      if (!e.projectIds || !e.projectIds.some((p: any) => String(p._id || p) === String(selectedProjectId))) return false;
       
       const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
       if (!projMeta || !projMeta.hasActiveContract) {
