@@ -471,6 +471,102 @@ export const ProjectTeamPage: React.FC = () => {
   // Check Is Coordinator Helper
   const checkIsCoordinator = (user: User) => (typeof user.positionId === "object" && user.positionId?.name?.toLowerCase().includes("coordinador")) || (user.roles && user.roles.some((r) => r.name.toLowerCase().includes("coordinador"))) || user.firstName?.toLowerCase().includes("coordinador") || user.lastName?.toLowerCase().includes("coordinador");
 
+  // Get standard shifts for a user assigned to an area
+  const getStandardShifts = (user: User, userConfig: any, activeContract: any, areaId: string, areaName: string) => {
+    let shifts: any[] = [];
+    if (!user) return shifts;
+
+    // Helper to get coordinated shift IDs for exclusion
+    const getCoordinatedShiftIds = () => {
+      if (!project?.coordinatorAssignments) return [];
+      return project.coordinatorAssignments
+        .filter((asm) => {
+          const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+          const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+          return String(uid) === String(user._id) && String(aid) === String(areaId);
+        })
+        .map((asm) => typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId);
+    };
+
+    const coordShiftIds = getCoordinatedShiftIds();
+
+    // 1. Check team configuration assignments (Wizard) and EXCLUDE coordinated ones
+    const assignments = userConfig?.areaShiftAssignments || [];
+    const areaAssign = assignments.find((a: any) => {
+      const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+      if (String(aid) === String(areaId)) return true;
+      const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+      return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
+    });
+
+    if (areaAssign) {
+      const sids = areaAssign.shiftIds || [];
+      sids.forEach((sid: any) => {
+        const actualSid = typeof sid === "object" ? sid?._id : sid;
+        if (coordShiftIds.includes(actualSid)) return;
+        const shift = allShifts.find((s) => String(s._id) === String(actualSid));
+        if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
+          shifts.push(shift);
+        }
+      });
+    }
+
+    // 2. Check user's contract history fallback
+    if (shifts.length === 0) {
+      if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
+        const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
+          const aid = typeof a.areaId === "object" ? a.areaId?._id : a.areaId;
+          if (String(aid) === String(areaId)) return true;
+          const aData = allAreas.find((area) => String(area._id) === String(aid) || String(area.data?.id) === String(aid));
+          return aData && areaName && aData.name.toLowerCase() === areaName.toLowerCase();
+        });
+
+        if (fallbackAssign) {
+          const sids = fallbackAssign.shiftIds || [];
+          sids.forEach((sid: any) => {
+            const actualSid = typeof sid === "object" ? sid?._id : sid;
+            if (coordShiftIds.includes(actualSid)) return;
+            const shift = allShifts.find((s) => String(s._id) === String(actualSid));
+            if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
+              shifts.push(shift);
+            }
+          });
+        }
+      }
+    }
+
+    // 3. Legacy members fallback
+    if (shifts.length === 0) {
+      const shiftIdFromUser = user.turnos && user.turnos.length > 0 ? (typeof user.turnos[0] === "object" ? user.turnos[0]._id : user.turnos[0]) : undefined;
+      const finalShiftId = userConfig?.shiftId || shiftIdFromUser;
+      const shift = allShifts.find((sh) => String(sh._id) === String(finalShiftId));
+      if (shift) shifts = [shift];
+    }
+
+    return shifts;
+  };
+
+  // Get coordinated shifts for a user assigned to an area
+  const getCoordinatedShifts = (user: User, areaId: string) => {
+    let shifts: any[] = [];
+    if (!user) return shifts;
+    if (project?.coordinatorAssignments) {
+      const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
+        const uid = typeof asm.userId === "object" ? (asm.userId as any)?._id : asm.userId;
+        const aid = typeof asm.areaId === "object" ? (asm.areaId as any)?._id : asm.areaId;
+        return String(uid) === String(user._id) && String(aid) === String(areaId);
+      });
+      myCoordAsgn.forEach((asm) => {
+        const sid = typeof asm.shiftId === "object" ? (asm.shiftId as any)?._id : asm.shiftId;
+        const shift = allShifts.find((s) => String(s._id) === String(sid));
+        if (shift && !shifts.some((s) => String(s._id) === String(shift._id))) {
+          shifts.push(shift);
+        }
+      });
+    }
+    return shifts;
+  };
+
   const getUserVacationStatus = (userId: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -885,14 +981,28 @@ export const ProjectTeamPage: React.FC = () => {
 
             return (
               <div className="flex flex-wrap items-center gap-1.5">
-                {areaData.map((ad, i) => (
-                  <div key={i} className="group relative flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 pl-2 pr-1 py-1 rounded-lg border border-blue-100 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
-                    <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                    <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' })} className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black" title="Ver turnos">
-                      +
-                    </button>
-                  </div>
-                ))}
+                {areaData.map((ad, i) => {
+                  const shifts = getStandardShifts(user, userConfig, activeContract, ad.id, ad.name);
+                  return (
+                    <div key={i} className="flex flex-col gap-1">
+                      <div className="group relative flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 pl-2 pr-1 py-1 rounded-lg border border-blue-100 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all w-fit">
+                        <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
+                        <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'standard' })} className="flex items-center justify-center w-4 h-4 rounded-md text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors text-xs font-black" title="Ver turnos">
+                          +
+                        </button>
+                      </div>
+                      {shifts.length > 0 && (
+                        <div className="flex flex-col gap-1 mt-0.5 pl-0.5">
+                          {shifts.map((s, idx) => (
+                            <span key={idx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50/50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40 whitespace-nowrap w-fit" title={`${s.startTime} - ${s.endTime}`}>
+                              {s.name} ({s.startTime} - {s.endTime})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
@@ -919,14 +1029,28 @@ export const ProjectTeamPage: React.FC = () => {
 
             return (
               <div className="flex flex-wrap items-center gap-1.5">
-                {coordAreaData.map((ad, i) => (
-                  <div key={i} className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all">
-                    <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-                    <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' })} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
-                      +
-                    </button>
-                  </div>
-                ))}
+                {coordAreaData.map((ad, i) => {
+                  const shifts = getCoordinatedShifts(user, ad.id);
+                  return (
+                    <div key={i} className="flex flex-col gap-1">
+                      <div className="group relative flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 pl-2 pr-1 py-1 rounded-lg border border-amber-100 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-fit">
+                        <span className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
+                        <button type="button" onClick={() => setViewingShiftsData({ user, areaId: ad.id, areaName: ad.name, assignmentType: 'coordinated' })} className="flex items-center justify-center w-4 h-4 rounded-md text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors text-xs font-black" title="Ver turnos coordinados">
+                          +
+                        </button>
+                      </div>
+                      {shifts.length > 0 && (
+                        <div className="flex flex-col gap-1 mt-0.5 pl-0.5">
+                          {shifts.map((s, idx) => (
+                            <span key={idx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 whitespace-nowrap w-fit" title={`${s.startTime} - ${s.endTime}`}>
+                              {s.name} ({s.startTime} - {s.endTime})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
