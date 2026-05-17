@@ -362,7 +362,13 @@ export const RequestsPage: React.FC = () => {
           const empId = typeof record.employeeId === "object" && record.employeeId ? (record.employeeId as any)._id : record.employeeId;
           const user = allUsers.find((u) => u._id === empId);
           if (user) {
-            const aName = !user.areaId ? "-" : typeof user.areaId === "string" ? "Area " + user.areaId.slice(-4) : user.areaId.name;
+            // Find project-specific area
+            const userProj = (user as any).metadata?.projects?.find(
+              (p: any) => String(p.projectId?._id || p.projectId || "") === String(selectedReport.projectIdRaw)
+            );
+            const areaId = userProj?.areaId || user.areaId;
+            const area = allAreas.find((a) => String(a.id) === String(areaId));
+            const aName = area?.name || (!user.areaId ? "-" : typeof user.areaId === "string" ? "Area " + user.areaId.slice(-4) : user.areaId.name);
             return { ...record, areaName: aName };
           }
           return record;

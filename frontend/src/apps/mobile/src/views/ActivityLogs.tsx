@@ -1330,8 +1330,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const entry = entries.find((e) => e.employeeId === emp.id);
 
         // Calculate schedule times for THIS day
-        const schedIn = proj ? getEmployeeStartTime(proj, emp.id, reportDate) : undefined;
-        const schedOut = proj ? getEmployeeEndTime(proj, emp.id, reportDate) : undefined;
+        const schedIn = proj ? getEmployeeStartTime(proj, emp.id, reportDate, emp) : undefined;
+        const schedOut = proj ? getEmployeeEndTime(proj, emp.id, reportDate, emp) : undefined;
 
         if (entry) {
           // It's an anomaly or overtime
@@ -1362,6 +1362,30 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             });
           }
         }
+      }
+
+      // Process additional staff (non-project employees who were added)
+      const additionalEntries = entries.filter((e) => !projectEmployees.some((pe) => pe.id === e.employeeId));
+      for (const entry of additionalEntries) {
+        const emp = employees.find((e) => e.id === entry.employeeId);
+        const schedIn = proj && emp ? getEmployeeStartTime(proj, entry.employeeId, reportDate, emp) : undefined;
+        const schedOut = proj && emp ? getEmployeeEndTime(proj, entry.employeeId, reportDate, emp) : undefined;
+
+        attendance.push({
+          employeeId: entry.employeeId,
+          status: "present",
+          absenceReason: entry.typeName || "Presente (Adicional)",
+          replacementId: entry.replacementId,
+          overtimeHours: entry.overtimeHours || 0,
+          replacementOvertimeHours: entry.replacementOvertimeHours,
+          notes: entry.notes || "Personal adicional agregado al reporte",
+          inTime: entry.inTime, // Real Entry
+          outTime: entry.outTime, // Real Exit
+          replacementInTime: entry.replacementInTime, // Real Replacement Entry
+          replacementOutTime: entry.replacementOutTime, // Real Replacement Exit
+          scheduleInTime: schedIn,
+          scheduleOutTime: schedOut,
+        });
       }
 
       const payload = {
@@ -3517,10 +3541,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               <h4 className="font-medium text-sm text-gray-900 dark:text-white border-b pb-1 dark:border-gray-700">Novedades: {viewingReport.hasActivity ? "SÍ" : "NO"}</h4>
               <div className="max-h-50 overflow-y-auto text-sm space-y-2 mt-2">
                 {viewingReport.attendance.map((entry, idx) => {
-                  const empName = typeof entry.employeeId === "object" ? `${entry.employeeId.firstName} ${entry.employeeId.lastName}` : "Empleado";
+                  const empName = typeof entry.employeeId === "object" && entry.employeeId
+                    ? `${entry.employeeId.firstName} ${entry.employeeId.lastName}`
+                    : (employees.find((e) => e.id === entry.employeeId)?.name || "Empleado");
                   // Fallback for type name reconstruction if needed or use absenceReason directly
                   const reason = entry.absenceReason || (entry.overtimeHours ? "Horas Extra" : "Presente");
-                  const repName = entry.replacementId ? (typeof entry.replacementId === "object" ? `${entry.replacementId.firstName} ${entry.replacementId.lastName}` : "Reemplazo") : null;
+                  const repName = entry.replacementId
+                    ? (typeof entry.replacementId === "object" && entry.replacementId
+                      ? `${entry.replacementId.firstName} ${entry.replacementId.lastName}`
+                      : (employees.find((e) => e.id === entry.replacementId)?.name || "Reemplazo"))
+                    : null;
 
                   return (
                     <div key={idx} className="flex flex-col pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
