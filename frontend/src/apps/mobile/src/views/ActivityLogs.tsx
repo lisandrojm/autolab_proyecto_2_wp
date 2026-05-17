@@ -560,13 +560,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
     const userRoles = (profile?.roleNames || []).map((r) => r.toLowerCase());
     const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
-    if (isAdmin) return true;
 
     const allAssignments = selectedProject.coordinatorAssignments || [];
-    // If no coordinator assignments configured at all, no restriction
-    if (allAssignments.length === 0) return true;
+    // If coordinator assignments are configured on the project, all users (including admins) must have at least one assignment to coordinate
+    if (allAssignments.length > 0) {
+      return coordinatedAreaIds.length > 0;
+    }
 
-    return coordinatedAreaIds.length > 0;
+    // If no coordinator assignments are set up at all on the project, admins can see it, but regular users must have assignments
+    if (isAdmin) return true;
+    return false;
   }, [selectedProject, profile, coordinatedAreaIds]);
   const projectEmployees = useMemo(() => {
     if (!selectedProjectId || !selectedProject) return [];
@@ -1721,8 +1724,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-600 dark:text-amber-400 text-sm" />
                               </div>
                               <div>
-                                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Usted no tiene asignado ningún turno.</p>
-                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Comuníquese con administración.</p>
+                                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Usted no tiene asignado ningún Área/Turno.</p>
+                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Por favor comuníquese con la administración.</p>
                               </div>
                             </div>
                           )}
