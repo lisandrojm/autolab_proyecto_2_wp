@@ -56,11 +56,30 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
 
             return (
               <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>{record.employeeName}</td>
+                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>
+                  <div className="flex items-center gap-2">
+                    <span>{record.employeeName}</span>
+                    {record.absenceReason?.toLowerCase().includes("adicional") && (
+                      <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">
+                        Adicional
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="py-3 px-4 text-center">
                   <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-gray-300"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : "-"}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">
+                  {isAbsent ? (
+                    record.absenceReason || "Ausente"
+                  ) : record.absenceReason?.toLowerCase().includes("adicional") ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">
+                      Adicional
+                    </span>
+                  ) : (
+                    "-"
+                  )}
+                </td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
@@ -169,7 +188,7 @@ export const RequestsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<ActivityReport | null>(null);
   const [openInfo, setOpenInfo] = useState(false);
   const [showDetailStatsModal, setShowDetailStatsModal] = useState(false);
-  const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments" | "overtime">("attendance");
+  const [detailTab, setDetailTab] = useState<"attendance" | "absences" | "comments" | "overtime" | "additional">("attendance");
   const [reports, setReports] = useState<ActivityReport[]>([]);
   const [logTypes, setLogTypes] = useState<RequestConfig[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -602,6 +621,9 @@ export const RequestsPage: React.FC = () => {
             <button onClick={() => setDetailTab("attendance")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "attendance" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Asistencia del Personal ({mergedAttendance.length})
             </button>
+            <button onClick={() => setDetailTab("additional")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "additional" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
+              Personal Adicional ({mergedAttendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional")).length})
+            </button>
             <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Ausentes | Reemplazos ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
             </button>
@@ -624,6 +646,20 @@ export const RequestsPage: React.FC = () => {
               ) : (
                 <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registro de Asistencia del Personal</div>
               ))}
+
+            {detailTab === "additional" &&
+              (() => {
+                const additionalRecords = mergedAttendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional"));
+                return additionalRecords.length > 0 ? (
+                  <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-0 overflow-hidden animate-fade-in">
+                    <div className="p-4">
+                      <AttendanceTable attendance={additionalRecords} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">No hay registros de Personal Adicional</div>
+                );
+              })()}
 
             {detailTab === "absences" &&
               (() => {
