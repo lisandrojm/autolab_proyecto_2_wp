@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isFuture, isToday, isBefore, isAfter, getDate, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
@@ -20,6 +20,7 @@ import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 interface EmployeeOption {
   id: string;
   name: string;
+  email?: string;
   projectIds: string[];
   role?: string;
   roles?: { name: string }[];
@@ -314,6 +315,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [reports, setReports] = useState<ActivityReport[]>([]);
+  const [fullProjectData, setFullProjectData] = useState<Project | null>(null);
 
   // Calendar State
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -362,6 +364,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           users.map((u) => ({
             id: u._id,
             name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
+            email: u.email,
             projectIds: u.projectIds?.map((p) => p._id) || [],
             role: u.role,
             roles: u.roles,
@@ -474,6 +477,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const { profile, stats } = useProfile();
 
+  const isMyAssignment = useCallback((asm: any) => {
+    if (!profile) return false;
+    const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id) : asm.userId;
+    const myIdsMatch = [profile?.userId, profile?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
+    
+    let isMatch = uid && myIdsMatch.includes(String(uid));
+    if (!isMatch) {
+      const asmEmail = typeof asm.userId === "object" ? (asm.userId?.email || asm.userId?.correo) : null;
+      const myEmail = profile?.email;
+      if (asmEmail && myEmail && String(asmEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
+    }
+    if (!isMatch) {
+      const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : (asm.userId?.name || asm.userId?.nombre)) : null;
+      const myName = `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
+      if (asmName && myName && asmName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
+    }
+    return isMatch;
+  }, [profile]);
+
   const userProjects = useMemo(() => {
     if (!profile || allProjectsCache.length === 0) return [];
 
@@ -486,21 +508,41 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     return myProjects;
   }, [profile, allProjectsCache]);
 
-  const selectedProject = useMemo(() => userProjects.find((p) => p._id === selectedProjectId), [userProjects, selectedProjectId]);
+  const selectedProject = useMemo(() => {
+    const summaryProj = userProjects.find((p) => p._id === selectedProjectId);
+    return fullProjectData || summaryProj || null;
+  }, [userProjects, selectedProjectId, fullProjectData]);
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setFullProjectData(null);
+      return;
+    }
+    let isMounted = true;
+    projectsAPI.getProject(selectedProjectId)
+      .then((proj) => {
+        if (isMounted) {
+          console.log("DEBUG: Loaded full project details with teamConfig:", proj);
+          setFullProjectData(proj);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching full project details:", err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedProjectId]);
 
   const myCoordinatedCombinations = useMemo(() => {
     if (!selectedProject || !profile) return [];
-    const userIdToCheck = profile.userId || profile._id;
     return (selectedProject.coordinatorAssignments || [])
-      .filter((asm: any) => {
-        const uid = typeof asm.userId === "object" && asm.userId?._id ? String(asm.userId._id) : String(asm.userId || "");
-        return uid === String(userIdToCheck);
-      })
+      .filter(isMyAssignment)
       .map((asm: any) => ({
         areaId: String(asm.areaId?._id || asm.areaId || ""),
         shiftId: String(asm.shiftId?._id || asm.shiftId || ""),
       }));
-  }, [selectedProject, profile]);
+  }, [selectedProject, profile, isMyAssignment]);
 
   const coordinatedAreaIds = useMemo(() => {
     const ids = new Set(myCoordinatedCombinations.map((c) => c.areaId));
@@ -530,17 +572,18 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     if (!selectedProjectId || !selectedProject) return [];
     
     // Fallback for Coordinators who get 403 on /users API: use populated assignedUsers
-    const sourceEmployees = employees.length > 0 ? employees : (selectedProject?.assignedUsers || [])
+    const sourceEmployees: EmployeeOption[] = employees.length > 0 ? employees : (selectedProject?.assignedUsers || [])
       .filter((au: any) => typeof au === 'object' && au !== null)
-      .map((au: any) => ({
+      .map((au: any): EmployeeOption => ({
         id: au._id,
         name: `${au.firstName || ""} ${au.lastName || ""}`.trim() || au.email,
         email: au.email,
-        isActive: true, // Optimistic assumption
+        isActive: au.metadata?.activo !== false,
         projectIds: [selectedProjectId],
         hasActiveContract: true, // Optimistic assumption
         metadataProjects: [], // Area/Shift will fallback to teamConfig
         roles: [],
+        positionName: typeof au.positionId === 'object' ? au.positionId?.name : undefined,
       }));
 
     console.log("DEBUG projectEmployees - Evaluating for project:", selectedProjectId);
@@ -576,8 +619,22 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         });
       } else if (isCoordGlobal && selectedProject?.coordinatorAssignments) {
         selectedProject.coordinatorAssignments.forEach((asm: any) => {
-          const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-          if (String(uid) === String(e.id)) {
+          const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id) : asm.userId;
+          const empIds = [e.id, (e as any).userId, (e as any).metadata?.id].filter(Boolean).map(id => String(id));
+          
+          let isMatch = uid && empIds.includes(String(uid));
+          if (!isMatch) {
+            const asmEmail = typeof asm.userId === "object" ? (asm.userId?.email || asm.userId?.correo) : null;
+            const empEmail = e.email;
+            if (asmEmail && empEmail && String(asmEmail).toLowerCase() === String(empEmail).toLowerCase()) isMatch = true;
+          }
+          if (!isMatch) {
+            const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : (asm.userId?.name || asm.userId?.nombre)) : null;
+            const empName = e.name;
+            if (asmName && empName && asmName.toLowerCase().includes(empName.toLowerCase())) isMatch = true;
+          }
+
+          if (isMatch) {
             const aId = String(asm.areaId?._id || asm.areaId || "");
             const sId = String(asm.shiftId?._id || asm.shiftId || "");
             employeeCombinations.push({ areaId: aId, shiftId: sId });
@@ -602,11 +659,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const auId = typeof au === "object" ? au._id : au;
         return String(auId) === String(e.id);
       });
-      
-      const inProjectIds = e.projectIds && e.projectIds.some((p: any) => String(p._id || p) === String(selectedProjectId));
 
-      if (!isExplicitlyAssigned && !isCoordGlobal && !inProjectIds) {
-        console.log(`DEBUG: Employee ${e.name} rejected: not explicitly assigned and not coordGlobal and not in projectIds.`);
+      if (!isExplicitlyAssigned) {
+        console.log(`DEBUG: Employee ${e.name} rejected: not explicitly assigned.`);
         return false;
       }
 
@@ -1872,10 +1927,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           ) : (
                             (() => {
                               /* No area selected — show the coordinator's own assigned area/shift combos */
-                              const myAssignments = (selectedProject.coordinatorAssignments || []).filter((asm: any) => {
-                                const uid = typeof asm.userId === "object" ? asm.userId?._id : asm.userId;
-                                return String(uid) === String(profile?.userId || profile?._id);
-                              });
+                              const myAssignments = (selectedProject.coordinatorAssignments || []).filter(isMyAssignment);
                               if (myAssignments.length === 0) return null;
 
                               /* Group by area */

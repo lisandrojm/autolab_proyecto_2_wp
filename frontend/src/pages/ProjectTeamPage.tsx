@@ -410,6 +410,24 @@ export const ProjectTeamPage: React.FC = () => {
     });
   }, [teamMembers, searchTermTeam, filterUserStatus]);
 
+  const displayedCount = useMemo(() => {
+    if (activeTab === "equipo") {
+      return filteredTeamMembers.length;
+    }
+    if (activeTab === "coordinadores") {
+      const coordIds = new Set(
+        (project?.coordinatorAssignments || [])
+          .map((asm) => typeof asm.userId === "object" ? asm.userId?._id : asm.userId)
+          .filter(Boolean)
+      );
+      return coordIds.size;
+    }
+    if (activeTab === "solicitudes") {
+      return solicitudesCount;
+    }
+    return teamMembers.length;
+  }, [activeTab, filteredTeamMembers.length, project?.coordinatorAssignments, solicitudesCount, teamMembers.length]);
+
   const hasMobileCoordinator = useMemo(() => {
     return teamMembers.some((u) => u.roles?.some((r) => {
       const n = r.name.toLowerCase();
@@ -977,7 +995,7 @@ export const ProjectTeamPage: React.FC = () => {
   return (
     <PageLayout
       title="Gestionar Equipo"
-      itemCount={teamMembers.length}
+      itemCount={displayedCount}
       subtitle="Agrega o quita miembros del equipo"
       onBack={() => navigate(-1)}
       faIcon={{ icon: faUsers }}

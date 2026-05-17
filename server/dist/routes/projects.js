@@ -537,7 +537,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
         }
         const project = await Project.findOne(filter)
             .populate("clientId", "name email")
-            .populate("assignedUsers", "firstName lastName email")
+            .populate("assignedUsers", "firstName lastName email metadata")
             .populate("turnos")
             .populate("areasConfig.areaId")
             .populate("areasConfig.shiftIds")
