@@ -255,6 +255,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const [activeProjectTab, setActiveProjectTab] = useState<"info" | "schedule" | "team">("info");
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isLoadingReports, setIsLoadingReports] = useState(true);
 
   // Form State
   const [reportDate, setReportDate] = useState(() => {
@@ -450,6 +451,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   const fetchReports = async () => {
+    setIsLoadingReports(true);
     try {
       const data = await activityReportsAPI.getAll();
       // Filter for mobile view? Or show all allowed?
@@ -457,6 +459,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       setReports(data);
     } catch (e) {
       console.error("Error loading reports", e);
+    } finally {
+      setIsLoadingReports(false);
     }
   };
 
@@ -2667,56 +2671,62 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
         {/* List of Reports */}
         <div className="space-y-3">
-          {reports.map((report) => (
-            <div key={report._id} onClick={() => handleViewReport(report)} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
-              <div className="flex justify-between items-start mb-2">
-                <span className="inline-block px-2 py-0.5 text-[12px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">{report.reportNumber || `#${report._id.slice(-6).toUpperCase()}`}</span>
-              </div>
-              <h4 className="font-semibold text-slate-800 dark:text-white mb-1">
-                {(() => {
-                  const p = report.projectId;
-                  if (!p) return "Sin Proyecto";
-                  if (typeof p === "string") return "Proyecto";
-                  // If it's an object, it might have clientId populated
-                  const pName = p.name || "Proyecto";
-                  const cName = typeof p.clientId === "object" ? p.clientId.name : undefined;
-                  return cName ? `${cName} | ${pName}` : pName;
-                })()}
-                {report.areaId ? (typeof report.areaId === "string" ? "" : ` - ${report.areaId.name}`) : ""}
-              </h4>
-              <div className="text-sm text-slate-500 mb-3">{new Date(report.date + "T00:00:00").toLocaleDateString()}</div>
+          {isLoadingReports ? (
+            <LoadingSpinner size="md" message="Cargando novedades..." />
+          ) : (
+            <>
+              {reports.map((report) => (
+                <div key={report._id} onClick={() => handleViewReport(report)} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="inline-block px-2 py-0.5 text-[12px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">{report.reportNumber || `#${report._id.slice(-6).toUpperCase()}`}</span>
+                  </div>
+                  <h4 className="font-semibold text-slate-800 dark:text-white mb-1">
+                    {(() => {
+                      const p = report.projectId;
+                      if (!p) return "Sin Proyecto";
+                      if (typeof p === "string") return "Proyecto";
+                      // If it's an object, it might have clientId populated
+                      const pName = p.name || "Proyecto";
+                      const cName = typeof p.clientId === "object" ? p.clientId.name : undefined;
+                      return cName ? `${cName} | ${pName}` : pName;
+                    })()}
+                    {report.areaId ? (typeof report.areaId === "string" ? "" : ` - ${report.areaId.name}`) : ""}
+                  </h4>
+                  <div className="text-sm text-slate-500 mb-3">{new Date(report.date + "T00:00:00").toLocaleDateString()}</div>
 
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>
-                  {(() => {
-                    if (!report.hasActivity) return "Sin novedades";
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>
+                      {(() => {
+                        if (!report.hasActivity) return "Sin novedades";
 
-                    const counts: Record<string, number> = {};
-                    let hasAnomalies = false;
+                        const counts: Record<string, number> = {};
+                        let hasAnomalies = false;
 
-                    report.attendance.forEach((att) => {
-                      if (att.overtimeHours && att.overtimeHours > 0) {
-                        counts["Horas Extra"] = (counts["Horas Extra"] || 0) + 1;
-                        hasAnomalies = true;
-                      } else if (att.absenceReason && att.absenceReason !== "Presente") {
-                        // Simplify pluralization or just use the raw reason
-                        counts[att.absenceReason] = (counts[att.absenceReason] || 0) + 1;
-                        hasAnomalies = true;
-                      }
-                    });
+                        report.attendance.forEach((att) => {
+                          if (att.overtimeHours && att.overtimeHours > 0) {
+                            counts["Horas Extra"] = (counts["Horas Extra"] || 0) + 1;
+                            hasAnomalies = true;
+                          } else if (att.absenceReason && att.absenceReason !== "Presente") {
+                            // Simplify pluralization or just use the raw reason
+                            counts[att.absenceReason] = (counts[att.absenceReason] || 0) + 1;
+                            hasAnomalies = true;
+                          }
+                        });
 
-                    if (!hasAnomalies) return "Sin novedades";
+                        if (!hasAnomalies) return "Sin novedades";
 
-                    return Object.entries(counts)
-                      .map(([type, count]) => `${count} ${type}`)
-                      .join(", ");
-                  })()}
-                </span>
-                <span>{new Date(report.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-              </div>
-            </div>
-          ))}
-          {reports.length === 0 && <div className="text-center text-gray-500 py-8">No has enviado novedades recientes.</div>}
+                        return Object.entries(counts)
+                          .map(([type, count]) => `${count} ${type}`)
+                          .join(", ");
+                      })()}
+                    </span>
+                    <span>{new Date(report.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                </div>
+              ))}
+              {reports.length === 0 && <div className="text-center text-gray-500 py-8">No has enviado novedades recientes.</div>}
+            </>
+          )}
         </div>
       </div>
 
