@@ -263,7 +263,7 @@ export const RequestsPage: React.FC = () => {
 
   const fetchAreas = async () => {
     try {
-      const data = await areasAPI.getAll();
+      const data = await areasAPI.listAll();
       setAllAreas(data.map((a: any) => ({ id: a._id, name: a.name })));
     } catch (e) {
       console.error("Error loading areas", e);
@@ -273,7 +273,7 @@ export const RequestsPage: React.FC = () => {
   const fetchShifts = async () => {
     try {
       const data = await shiftsAPI.getAll();
-      setAllShifts(data.map((s: any) => ({ id: s._id, name: s.name })));
+      setAllShifts(data.map((s: any) => ({ id: s._id, name: s.name, startTime: s.startTime, endTime: s.endTime })));
     } catch (e) {
       console.error("Error loading shifts", e);
     }
@@ -379,13 +379,19 @@ export const RequestsPage: React.FC = () => {
       return selectedReport.attendance
         .map((record) => {
           const empId = typeof record.employeeId === "object" && record.employeeId ? (record.employeeId as any)._id : record.employeeId;
-          const user = allUsers.find((u) => u._id === empId);
+          const user = allUsers.find((u) => String(u._id) === String(empId));
           if (user) {
             // Find project-specific area
             const userProj = (user as any).metadata?.projects?.find(
               (p: any) => String(p.projectId?._id || p.projectId || "") === String(selectedReport.projectIdRaw)
             );
-            const areaId = userProj?.areaId || user.areaId;
+            let areaId = userProj?.areaId || user.areaId;
+            if (!areaId && userProj?.contracts && Array.isArray(userProj.contracts)) {
+              const activeContract = userProj.contracts.find((c: any) => c.areaId);
+              if (activeContract) {
+                areaId = activeContract.areaId;
+              }
+            }
             const area = allAreas.find((a) => String(a.id) === String(areaId));
             const aName = area?.name || (!user.areaId ? "-" : typeof user.areaId === "string" ? "Area " + user.areaId.slice(-4) : user.areaId.name);
             return { ...record, areaName: aName };
@@ -461,38 +467,71 @@ export const RequestsPage: React.FC = () => {
     const textClass = isCard ? "text-xs gap-1.5" : "text-[11px] gap-1";
     const iconClass = isCard ? "text-[10px]" : "text-[9px]";
 
-    if (report.areaName || report.shiftName) {
-      return (
-        <>
-          {report.areaName && (
-            <span className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 ${textClass}`}>
-              <FontAwesomeIcon icon={faLayerGroup} className={`${iconClass}`} />
-              {report.areaName}
-            </span>
-          )}
-          {report.shiftName && (
-            <span className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass}`}>
-              <FontAwesomeIcon icon={faClock} className={`${iconClass}`} />
-              {report.shiftName}
-            </span>
-          )}
-        </>
-      );
-    }
-
     // Dynamic distinct collection
     const distinctAreas = new Set<string>();
-    const distinctShifts = new Set<string>();
+    const distinctShifts = new Map<string, { name: string; startTime?: string; endTime?: string }>();
+
+    if (report.areaName) distinctAreas.add(report.areaName);
+    if (report.shiftName) {
+      const shift = allShifts.find((s) => String(s.id) === String(report.shiftId) || s.name === report.shiftName);
+      distinctShifts.set(report.shiftName, {
+        name: report.shiftName,
+        startTime: shift?.startTime,
+        endTime: shift?.endTime,
+      });
+    }
+
+    // If area is specified, but no specific shift is selected, pull all shifts configured for this area inside the project
+    if (report.areaName && !report.shiftName) {
+      const project = allProjects.find((p) => String(p.id) === String(report.projectIdRaw));
+      if (project && project.areasConfig) {
+        const targetArea = allAreas.find((a) => a.name === report.areaName || String(a.id) === String(report.areaId));
+        if (targetArea) {
+          const areaCfg = project.areasConfig.find((ac: any) => {
+            const acAreaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+            return String(acAreaId) === String(targetArea.id);
+          });
+          if (areaCfg && Array.isArray(areaCfg.shiftIds)) {
+            areaCfg.shiftIds.forEach((sid: any) => {
+              const idToCheck = typeof sid === "object" ? sid?._id : sid;
+              const shift = allShifts.find((s) => String(s.id) === String(idToCheck));
+              if (shift) {
+                distinctShifts.set(shift.name, {
+                  name: shift.name,
+                  startTime: shift.startTime,
+                  endTime: shift.endTime,
+                });
+              }
+            });
+          }
+        }
+      }
+    }
 
     report.attendance.forEach((att: any) => {
       const empId = typeof att.employeeId === "object" && att.employeeId ? att.employeeId._id : att.employeeId;
-      const user = allUsers.find((u) => u._id === empId);
+      const user = allUsers.find((u) => String(u._id) === String(empId));
       if (user) {
         const userProj = (user as any).metadata?.projects?.find(
           (p: any) => String(p.projectId?._id || p.projectId || "") === String(report.projectIdRaw)
         );
-        const areaId = userProj?.areaId || user.areaId;
-        const shiftId = userProj?.shiftId || (user as any).shiftId;
+        let areaId = userProj?.areaId || user.areaId;
+        let shiftId = userProj?.shiftId || (user as any).shiftId;
+
+        // Fallback to contracts if not present at top level of UserProject
+        if (!areaId && userProj?.contracts && Array.isArray(userProj.contracts)) {
+          const activeContract = userProj.contracts.find((c: any) => c.areaId);
+          if (activeContract) {
+            areaId = activeContract.areaId;
+          }
+        }
+
+        if (!shiftId && userProj?.contracts && Array.isArray(userProj.contracts)) {
+          const activeContract = userProj.contracts.find((c: any) => c.shiftId);
+          if (activeContract) {
+            shiftId = activeContract.shiftId;
+          }
+        }
 
         if (areaId) {
           const area = allAreas.find((a) => String(a.id) === String(areaId));
@@ -500,30 +539,43 @@ export const RequestsPage: React.FC = () => {
         }
         if (shiftId) {
           const shift = allShifts.find((s) => String(s.id) === String(shiftId));
-          if (shift) distinctShifts.add(shift.name);
+          if (shift) {
+            distinctShifts.set(shift.name, {
+              name: shift.name,
+              startTime: shift.startTime,
+              endTime: shift.endTime,
+            });
+          }
         }
       }
     });
 
     if (distinctAreas.size === 0 && distinctShifts.size === 0) {
-      return !isCard ? <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span> : null;
+      return !isCard ? (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 ${textClass} w-fit whitespace-nowrap`}>
+          Todas las Áreas | Turnos
+        </span>
+      ) : null;
     }
 
     return (
-      <>
+      <div className="flex flex-col gap-1">
         {Array.from(distinctAreas).map((areaName) => (
-          <span key={areaName} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 ${textClass}`}>
+          <span key={areaName} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 ${textClass} w-fit`}>
             <FontAwesomeIcon icon={faLayerGroup} className={`${iconClass}`} />
             {areaName}
           </span>
         ))}
-        {Array.from(distinctShifts).map((shiftName) => (
-          <span key={shiftName} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass}`}>
-            <FontAwesomeIcon icon={faClock} className={`${iconClass}`} />
-            {shiftName}
-          </span>
-        ))}
-      </>
+        {Array.from(distinctShifts.values()).map((shift) => {
+          const scheduleText = shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : "";
+          return (
+            <span key={shift.name} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass} w-fit`}>
+              <FontAwesomeIcon icon={faClock} className={`${iconClass}`} />
+              {shift.name}{scheduleText}
+            </span>
+          );
+        })}
+      </div>
     );
   };
 
