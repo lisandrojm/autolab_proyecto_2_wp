@@ -59,13 +59,13 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
                 <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>
                   <div className="flex items-center gap-2">
                     <span>{record.employeeName}</span>
-                    {record.absenceReason?.toLowerCase().includes("adicional") && <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">Adicional</span>}
+                    {record.absenceReason?.toLowerCase().includes("adicional") && <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">Otros Presentes</span>}
                   </div>
                 </td>
                 <td className="py-3 px-4 text-center">
                   <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-gray-300"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : record.absenceReason?.toLowerCase().includes("adicional") ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">Adicional</span> : "-"}</td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : record.absenceReason?.toLowerCase().includes("adicional") ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">Otros Presentes</span> : "-"}</td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
@@ -558,6 +558,116 @@ export const RequestsPage: React.FC = () => {
     );
   };
 
+  const renderAreaShiftBadgesDetail = (report: any) => {
+    // Dynamic distinct collection
+    const distinctAreas = new Set<string>();
+    const distinctShifts = new Map<string, { name: string; startTime?: string; endTime?: string }>();
+
+    if (report.areaName) distinctAreas.add(report.areaName);
+    if (report.shiftName) {
+      const shift = allShifts.find((s) => String(s.id) === String(report.shiftId) || s.name === report.shiftName);
+      distinctShifts.set(report.shiftName, {
+        name: report.shiftName,
+        startTime: shift?.startTime,
+        endTime: shift?.endTime,
+      });
+    }
+
+    if (report.areaName && !report.shiftName) {
+      const project = allProjects.find((p) => String(p.id) === String(report.projectIdRaw));
+      if (project && project.areasConfig) {
+        const targetArea = allAreas.find((a) => a.name === report.areaName || String(a.id) === String(report.areaId));
+        if (targetArea) {
+          const areaCfg = project.areasConfig.find((ac: any) => {
+            const acAreaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
+            return String(acAreaId) === String(targetArea.id);
+          });
+          if (areaCfg && Array.isArray(areaCfg.shiftIds)) {
+            areaCfg.shiftIds.forEach((sid: any) => {
+              const idToCheck = typeof sid === "object" ? sid?._id : sid;
+              const shift = allShifts.find((s) => String(s.id) === String(idToCheck));
+              if (shift) {
+                distinctShifts.set(shift.name, {
+                  name: shift.name,
+                  startTime: shift.startTime,
+                  endTime: shift.endTime,
+                });
+              }
+            });
+          }
+        }
+      }
+    }
+
+    report.attendance.forEach((att: any) => {
+      const empId = typeof att.employeeId === "object" && att.employeeId ? att.employeeId._id : att.employeeId;
+      const user = allUsers.find((u) => String(u._id) === String(empId));
+      if (user) {
+        const userProj = (user as any).metadata?.projects?.find((p: any) => String(p.projectId?._id || p.projectId || "") === String(report.projectIdRaw));
+        let areaId = userProj?.areaId || user.areaId;
+        let shiftId = userProj?.shiftId || (user as any).shiftId;
+
+        if (!areaId && userProj?.contracts && Array.isArray(userProj.contracts)) {
+          const activeContract = userProj.contracts.find((c: any) => c.areaId);
+          if (activeContract) {
+            areaId = activeContract.areaId;
+          }
+        }
+
+        if (!shiftId && userProj?.contracts && Array.isArray(userProj.contracts)) {
+          const activeContract = userProj.contracts.find((c: any) => c.shiftId);
+          if (activeContract) {
+            shiftId = activeContract.shiftId;
+          }
+        }
+
+        if (areaId) {
+          const area = allAreas.find((a) => String(a.id) === String(areaId));
+          if (area) distinctAreas.add(area.name);
+        }
+        if (shiftId) {
+          const shift = allShifts.find((s) => String(s.id) === String(shiftId));
+          if (shift) {
+            distinctShifts.set(shift.name, {
+              name: shift.name,
+              startTime: shift.startTime,
+              endTime: shift.endTime,
+            });
+          }
+        }
+      }
+    });
+
+    if (distinctAreas.size === 0 && distinctShifts.size === 0) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 whitespace-nowrap">
+          Todas las Áreas | Turnos
+        </span>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        {Array.from(distinctAreas).map((areaName) => (
+          <span key={areaName} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
+            <FontAwesomeIcon icon={faLayerGroup} className="text-indigo-400 mr-1.5 text-xs" />
+            {areaName}
+          </span>
+        ))}
+        {Array.from(distinctShifts.values()).map((shift) => {
+          const scheduleText = shift.startTime && shift.endTime ? ` (${shift.startTime} - ${shift.endTime})` : "";
+          return (
+            <span key={shift.name} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
+              <FontAwesomeIcon icon={faClock} className="text-purple-400 mr-1.5 text-xs" />
+              {shift.name}
+              {scheduleText}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   // --- RENDER CARDS VIEW ---
   const renderCardsView = () => {
     return (
@@ -705,6 +815,12 @@ export const RequestsPage: React.FC = () => {
               </div>
             </div>
           </Modal>
+
+          {/* Area/Turno Badges above Tabs */}
+          <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-100 dark:border-gray-700/50">
+            <h4 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Área / Turno Informado</h4>
+            {renderAreaShiftBadgesDetail(selectedReport)}
+          </div>
 
           {/* Tabs Navigation */}
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 bg-white dark:bg-gray-800 rounded-t-lg px-2 pt-2 overflow-x-auto">
