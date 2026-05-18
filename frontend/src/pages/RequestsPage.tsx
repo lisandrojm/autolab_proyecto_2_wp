@@ -457,6 +457,76 @@ export const RequestsPage: React.FC = () => {
     }
   };
 
+  const renderAreaShiftBadges = (report: ActivityReport, isCard = false) => {
+    const textClass = isCard ? "text-xs gap-1.5" : "text-[11px] gap-1";
+    const iconClass = isCard ? "text-[10px]" : "text-[9px]";
+
+    if (report.areaName || report.shiftName) {
+      return (
+        <>
+          {report.areaName && (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 ${textClass}`}>
+              <FontAwesomeIcon icon={faLayerGroup} className={`${iconClass}`} />
+              {report.areaName}
+            </span>
+          )}
+          {report.shiftName && (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass}`}>
+              <FontAwesomeIcon icon={faClock} className={`${iconClass}`} />
+              {report.shiftName}
+            </span>
+          )}
+        </>
+      );
+    }
+
+    // Dynamic distinct collection
+    const distinctAreas = new Set<string>();
+    const distinctShifts = new Set<string>();
+
+    report.attendance.forEach((att: any) => {
+      const empId = typeof att.employeeId === "object" && att.employeeId ? att.employeeId._id : att.employeeId;
+      const user = allUsers.find((u) => u._id === empId);
+      if (user) {
+        const userProj = (user as any).metadata?.projects?.find(
+          (p: any) => String(p.projectId?._id || p.projectId || "") === String(report.projectIdRaw)
+        );
+        const areaId = userProj?.areaId || user.areaId;
+        const shiftId = userProj?.shiftId || (user as any).shiftId;
+
+        if (areaId) {
+          const area = allAreas.find((a) => String(a.id) === String(areaId));
+          if (area) distinctAreas.add(area.name);
+        }
+        if (shiftId) {
+          const shift = allShifts.find((s) => String(s.id) === String(shiftId));
+          if (shift) distinctShifts.add(shift.name);
+        }
+      }
+    });
+
+    if (distinctAreas.size === 0 && distinctShifts.size === 0) {
+      return !isCard ? <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span> : null;
+    }
+
+    return (
+      <>
+        {Array.from(distinctAreas).map((areaName) => (
+          <span key={areaName} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 ${textClass}`}>
+            <FontAwesomeIcon icon={faLayerGroup} className={`${iconClass}`} />
+            {areaName}
+          </span>
+        ))}
+        {Array.from(distinctShifts).map((shiftName) => (
+          <span key={shiftName} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass}`}>
+            <FontAwesomeIcon icon={faClock} className={`${iconClass}`} />
+            {shiftName}
+          </span>
+        ))}
+      </>
+    );
+  };
+
   // --- RENDER CARDS VIEW ---
   const renderCardsView = () => {
     return (
@@ -507,18 +577,7 @@ export const RequestsPage: React.FC = () => {
                   <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
                   {report.projectName}
                 </span>
-                {report.areaName && (
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
-                    <FontAwesomeIcon icon={faLayerGroup} className="text-indigo-400 text-[10px]" />
-                    {report.areaName}
-                  </span>
-                )}
-                {report.shiftName && (
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
-                    <FontAwesomeIcon icon={faClock} className="text-purple-400 text-[10px]" />
-                    {report.shiftName}
-                  </span>
-                )}
+                {renderAreaShiftBadges(report, true)}
               </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-medium">{report.attendance.length}</span> registros de asistencia
@@ -906,21 +965,7 @@ export const RequestsPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap gap-1">
-                        {report.areaName && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">
-                            <FontAwesomeIcon icon={faLayerGroup} className="text-[9px]" />
-                            {report.areaName}
-                          </span>
-                        )}
-                        {report.shiftName && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
-                            <FontAwesomeIcon icon={faClock} className="text-[9px]" />
-                            {report.shiftName}
-                          </span>
-                        )}
-                        {!report.areaName && !report.shiftName && (
-                          <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
-                        )}
+                        {renderAreaShiftBadges(report, false)}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
