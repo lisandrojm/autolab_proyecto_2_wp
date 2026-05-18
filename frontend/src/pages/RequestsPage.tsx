@@ -59,27 +59,13 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
                 <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-gray-300" : "text-gray-900 dark:text-white"}`}>
                   <div className="flex items-center gap-2">
                     <span>{record.employeeName}</span>
-                    {record.absenceReason?.toLowerCase().includes("adicional") && (
-                      <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">
-                        Adicional
-                      </span>
-                    )}
+                    {record.absenceReason?.toLowerCase().includes("adicional") && <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">Adicional</span>}
                   </div>
                 </td>
                 <td className="py-3 px-4 text-center">
                   <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-gray-300"}`}>{!isAbsent ? "Sí" : "No"}</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">
-                  {isAbsent ? (
-                    record.absenceReason || "Ausente"
-                  ) : record.absenceReason?.toLowerCase().includes("adicional") ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">
-                      Adicional
-                    </span>
-                  ) : (
-                    "-"
-                  )}
-                </td>
+                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : record.absenceReason?.toLowerCase().includes("adicional") ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">Adicional</span> : "-"}</td>
                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
                 <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
@@ -382,9 +368,7 @@ export const RequestsPage: React.FC = () => {
           const user = allUsers.find((u) => String(u._id) === String(empId));
           if (user) {
             // Find project-specific area
-            const userProj = (user as any).metadata?.projects?.find(
-              (p: any) => String(p.projectId?._id || p.projectId || "") === String(selectedReport.projectIdRaw)
-            );
+            const userProj = (user as any).metadata?.projects?.find((p: any) => String(p.projectId?._id || p.projectId || "") === String(selectedReport.projectIdRaw));
             let areaId = userProj?.areaId || user.areaId;
             if (!areaId && userProj?.contracts && Array.isArray(userProj.contracts)) {
               const activeContract = userProj.contracts.find((c: any) => c.areaId);
@@ -512,9 +496,7 @@ export const RequestsPage: React.FC = () => {
       const empId = typeof att.employeeId === "object" && att.employeeId ? att.employeeId._id : att.employeeId;
       const user = allUsers.find((u) => String(u._id) === String(empId));
       if (user) {
-        const userProj = (user as any).metadata?.projects?.find(
-          (p: any) => String(p.projectId?._id || p.projectId || "") === String(report.projectIdRaw)
-        );
+        const userProj = (user as any).metadata?.projects?.find((p: any) => String(p.projectId?._id || p.projectId || "") === String(report.projectIdRaw));
         let areaId = userProj?.areaId || user.areaId;
         let shiftId = userProj?.shiftId || (user as any).shiftId;
 
@@ -551,11 +533,7 @@ export const RequestsPage: React.FC = () => {
     });
 
     if (distinctAreas.size === 0 && distinctShifts.size === 0) {
-      return !isCard ? (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 ${textClass} w-fit whitespace-nowrap`}>
-          Todas las Áreas | Turnos
-        </span>
-      ) : null;
+      return !isCard ? <span className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 ${textClass} w-fit whitespace-nowrap`}>Todas las Áreas | Turnos</span> : null;
     }
 
     return (
@@ -571,7 +549,8 @@ export const RequestsPage: React.FC = () => {
           return (
             <span key={shift.name} className={`inline-flex items-center px-2 py-0.5 rounded font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 ${textClass} w-fit`}>
               <FontAwesomeIcon icon={faClock} className={`${iconClass}`} />
-              {shift.name}{scheduleText}
+              {shift.name}
+              {scheduleText}
             </span>
           );
         })}
@@ -631,9 +610,9 @@ export const RequestsPage: React.FC = () => {
                 </span>
                 {renderAreaShiftBadges(report, true)}
               </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium">{report.attendance.length}</span> registros de asistencia
-                </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium">{report.attendance.length}</span> registros de asistencia
+              </div>
             </CardItemGeneric>
           );
         })}
@@ -733,7 +712,7 @@ export const RequestsPage: React.FC = () => {
               Asistencia del Personal ({mergedAttendance.length})
             </button>
             <button onClick={() => setDetailTab("additional")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "additional" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
-              Personal Adicional ({mergedAttendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional")).length})
+              Otros Presentes ({mergedAttendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional")).length})
             </button>
             <button onClick={() => setDetailTab("absences")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${detailTab === "absences" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`}>
               Ausentes | Reemplazos ({selectedReport.attendance.filter((r) => r.status !== "present" && r.status !== "late").length})
@@ -980,6 +959,7 @@ export const RequestsPage: React.FC = () => {
                     Registros
                   </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Otros Presentes</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Hs. Extras</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
@@ -1016,15 +996,19 @@ export const RequestsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {renderAreaShiftBadges(report, false)}
-                      </div>
+                      <div className="flex flex-wrap gap-1">{renderAreaShiftBadges(report, false)}</div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.attendance.length}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                       {(() => {
                         const absentCount = report.attendance.filter((r) => r.status !== "present").length;
                         return absentCount > 0 ? <span className="text-red-600 dark:text-gray-300 font-medium">{absentCount}</span> : "0";
+                      })()}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                      {(() => {
+                        const otrosPresentes = report.attendance.filter((r) => r.absenceReason?.toLowerCase().includes("adicional")).length;
+                        return otrosPresentes > 0 ? <span className="text-amber-600 dark:text-amber-400 font-medium">{otrosPresentes}</span> : "0";
                       })()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
