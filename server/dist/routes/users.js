@@ -368,7 +368,7 @@ router.get("/directory", requireTenant, authenticateToken, async (req, res) => {
             .populate({
             path: "metadata.projects",
             model: UserProject,
-            select: "projectId positionId levelId areaId shiftId nombre_rol_frame contracts.fecha_baja_contrato contracts.shiftId",
+            select: "projectId positionId levelId areaId shiftId nombre_proyecto nombre_rol_frame contracts",
             populate: [
                 { path: "positionId", select: "name", model: Position },
                 { path: "levelId", select: "name", model: Level },
