@@ -2912,6 +2912,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       <Modal
         isOpen={activeOvertimeModal !== null}
         onClose={handleCloseOvertimeModal}
+        zIndex={60}
         title={`${activeOvertimeModal === "entry-edit" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Regulares)"} - ${(() => {
           if (activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
             return projectEmployees[wizardIndex].name;
@@ -3210,6 +3211,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       <Modal
         isOpen={activeReplacementOvertimeModal !== null}
         onClose={handleCloseReplacementOvertimeModal}
+        zIndex={60}
         title={`${activeReplacementOvertimeModal === "fast-entry" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Reemplazos)"} - ${(() => {
           if (activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
             const currentEmp = projectEmployees[wizardIndex];
@@ -3433,7 +3435,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       </Modal>
 
       {/* Absence Configuration Modal */}
-      <Modal isOpen={activeAbsenceModal !== null} onClose={() => setActiveAbsenceModal(null)} title="Configurar Ausencia">
+      <Modal isOpen={activeAbsenceModal !== null} onClose={() => setActiveAbsenceModal(null)} title="Configurar Ausencia" zIndex={60}>
         {activeAbsenceModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]
           ? (() => {
               const currentEmp = projectEmployees[wizardIndex];
