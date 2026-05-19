@@ -2928,7 +2928,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       <Modal
         isOpen={activeOvertimeModal !== null}
         onClose={handleCloseOvertimeModal}
-        zIndex={60}
+        zIndex={80}
         title={`${activeOvertimeModal === "entry-edit" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Regulares)"} - ${(() => {
           if (activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
             return projectEmployees[wizardIndex].name;
@@ -3261,7 +3261,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       <Modal
         isOpen={activeReplacementOvertimeModal !== null}
         onClose={handleCloseReplacementOvertimeModal}
-        zIndex={70}
+        zIndex={80}
         title={`${activeReplacementOvertimeModal === "fast-entry" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Reemplazos)"} - ${(() => {
           if (activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
             const currentEmp = projectEmployees[wizardIndex];
@@ -4202,7 +4202,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           setReplacementSearchTerm("");
           setReplacementTargetEmpId(null);
         }}
-        zIndex={70}
+        zIndex={100}
         title={`Seleccionar Reemplazo (${(() => {
           const filteredByProject = selectedProjectId
             ? employees.filter((e) => {
