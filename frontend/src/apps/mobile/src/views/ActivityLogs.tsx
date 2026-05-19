@@ -117,6 +117,14 @@ const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: strin
     if (projMeta && projMeta.contractEndTime) {
       return projMeta.contractEndTime;
     }
+    const activeMeta = employee.metadataProjects.find((m) => m.hasActiveContract && m.contractEndTime);
+    if (activeMeta && activeMeta.contractEndTime) {
+      return activeMeta.contractEndTime;
+    }
+    const anyMeta = employee.metadataProjects.find((m) => m.contractEndTime);
+    if (anyMeta && anyMeta.contractEndTime) {
+      return anyMeta.contractEndTime;
+    }
   }
 
   if (!project.teamConfig) return getProjectEndTime(project, dateStr);
@@ -188,6 +196,14 @@ const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: str
     const projMeta = employee.metadataProjects.find((m) => m.projectId === project._id);
     if (projMeta && projMeta.contractStartTime) {
       return projMeta.contractStartTime;
+    }
+    const activeMeta = employee.metadataProjects.find((m) => m.hasActiveContract && m.contractStartTime);
+    if (activeMeta && activeMeta.contractStartTime) {
+      return activeMeta.contractStartTime;
+    }
+    const anyMeta = employee.metadataProjects.find((m) => m.contractStartTime);
+    if (anyMeta && anyMeta.contractStartTime) {
+      return anyMeta.contractStartTime;
     }
   }
 
