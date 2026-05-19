@@ -3043,32 +3043,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 );
               })()
             : null}
-        {isOvertimeTimeIncomplete && (
-          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">
-            ⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.
-          </div>
-        )}
+        {isOvertimeTimeIncomplete && <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.</div>}
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleCancelOvertime}
-            className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-          >
+          <button type="button" onClick={handleCancelOvertime} className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
             Cancelar
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveOvertimeModal(null)}
-            disabled={isOvertimeTimeIncomplete}
-            className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
-          >
+          <button type="button" onClick={() => setActiveOvertimeModal(null)} disabled={isOvertimeTimeIncomplete} className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
             Listo
           </button>
         </div>
       </Modal>
 
       {/* Replacement Overtime Configuration Modal */}
-      <Modal isOpen={activeReplacementOvertimeModal !== null} onClose={handleCloseReplacementOvertimeModal} title="Configurar Horas Extras (Otros Presentes)" zIndex={60}>
+      <Modal isOpen={activeReplacementOvertimeModal !== null} onClose={handleCloseReplacementOvertimeModal} title="Configurar Horas Extras (Reemplazos)" zIndex={60}>
         {activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]
           ? (() => {
               const currentEmp = projectEmployees[wizardIndex];
@@ -3257,25 +3244,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 );
               })()
             : null}
-        {isReplacementOvertimeTimeIncomplete && (
-          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">
-            ⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.
-          </div>
-        )}
+        {isReplacementOvertimeTimeIncomplete && <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.</div>}
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleCancelReplacementOvertime}
-            className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-          >
+          <button type="button" onClick={handleCancelReplacementOvertime} className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
             Cancelar
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveReplacementOvertimeModal(null)}
-            disabled={isReplacementOvertimeTimeIncomplete}
-            className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isReplacementOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
-          >
+          <button type="button" onClick={() => setActiveReplacementOvertimeModal(null)} disabled={isReplacementOvertimeTimeIncomplete} className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isReplacementOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}>
             Listo
           </button>
         </div>
@@ -3384,7 +3358,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10"
                               >
                                 <FontAwesomeIcon icon={faClock} />
-                                {data.replacementOvertimeHours > 0 ? `${data.replacementOvertimeHours} Horas Extras (Otros Presentes)` : "Configurar Horas Extras (Otros Presentes)"}
+                                {data.replacementOvertimeHours > 0 ? `${data.replacementOvertimeHours} Horas Extras (Reemplazos)` : "Configurar Horas Extras (Reemplazos)"}
                               </button>
                             </div>
                           )}
