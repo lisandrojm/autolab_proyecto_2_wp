@@ -3122,6 +3122,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             ? (() => {
                 const entry = entries.find((e) => e.tempId === editingEntryTempId);
                 if (!entry) return null;
+                const empOption = employees.find((e) => e.id === entry.employeeId);
                 return (
                   <div className="space-y-4 pt-2">
                     <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
@@ -3129,6 +3130,39 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Otros Presentes</span>
                         <span className="text-sm font-bold text-slate-800 dark:text-white">{entry.employeeName}</span>
                       </div>
+                      <div className="grid grid-cols-2 gap-4 w-full">
+                        <div className="text-center">
+                          <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            {(() => {
+                              const proj = userProjects.find((p) => p._id === selectedProjectId);
+                              return proj ? formatToAMPM(getEmployeeStartTime(proj, entry.employeeId, reportDate, empOption)) : "—";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Salida Contrato</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            {(() => {
+                              const proj = userProjects.find((p) => p._id === selectedProjectId);
+                              return proj ? formatToAMPM(getEmployeeEndTime(proj, entry.employeeId, reportDate, empOption)) : "—";
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                      {(() => {
+                        const proj = userProjects.find((p) => p._id === selectedProjectId);
+                        if (!proj) return null;
+                        const sT = getEmployeeStartTime(proj, entry.employeeId, reportDate, empOption);
+                        const eT = getEmployeeEndTime(proj, entry.employeeId, reportDate, empOption);
+                        const dur = getDurationText(sT, eT);
+                        if (!dur) return null;
+                        return (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Duración Contrato: {dur}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div>
