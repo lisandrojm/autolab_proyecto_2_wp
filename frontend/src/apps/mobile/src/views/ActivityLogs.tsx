@@ -304,6 +304,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [additionalStaffSearchTerm, setAdditionalStaffSearchTerm] = useState("");
   const [debouncedAdditionalSearchTerm, setDebouncedAdditionalSearchTerm] = useState("");
   const [additionalStaffVisibleCount, setAdditionalStaffVisibleCount] = useState(20);
+  const [editingEntryTempId, setEditingEntryTempId] = useState<string | null>(null);
+
+  const updateEntryOvertime = (tempId: string, updates: Partial<LocalAttendanceRecord>) => {
+    setEntries((prev) =>
+      prev.map((e) => (e.tempId === tempId ? { ...e, ...updates } : e))
+    );
+  };
 
   // Replacement Modal State
   const [showReplacementModal, setShowReplacementModal] = useState(false);
@@ -1584,6 +1591,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     if (activeOvertimeModal === "fast-entry") {
       return !draftInTime || !draftOutTime;
     }
+    if (activeOvertimeModal === "entry-edit" && editingEntryTempId) {
+      const entry = entries.find((e) => e.tempId === editingEntryTempId);
+      return !entry?.inTime || !entry?.outTime;
+    }
     return false;
   })();
 
@@ -1621,6 +1632,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         setDraftInTime("");
         setDraftOutTime("");
       }
+    } else if (activeOvertimeModal === "entry-edit" && editingEntryTempId) {
+      const entry = entries.find((e) => e.tempId === editingEntryTempId);
+      if (entry && (!entry.inTime || !entry.outTime)) {
+        updateEntryOvertime(editingEntryTempId, { overtimeHours: undefined, inTime: undefined, outTime: undefined });
+      }
+      setEditingEntryTempId(null);
     }
     setActiveOvertimeModal(null);
   };
@@ -1656,6 +1673,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       setDraftOvertimeHours(0);
       setDraftInTime("");
       setDraftOutTime("");
+    } else if (activeOvertimeModal === "entry-edit" && editingEntryTempId) {
+      updateEntryOvertime(editingEntryTempId, { overtimeHours: undefined, inTime: undefined, outTime: undefined });
+      setEditingEntryTempId(null);
     }
     setActiveOvertimeModal(null);
   };
@@ -2685,18 +2705,47 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 <h4 className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Registros Agregados ({entries.length})</h4>
                                 {entries.map((entry) => (
                                   <div key={entry.tempId} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center shadow-sm">
-                                    <div>
+                                    <div className="flex-1">
                                       <div className="font-bold text-slate-900 dark:text-white text-sm">{entry.employeeName}</div>
-                                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                        {entry.typeName} {entry.overtimeHours ? `(${entry.overtimeHours} h)` : ""}
+                                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium flex flex-wrap gap-2 items-center">
+                                        <span>{entry.typeName}</span>
+                                        {entry.overtimeHours ? (
+                                          <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] dark:bg-blue-900/30 dark:text-blue-400 font-bold">
+                                            {entry.overtimeHours} h Extra
+                                          </span>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditingEntryTempId(entry.tempId);
+                                              setActiveOvertimeModal("entry-edit");
+                                            }}
+                                            className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1"
+                                          >
+                                            <FontAwesomeIcon icon={faClock} />
+                                            + Horas Extras
+                                          </button>
+                                        )}
                                       </div>
+                                      {entry.overtimeHours && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingEntryTempId(entry.tempId);
+                                            setActiveOvertimeModal("entry-edit");
+                                          }}
+                                          className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold hover:underline block mt-1"
+                                        >
+                                          Editar Horas Extras
+                                        </button>
+                                      )}
                                       {entry.replacementName && (
-                                        <div className="text-xs text-slate-500">
+                                        <div className="text-xs text-slate-500 mt-0.5">
                                           Reemplazo: {entry.replacementName} {entry.replacementOvertimeHours ? `(+${entry.replacementOvertimeHours}h)` : ""}
                                         </div>
                                       )}
                                     </div>
-                                    <button onClick={() => handleRemoveRecord(entry.tempId)} className="text-red-500 hover:text-red-700 p-2">
+                                    <button onClick={() => handleRemoveRecord(entry.tempId)} className="text-red-500 hover:text-red-700 p-2 ml-2">
                                       <FontAwesomeIcon icon={faTrash} />
                                     </button>
                                   </div>
@@ -2863,12 +2912,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       <Modal
         isOpen={activeOvertimeModal !== null}
         onClose={handleCloseOvertimeModal}
-        title={`Configurar Horas Extras (Regulares) - ${(() => {
+        title={`${activeOvertimeModal === "entry-edit" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Regulares)"} - ${(() => {
           if (activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
             return projectEmployees[wizardIndex].name;
           }
           if (activeOvertimeModal === "fast-entry" && selectedEmployee) {
             return selectedEmployee.name;
+          }
+          if (activeOvertimeModal === "entry-edit" && editingEntryTempId) {
+            return entries.find((e) => e.tempId === editingEntryTempId)?.employeeName || "";
           }
           return "";
         })()}`}
@@ -3061,6 +3113,84 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <input type="number" step="0.5" className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400" value={draftOvertimeHours} onChange={(e) => setDraftOvertimeHours(parseFloat(e.target.value))} />
                       </div>
                       <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se calcula automáticamente, pero puedes ajustarlo si es necesario.</p>
+                    </div>
+                  </div>
+                );
+              })()
+          : activeOvertimeModal === "entry-edit" && editingEntryTempId
+            ? (() => {
+                const entry = entries.find((e) => e.tempId === editingEntryTempId);
+                if (!entry) return null;
+                return (
+                  <div className="space-y-4 pt-2">
+                    <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                      <div className="text-center mb-2">
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Otros Presentes</span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">{entry.employeeName}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Entrada Real</label>
+                      <div className="relative">
+                        <select
+                          className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer"
+                          value={entry.inTime || ""}
+                          onChange={(e) => updateEntryOvertime(entry.tempId, { inTime: e.target.value })}
+                        >
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <FontAwesomeIcon icon={faClock} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase text-blue-600 dark:text-blue-400">Horario Salida Real</label>
+                      <div className="relative">
+                        <select
+                          className="w-full p-2.5 rounded border border-blue-200 dark:border-blue-900 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm font-mono text-center tracking-wider appearance-none cursor-pointer"
+                          value={entry.outTime || ""}
+                          onChange={(e) => updateEntryOvertime(entry.tempId, { outTime: e.target.value })}
+                        >
+                          <option value="">--:--</option>
+                          {TIME_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <FontAwesomeIcon icon={faClock} />
+                        </div>
+                      </div>
+                      {entry.inTime && entry.outTime && (
+                        <div className="mt-2 text-right">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
+                            <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Tiempo Registrado: {getDurationText(entry.inTime, entry.outTime)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 uppercase">Cantidad de Horas Extras</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="w-full p-2.5 rounded border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white bg-white focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400"
+                          value={entry.overtimeHours || 0}
+                          onChange={(e) => updateEntryOvertime(entry.tempId, { overtimeHours: parseFloat(e.target.value) })}
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 italic">Este valor se puede ajustar manualmente.</p>
                     </div>
                   </div>
                 );
@@ -3589,12 +3719,45 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 {entries.length > 0 ? (
                   entries.map((entry) => (
                     <div key={entry.tempId} className="flex flex-col pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
-                      <span className="font-semibold text-gray-800 dark:text-white">{entry.employeeName}</span>
-                      <span className="text-xs text-blue-600 dark:text-blue-400">
-                        {entry.typeName} {entry.overtimeHours ? `(${entry.overtimeHours}h)` : ""}
-                      </span>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="font-semibold text-gray-800 dark:text-white">{entry.employeeName}</span>
+                          <div className="text-xs text-blue-600 dark:text-blue-400 font-medium flex flex-wrap gap-2 items-center mt-0.5">
+                            <span>{entry.typeName}</span>
+                            {entry.overtimeHours ? (
+                              <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] dark:bg-blue-900/30 dark:text-blue-400 font-bold">
+                                {entry.overtimeHours} h Extra
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingEntryTempId(entry.tempId);
+                                  setActiveOvertimeModal("entry-edit");
+                                }}
+                                className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1"
+                              >
+                                <FontAwesomeIcon icon={faClock} />
+                                + Horas Extras
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {entry.overtimeHours && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingEntryTempId(entry.tempId);
+                              setActiveOvertimeModal("entry-edit");
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 font-semibold hover:underline"
+                          >
+                            Editar OT
+                          </button>
+                        )}
+                      </div>
                       {entry.replacementName && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 mt-1">
                           Reemplaza: {entry.replacementName} {entry.replacementOvertimeHours ? `(+${entry.replacementOvertimeHours}h)` : ""}
                         </span>
                       )}
