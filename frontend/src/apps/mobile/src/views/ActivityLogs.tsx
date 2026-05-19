@@ -2472,11 +2472,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                           }, 100);
                                                         }}
                                                       >
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex flex-col gap-1 items-start">
                                                           <div className="font-medium text-slate-800 dark:text-white truncate">{emp.name}</div>
                                                           {(() => {
                                                             const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
-                                                            return roleFrame ? <span className="shrink-0 bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
+                                                            return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
                                                           })()}
                                                         </div>
                                                       </div>
@@ -4125,13 +4125,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           setReplacementTargetEmpId(null);
                         }}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1 items-start">
                           <div className={`font-medium text-slate-800 dark:text-white truncate ${isSelected ? "text-blue-900 dark:text-blue-100 font-semibold" : ""}`}>{emp.name}</div>
-                          {(() => {
-                            const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
-                            return roleFrame ? <span className="shrink-0 bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
-                          })()}
-                          {emp.isActive === false ? <span className="shrink-0 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase whitespace-nowrap">Inactivo</span> : <span className="shrink-0 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase whitespace-nowrap">Activo</span>}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {(() => {
+                              const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                              return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
+                            })()}
+                            {emp.isActive === false ? <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase whitespace-nowrap">Inactivo</span> : <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase whitespace-nowrap">Activo</span>}
+                          </div>
                         </div>
                       </div>
                     );
@@ -4297,8 +4299,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 >
                   <div className="flex items-center gap-3">
                     <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
                         {(() => {
                           const roleFrame = emp.metadataProjects?.find((m) => m.roleFrame)?.roleFrame;
                           return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider uppercase">{roleFrame}</span> : null;
