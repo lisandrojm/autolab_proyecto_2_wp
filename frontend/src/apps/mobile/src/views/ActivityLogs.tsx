@@ -280,6 +280,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [draftReplacementId, setDraftReplacementId] = useState<string>("");
   const [draftOvertimeHours, setDraftOvertimeHours] = useState<number>(0);
   const [draftReplacementOvertimeHours, setDraftReplacementOvertimeHours] = useState<number>(0);
+  const [hasDraftReplacementOvertime, setHasDraftReplacementOvertime] = useState<boolean>(false);
   const [draftReplacementInTime, setDraftReplacementInTime] = useState<string>("");
   const [draftReplacementOutTime, setDraftReplacementOutTime] = useState<string>("");
   const [draftOutTime, setDraftOutTime] = useState<string>("");
@@ -1042,11 +1043,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       replacementId: replacementId || undefined,
       replacementName: replacement?.name,
       overtimeHours: type.name.toLowerCase().includes("horas extra") ? overtimeHours : undefined,
-      replacementOvertimeHours: draftReplacementOvertimeHours || undefined,
+      replacementOvertimeHours: hasDraftReplacementOvertime ? draftReplacementOvertimeHours : undefined,
       outTime: type.name.toLowerCase().includes("horas extra") ? draftOutTime : undefined,
       inTime: type.name.toLowerCase().includes("horas extra") ? draftInTime : undefined,
-      replacementInTime: draftReplacementInTime || undefined,
-      replacementOutTime: draftReplacementOutTime || undefined,
+      replacementInTime: hasDraftReplacementOvertime ? draftReplacementInTime : undefined,
+      replacementOutTime: hasDraftReplacementOvertime ? draftReplacementOutTime : undefined,
       notes: notes,
     };
 
@@ -1062,6 +1063,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setDraftReplacementId("");
     setDraftOvertimeHours(0);
     setDraftReplacementOvertimeHours(0);
+    setHasDraftReplacementOvertime(false);
     setDraftReplacementInTime("");
     setDraftReplacementOutTime("");
     setDraftOutTime("");
@@ -1664,6 +1666,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       updateWizardEntry(currentEmp.id, { replacementOvertimeHours: undefined, replacementInTime: undefined, replacementOutTime: undefined });
     } else if (activeReplacementOvertimeModal === "fast-entry") {
       setDraftReplacementOvertimeHours(0);
+      setHasDraftReplacementOvertime(false);
       setDraftReplacementInTime("");
       setDraftReplacementOutTime("");
     }
@@ -2857,7 +2860,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       </div>
 
       {/* Overtime Configuration Modal */}
-      <Modal isOpen={activeOvertimeModal !== null} onClose={handleCloseOvertimeModal} title="Configurar Horas Extras (Regulares)">
+      <Modal
+        isOpen={activeOvertimeModal !== null}
+        onClose={handleCloseOvertimeModal}
+        title={`Configurar Horas Extras (Regulares) - ${(() => {
+          if (activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+            return projectEmployees[wizardIndex].name;
+          }
+          if (activeOvertimeModal === "fast-entry" && selectedEmployee) {
+            return selectedEmployee.name;
+          }
+          return "";
+        })()}`}
+      >
         {activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]
           ? (() => {
               const currentEmp = projectEmployees[wizardIndex];
@@ -2865,6 +2880,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               return (
                 <div className="space-y-4 pt-2">
                   <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                    <div className="text-center mb-2">
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Colaborador</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-white">{currentEmp.name}</span>
+                    </div>
                     <div className="grid grid-cols-2 gap-4 w-full">
                       <div className="text-center">
                         <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
@@ -2956,6 +2975,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 return (
                   <div className="space-y-4 pt-2">
                     <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                      <div className="text-center mb-2">
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Colaborador</span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">{selectedEmployee.name}</span>
+                      </div>
                       <div className="grid grid-cols-2 gap-4 w-full">
                         <div className="text-center">
                           <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
@@ -3054,8 +3077,24 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         </div>
       </Modal>
 
-      {/* Replacement Overtime Configuration Modal */}
-      <Modal isOpen={activeReplacementOvertimeModal !== null} onClose={handleCloseReplacementOvertimeModal} title="Configurar Horas Extras (Reemplazos)" zIndex={60}>
+      <Modal
+        isOpen={activeReplacementOvertimeModal !== null}
+        onClose={handleCloseReplacementOvertimeModal}
+        title={`${activeReplacementOvertimeModal === "fast-entry" ? "Configurar Horas Extras (Otros Presentes)" : "Configurar Horas Extras (Reemplazos)"} - ${(() => {
+          if (activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+            const currentEmp = projectEmployees[wizardIndex];
+            const data = wizardData[currentEmp.id];
+            if (data?.replacementId) {
+              return employees.find((e) => e.id === data.replacementId)?.name || "";
+            }
+          }
+          if (activeReplacementOvertimeModal === "fast-entry" && draftReplacementId) {
+            return employees.find((e) => e.id === draftReplacementId)?.name || "";
+          }
+          return "";
+        })()}`}
+        zIndex={60}
+      >
         {activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]
           ? (() => {
               const currentEmp = projectEmployees[wizardIndex];
@@ -3065,6 +3104,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               return (
                 <div className="space-y-4 pt-2">
                   <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                    <div className="text-center mb-2">
+                      <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Reemplazo</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-white">{repEmp?.name}</span>
+                    </div>
                     <div className="grid grid-cols-2 gap-4 w-full">
                       <div className="text-center">
                         <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
@@ -3157,6 +3200,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 return (
                   <div className="space-y-4 pt-2">
                     <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+                      <div className="text-center mb-2">
+                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Personal Adicional</span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">{repEmp?.name}</span>
+                      </div>
                       <div className="grid grid-cols-2 gap-4 w-full">
                         <div className="text-center">
                           <span className="block text-[10px] text-slate-400 uppercase tracking-widest mb-1">Entrada Contrato</span>
@@ -3434,28 +3481,27 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (!draftReplacementOvertimeHours) {
-                                    setDraftReplacementOvertimeHours(0);
-                                  }
+                                  setHasDraftReplacementOvertime(true);
                                   setActiveReplacementOvertimeModal("fast-entry");
                                 }}
-                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${draftReplacementOvertimeHours !== undefined && draftReplacementOvertimeHours !== null && draftReplacementOvertimeHours !== 0 ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${hasDraftReplacementOvertime ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                               >
                                 SÍ
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
+                                  setHasDraftReplacementOvertime(false);
                                   setDraftReplacementOvertimeHours(0);
                                   setDraftReplacementInTime("");
                                   setDraftReplacementOutTime("");
                                 }}
-                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!draftReplacementOvertimeHours ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
+                                className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${!hasDraftReplacementOvertime ? "bg-slate-500 border-slate-500 text-white shadow-md dark:shadow-slate-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
                               >
                                 NO
                               </button>
                             </div>
-                            {draftReplacementOvertimeHours > 0 && (
+                            {hasDraftReplacementOvertime && (
                               <div className="pt-1 text-center">
                                 <button
                                   type="button"
