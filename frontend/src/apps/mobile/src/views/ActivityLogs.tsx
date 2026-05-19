@@ -489,24 +489,27 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const { profile, stats } = useProfile();
 
-  const isMyAssignment = useCallback((asm: any) => {
-    if (!profile) return false;
-    const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id) : asm.userId;
-    const myIdsMatch = [profile?.userId, profile?._id, profile?.metadata?.id].filter(Boolean).map(id => String(id));
-    
-    let isMatch = uid && myIdsMatch.includes(String(uid));
-    if (!isMatch) {
-      const asmEmail = typeof asm.userId === "object" ? (asm.userId?.email || asm.userId?.correo) : null;
-      const myEmail = profile?.email;
-      if (asmEmail && myEmail && String(asmEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
-    }
-    if (!isMatch) {
-      const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : (asm.userId?.name || asm.userId?.nombre)) : null;
-      const myName = `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
-      if (asmName && myName && asmName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
-    }
-    return isMatch;
-  }, [profile]);
+  const isMyAssignment = useCallback(
+    (asm: any) => {
+      if (!profile) return false;
+      const uid = typeof asm.userId === "object" ? asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id : asm.userId;
+      const myIdsMatch = [profile?.userId, profile?._id, profile?.metadata?.id].filter(Boolean).map((id) => String(id));
+
+      let isMatch = uid && myIdsMatch.includes(String(uid));
+      if (!isMatch) {
+        const asmEmail = typeof asm.userId === "object" ? asm.userId?.email || asm.userId?.correo : null;
+        const myEmail = profile?.email;
+        if (asmEmail && myEmail && String(asmEmail).toLowerCase() === String(myEmail).toLowerCase()) isMatch = true;
+      }
+      if (!isMatch) {
+        const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : asm.userId?.name || asm.userId?.nombre) : null;
+        const myName = `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
+        if (asmName && myName && asmName.toLowerCase().includes(myName.toLowerCase())) isMatch = true;
+      }
+      return isMatch;
+    },
+    [profile],
+  );
 
   const userProjects = useMemo(() => {
     if (!profile || allProjectsCache.length === 0) return [];
@@ -531,7 +534,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return;
     }
     let isMounted = true;
-    projectsAPI.getProject(selectedProjectId)
+    projectsAPI
+      .getProject(selectedProjectId)
       .then((proj) => {
         if (isMounted) {
           console.log("DEBUG: Loaded full project details with teamConfig:", proj);
@@ -548,12 +552,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const myCoordinatedCombinations = useMemo(() => {
     if (!selectedProject || !profile) return [];
-    return (selectedProject.coordinatorAssignments || [])
-      .filter(isMyAssignment)
-      .map((asm: any) => ({
-        areaId: String(asm.areaId?._id || asm.areaId || ""),
-        shiftId: String(asm.shiftId?._id || asm.shiftId || ""),
-      }));
+    return (selectedProject.coordinatorAssignments || []).filter(isMyAssignment).map((asm: any) => ({
+      areaId: String(asm.areaId?._id || asm.areaId || ""),
+      shiftId: String(asm.shiftId?._id || asm.shiftId || ""),
+    }));
   }, [selectedProject, profile, isMyAssignment]);
 
   const coordinatedAreaIds = useMemo(() => {
@@ -585,40 +587,45 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   }, [selectedProject, profile, coordinatedAreaIds]);
   const projectEmployees = useMemo(() => {
     if (!selectedProjectId || !selectedProject) return [];
-    
+
     // Fallback for Coordinators who get 403 on /users API: use populated assignedUsers
-    const sourceEmployees: EmployeeOption[] = employees.length > 0 ? employees : (selectedProject?.assignedUsers || [])
-      .filter((au: any) => typeof au === 'object' && au !== null)
-      .map((au: any): EmployeeOption => ({
-        id: au._id,
-        name: `${au.firstName || ""} ${au.lastName || ""}`.trim() || au.email,
-        email: au.email,
-        isActive: au.metadata?.activo !== false,
-        projectIds: [selectedProjectId],
-        hasActiveContract: true, // Optimistic assumption
-        metadataProjects: [], // Area/Shift will fallback to teamConfig
-        roles: [],
-        positionName: typeof au.positionId === 'object' ? au.positionId?.name : undefined,
-      }));
+    const sourceEmployees: EmployeeOption[] =
+      employees.length > 0
+        ? employees
+        : (selectedProject?.assignedUsers || [])
+            .filter((au: any) => typeof au === "object" && au !== null)
+            .map(
+              (au: any): EmployeeOption => ({
+                id: au._id,
+                name: `${au.firstName || ""} ${au.lastName || ""}`.trim() || au.email,
+                email: au.email,
+                isActive: au.metadata?.activo !== false,
+                projectIds: [selectedProjectId],
+                hasActiveContract: true, // Optimistic assumption
+                metadataProjects: [], // Area/Shift will fallback to teamConfig
+                roles: [],
+                positionName: typeof au.positionId === "object" ? au.positionId?.name : undefined,
+              }),
+            );
 
     console.log("DEBUG projectEmployees - Evaluating for project:", selectedProjectId);
     console.log("DEBUG myCoordinatedCombinations:", myCoordinatedCombinations);
-    
+
     const filtered = sourceEmployees.filter((e) => {
       if (!e.isActive) {
         return false;
       }
-      
+
       const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
-      
+
       // Determine ALL of employee's area and shift combinations
       const employeeCombinations: { areaId: string; shiftId: string }[] = [];
-      
+
       const teamConfigMember = selectedProject?.teamConfig?.find((c: any) => {
         const cUserId = typeof c.userId === "object" ? c.userId?._id : c.userId;
         return String(cUserId) === String(e.id);
       });
-      
+
       const isCoordGlobal = e.roles?.some((r) => r.name?.toLowerCase()?.includes("coordinador"));
 
       if (teamConfigMember && teamConfigMember.areaShiftAssignments?.length > 0) {
@@ -634,17 +641,17 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         });
       } else if (isCoordGlobal && selectedProject?.coordinatorAssignments) {
         selectedProject.coordinatorAssignments.forEach((asm: any) => {
-          const uid = typeof asm.userId === "object" ? (asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id) : asm.userId;
-          const empIds = [e.id, (e as any).userId, (e as any).metadata?.id].filter(Boolean).map(id => String(id));
-          
+          const uid = typeof asm.userId === "object" ? asm.userId?._id || asm.userId?.id || asm.userId?.userId || asm.userId?.metadata?.id : asm.userId;
+          const empIds = [e.id, (e as any).userId, (e as any).metadata?.id].filter(Boolean).map((id) => String(id));
+
           let isMatch = uid && empIds.includes(String(uid));
           if (!isMatch) {
-            const asmEmail = typeof asm.userId === "object" ? (asm.userId?.email || asm.userId?.correo) : null;
+            const asmEmail = typeof asm.userId === "object" ? asm.userId?.email || asm.userId?.correo : null;
             const empEmail = e.email;
             if (asmEmail && empEmail && String(asmEmail).toLowerCase() === String(empEmail).toLowerCase()) isMatch = true;
           }
           if (!isMatch) {
-            const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : (asm.userId?.name || asm.userId?.nombre)) : null;
+            const asmName = typeof asm.userId === "object" ? (asm.userId?.firstName && asm.userId?.lastName ? `${asm.userId.firstName} ${asm.userId.lastName}` : asm.userId?.name || asm.userId?.nombre) : null;
             const empName = e.name;
             if (asmName && empName && asmName.toLowerCase().includes(empName.toLowerCase())) isMatch = true;
           }
@@ -658,22 +665,24 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       } else {
         const pAreaId = String(projMeta?.areaId?._id || projMeta?.areaId || "");
         let pShiftId = String(projMeta?.shiftId?._id || projMeta?.shiftId || "");
-        
+
         // Infer shiftId from contract hours if missing (workaround for /users API not selecting shiftId)
         if (!pShiftId && projMeta?.contractStartTime && projMeta?.contractEndTime) {
-          const matchingShift = allShifts.find(s => s.startTime === projMeta.contractStartTime && s.endTime === projMeta.contractEndTime);
+          const matchingShift = allShifts.find((s) => s.startTime === projMeta.contractStartTime && s.endTime === projMeta.contractEndTime);
           if (matchingShift) {
             pShiftId = String(matchingShift._id || matchingShift.id);
           }
         }
-        
+
         employeeCombinations.push({ areaId: pAreaId, shiftId: pShiftId });
       }
 
-      const isExplicitlyAssigned = !!teamConfigMember || selectedProject?.assignedUsers?.some((au: any) => {
-        const auId = typeof au === "object" ? au._id : au;
-        return String(auId) === String(e.id);
-      });
+      const isExplicitlyAssigned =
+        !!teamConfigMember ||
+        selectedProject?.assignedUsers?.some((au: any) => {
+          const auId = typeof au === "object" ? au._id : au;
+          return String(auId) === String(e.id);
+        });
 
       if (!isExplicitlyAssigned) {
         console.log(`DEBUG: Employee ${e.name} rejected: not explicitly assigned.`);
@@ -687,7 +696,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           if (selectedShiftId && combo.shiftId !== String(selectedShiftId)) return false;
           return true;
         });
-        
+
         if (!hasMatch) {
           console.log(`DEBUG: Employee ${e.name} rejected: area/shift mismatch. Has combinations:`, employeeCombinations);
           return false;
@@ -698,13 +707,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
         const allAssignments = selectedProject?.coordinatorAssignments || [];
         const noRestrictions = allAssignments.length === 0;
-        
+
         if (!isAdmin && !noRestrictions) {
-          const isMine = employeeCombinations.some((combo) => 
-            myCoordinatedCombinations.some((myCombo) => 
-              myCombo.areaId === combo.areaId && (myCombo.shiftId === combo.shiftId || !myCombo.shiftId || !combo.shiftId)
-            )
-          );
+          const isMine = employeeCombinations.some((combo) => myCoordinatedCombinations.some((myCombo) => myCombo.areaId === combo.areaId && (myCombo.shiftId === combo.shiftId || !myCombo.shiftId || !combo.shiftId)));
           if (!isMine) {
             console.log(`DEBUG: Employee ${e.name} rejected: not in myCoordinatedCombinations.`);
             return false;
@@ -715,7 +720,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       console.log(`DEBUG: Employee ${e.name} ACCEPTED!`);
       return true;
     });
-    
+
     console.log("DEBUG projectEmployees - Total accepted:", filtered.length);
     return filtered;
   }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts]);
@@ -792,8 +797,9 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     if (draftReplacementId && draftTypeId && selectedProjectId) {
       const project = userProjects.find((p) => p._id === selectedProjectId);
       if (project) {
-        const endTime = getEmployeeEndTime(project, draftReplacementId, reportDate);
-        const startTime = getEmployeeStartTime(project, draftReplacementId, reportDate);
+        const rep = employees.find((e) => e.id === draftReplacementId);
+        const endTime = getEmployeeEndTime(project, draftReplacementId, reportDate, rep);
+        const startTime = getEmployeeStartTime(project, draftReplacementId, reportDate, rep);
 
         let totalOvertime = 0;
         let contractedMinutes = 0;
@@ -1564,6 +1570,106 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     setShowForm(true);
   };
 
+  const isOvertimeTimeIncomplete = (() => {
+    if (activeOvertimeModal === "wizard") {
+      if (wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+        const currentEmp = projectEmployees[wizardIndex];
+        const data = wizardData[currentEmp.id];
+        return !data?.inTime || !data?.outTime;
+      }
+      return true;
+    }
+    if (activeOvertimeModal === "fast-entry") {
+      return !draftInTime || !draftOutTime;
+    }
+    return false;
+  })();
+
+  const isReplacementOvertimeTimeIncomplete = (() => {
+    if (activeReplacementOvertimeModal === "wizard") {
+      if (wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+        const currentEmp = projectEmployees[wizardIndex];
+        const data = wizardData[currentEmp.id];
+        return !data?.replacementInTime || !data?.replacementOutTime;
+      }
+      return true;
+    }
+    if (activeReplacementOvertimeModal === "fast-entry") {
+      return !draftReplacementInTime || !draftReplacementOutTime;
+    }
+    return false;
+  })();
+
+  const handleCloseOvertimeModal = () => {
+    if (activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+      const currentEmp = projectEmployees[wizardIndex];
+      const data = wizardData[currentEmp.id];
+      if (data) {
+        const inTime = data.inTime;
+        const outTime = data.outTime;
+        if (!inTime || !outTime) {
+          updateWizardEntry(currentEmp.id, { overtimeHours: undefined, inTime: undefined, outTime: undefined });
+        }
+      }
+    } else if (activeOvertimeModal === "fast-entry") {
+      if (!draftInTime || !draftOutTime) {
+        setShowOvertimeForm(false);
+        setDraftTypeId("");
+        setDraftOvertimeHours(0);
+        setDraftInTime("");
+        setDraftOutTime("");
+      }
+    }
+    setActiveOvertimeModal(null);
+  };
+
+  const handleCloseReplacementOvertimeModal = () => {
+    if (activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+      const currentEmp = projectEmployees[wizardIndex];
+      const data = wizardData[currentEmp.id];
+      if (data) {
+        const inTime = data.replacementInTime;
+        const outTime = data.replacementOutTime;
+        if (!inTime || !outTime) {
+          updateWizardEntry(currentEmp.id, { replacementOvertimeHours: undefined, replacementInTime: undefined, replacementOutTime: undefined });
+        }
+      }
+    } else if (activeReplacementOvertimeModal === "fast-entry") {
+      if (!draftReplacementInTime || !draftReplacementOutTime) {
+        setDraftReplacementOvertimeHours(0);
+        setDraftReplacementInTime("");
+        setDraftReplacementOutTime("");
+      }
+    }
+    setActiveReplacementOvertimeModal(null);
+  };
+
+  const handleCancelOvertime = () => {
+    if (activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+      const currentEmp = projectEmployees[wizardIndex];
+      updateWizardEntry(currentEmp.id, { overtimeHours: undefined, inTime: undefined, outTime: undefined });
+    } else if (activeOvertimeModal === "fast-entry") {
+      setShowOvertimeForm(false);
+      setDraftTypeId("");
+      setDraftOvertimeHours(0);
+      setDraftInTime("");
+      setDraftOutTime("");
+    }
+    setActiveOvertimeModal(null);
+  };
+
+  const handleCancelReplacementOvertime = () => {
+    if (activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]) {
+      const currentEmp = projectEmployees[wizardIndex];
+      updateWizardEntry(currentEmp.id, { replacementOvertimeHours: undefined, replacementInTime: undefined, replacementOutTime: undefined });
+    } else if (activeReplacementOvertimeModal === "fast-entry") {
+      setDraftReplacementOvertimeHours(0);
+      setDraftReplacementInTime("");
+      setDraftReplacementOutTime("");
+    }
+    setActiveReplacementOvertimeModal(null);
+  };
+
   return (
     <div className="flex-1 pb-24">
       <div className="sticky top-0 border-b border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm px-4 py-4 z-30">
@@ -1947,7 +2053,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 (() => {
                                   const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === String(selectedAreaId));
                                   if (!areaConfig || !areaConfig.shiftIds) return null;
-                                  
+
                                   const visibleShifts = areaConfig.shiftIds
                                     .map((sId: any) => {
                                       const shiftId = String(sId?._id || sId || "");
@@ -2150,7 +2256,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 <div className="pt-2 pb-1 text-center ot-details-row scroll-mt-[70px]">
                                                   <button onClick={() => setActiveOvertimeModal("wizard")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
                                                     <FontAwesomeIcon icon={faClock} />
-                                                    {data.overtimeHours > 0 ? `${data.overtimeHours} Horas Extras` : "Configurar Horas Extras"}
+                                                    {data.overtimeHours > 0 ? `${data.overtimeHours} Horas Extras (Regulares)` : "Configurar Horas Extras (Regulares)"}
                                                   </button>
                                                 </div>
                                               )}
@@ -2542,7 +2648,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               <div className="pt-2 pb-1 text-center">
                                                 <button onClick={() => setActiveOvertimeModal("fast-entry")} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10">
                                                   <FontAwesomeIcon icon={faClock} />
-                                                  {draftOvertimeHours > 0 ? `${draftOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
+                                                  {draftOvertimeHours > 0 ? `${draftOvertimeHours} Horas Extras (Regulares)` : "Configurar Horas Extras (Regulares)"}
                                                 </button>
                                               </div>
                                               <button onClick={handleAddRecord} disabled={!draftTypeId} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded mt-2 disabled:opacity-50 shadow-sm">
@@ -2751,7 +2857,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       </div>
 
       {/* Overtime Configuration Modal */}
-      <Modal isOpen={activeOvertimeModal !== null} onClose={() => setActiveOvertimeModal(null)} title="Configurar Horas Extras">
+      <Modal isOpen={activeOvertimeModal !== null} onClose={handleCloseOvertimeModal} title="Configurar Horas Extras (Regulares)">
         {activeOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]
           ? (() => {
               const currentEmp = projectEmployees[wizardIndex];
@@ -2937,20 +3043,38 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 );
               })()
             : null}
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
-          <button onClick={() => setActiveOvertimeModal(null)} className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors shadow-sm">
+        {isOvertimeTimeIncomplete && (
+          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">
+            ⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.
+          </div>
+        )}
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleCancelOvertime}
+            className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveOvertimeModal(null)}
+            disabled={isOvertimeTimeIncomplete}
+            className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+          >
             Listo
           </button>
         </div>
       </Modal>
 
       {/* Replacement Overtime Configuration Modal */}
-      <Modal isOpen={activeReplacementOvertimeModal !== null} onClose={() => setActiveReplacementOvertimeModal(null)} title="Configurar Horas Extras" zIndex={60}>
+      <Modal isOpen={activeReplacementOvertimeModal !== null} onClose={handleCloseReplacementOvertimeModal} title="Configurar Horas Extras (Otros Presentes)" zIndex={60}>
         {activeReplacementOvertimeModal === "wizard" && wizardIndex >= 0 && projectEmployees[wizardIndex]
           ? (() => {
               const currentEmp = projectEmployees[wizardIndex];
               const data = wizardData[currentEmp.id];
               if (!data?.replacementId) return null;
+              const repEmp = employees.find((e) => e.id === data.replacementId);
               return (
                 <div className="space-y-4 pt-2">
                   <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
@@ -2960,7 +3084,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeStartTime(proj, data.replacementId, reportDate)) : "—";
+                            return proj ? formatToAMPM(getEmployeeStartTime(proj, data.replacementId, reportDate, repEmp)) : "—";
                           })()}
                         </span>
                       </div>
@@ -2969,7 +3093,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                           {(() => {
                             const proj = userProjects.find((p) => p._id === selectedProjectId);
-                            return proj ? formatToAMPM(getEmployeeEndTime(proj, data.replacementId, reportDate)) : "—";
+                            return proj ? formatToAMPM(getEmployeeEndTime(proj, data.replacementId, reportDate, repEmp)) : "—";
                           })()}
                         </span>
                       </div>
@@ -2977,8 +3101,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     {(() => {
                       const proj = userProjects.find((p) => p._id === selectedProjectId);
                       if (!proj) return null;
-                      const sT = getEmployeeStartTime(proj, data.replacementId, reportDate);
-                      const eT = getEmployeeEndTime(proj, data.replacementId, reportDate);
+                      const sT = getEmployeeStartTime(proj, data.replacementId, reportDate, repEmp);
+                      const eT = getEmployeeEndTime(proj, data.replacementId, reportDate, repEmp);
                       const dur = getDurationText(sT, eT);
                       if (!dur) return null;
                       return (
@@ -3042,6 +3166,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             })()
           : activeReplacementOvertimeModal === "fast-entry" && draftReplacementId
             ? (() => {
+                const repEmp = employees.find((e) => e.id === draftReplacementId);
                 return (
                   <div className="space-y-4 pt-2">
                     <div className="flex flex-col gap-1 items-center pb-3 border-b border-slate-100 dark:border-slate-700">
@@ -3051,7 +3176,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                             {(() => {
                               const proj = userProjects.find((p) => p._id === selectedProjectId);
-                              return proj ? formatToAMPM(getEmployeeStartTime(proj, draftReplacementId, reportDate)) : "—";
+                              return proj ? formatToAMPM(getEmployeeStartTime(proj, draftReplacementId, reportDate, repEmp)) : "—";
                             })()}
                           </span>
                         </div>
@@ -3060,7 +3185,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                             {(() => {
                               const proj = userProjects.find((p) => p._id === selectedProjectId);
-                              return proj ? formatToAMPM(getEmployeeEndTime(proj, draftReplacementId, reportDate)) : "—";
+                              return proj ? formatToAMPM(getEmployeeEndTime(proj, draftReplacementId, reportDate, repEmp)) : "—";
                             })()}
                           </span>
                         </div>
@@ -3068,8 +3193,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                       {(() => {
                         const proj = userProjects.find((p) => p._id === selectedProjectId);
                         if (!proj) return null;
-                        const sT = getEmployeeStartTime(proj, draftReplacementId, reportDate);
-                        const eT = getEmployeeEndTime(proj, draftReplacementId, reportDate);
+                        const sT = getEmployeeStartTime(proj, draftReplacementId, reportDate, repEmp);
+                        const eT = getEmployeeEndTime(proj, draftReplacementId, reportDate, repEmp);
                         const dur = getDurationText(sT, eT);
                         if (!dur) return null;
                         return (
@@ -3132,8 +3257,25 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 );
               })()
             : null}
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
-          <button onClick={() => setActiveReplacementOvertimeModal(null)} className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition-colors shadow-sm">
+        {isReplacementOvertimeTimeIncomplete && (
+          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded text-xs text-amber-600 dark:text-amber-400 font-medium animate-in fade-in slide-in-from-top-2">
+            ⚠️ El Horario Entrada Real y el Horario Salida Real son obligatorios para guardar las horas extras. Si no deseas registrar horas extras, puedes cerrar la ventana (X) o presionar NO en la pantalla principal.
+          </div>
+        )}
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleCancelReplacementOvertime}
+            className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveReplacementOvertimeModal(null)}
+            disabled={isReplacementOvertimeTimeIncomplete}
+            className={`px-6 py-2 rounded font-bold transition-all shadow-sm ${isReplacementOvertimeTimeIncomplete ? "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+          >
             Listo
           </button>
         </div>
@@ -3210,21 +3352,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               type="button"
                               onClick={() => {
                                 const updates: Partial<WizardEntry> = {};
-                                if (!data.replacementOvertimeHours) {
+                                if (data.replacementOvertimeHours === undefined || data.replacementOvertimeHours === null) {
                                   updates.replacementOvertimeHours = 0;
-                                }
-                                if (!data.replacementInTime || !data.replacementOutTime) {
-                                  const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                  if (proj && data.replacementId) {
-                                    if (!data.replacementInTime) {
-                                      const st = getEmployeeStartTime(proj, data.replacementId, reportDate);
-                                      if (st) updates.replacementInTime = st;
-                                    }
-                                    if (!data.replacementOutTime) {
-                                      const et = getEmployeeEndTime(proj, data.replacementId, reportDate);
-                                      if (et) updates.replacementOutTime = et;
-                                    }
-                                  }
                                 }
                                 if (Object.keys(updates).length > 0) {
                                   updateWizardEntry(currentEmp.id, updates);
@@ -3250,32 +3379,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const updates: Partial<WizardEntry> = {};
-                                  if (!data.replacementOvertimeHours) {
-                                    updates.replacementOvertimeHours = 0;
-                                  }
-                                  if (!data.replacementInTime || !data.replacementOutTime) {
-                                    const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                    if (proj && data.replacementId) {
-                                      if (!data.replacementInTime) {
-                                        const st = getEmployeeStartTime(proj, data.replacementId, reportDate);
-                                        if (st) updates.replacementInTime = st;
-                                      }
-                                      if (!data.replacementOutTime) {
-                                        const et = getEmployeeEndTime(proj, data.replacementId, reportDate);
-                                        if (et) updates.replacementOutTime = et;
-                                      }
-                                    }
-                                  }
-                                  if (Object.keys(updates).length > 0) {
-                                    updateWizardEntry(currentEmp.id, updates);
-                                  }
                                   setActiveReplacementOvertimeModal("wizard");
                                 }}
                                 className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10"
                               >
                                 <FontAwesomeIcon icon={faClock} />
-                                {data.replacementOvertimeHours > 0 ? `${data.replacementOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
+                                {data.replacementOvertimeHours > 0 ? `${data.replacementOvertimeHours} Horas Extras (Otros Presentes)` : "Configurar Horas Extras (Otros Presentes)"}
                               </button>
                             </div>
                           )}
@@ -3354,19 +3463,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                   if (!draftReplacementOvertimeHours) {
                                     setDraftReplacementOvertimeHours(0);
                                   }
-                                  if (!draftReplacementInTime || !draftReplacementOutTime) {
-                                    const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                    if (proj && draftReplacementId) {
-                                      if (!draftReplacementInTime) {
-                                        const st = getEmployeeStartTime(proj, draftReplacementId, reportDate);
-                                        if (st) setDraftReplacementInTime(st);
-                                      }
-                                      if (!draftReplacementOutTime) {
-                                        const et = getEmployeeEndTime(proj, draftReplacementId, reportDate);
-                                        if (et) setDraftReplacementOutTime(et);
-                                      }
-                                    }
-                                  }
                                   setActiveReplacementOvertimeModal("fast-entry");
                                 }}
                                 className={`flex-1 py-1.5 rounded font-bold text-base md:text-lg transition-all shadow-sm border ${draftReplacementOvertimeHours !== undefined && draftReplacementOvertimeHours !== null && draftReplacementOvertimeHours !== 0 ? "bg-blue-600 border-blue-600 text-white shadow-md dark:shadow-blue-900/20" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600"}`}
@@ -3390,25 +3486,12 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (!draftReplacementInTime || !draftReplacementOutTime) {
-                                      const proj = userProjects.find((p) => p._id === selectedProjectId);
-                                      if (proj && draftReplacementId) {
-                                        if (!draftReplacementInTime) {
-                                          const st = getEmployeeStartTime(proj, draftReplacementId, reportDate);
-                                          if (st) setDraftReplacementInTime(st);
-                                        }
-                                        if (!draftReplacementOutTime) {
-                                          const et = getEmployeeEndTime(proj, draftReplacementId, reportDate);
-                                          if (et) setDraftReplacementOutTime(et);
-                                        }
-                                      }
-                                    }
                                     setActiveReplacementOvertimeModal("fast-entry");
                                   }}
                                   className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center justify-center w-full gap-2 p-2 border border-blue-200 dark:border-blue-900 rounded bg-blue-50 dark:bg-blue-900/10"
                                 >
                                   <FontAwesomeIcon icon={faClock} />
-                                  {draftReplacementOvertimeHours > 0 ? `${draftReplacementOvertimeHours} Horas Extras` : "Configurar Horas Extras"}
+                                  {draftReplacementOvertimeHours > 0 ? `${draftReplacementOvertimeHours} Horas Extras (Otros Presentes)` : "Configurar Horas Extras (Otros Presentes)"}
                                 </button>
                               </div>
                             )}
@@ -3521,11 +3604,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 </h4>
                 <div className="max-h-60 overflow-y-auto space-y-0.5 pr-1">
                   {projectEmployees.map((emp) => (
-                      <div key={emp.id} className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors group">
-                        <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 uppercase tracking-wide border border-blue-200 dark:border-blue-900/50">Presente</span>
-                      </div>
-                    ))}
+                    <div key={emp.id} className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors group">
+                      <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 uppercase tracking-wide border border-blue-200 dark:border-blue-900/50">Presente</span>
+                    </div>
+                  ))}
                   {projectEmployees.length === 0 && <p className="text-sm text-gray-500 italic text-center py-4">No hay colaboradores asignados a este proyecto.</p>}
                 </div>
               </div>
@@ -3571,16 +3654,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               <h4 className="font-medium text-sm text-gray-900 dark:text-white border-b pb-1 dark:border-gray-700">Novedades: {viewingReport.hasActivity ? "SÍ" : "NO"}</h4>
               <div className="max-h-50 overflow-y-auto text-sm space-y-2 mt-2">
                 {viewingReport.attendance.map((entry, idx) => {
-                  const empName = typeof entry.employeeId === "object" && entry.employeeId
-                    ? `${entry.employeeId.firstName} ${entry.employeeId.lastName}`
-                    : (employees.find((e) => e.id === entry.employeeId)?.name || "Empleado");
+                  const empName = typeof entry.employeeId === "object" && entry.employeeId ? `${entry.employeeId.firstName} ${entry.employeeId.lastName}` : employees.find((e) => e.id === entry.employeeId)?.name || "Empleado";
                   // Fallback for type name reconstruction if needed or use absenceReason directly
                   const reason = entry.absenceReason || (entry.overtimeHours ? "Horas Extra" : "Presente");
-                  const repName = entry.replacementId
-                    ? (typeof entry.replacementId === "object" && entry.replacementId
-                      ? `${entry.replacementId.firstName} ${entry.replacementId.lastName}`
-                      : (employees.find((e) => e.id === entry.replacementId)?.name || "Reemplazo"))
-                    : null;
+                  const repName = entry.replacementId ? (typeof entry.replacementId === "object" && entry.replacementId ? `${entry.replacementId.firstName} ${entry.replacementId.lastName}` : employees.find((e) => e.id === entry.replacementId)?.name || "Reemplazo") : null;
 
                   return (
                     <div key={idx} className="flex flex-col pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
@@ -4080,15 +4157,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
                             return roleFrame ? <span className="shrink-0 bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
                           })()}
-                          {emp.isActive === false ? (
-                            <span className="shrink-0 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase whitespace-nowrap">
-                              Inactivo
-                            </span>
-                          ) : (
-                            <span className="shrink-0 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase whitespace-nowrap">
-                              Activo
-                            </span>
-                          )}
+                          {emp.isActive === false ? <span className="shrink-0 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase whitespace-nowrap">Inactivo</span> : <span className="shrink-0 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase whitespace-nowrap">Activo</span>}
                         </div>
                       </div>
                     );
@@ -4239,54 +4308,39 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           {/* Staff List */}
           <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
             {filteredNonProjectEmployees.slice(0, additionalStaffVisibleCount).map((emp) => {
-                const isSelected = selectedAdditionalStaff.includes(emp.id);
-                return (
-                  <div
-                    key={emp.id}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedAdditionalStaff((prev) => prev.filter((id) => id !== emp.id));
-                      } else {
-                        setSelectedAdditionalStaff((prev) => [...prev, emp.id]);
-                      }
-                    }}
-                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-800" : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50"}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
-                          {(() => {
-                            const roleFrame = emp.metadataProjects?.find((m) => m.roleFrame)?.roleFrame;
-                            return roleFrame ? (
-                              <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider uppercase">
-                                {roleFrame}
-                              </span>
-                            ) : null;
-                          })()}
-                          {emp.isActive === false ? (
-                            <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase">
-                              Inactivo
-                            </span>
-                          ) : (
-                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase">
-                              Activo
-                            </span>
-                          )}
-                        </div>
-                        {emp.positionName && <p className="text-[10px] text-gray-500 dark:text-gray-400">{emp.positionName}</p>}
+              const isSelected = selectedAdditionalStaff.includes(emp.id);
+              return (
+                <div
+                  key={emp.id}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedAdditionalStaff((prev) => prev.filter((id) => id !== emp.id));
+                    } else {
+                      setSelectedAdditionalStaff((prev) => [...prev, emp.id]);
+                    }
+                  }}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-800" : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50"}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                        {(() => {
+                          const roleFrame = emp.metadataProjects?.find((m) => m.roleFrame)?.roleFrame;
+                          return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider uppercase">{roleFrame}</span> : null;
+                        })()}
+                        {emp.isActive === false ? <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase">Inactivo</span> : <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase">Activo</span>}
                       </div>
+                      {emp.positionName && <p className="text-[10px] text-gray-500 dark:text-gray-400">{emp.positionName}</p>}
                     </div>
-                    <div className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${isSelected ? "bg-blue-500 text-white" : "border-2 border-gray-300 dark:border-gray-600"}`}>{isSelected && <FontAwesomeIcon icon={faCheck} className="text-xs" />}</div>
                   </div>
-                );
-              })}
+                  <div className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${isSelected ? "bg-blue-500 text-white" : "border-2 border-gray-300 dark:border-gray-600"}`}>{isSelected && <FontAwesomeIcon icon={faCheck} className="text-xs" />}</div>
+                </div>
+              );
+            })}
             {/* Load More Button */}
             {filteredNonProjectEmployees.length > additionalStaffVisibleCount && (
-              <button
-                onClick={() => setAdditionalStaffVisibleCount(prev => prev + 20)}
-                className="w-full py-2.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-              >
+              <button onClick={() => setAdditionalStaffVisibleCount((prev) => prev + 20)} className="w-full py-2.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                 Mostrar más ({filteredNonProjectEmployees.length - additionalStaffVisibleCount} restantes)
               </button>
             )}
@@ -4346,29 +4400,19 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           </div>
         </div>
       </Modal>
-      
+
       {/* Info Modal for Others Present */}
-      <Modal
-        isOpen={showOtherPresentInfo}
-        onClose={() => setShowOtherPresentInfo(false)}
-        title="Información"
-        size="sm"
-      >
+      <Modal isOpen={showOtherPresentInfo} onClose={() => setShowOtherPresentInfo(false)} title="Información" size="sm">
         <div className="space-y-4 p-1 text-center">
           <div className="flex flex-col items-center gap-3 text-blue-600 dark:text-blue-400 mb-2">
-             <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                <FontAwesomeIcon icon={faInfoCircle} className="text-2xl" />
-             </div>
-             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Otros Presentes</h3>
+            <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+              <FontAwesomeIcon icon={faInfoCircle} className="text-2xl" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Otros Presentes</h3>
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Puedes incluir colaboradores que no están asignados a este proyecto en el reporte de novedades.
-          </p>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">Puedes incluir colaboradores que no están asignados a este proyecto en el reporte de novedades.</p>
           <div className="pt-4">
-            <button 
-              onClick={() => setShowOtherPresentInfo(false)}
-              className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold shadow-lg transition-all active:scale-95"
-            >
+            <button onClick={() => setShowOtherPresentInfo(false)} className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold shadow-lg transition-all active:scale-95">
               Entendido
             </button>
           </div>
