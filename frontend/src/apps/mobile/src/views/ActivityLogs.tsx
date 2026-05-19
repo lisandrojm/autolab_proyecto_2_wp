@@ -328,6 +328,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const [selectedReplacementRoleFilters, setSelectedReplacementRoleFilters] = useState<string[]>([]);
   const [isReplacementRoleFilterModalOpen, setIsReplacementRoleFilterModalOpen] = useState(false);
+  const [replacementStatusFilter, setReplacementStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [replacementFilterContractActive, setReplacementFilterContractActive] = useState(false);
 
   const [selectedAdditionalRoleFilters, setSelectedAdditionalRoleFilters] = useState<string[]>([]);
   const [isAdditionalRoleFilterModalOpen, setIsAdditionalRoleFilterModalOpen] = useState(false);
@@ -359,8 +361,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
       // 2. Fetch Employees
       try {
-        const usersResp = await usersAPI.list({ limit: 2000 });
-        const users = usersResp.users || [];
+        let users: any[] = [];
+        try {
+          const usersResp = await usersAPI.list({ limit: 2000 });
+          users = usersResp.users || [];
+        } catch (e) {
+          console.warn("usersAPI.list failed (likely non-admin 403), falling back to directory endpoint", e);
+          users = await usersAPI.getDirectory({ status: "all" });
+        }
         setEmployees(
           users.map((u) => ({
             id: u._id,
@@ -1003,6 +1011,18 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     });
     return Array.from(roles).sort();
   }, [nonProjectEmployees]);
+
+  const replacementAvailableRoles = useMemo(() => {
+    if (!selectedProjectId) return [];
+    const roles = new Set<string>();
+    employees
+      .filter((e) => e.projectIds?.includes(selectedProjectId))
+      .forEach((e) => {
+        const role = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+        if (role) roles.add(role.trim());
+      });
+    return Array.from(roles).sort();
+  }, [employees, selectedProjectId]);
 
   const addRecordInternal = (employee: EmployeeOption, type: RequestConfig, replacementId?: string, overtimeHours?: number, notes?: string) => {
     const replacement = employees.find((e) => e.id === replacementId);
@@ -3875,8 +3895,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           const filteredByProject = selectedProjectId
             ? employees.filter((e) => {
                 if (!e.projectIds?.includes(selectedProjectId)) return false;
-                const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
-                return projMeta ? projMeta.hasActiveContract : false;
+
+                // 1. Status Filter
+                let matchesStatus = true;
+                if (replacementStatusFilter === "active") {
+                  matchesStatus = e.isActive !== false;
+                } else if (replacementStatusFilter === "inactive") {
+                  matchesStatus = e.isActive === false;
+                }
+
+                // 2. Contract Active Filter
+                let matchesContract = true;
+                if (replacementFilterContractActive) {
+                  const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                  matchesContract = projMeta ? projMeta.hasActiveContract : false;
+                }
+
+                return matchesStatus && matchesContract;
               })
             : [];
           const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
@@ -3897,15 +3932,16 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           }
 
           return results.length;
-        })()})`}
+        })()})${selectedProject ? ` - ${selectedProject.name}` : ""}`}
         size="md"
       >
         <div className="flex flex-col h-[60vh]">
           {/* Search Input and Filter Button inside Modal */}
           <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 sticky top-0 z-10 flex flex-col gap-2">
             {/* Active Filter Badges */}
-            {selectedReplacementRoleFilters.length > 0 && (
+            {(selectedReplacementRoleFilters.length > 0 || replacementStatusFilter !== "active" || replacementFilterContractActive) && (
               <div className="flex flex-wrap gap-2 mb-1">
+                {/* Role Badges */}
                 {selectedReplacementRoleFilters.map((role) => (
                   <span key={role} className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold border border-blue-200 dark:border-blue-800">
                     {role}
@@ -3914,8 +3950,44 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     </button>
                   </span>
                 ))}
-                <button onClick={() => setSelectedReplacementRoleFilters([])} className="text-[10px] text-gray-500 hover:underline px-1">
-                  Limpiar
+
+                {/* Status Badges */}
+                {replacementStatusFilter === "inactive" && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 text-[10px] font-bold border border-red-200 dark:border-red-800">
+                    Solo Inactivos
+                    <button onClick={() => setReplacementStatusFilter("active")} className="hover:text-red-900 dark:hover:text-red-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+                {replacementStatusFilter === "all" && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-[10px] font-bold border border-gray-200 dark:border-gray-700">
+                    Todos los Usuarios
+                    <button onClick={() => setReplacementStatusFilter("active")} className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Contract Badge */}
+                {replacementFilterContractActive && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-bold border border-amber-200 dark:border-amber-800">
+                    Contrato Activo
+                    <button onClick={() => setReplacementFilterContractActive(false)} className="hover:text-amber-900 dark:hover:text-amber-100 transition-colors">
+                      <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                    </button>
+                  </span>
+                )}
+
+                <button
+                  onClick={() => {
+                    setSelectedReplacementRoleFilters([]);
+                    setReplacementStatusFilter("active");
+                    setReplacementFilterContractActive(false);
+                  }}
+                  className="text-[10px] text-gray-500 hover:underline px-1"
+                >
+                  Limpiar Todo
                 </button>
               </div>
             )}
@@ -3928,10 +4000,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               <button
                 onClick={() => setIsReplacementRoleFilterModalOpen(true)}
                 className={`px-3 border rounded transition-colors flex items-center gap-2 whitespace-nowrap text-sm font-medium
-                  ${selectedReplacementRoleFilters.length > 0 ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" : "bg-white border-gray-300 text-gray-700 dark:bg-slate-800 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"}`}
+                  ${selectedReplacementRoleFilters.length > 0 || replacementStatusFilter !== "active" || replacementFilterContractActive ? "bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" : "bg-white border-gray-300 text-gray-700 dark:bg-slate-800 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"}`}
               >
                 <FontAwesomeIcon icon={faFilter} />
-                Rol
+                Filtros
               </button>
             </div>
           </div>
@@ -3942,8 +4014,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               const filteredByProject = selectedProjectId
                 ? employees.filter((e) => {
                     if (!e.projectIds?.includes(selectedProjectId)) return false;
-                    const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
-                    return projMeta ? projMeta.hasActiveContract : false;
+
+                    // 1. Status Filter
+                    let matchesStatus = true;
+                    if (replacementStatusFilter === "active") {
+                      matchesStatus = e.isActive !== false;
+                    } else if (replacementStatusFilter === "inactive") {
+                      matchesStatus = e.isActive === false;
+                    }
+
+                    // 2. Contract Active Filter
+                    let matchesContract = true;
+                    if (replacementFilterContractActive) {
+                      const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                      matchesContract = projMeta ? projMeta.hasActiveContract : false;
+                    }
+
+                    return matchesStatus && matchesContract;
                   })
                 : [];
               const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
@@ -3982,6 +4069,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           setShowReplacementModal(false);
                           setReplacementSearchTerm("");
                           setSelectedReplacementRoleFilters([]);
+                          setReplacementStatusFilter("active");
+                          setReplacementFilterContractActive(false);
                           setReplacementTargetEmpId(null);
                         }}
                       >
@@ -3991,6 +4080,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                             const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
                             return roleFrame ? <span className="shrink-0 bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
                           })()}
+                          {emp.isActive === false ? (
+                            <span className="shrink-0 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase whitespace-nowrap">
+                              Inactivo
+                            </span>
+                          ) : (
+                            <span className="shrink-0 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase whitespace-nowrap">
+                              Activo
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -4003,71 +4101,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         </div>
       </Modal>
 
-      {/* Role Filter Modal for Replacement */}
-      <Modal isOpen={isReplacementRoleFilterModalOpen} onClose={() => setIsReplacementRoleFilterModalOpen(false)} title="Filtrar por Rol (Reemplazo)" size="md">
-        <div className="flex flex-col max-h-[70vh]">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Selecciona uno o más roles para filtrar la lista de reemplazos.</p>
-          </div>
-
-          <div className="overflow-y-auto flex-1 p-2">
-            {(() => {
-              if (!selectedProjectId) return null;
-
-              // Get all unique roles for this project
-              const projectRoles = employees
-                .filter((e) => e.projectIds?.includes(selectedProjectId))
-                .flatMap((e) => {
-                  const role = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
-                  return role ? [role] : [];
-                })
-                .filter((role, index, self) => self.indexOf(role) === index) // Unique
-                .sort();
-
-              if (projectRoles.length === 0) {
-                return <div className="p-8 text-center text-gray-500 italic">No hay roles definidos para este proyecto.</div>;
-              }
-
-              return (
-                <div className="space-y-1">
-                  {projectRoles.map((role) => {
-                    const isSelected = selectedReplacementRoleFilters.includes(role);
-                    return (
-                      <label key={role} className="flex items-center justify-between p-3 rounded hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
-                        <span className="text-sm font-medium text-slate-800 dark:text-gray-200">{role}</span>
-                        <div className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={isSelected}
-                            onChange={() => {
-                              if (isSelected) {
-                                setSelectedReplacementRoleFilters((prev) => prev.filter((r) => r !== role));
-                              } else {
-                                setSelectedReplacementRoleFilters((prev) => [...prev, role]);
-                              }
-                            }}
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-
-          <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 flex justify-between items-center">
-            <button onClick={() => setSelectedReplacementRoleFilters([])} className="text-sm text-red-500 hover:underline font-medium">
-              Limpiar Filtros
-            </button>
-            <button onClick={() => setIsReplacementRoleFilterModalOpen(false)} className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-sm shadow-sm hover:bg-blue-700 transition-colors">
-              Listo
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {/* Advanced Filter Modal for Replacement */}
+      <AdditionalStaffFiltersModal
+        isOpen={isReplacementRoleFilterModalOpen}
+        onClose={() => setIsReplacementRoleFilterModalOpen(false)}
+        onApply={(filters: AdditionalStaffFilterValues) => {
+          setSelectedReplacementRoleFilters(filters.roleFilters);
+          setReplacementStatusFilter(filters.statusFilter);
+          setReplacementFilterContractActive(filters.contractActive);
+          setIsReplacementRoleFilterModalOpen(false);
+        }}
+        availableRoles={replacementAvailableRoles}
+        currentFilters={{
+          roleFilters: selectedReplacementRoleFilters,
+          statusFilter: replacementStatusFilter,
+          contractActive: replacementFilterContractActive,
+        }}
+      />
 
       {/* Role Filter Modal for Additional Staff — self-contained component to prevent parent re-renders */}
       <AdditionalStaffFiltersModal
