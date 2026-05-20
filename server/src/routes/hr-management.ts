@@ -616,12 +616,40 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
 
       // 1. Try association
       if (pdfCategory.pdfId) {
-        template = await Pdf.findOne({ _id: pdfCategory.pdfId, tenantId: req.tenantObjectId });
+        template = await Pdf.findOne({ _id: pdfCategory.pdfId, tenantId: req.tenantObjectId, isActive: true });
         if (!template) console.warn("[PDF WARNING] pdfId referenced but Template not found in DB.");
         else console.log(`[PDF DEBUG] Found template via association: ${template.name}`);
       }
 
-      // 2. Fallback: Map by Name if missing
+      // 2. Fallback: Map by Category Properties
+      if (!template) {
+        let templateCode = "";
+        if (pdfCategory.categoryType === "fecha") {
+          templateCode = pdfCategory.dateMode === "range" ? "fechaRango" : "fechasMultiples";
+        } else if (pdfCategory.categoryType === "dinero") {
+          templateCode = "dinero";
+        } else if (pdfCategory.categoryType === "objeto") {
+          templateCode = "objeto";
+        } else {
+          templateCode = "otros";
+        }
+
+        template = await Pdf.findOne({
+          tenantId: req.tenantObjectId,
+          code: templateCode,
+          isActive: true,
+        });
+
+        if (!template && templateCode === "fechasMultiples") {
+          template = await Pdf.findOne({
+            tenantId: req.tenantObjectId,
+            code: "fechaUnica",
+            isActive: true,
+          });
+        }
+      }
+
+      // 3. Fallback: Map by Name if still missing
       if (!template) {
         console.log("[PDF DEBUG] Attempting Fallback Template Lookup by Category Name...");
         let templateCode = "";
@@ -635,7 +663,7 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
         else if (nameLower.includes("solicitud")) templateCode = "otros";
 
         if (templateCode) {
-          template = await Pdf.findOne({ tenantId: req.tenantObjectId, code: templateCode });
+          template = await Pdf.findOne({ tenantId: req.tenantObjectId, code: templateCode, isActive: true });
           if (template) console.log(`[PDF DEBUG] Found template via Fallback (${templateCode}): ${template.name}`);
         }
       }

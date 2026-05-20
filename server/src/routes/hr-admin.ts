@@ -629,14 +629,44 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
     await order.save();
 
     if (order.categoryId) {
-      const category = await OrderConfig.findById(order.categoryId);
-      if (category && category.pdfId) {
-        try {
-          const template = await Pdf.findOne({
-            _id: category.pdfId,
-            tenantId: req.tenantObjectId,
-            isActive: true,
-          });
+      try {
+        const category = await OrderConfig.findById(order.categoryId);
+        if (category) {
+          let template = null;
+          if (category.pdfId) {
+            template = await Pdf.findOne({
+              _id: category.pdfId,
+              tenantId: req.tenantObjectId,
+              isActive: true,
+            });
+          }
+
+          if (!template) {
+            let templateCode = "";
+            if (category.categoryType === "fecha") {
+              templateCode = category.dateMode === "range" ? "fechaRango" : "fechasMultiples";
+            } else if (category.categoryType === "dinero") {
+              templateCode = "dinero";
+            } else if (category.categoryType === "objeto") {
+              templateCode = "objeto";
+            } else {
+              templateCode = "otros";
+            }
+
+            template = await Pdf.findOne({
+              tenantId: req.tenantObjectId,
+              code: templateCode,
+              isActive: true,
+            });
+
+            if (!template && templateCode === "fechasMultiples") {
+              template = await Pdf.findOne({
+                tenantId: req.tenantObjectId,
+                code: "fechaUnica",
+                isActive: true,
+              });
+            }
+          }
 
           if (template) {
             const user = order.userId as any;
@@ -651,10 +681,12 @@ router.put("/orders/:id/pre-approve", async (req: AuthenticatedRequest & TenantR
             } else {
               console.error("PDF generation failed:", pdfResult.error);
             }
+          } else {
+            console.warn("[PDF WARNING] No active PDF template found matching category or fallback.");
           }
-        } catch (pdfError) {
-          console.error("Error in PDF generation process:", pdfError);
         }
+      } catch (pdfError) {
+        console.error("Error in PDF generation process:", pdfError);
       }
     }
 
@@ -790,19 +822,46 @@ router.post("/orders/:id/regenerate-pdf", async (req: AuthenticatedRequest & Ten
 
     const category = order.categoryId as any;
 
-    if (!category || !category.pdfId) {
-      res.status(400).json({ error: "Este tipo de pedido no tiene plantilla PDF asignada" });
-      return;
+    let template = null;
+    if (category) {
+      if (category.pdfId) {
+        template = await Pdf.findOne({
+          _id: category.pdfId,
+          tenantId: req.tenantObjectId,
+          isActive: true,
+        });
+      }
+
+      if (!template) {
+        let templateCode = "";
+        if (category.categoryType === "fecha") {
+          templateCode = category.dateMode === "range" ? "fechaRango" : "fechasMultiples";
+        } else if (category.categoryType === "dinero") {
+          templateCode = "dinero";
+        } else if (category.categoryType === "objeto") {
+          templateCode = "objeto";
+        } else {
+          templateCode = "otros";
+        }
+
+        template = await Pdf.findOne({
+          tenantId: req.tenantObjectId,
+          code: templateCode,
+          isActive: true,
+        });
+
+        if (!template && templateCode === "fechasMultiples") {
+          template = await Pdf.findOne({
+            tenantId: req.tenantObjectId,
+            code: "fechaUnica",
+            isActive: true,
+          });
+        }
+      }
     }
 
-    const template = await Pdf.findOne({
-      _id: category.pdfId,
-      tenantId: req.tenantObjectId,
-      isActive: true,
-    });
-
     if (!template) {
-      res.status(404).json({ error: "Plantilla PDF no encontrada o inactiva" });
+      res.status(404).json({ error: "Plantilla PDF no encontrada o inactiva para este tipo de pedido" });
       return;
     }
 
