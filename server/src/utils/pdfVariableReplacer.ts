@@ -81,6 +81,41 @@ function formatDateOnly(date: Date | string | undefined): string {
   }
 }
 
+function getDatesInRange(startDateStr: string | Date, endDateStr: string | Date): string {
+  try {
+    const start = typeof startDateStr === "string" ? new Date(startDateStr) : startDateStr;
+    const end = typeof endDateStr === "string" ? new Date(endDateStr) : endDateStr;
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return "-";
+
+    const s = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    const e = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+
+    const dates: string[] = [];
+    let current = new Date(s);
+    let safetyCounter = 0;
+    while (current <= e && safetyCounter < 100) {
+      const day = current.getUTCDate().toString().padStart(2, "0");
+      const month = (current.getUTCMonth() + 1).toString().padStart(2, "0");
+      const year = current.getUTCFullYear();
+      dates.push(`${day}/${month}/${year}`);
+
+      current.setUTCDate(current.getUTCDate() + 1);
+      safetyCounter++;
+    }
+
+    return dates.join(", ");
+  } catch {
+    return "-";
+  }
+}
+
+function formatSingleOrMultipleDates(value: any): string {
+  if (Array.isArray(value)) {
+    return value.map(d => formatDate(d)).filter(d => d !== "-").join(", ");
+  }
+  return formatDate(value);
+}
+
 function formatCurrency(amount: number | undefined): string {
   if (amount === undefined || amount === null) return "-";
 
@@ -137,7 +172,14 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
 
   const dynamicVars: Record<string, string> = {};
 
-  if (order.dynamicValue && typeof order.dynamicValue === "object") {
+  if (order.dynamicValue && Array.isArray(order.dynamicValue)) {
+    fechaUnica = formatSingleOrMultipleDates(order.dynamicValue);
+    dynamicVars["fecha"] = fechaUnica;
+    dynamicVars["fechaUnica"] = fechaUnica;
+    dynamicVars["fechas"] = fechaUnica;
+    dynamicVars["fechasMultiples"] = fechaUnica;
+    dynamicVars["value"] = fechaUnica;
+  } else if (order.dynamicValue && typeof order.dynamicValue === "object") {
     const normalize = (str: string) =>
       str
         .toLowerCase()
@@ -162,6 +204,8 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
         } else {
           dynamicVars[key] = sanitizeHtml(value);
         }
+      } else if (Array.isArray(value)) {
+        dynamicVars[key] = formatSingleOrMultipleDates(value);
       } else if (typeof value === "number") {
         dynamicVars[key] = value.toString();
       } else if (typeof value === "boolean") {
@@ -171,7 +215,7 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
 
     const fechaUnicaKey = findKey(["fechaunica", "fecha", "date", "unique_date", "fechasolicitada", "fechaparaelpedido"]);
     if (fechaUnicaKey && order.dynamicValue[fechaUnicaKey]) {
-      fechaUnica = formatDate(order.dynamicValue[fechaUnicaKey]);
+      fechaUnica = formatSingleOrMultipleDates(order.dynamicValue[fechaUnicaKey]);
     }
 
     const fechaDesdeKey = findKey(["fechadesde", "startdate", "start", "desde", "fechainicio"]);
@@ -184,23 +228,39 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
       fechaHasta = formatDate(order.dynamicValue[fechaHastaKey]);
     }
 
+    const valDesde = fechaDesdeKey ? order.dynamicValue[fechaDesdeKey] : null;
+    const valHasta = fechaHastaKey ? order.dynamicValue[fechaHastaKey] : null;
+
+    if (fechaUnica === "-") {
+      if (valDesde && valHasta) {
+        fechaUnica = getDatesInRange(valDesde, valHasta);
+      } else if (valDesde) {
+        fechaUnica = formatDate(valDesde);
+      }
+    }
+
+    dynamicVars["fechaUnica"] = fechaUnica;
+    dynamicVars["fechas"] = fechaUnica;
+    dynamicVars["fechasMultiples"] = fechaUnica;
+    dynamicVars["fecha"] = fechaUnica;
+
     const diasKey = findKey(["dias", "days", "cantidad_dias", "cantidaddias"]);
     if (diasKey && order.dynamicValue[diasKey]) {
       dias = order.dynamicValue[diasKey].toString();
     }
 
-    if (dias === "-" && fechaDesde !== "-" && fechaHasta !== "-") {
-      const valDesde = fechaDesdeKey ? order.dynamicValue[fechaDesdeKey] : null;
-      const valHasta = fechaHastaKey ? order.dynamicValue[fechaHastaKey] : null;
+    if (dias === "-") {
       if (valDesde && valHasta) {
         dias = calculateDays(valDesde, valHasta);
       }
     }
   } else if (order.dynamicValue && typeof order.dynamicValue === "string") {
     if (category.categoryType === "fecha" && category.dateMode === "single") {
-      fechaUnica = formatDate(order.dynamicValue);
+      fechaUnica = formatSingleOrMultipleDates(order.dynamicValue);
       dynamicVars["fecha"] = fechaUnica;
       dynamicVars["fechaUnica"] = fechaUnica;
+      dynamicVars["fechas"] = fechaUnica;
+      dynamicVars["fechasMultiples"] = fechaUnica;
       dynamicVars["value"] = fechaUnica;
     } else if (category.categoryType === "objeto") {
       dynamicVars["objeto"] = sanitizeHtml(order.dynamicValue);
@@ -223,6 +283,8 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
     fechaDesde,
     fechaHasta,
     fechaUnica,
+    fechas: fechaUnica,
+    fechasMultiples: fechaUnica,
     dias,
     nombreCompleto: sanitizeHtml(nombreCompleto),
     nombreUsuario: sanitizeHtml(nombreCompleto),
@@ -327,6 +389,9 @@ export function getDummyVariables(code: string): Record<string, string> {
     nombreCompleto: "Juan Pérez",
     numeroOrden: "ORD-12345",
     tenantName: "Empresa Demo",
+    fechaUnica: "10/03/2024, 11/03/2024",
+    fechas: "10/03/2024, 11/03/2024",
+    fechasMultiples: "10/03/2024, 11/03/2024",
   };
 
   const normalizedCode = code.toLowerCase();
@@ -348,6 +413,9 @@ export function getDummyVariables(code: string): Record<string, string> {
         subcategoria: "Estudio",
         fechaDesde: "01/03/2024",
         fechaHasta: "05/03/2024",
+        fechaUnica: "01/03/2024, 02/03/2024, 03/03/2024, 04/03/2024, 05/03/2024",
+        fechas: "01/03/2024, 02/03/2024, 03/03/2024, 04/03/2024, 05/03/2024",
+        fechasMultiples: "01/03/2024, 02/03/2024, 03/03/2024, 04/03/2024, 05/03/2024",
         dias: "5",
         descripcion: "Licencia por examen universitario",
       };
@@ -356,8 +424,8 @@ export function getDummyVariables(code: string): Record<string, string> {
         ...defaults,
         categoria: "Compensatorio",
         subcategoria: "",
-        fechaUnica: "10/03/2024",
-        descripcion: "Día compensatorio por guardia fin de semana",
+        fechaUnica: "10/03/2024, 11/03/2024",
+        descripcion: "Días compensatorios por guardia fin de semana",
       };
     case "vacaciones":
       return {

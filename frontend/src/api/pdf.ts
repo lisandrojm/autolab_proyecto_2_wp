@@ -51,7 +51,7 @@ export const pdfsAPI = {
 export const codeOptions = [
   { value: "dinero", label: "Pedidos | Dinero" },
   { value: "fechaRango", label: "Pedidos | Fecha - Rango" },
-  { value: "fechaUnica", label: "Pedidos | Fecha - Única" },
+  { value: "fechaUnica", label: "Pedidos | Fecha - Múltiples" },
   { value: "objeto", label: "Pedidos | Objeto" },
   { value: "otros", label: "Pedidos | Otros" },
   { value: "vacaciones", label: "Vacaciones" },
@@ -59,8 +59,8 @@ export const codeOptions = [
 
 export const variablesByCode: Record<string, string[]> = {
   dinero: ["{{categoria}}", "{{subcategoria}}", "{{monto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
-  fechaRango: ["{{categoria}}", "{{subcategoria}}", "{{dias}}", "{{fechaDesde}}", "{{fechaHasta}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
-  fechaUnica: ["{{categoria}}", "{{subcategoria}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
+  fechaRango: ["{{categoria}}", "{{subcategoria}}", "{{dias}}", "{{fechaDesde}}", "{{fechaHasta}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
+  fechaUnica: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   objeto: ["{{categoria}}", "{{subcategoria}}", "{{objeto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   otros: ["{{categoria}}", "{{subcategoria}}", "{{detalle}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   vacaciones: ["{{dias}}", "{{anio}}", "{{fechaInicio}}", "{{fechaFin}}", "{{fechaReintegro}}", "{{nombreUsuario}}"],
