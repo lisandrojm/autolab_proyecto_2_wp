@@ -35,7 +35,7 @@ Esta autorización se encuentra sujeta a las políticas internas de la empresa y
         isActive: true,
     },
     {
-        code: "fechaUnica",
+        code: "fechasMultiples",
         name: "Solicitud con Fechas Múltiples",
         content: `Por la presente notifico que hemos aprobado su solicitud de {{categoria}}{{subcategoria}} para el/los día/s {{fechas}}.
 
@@ -53,7 +53,7 @@ Esta autorización se encuentra sujeta a las políticas internas de la empresa y
         isActive: true,
     },
     {
-        code: "fechaUnica",
+        code: "fechasMultiples",
         name: "Solicitud de Fechas Múltiples",
         content: "Por la presente solicito el/los día/s {{fechas}} por motivos personales.",
         variablesHint: "Variables: categoria, subcategoria, fechas, fechaUnica, nombreCompleto, numeroPedido",

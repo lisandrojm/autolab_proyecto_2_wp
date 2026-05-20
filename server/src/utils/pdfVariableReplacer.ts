@@ -419,6 +419,7 @@ export function getDummyVariables(code: string): Record<string, string> {
         dias: "5",
         descripcion: "Licencia por examen universitario",
       };
+    case "fechasmultiples":
     case "fechaunica":
       return {
         ...defaults,

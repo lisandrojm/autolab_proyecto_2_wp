@@ -3,7 +3,7 @@ import axios from "./axiosConfig";
 export interface Pdf {
   _id: string;
   tenantId: string;
-  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros";
   name: string;
   title?: string;
   content: string;
@@ -14,7 +14,7 @@ export interface Pdf {
 }
 
 export interface PdfInput {
-  code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
+  code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros";
   name: string;
   title?: string;
   content: string;
@@ -51,6 +51,7 @@ export const pdfsAPI = {
 export const codeOptions = [
   { value: "dinero", label: "Pedidos | Dinero" },
   { value: "fechaRango", label: "Pedidos | Fecha - Rango" },
+  { value: "fechasMultiples", label: "Pedidos | Fecha - Múltiples" },
   { value: "fechaUnica", label: "Pedidos | Fecha - Múltiples" },
   { value: "objeto", label: "Pedidos | Objeto" },
   { value: "otros", label: "Pedidos | Otros" },
@@ -61,6 +62,7 @@ export const variablesByCode: Record<string, string[]> = {
   dinero: ["{{categoria}}", "{{subcategoria}}", "{{monto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   fechaRango: ["{{categoria}}", "{{subcategoria}}", "{{dias}}", "{{fechaDesde}}", "{{fechaHasta}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   fechaUnica: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
+  fechasMultiples: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechasMultiples}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   objeto: ["{{categoria}}", "{{subcategoria}}", "{{objeto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   otros: ["{{categoria}}", "{{subcategoria}}", "{{detalle}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
   vacaciones: ["{{dias}}", "{{anio}}", "{{fechaInicio}}", "{{fechaFin}}", "{{fechaReintegro}}", "{{nombreUsuario}}"],

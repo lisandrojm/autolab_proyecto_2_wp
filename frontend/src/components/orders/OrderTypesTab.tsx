@@ -44,7 +44,7 @@ const SortableRow: React.FC<SortableRowProps> = ({ orderConfig, index, isReorder
   const getExpectedTemplateCode = (): string | null => {
     const { categoryType, dateMode } = orderConfig;
     if (categoryType === "fecha") {
-      return dateMode === "range" ? "fechaRango" : "fechaUnica";
+      return dateMode === "range" ? "fechaRango" : "fechasMultiples";
     }
     if (categoryType === "dinero") return "dinero";
     if (categoryType === "objeto") return "objeto";

@@ -52,7 +52,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
   const getExpectedTemplateCode = (): string | null => {
     const { categoryType, dateMode } = formData;
     if (categoryType === "fecha") {
-      return dateMode === "range" ? "fechaRango" : "fechaUnica";
+      return dateMode === "range" ? "fechaRango" : "fechasMultiples";
     }
     if (categoryType === "dinero") return "dinero";
     if (categoryType === "objeto") return "objeto";

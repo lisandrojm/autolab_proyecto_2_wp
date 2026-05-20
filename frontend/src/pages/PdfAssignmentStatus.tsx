@@ -10,7 +10,7 @@ export function PdfAssignmentStatus({ templates }: PdfAssignmentStatusProps) {
   const codesToCheck = [
     { section: "Pedidos", code: "dinero", label: "Dinero", description: "Para pedidos monetarios (viáticos, reembolsos)" },
     { section: "Pedidos", code: "fechaRango", label: "Fecha - Rango", description: "Para licencias, permisos (días múltiples)" },
-    { section: "Pedidos", code: "fechaUnica", label: "Fecha - Múltiples", description: "Para una o más fechas puntuales" },
+    { section: "Pedidos", code: "fechasMultiples", label: "Fecha - Múltiples", description: "Para una o más fechas puntuales" },
     { section: "Pedidos", code: "objeto", label: "Objeto", description: "Para solicitudes de equipamiento y materiales" },
     { section: "Pedidos", code: "otros", label: "Otros", description: "Para solicitudes genéricas y otros tipos" },
     { section: "Vacaciones", code: "vacaciones", label: "Vacaciones", description: "Para solicitudes de vacaciones" },

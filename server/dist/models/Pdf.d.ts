@@ -1,7 +1,7 @@
 import mongoose, { Document, Types } from "mongoose";
 export interface IPdf extends Document {
     tenantId: Types.ObjectId;
-    code: "dinero" | "fechaRango" | "fechaUnica" | "vacaciones" | "objeto" | "otros";
+    code: "dinero" | "fechaRango" | "fechaUnica" | "fechasMultiples" | "vacaciones" | "objeto" | "otros";
     name: string;
     title?: string;
     content: string;
