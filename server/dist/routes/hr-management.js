@@ -1,0 +1,1040 @@
+import { Router } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import { z } from "zod";
+import { Calendar } from "../models/Calendar.js";
+import { UserProfile } from "../models/UserProfile.js";
+import { Order } from "../models/Order.js";
+import { OrderConfig } from "../models/OrderConfig.js";
+import { Vacation } from "../models/Vacation.js";
+import { Notification } from "../models/Notification.js";
+import { Tenant } from "../models/Tenant.js";
+import { Pdf } from "../models/Pdf.js";
+import { authenticateToken } from "../middleware/auth.js";
+import { requireTenant } from "../middleware/tenant.js";
+import { Types } from "mongoose";
+import { getPlainOrderNumber } from "../utils/orderHelpers.js";
+import { generateOrderPDF } from "../utils/pdfGenerator.js";
+const router = Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+router.use(requireTenant, authenticateToken);
+async function ensureDir(dir) {
+    try {
+        await fs.promises.mkdir(dir, { recursive: true });
+    }
+    catch (err) {
+        console.error("Error creating directory:", dir, err);
+        throw err;
+    }
+}
+const orderStorage = multer.diskStorage({
+    destination: async (req, _file, cb) => {
+        try {
+            const tenantId = req.tenantId || "unknown_tenant";
+            const userId = req.user?.userId || "admin";
+            const dir = path.join(__dirname, "../../storage", tenantId, userId, "orders");
+            await ensureDir(dir);
+            cb(null, dir);
+        }
+        catch (err) {
+            console.error("Error in multer destination:", err);
+            cb(err, "");
+        }
+    },
+    filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const orderId = new mongoose.Types.ObjectId();
+        const filename = `order_${orderId}${ext}`;
+        cb(null, filename);
+    },
+});
+const uploadOrderImage = multer({
+    storage: orderStorage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error("Solo se permiten imágenes (jpeg, jpg, png, gif, webp)"));
+    },
+}).single("photo");
+const createOrderSchema = z.object({
+    title: z.string().min(1),
+    description: z.string().min(1),
+    category: z.string().default("other"),
+    categoryId: z.string().optional(),
+    subcategories: z.array(z.string()).default([]),
+    amount: z.number().min(0).optional(),
+    photoUrl: z.string().optional(),
+});
+const updateOrderSchema = z.object({
+    title: z.string().min(1).optional(),
+    description: z.string().min(1).optional(),
+    category: z.string().optional(),
+    amount: z.number().min(0).optional(),
+    status: z.enum(["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"]).optional(),
+    photoUrl: z.string().optional(),
+    customTextBlock: z.string().optional(),
+});
+router.get("/calendarevents", async (req, res) => {
+    try {
+        const { page = 1, limit = 50, year, month, userId } = req.query;
+        const filter = { tenantId: req.tenantObjectId };
+        if (userId)
+            filter.userId = userId;
+        if (year && month) {
+            const startDate = new Date(Number(year), Number(month) - 1, 1);
+            const endDate = new Date(Number(year), Number(month), 0, 23, 59, 59);
+            filter.start = { $gte: startDate, $lte: endDate };
+        }
+        const skip = (Number(page) - 1) * Number(limit);
+        const [events, total] = await Promise.all([Calendar.find(filter).sort({ start: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("createdBy", "firstName lastName email"), Calendar.countDocuments(filter)]);
+        res.json({
+            events,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit)),
+            },
+        });
+    }
+    catch (error) {
+        console.error("Get calendar events error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/calendarevents/count", async (req, res) => {
+    try {
+        const count = await Calendar.countDocuments({ tenantId: req.tenantObjectId });
+        res.json({ count });
+    }
+    catch (error) {
+        console.error("Count calendar events error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/UserProfiles", async (req, res) => {
+    try {
+        const { page = 1, limit = 50, department, isActive, search } = req.query;
+        const filter = { tenantId: req.tenantObjectId };
+        if (department)
+            filter.department = department;
+        if (isActive !== undefined)
+            filter.isActive = isActive === "true";
+        if (search) {
+            filter.$or = [{ firstName: { $regex: search, $options: "i" } }, { lastName: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }];
+        }
+        const skip = (Number(page) - 1) * Number(limit);
+        const [profiles, total] = await Promise.all([UserProfile.find(filter).sort({ lastName: 1, firstName: 1 }).skip(skip).limit(Number(limit)).populate("userId", "email roles"), UserProfile.countDocuments(filter)]);
+        res.json({
+            profiles,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit)),
+            },
+        });
+    }
+    catch (error) {
+        console.error("Get employee profiles error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/UserProfiles/count", async (req, res) => {
+    try {
+        const count = await UserProfile.countDocuments({ tenantId: req.tenantObjectId });
+        res.json({ count });
+    }
+    catch (error) {
+        console.error("Count employee profiles error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/hrdocuments", async (req, res) => {
+    try {
+        const { page = 1, limit = 50, type, userId } = req.query;
+        const filter = { tenantId: req.tenantObjectId };
+        if (type)
+            filter.type = type;
+        if (userId)
+            filter.userId = userId;
+        const skip = (Number(page) - 1) * Number(limit);
+        const [orders, total] = await Promise.all([
+            Order.find({ tenantId: req.tenantObjectId, "documents.0": { $exists: true } })
+                .sort({ "documents.uploadedAt": -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .populate("userId", "firstName lastName email"),
+            Order.countDocuments({ tenantId: req.tenantObjectId, "documents.0": { $exists: true } }),
+        ]);
+        const documents = orders.flatMap((o) => o.documents.map((d) => ({ ...d.toObject(), userId: o.userId })));
+        res.json({
+            documents,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit)),
+            },
+        });
+    }
+    catch (error) {
+        console.error("Get HR documents error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/hrdocuments/count", async (req, res) => {
+    try {
+        const count = await Order.countDocuments({ tenantId: req.tenantObjectId, "documents.0": { $exists: true } });
+        res.json({ count });
+    }
+    catch (error) {
+        console.error("Count HR documents error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/orders", async (req, res) => {
+    try {
+        const { page = 1, limit = 50, status, category, userId, search } = req.query;
+        const filter = { tenantId: req.tenantObjectId };
+        if (status)
+            filter.status = status;
+        if (category)
+            filter.category = category;
+        if (userId)
+            filter.userId = userId;
+        if (search && typeof search === "string" && search.trim() !== "") {
+            filter.$or = [{ title: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }, { orderNumber: { $regex: search, $options: "i" } }];
+        }
+        const skip = (Number(page) - 1) * Number(limit);
+        const [orders, total] = await Promise.all([
+            Order.find(filter)
+                .sort({ requestedAt: -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .populate({
+                path: "userId",
+                select: "firstName lastName email metadata clientIds projectIds",
+                populate: [
+                    { path: "clientIds", select: "name", model: "Client" },
+                    {
+                        path: "projectIds",
+                        model: "Project",
+                        select: "clientId name",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                    {
+                        path: "metadata.projects",
+                        model: "UserProject",
+                        select: "nombre_rol_frame nombre_proyecto projectId",
+                        populate: {
+                            path: "projectId",
+                            model: "Project",
+                            select: "clientId",
+                            populate: { path: "clientId", select: "name", model: "Client" },
+                        },
+                    },
+                ],
+            })
+                .populate("approvedBy", "firstName lastName email")
+                .populate("categoryId"),
+            Order.countDocuments(filter),
+        ]);
+        res.json({
+            orders,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit)),
+            },
+        });
+    }
+    catch (error) {
+        console.error("Get orders error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/orders/count", async (req, res) => {
+    try {
+        const count = await Order.countDocuments({ tenantId: req.tenantObjectId });
+        res.json({ count });
+    }
+    catch (error) {
+        console.error("Count orders error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.post("/orders", uploadOrderImage, async (req, res) => {
+    const MAX_RETRIES = 5;
+    let attempt = 0;
+    try {
+        const userId = req.user.userId;
+        let photoUrl;
+        if (req.file) {
+            const tenantId = req.tenantId || "unknown_tenant";
+            photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+        }
+        const data = createOrderSchema.parse({
+            ...req.body,
+            amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+            photoUrl,
+        });
+        while (attempt < MAX_RETRIES) {
+            try {
+                attempt++;
+                const order = new Order({
+                    tenantId: req.tenantObjectId,
+                    userId,
+                    ...data,
+                    status: "pending",
+                    requestedAt: new Date(),
+                });
+                await order.save();
+                const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
+                const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+                const orderDisplayName = `${categoryName}${subcategoryText}`;
+                const populatedOrder = await Order.findById(order._id)
+                    .populate({
+                    path: "userId",
+                    select: "firstName lastName email metadata clientIds",
+                    populate: [
+                        { path: "clientIds", select: "name" },
+                        {
+                            path: "metadata.projects",
+                            select: "nombre_rol_frame nombre_proyecto projectId",
+                            populate: {
+                                path: "projectId",
+                                select: "clientId",
+                                populate: { path: "clientId", select: "name" },
+                            },
+                        },
+                    ],
+                })
+                    .populate("approvedBy", "firstName lastName email")
+                    .populate("categoryId");
+                res.status(201).json(populatedOrder);
+                return;
+            }
+            catch (saveError) {
+                if (saveError.code === 11000 && attempt < MAX_RETRIES) {
+                    console.warn(`⚠️  Número de pedido duplicado (intento ${attempt}/${MAX_RETRIES}), reintentando...`);
+                    await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+                    continue;
+                }
+                throw saveError;
+            }
+        }
+        console.error(`❌ Falló después de ${MAX_RETRIES} intentos - número duplicado persistente`);
+        res.status(500).json({ error: "No se pudo generar un número de pedido único. Por favor, intenta nuevamente." });
+    }
+    catch (error) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Invalid data", details: error.errors });
+            return;
+        }
+        console.error("Create order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.put("/orders/:id", uploadOrderImage, async (req, res) => {
+    try {
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        });
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        const userId = req.user.userId;
+        const userRole = req.user.role;
+        const isOwner = order.userId.toString() === userId;
+        const isAdmin = userRole === "admin" || userRole === "superadmin";
+        if (req.body.status && !isOwner && !isAdmin) {
+            res.status(403).json({ error: "No tienes permisos para modificar este pedido" });
+            return;
+        }
+        if (req.body.status === "cancelled" && order.status !== "pending" && !isAdmin) {
+            res.status(400).json({ error: "Solo puedes cancelar pedidos en estado pendiente" });
+            return;
+        }
+        if (req.body.status && req.body.status !== "cancelled" && isOwner && !isAdmin) {
+            res.status(403).json({ error: "Solo puedes cancelar tus propios pedidos. Otros cambios de estado están restringidos" });
+            return;
+        }
+        let photoUrl = order.photoUrl;
+        if (req.file) {
+            if (order.photoUrl) {
+                const oldPath = path.join(__dirname, "../../", order.photoUrl);
+                try {
+                    await fs.promises.unlink(oldPath);
+                }
+                catch (err) {
+                    console.error("Error deleting old photo:", err);
+                }
+            }
+            const tenantId = req.tenantId || "unknown_tenant";
+            photoUrl = `/storage/${tenantId}/${userId}/orders/${req.file.filename}`;
+        }
+        const data = updateOrderSchema.parse({
+            ...req.body,
+            amount: req.body.amount ? parseFloat(req.body.amount) : undefined,
+            photoUrl,
+        });
+        Object.assign(order, data);
+        await order.save();
+        if (req.body.customTextBlock !== undefined && order.pdfPreAprobacionUrl) {
+            // Regenerate the PDF automatically!
+            try {
+                console.log("[PDF REGENERATION] Automatically regenerating PDF due to customTextBlock update...");
+                const category = order.categoryId ? await OrderConfig.findById(order.categoryId) : null;
+                let template = null;
+                if (category) {
+                    if (category.pdfId) {
+                        template = await Pdf.findOne({ _id: category.pdfId, tenantId: req.tenantObjectId, isActive: true });
+                    }
+                    if (!template) {
+                        let templateCode = "";
+                        if (category.categoryType === "fecha") {
+                            templateCode = category.dateMode === "range" ? "fechaRango" : "fechasMultiples";
+                        }
+                        else if (category.categoryType === "dinero") {
+                            templateCode = "dinero";
+                        }
+                        else if (category.categoryType === "objeto") {
+                            templateCode = "objeto";
+                        }
+                        else {
+                            templateCode = "otros";
+                        }
+                        template = await Pdf.findOne({ tenantId: req.tenantObjectId, code: templateCode, isActive: true });
+                        if (!template && templateCode === "fechasMultiples") {
+                            template = await Pdf.findOne({ tenantId: req.tenantObjectId, code: "fechaUnica", isActive: true });
+                        }
+                    }
+                }
+                if (template) {
+                    const user = order.userId;
+                    const tenant = await Tenant.findById(req.tenantObjectId);
+                    const tenantName = tenant?.name || tenant?.slug || "Organización";
+                    const pdfResult = await generateOrderPDF(order, category, template, user, req.tenantObjectId.toString(), tenantName);
+                    if (pdfResult.success) {
+                        order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+                        await order.save();
+                        console.log("[PDF REGENERATION] PDF automatically regenerated successfully:", pdfResult.pdfUrl);
+                    }
+                    else {
+                        console.error("[PDF REGENERATION ERROR] Failed to regenerate PDF:", pdfResult.error);
+                    }
+                }
+            }
+            catch (pdfError) {
+                console.error("[PDF REGENERATION ERROR] Error in automatic regeneration:", pdfError);
+            }
+        }
+        if (req.body.status === "cancelled") {
+            const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
+            const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+            const orderDisplayName = `${categoryName}${subcategoryText}`;
+        }
+        const populatedOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("approvedBy", "firstName lastName email")
+            .populate("categoryId");
+        res.json(populatedOrder);
+    }
+    catch (error) {
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ error: "Invalid data", details: error.errors });
+            return;
+        }
+        console.error("Update order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.delete("/orders/:id", async (req, res) => {
+    try {
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        });
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        if (order.photoUrl) {
+            const photoPath = path.join(__dirname, "../../", order.photoUrl);
+            try {
+                await fs.promises.unlink(photoPath);
+            }
+            catch (err) {
+                console.error("Error deleting photo:", err);
+            }
+        }
+        await Order.findByIdAndDelete(order._id);
+        res.json({ message: "Order deleted successfully" });
+    }
+    catch (error) {
+        console.error("Delete order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/Vacations", async (req, res) => {
+    try {
+        const { page = 1, limit = 50, status, userId, year } = req.query;
+        const filter = { tenantId: req.tenantObjectId };
+        if (status)
+            filter.status = status;
+        if (userId)
+            filter.userId = userId;
+        if (year) {
+            const startDate = new Date(Number(year), 0, 1);
+            const endDate = new Date(Number(year), 11, 31, 23, 59, 59);
+            filter.startDate = { $gte: startDate, $lte: endDate };
+        }
+        const skip = (Number(page) - 1) * Number(limit);
+        const [vacations, total] = await Promise.all([Vacation.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).populate("userId", "firstName lastName email").populate("approvedBy", "firstName lastName email"), Vacation.countDocuments(filter)]);
+        res.json({
+            vacations,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit)),
+            },
+        });
+    }
+    catch (error) {
+        console.error("Get vacation requests error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.get("/Vacations/count", async (req, res) => {
+    try {
+        const count = await Vacation.countDocuments({ tenantId: req.tenantObjectId });
+        res.json({ count });
+    }
+    catch (error) {
+        console.error("Count vacation requests error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.put("/orders/:id/pre-approve", async (req, res) => {
+    try {
+        const preApproverId = req.user.userId;
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        })
+            .populate("userId")
+            .populate("categoryId");
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        if (order.status !== "pending") {
+            res.status(400).json({ error: "Only pending orders can be pre-approved" });
+            return;
+        }
+        order.status = "pre_approved";
+        order.preApprovedBy = new Types.ObjectId(preApproverId);
+        order.preApprovedAt = new Date();
+        await order.save();
+        const category = order.categoryId;
+        const categoryName = category?.name || order.category;
+        let subcategoryText = "";
+        if (order.subcategories && order.subcategories.length > 0) {
+            if (category?.config?.subtipos) {
+                const labels = order.subcategories.map((subId) => {
+                    const found = category.config.subtipos.find((st) => st.id === subId);
+                    return found ? found.label : subId;
+                });
+                subcategoryText = ` - ${labels.join(", ")}`;
+            }
+            else {
+                subcategoryText = ` - ${order.subcategories.join(", ")}`;
+            }
+        }
+        const orderDisplayName = `${categoryName}${subcategoryText}`;
+        console.log("[PDF DEBUG] Starting PDF generation check...");
+        console.log(`[PDF DEBUG] Order ID: ${order._id}, Status: ${order.status}`);
+        // Ensure category is available
+        let pdfCategory = category;
+        if (!pdfCategory) {
+            console.warn("[PDF WARNING] Order has no populated value for 'categoryId'. Trying to fetch manual.");
+            if (order.categoryId) {
+                pdfCategory = await OrderConfig.findById(order.categoryId);
+            }
+        }
+        if (!pdfCategory) {
+            console.error("[PDF ERROR] Category could not be resolved. Skipping PDF.");
+        }
+        else {
+            console.log(`[PDF DEBUG] Category resolved: Name="${pdfCategory.name}", ID=${pdfCategory._id}, pdfId=${pdfCategory.pdfId}`);
+            // Resolve Template
+            let template = null;
+            // 1. Try association
+            if (pdfCategory.pdfId) {
+                template = await Pdf.findOne({ _id: pdfCategory.pdfId, tenantId: req.tenantObjectId, isActive: true });
+                if (!template)
+                    console.warn("[PDF WARNING] pdfId referenced but Template not found in DB.");
+                else
+                    console.log(`[PDF DEBUG] Found template via association: ${template.name}`);
+            }
+            // 2. Fallback: Map by Category Properties
+            if (!template) {
+                let templateCode = "";
+                if (pdfCategory.categoryType === "fecha") {
+                    templateCode = pdfCategory.dateMode === "range" ? "fechaRango" : "fechasMultiples";
+                }
+                else if (pdfCategory.categoryType === "dinero") {
+                    templateCode = "dinero";
+                }
+                else if (pdfCategory.categoryType === "objeto") {
+                    templateCode = "objeto";
+                }
+                else {
+                    templateCode = "otros";
+                }
+                template = await Pdf.findOne({
+                    tenantId: req.tenantObjectId,
+                    code: templateCode,
+                    isActive: true,
+                });
+                if (!template && templateCode === "fechasMultiples") {
+                    template = await Pdf.findOne({
+                        tenantId: req.tenantObjectId,
+                        code: "fechaUnica",
+                        isActive: true,
+                    });
+                }
+            }
+            // 3. Fallback: Map by Name if still missing
+            if (!template) {
+                console.log("[PDF DEBUG] Attempting Fallback Template Lookup by Category Name...");
+                let templateCode = "";
+                const nameLower = pdfCategory.name.toLowerCase();
+                if (nameLower.includes("licencia"))
+                    templateCode = "fechaRango";
+                else if (nameLower.includes("adelanto"))
+                    templateCode = "dinero";
+                else if (nameLower.includes("reembolso"))
+                    templateCode = "dinero";
+                else if (nameLower.includes("equipamiento"))
+                    templateCode = "objeto";
+                else if (nameLower.includes("documento"))
+                    templateCode = "objeto";
+                else if (nameLower.includes("solicitud"))
+                    templateCode = "otros";
+                if (templateCode) {
+                    template = await Pdf.findOne({ tenantId: req.tenantObjectId, code: templateCode, isActive: true });
+                    if (template)
+                        console.log(`[PDF DEBUG] Found template via Fallback (${templateCode}): ${template.name}`);
+                }
+            }
+            if (template) {
+                const user = order.userId;
+                const tenant = await Tenant.findById(req.tenantObjectId);
+                const tenantName = tenant?.name || tenant?.slug || "Organización";
+                console.log("[PDF DEBUG] Calling generateOrderPDF...");
+                const pdfResult = await generateOrderPDF(order, pdfCategory, template, user, req.tenantObjectId.toString(), tenantName);
+                console.log("[PDF DEBUG] PDF generation result:", pdfResult.success ? "SUCCESS" : "FAILED");
+                if (pdfResult.success) {
+                    order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+                    // Force save again to persist the URL
+                    await Order.updateOne({ _id: order._id }, { $set: { pdfPreAprobacionUrl: pdfResult.pdfUrl } });
+                    console.log("[PDF DEBUG] PDF URL saved to order:", order.pdfPreAprobacionUrl);
+                }
+                else {
+                    console.error("[PDF ERROR] Error generating PDF:", pdfResult.error);
+                }
+            }
+            else {
+                console.log("[PDF DEBUG] No suitable template found for Category. Skipping PDF.");
+            }
+        }
+        const finalOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("categoryId")
+            .populate("approvedBy", "firstName lastName email");
+        console.log("[PDF DEBUG] Sending response with pdfPreAprobacionUrl:", finalOrder?.pdfPreAprobacionUrl || "undefined");
+        res.json(finalOrder);
+    }
+    catch (error) {
+        console.error("Pre-approve order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.put("/orders/:id/approve", async (req, res) => {
+    try {
+        const approverId = req.user.userId;
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        }).populate("categoryId");
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        if (order.status !== "pre_approved") {
+            res.status(400).json({ error: "Only pre-approved orders can be approved" });
+            return;
+        }
+        order.status = "approved";
+        order.approvedBy = new Types.ObjectId(approverId);
+        order.approvedAt = new Date();
+        const category = order.categoryId;
+        const requiresSignature = category?.requiresSignature || false;
+        if (requiresSignature) {
+            order.signatureStatus = "sent";
+            order.signatureSentAt = new Date();
+        }
+        await order.save();
+        const categoryName = category?.name || order.category;
+        let subcategoryText = "";
+        if (order.subcategories && order.subcategories.length > 0) {
+            if (category?.config?.subtipos) {
+                const labels = order.subcategories.map((subId) => {
+                    const found = category.config.subtipos.find((st) => st.id === subId);
+                    return found ? found.label : subId;
+                });
+                subcategoryText = ` - ${labels.join(", ")}`;
+            }
+            else {
+                subcategoryText = ` - ${order.subcategories.join(", ")}`;
+            }
+        }
+        const orderDisplayName = `${categoryName}${subcategoryText}`;
+        const orderNumber = order.orderNumber || "N/A";
+        const notificationMessage = requiresSignature ? `Tu pedido "${orderDisplayName}" N°: ${getPlainOrderNumber(orderNumber)} ha sido aprobado. Revisá tu casilla de email para firmar el documento.` : `Tu pedido "${orderDisplayName}" ha sido aprobado.`;
+        await Notification.create({
+            tenantId: req.tenantObjectId,
+            userId: order.userId,
+            type: "order",
+            title: requiresSignature ? "Documento enviado para firma" : "Pedido Aprobado",
+            message: notificationMessage,
+            linkUrl: `/orders/${order._id}`,
+        });
+        const finalOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("categoryId")
+            .populate("approvedBy", "firstName lastName email");
+        res.json(finalOrder);
+    }
+    catch (error) {
+        console.error("Approve order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.put("/orders/:id/reject", async (req, res) => {
+    try {
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        });
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        if (!["pending", "pre_approved", "approved"].includes(order.status)) {
+            res.status(400).json({ error: "Only pending, pre-approved, or approved orders can be rejected" });
+            return;
+        }
+        order.status = "rejected";
+        await order.save();
+        const category = order.categoryId ? await OrderConfig.findById(order.categoryId) : null;
+        const categoryName = category?.name || order.category;
+        let subcategoryText = "";
+        if (order.subcategories && order.subcategories.length > 0) {
+            if (category?.config?.subtipos) {
+                const labels = order.subcategories.map((subId) => {
+                    const found = category.config.subtipos.find((st) => st.id === subId);
+                    return found ? found.label : subId;
+                });
+                subcategoryText = ` - ${labels.join(", ")}`;
+            }
+            else {
+                subcategoryText = ` - ${order.subcategories.join(", ")}`;
+            }
+        }
+        const orderDisplayName = `${categoryName}${subcategoryText}`;
+        await Notification.create({
+            tenantId: req.tenantObjectId,
+            userId: order.userId,
+            type: "order",
+            title: "Pedido Rechazado",
+            message: `Tu pedido "${orderDisplayName}" ha sido rechazado.`,
+            linkUrl: `/orders/${order._id}`,
+        });
+        const finalOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("categoryId")
+            .populate("approvedBy", "firstName lastName email");
+        res.json(finalOrder);
+    }
+    catch (error) {
+        console.error("Reject order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.put("/orders/:id/deliver", async (req, res) => {
+    try {
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        });
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        if (order.status !== "approved") {
+            res.status(400).json({ error: "Only approved orders can be delivered" });
+            return;
+        }
+        order.status = "delivered";
+        order.deliveredAt = new Date();
+        await order.save();
+        const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
+        const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+        const orderDisplayName = `${categoryName}${subcategoryText}`;
+        await Notification.create({
+            tenantId: req.tenantObjectId,
+            userId: order.userId,
+            type: "order",
+            title: "Pedido Entregado",
+            message: `Tu pedido "${orderDisplayName}" ha sido entregado.`,
+            linkUrl: `/orders/${order._id}`,
+        });
+        const finalOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("categoryId")
+            .populate("approvedBy", "firstName lastName email");
+        res.json(finalOrder);
+    }
+    catch (error) {
+        console.error("Deliver order error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.put("/orders/:id/send-signature", async (req, res) => {
+    try {
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        }).populate("categoryId");
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        if (order.status !== "approved") {
+            res.status(400).json({ error: "Only approved orders can be sent for signature" });
+            return;
+        }
+        const category = order.categoryId;
+        if (!category?.requiresSignature) {
+            res.status(400).json({ error: "This order does not require signature" });
+            return;
+        }
+        order.signatureStatus = "sent";
+        order.signatureSentAt = new Date();
+        await order.save();
+        const categoryName = category?.name || order.category;
+        const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+        const orderDisplayName = `${categoryName}${subcategoryText}`;
+        await Notification.create({
+            tenantId: req.tenantObjectId,
+            userId: order.userId,
+            type: "order",
+            title: "Documento enviado para firma",
+            message: `El documento de tu pedido "${orderDisplayName}" ha sido enviado para firma.`,
+            linkUrl: `/orders/${order._id}`,
+        });
+        const finalOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("categoryId")
+            .populate("approvedBy", "firstName lastName email");
+        res.json(finalOrder);
+    }
+    catch (error) {
+        console.error("Send signature error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+router.put("/orders/:id/mark-signed", async (req, res) => {
+    try {
+        const signedById = req.user.userId;
+        const order = await Order.findOne({
+            _id: req.params.id,
+            tenantId: req.tenantObjectId,
+        }).populate("categoryId");
+        if (!order) {
+            res.status(404).json({ error: "Order not found" });
+            return;
+        }
+        const category = order.categoryId;
+        if (!category?.requiresSignature) {
+            res.status(400).json({ error: "This order does not require signature" });
+            return;
+        }
+        if (order.signatureStatus !== "sent") {
+            res.status(400).json({ error: "Only orders with sent signature can be marked as signed" });
+            return;
+        }
+        order.signatureStatus = "signed";
+        order.signedAt = new Date();
+        order.signedBy = new Types.ObjectId(signedById);
+        await order.save();
+        const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
+        const subcategoryText = order.subcategories && order.subcategories.length > 0 ? ` - ${order.subcategories.join(", ")}` : "";
+        const orderDisplayName = `${categoryName}${subcategoryText}`;
+        await Notification.create({
+            tenantId: req.tenantObjectId,
+            userId: order.userId,
+            type: "order",
+            title: "Firma confirmada",
+            message: `Tu firma del pedido ${orderDisplayName} N°: ${getPlainOrderNumber(order.orderNumber)} ha sido verificada y confirmada.`,
+            linkUrl: `/orders/${order._id}`,
+        });
+        const finalOrder = await Order.findById(order._id)
+            .populate({
+            path: "userId",
+            select: "firstName lastName email metadata clientIds",
+            populate: [
+                { path: "clientIds", select: "name", model: "Client" },
+                {
+                    path: "metadata.projects",
+                    model: "UserProject",
+                    select: "nombre_rol_frame nombre_proyecto projectId",
+                    populate: {
+                        path: "projectId",
+                        model: "Project",
+                        select: "clientId",
+                        populate: { path: "clientId", select: "name", model: "Client" },
+                    },
+                },
+            ],
+        })
+            .populate("categoryId")
+            .populate("approvedBy", "firstName lastName email")
+            .populate("signedBy", "firstName lastName email");
+        res.json(finalOrder);
+    }
+    catch (error) {
+        console.error("Mark signed error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+export { router as hrManagementRoutes };
