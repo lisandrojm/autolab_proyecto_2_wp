@@ -398,7 +398,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             id: u._id,
             name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email,
             email: u.email,
-            projectIds: u.projectIds?.map((p) => p._id) || [],
+            projectIds: u.projectIds?.map((p: any) => typeof p === "string" ? p : p?._id || p?.id).filter(Boolean) || [],
             role: u.role,
             roles: u.roles,
             positionName: typeof u.positionId === "object" ? u.positionId.name : undefined,
@@ -994,7 +994,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   // Get employees for additional staff selection (shows all active users)
   const nonProjectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
-    return employees.filter((e) => !projectEmployees.some((pe) => pe.id === e.id));
+    return employees.filter((e) => {
+      // Exclude if already in the checklist (projectEmployees)
+      const isAlreadyChecklist = projectEmployees.some((pe) => pe.id === e.id);
+      if (isAlreadyChecklist) return false;
+      // Exclude if assigned to this project
+      const isAssignedToProject = e.projectIds?.includes(selectedProjectId);
+      if (isAssignedToProject) return false;
+      return true;
+    });
   }, [employees, selectedProjectId, projectEmployees]);
 
   const filteredNonProjectEmployees = useMemo(() => {

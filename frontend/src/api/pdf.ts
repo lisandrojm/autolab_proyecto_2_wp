@@ -59,12 +59,12 @@ export const codeOptions = [
 ] as const;
 
 export const variablesByCode: Record<string, string[]> = {
-  dinero: ["{{categoria}}", "{{subcategoria}}", "{{monto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
-  fechaRango: ["{{categoria}}", "{{subcategoria}}", "{{dias}}", "{{fechaDesde}}", "{{fechaHasta}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
-  fechaUnica: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
-  fechasMultiples: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechasMultiples}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
-  objeto: ["{{categoria}}", "{{subcategoria}}", "{{objeto}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
-  otros: ["{{categoria}}", "{{subcategoria}}", "{{detalle}}", "{{nombreUsuario}}", "{{numeroOrden}}"],
+  dinero: ["{{categoria}}", "{{subcategoria}}", "{{monto}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
+  fechaRango: ["{{categoria}}", "{{subcategoria}}", "{{dias}}", "{{fechaDesde}}", "{{fechaHasta}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
+  fechaUnica: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
+  fechasMultiples: ["{{categoria}}", "{{subcategoria}}", "{{fechas}}", "{{fechasMultiples}}", "{{fechaUnica}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
+  objeto: ["{{categoria}}", "{{subcategoria}}", "{{objeto}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
+  otros: ["{{categoria}}", "{{subcategoria}}", "{{detalle}}", "{{nombreUsuario}}", "{{numeroOrden}}", "{{textoAdicional}}"],
   vacaciones: ["{{dias}}", "{{anio}}", "{{fechaInicio}}", "{{fechaFin}}", "{{fechaReintegro}}", "{{nombreUsuario}}"],
 };
 

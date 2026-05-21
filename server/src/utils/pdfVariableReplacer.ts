@@ -274,6 +274,7 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
   const fechaSolicitud = formatDate(order.requestedAt);
   const fechaAprobacion = formatDate(order.preApprovedAt);
   const descripcion = sanitizeHtml(order.description || "-");
+  const textoAdicional = order.customTextBlock ? sanitizeHtml(order.customTextBlock) : "";
 
   return {
     ...dynamicVars,
@@ -293,6 +294,7 @@ export function prepareVariables(order: IOrder, category: IOrderConfig, user: IU
     fechaAprobacion,
     tenantName: sanitizeHtml(tenantName),
     descripcion,
+    textoAdicional,
   };
 }
 
@@ -392,6 +394,7 @@ export function getDummyVariables(code: string): Record<string, string> {
     fechaUnica: "10/03/2024, 11/03/2024",
     fechas: "10/03/2024, 11/03/2024",
     fechasMultiples: "10/03/2024, 11/03/2024",
+    textoAdicional: "[Aquí aparecerá el texto personalizado redactado al aprobar el pedido]",
   };
 
   const normalizedCode = code.toLowerCase();

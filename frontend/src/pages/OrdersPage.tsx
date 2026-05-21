@@ -1178,15 +1178,15 @@ export const OrdersPage: React.FC = () => {
               </div>
             )}
 
-            {/* Texto personalizado al final del PDF */}
+            {/* Texto personalizado en el PDF */}
             <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
               <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">
-                Texto personalizado al final del PDF
+                Texto personalizado para el PDF
               </label>
               <textarea
                 value={customTextVal}
                 onChange={(e) => setCustomTextVal(e.target.value)}
-                placeholder="Escriba aquí un texto que aparecerá al final del PDF generado para este pedido..."
+                placeholder="Escriba aquí un texto que se inyectará en la variable {{textoAdicional}} de la plantilla (o aparecerá al final por defecto si la variable no está en el contenido)..."
                 className="w-full min-h-[80px] p-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:text-white"
               />
               <div className="mt-2.5 flex justify-end">

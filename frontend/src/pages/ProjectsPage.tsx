@@ -40,6 +40,8 @@ export const ProjectsPage: React.FC = () => {
 
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [creating, setCreating] = useState(false);
   const [selectedClientId, setSelectedClientIdLocal] = useState("");
   const [availableSedes, setAvailableSedes] = useState<any[]>([]);
@@ -168,6 +170,8 @@ export const ProjectsPage: React.FC = () => {
   };
 
   const handleOpenCreate = () => {
+    setModalMode("create");
+    setEditingProject(null);
     setSelectedClientIdLocal("");
     setSelectedAreaId("");
     setIsAddingArea(false);
@@ -190,6 +194,50 @@ export const ProjectsPage: React.FC = () => {
     fetchAuxData();
   };
 
+  const handleOpenEdit = (project: Project) => {
+    setModalMode("edit");
+    setEditingProject(project);
+    const cId = typeof project.clientId === "object" ? project.clientId._id : project.clientId;
+    setSelectedClientIdLocal(cId || "");
+    setFormData({
+      name: project.name || "",
+      description: project.description || "",
+      status: project.status || "active",
+      startDate: project.startDate ? project.startDate.split("T")[0] : "",
+      endDate: project.endDate ? project.endDate.split("T")[0] : "",
+      areasConfig: (project.areasConfig || []).map((ac: any) => ({
+        areaId: typeof ac.areaId === "string" ? ac.areaId : ac.areaId._id,
+        shiftIds: ac.shiftIds.map((s: any) => (typeof s === "string" ? s : s._id)),
+      })),
+      metadata: {
+        centroCostoId: project.metadata?.centroCostoId,
+        sedeId: project.metadata?.sedeId,
+        responsableId: project.metadata?.responsableId,
+      },
+    });
+    setSelectedAreaId("");
+    setIsAddingArea(false);
+    setConfiguringAreaId(null);
+    setShowCreateModal(true);
+    fetchAuxData();
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    const result = await sweetAlert.confirm("¿Eliminar proyecto?", "Esta acción no se puede deshacer.");
+    if (!result.isConfirmed) return;
+
+    try {
+      setLoading(true);
+      await projectsAPI.deleteProject(projectId);
+      sweetAlert.success("Proyecto eliminado", "El proyecto fue eliminado correctamente");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting project:", error);
+      sweetAlert.error("Error", error?.response?.data?.error || "No se pudo eliminar el proyecto");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,16 +266,24 @@ export const ProjectsPage: React.FC = () => {
         return;
       }
 
-      await projectsAPI.createProject(selectedClientId, {
-        ...formData,
-      } as any);
-      sweetAlert.success("Proyecto creado", "El proyecto se ha creado correctamente");
+      if (modalMode === "edit" && editingProject) {
+        await projectsAPI.updateProject(editingProject._id, {
+          ...formData,
+        } as any);
+        sweetAlert.success("Proyecto actualizado", "El proyecto se ha actualizado correctamente");
+      } else {
+        await projectsAPI.createProject(selectedClientId, {
+          ...formData,
+        } as any);
+        sweetAlert.success("Proyecto creado", "El proyecto se ha creado correctamente");
+      }
+
       setShowCreateModal(false);
-      emitProjectsChanged("create", "", selectedClientId);
+      emitProjectsChanged(modalMode === "edit" ? "update" : "create", editingProject?._id || "", selectedClientId);
       fetchData();
     } catch (error) {
-      console.error("Error creating project:", error);
-      sweetAlert.error("Error", "No se pudo crear el proyecto");
+      console.error("Error saving project:", error);
+      sweetAlert.error("Error", modalMode === "edit" ? "No se pudo actualizar el proyecto" : "No se pudo crear el proyecto");
     } finally {
       setCreating(false);
     }
@@ -317,6 +373,26 @@ export const ProjectsPage: React.FC = () => {
                 }}
                 footer={{
                   leftContent: <div className="text-xs text-gray-500 dark:text-gray-500">Creado: {new Date(project.createdAt).toLocaleDateString()}</div>,
+                  actions: [
+                    {
+                      icon: faEdit,
+                      onClick: (e: any) => {
+                        e.stopPropagation();
+                        handleOpenEdit(project);
+                      },
+                      title: "Editar proyecto",
+                      variant: "default",
+                    },
+                    {
+                      icon: faTrash,
+                      onClick: (e: any) => {
+                        e.stopPropagation();
+                        handleDeleteProject(project._id);
+                      },
+                      title: "Eliminar proyecto",
+                      variant: "default",
+                    },
+                  ],
                 }}
               >
                 {project.metadataResolutions?.sede && (
@@ -408,7 +484,30 @@ export const ProjectsPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-500">{new Date(project.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-right">{/* Actions column */}</td>
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(project);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
+                            title="Editar"
+                          >
+                            <FontAwesomeIcon icon={faEdit} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProject(project._id);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
+                            title="Eliminar"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -419,15 +518,16 @@ export const ProjectsPage: React.FC = () => {
       )}
 
       {/* Create Project Modal */}
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Nuevo Proyecto" subtitle="Seleccioná el cliente y completá los datos" size="lg">
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title={modalMode === "edit" ? "Editar Proyecto" : "Nuevo Proyecto"} subtitle={modalMode === "edit" ? "Actualiza los datos del proyecto" : "Seleccioná el cliente y completá los datos"} size="lg">
         <form onSubmit={handleCreateProject}>
           <div className="space-y-6">
             {/* Client selector - first field */}
             <div>
               <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Cliente *</label>
               <select
-                className="input-field py-2.5"
+                className="input-field py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 required
+                disabled={modalMode === "edit"}
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientIdLocal(e.target.value)}
               >
@@ -783,7 +883,7 @@ export const ProjectsPage: React.FC = () => {
               disabled={creating}
               className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
             >
-              {creating ? "Creando..." : "Crear"}
+              {creating ? (modalMode === "edit" ? "Guardando..." : "Creando...") : (modalMode === "edit" ? "Guardar" : "Crear")}
             </button>
             <button
               type="button"
