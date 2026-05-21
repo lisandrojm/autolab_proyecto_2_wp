@@ -68,6 +68,7 @@ const orderSchema = new Schema({
     signedAt: { type: Date },
     signedBy: { type: Schema.Types.ObjectId, ref: "User" },
     pdfPreAprobacionUrl: { type: String, trim: true },
+    customTextBlock: { type: String, trim: true },
     metadata: { type: Schema.Types.Mixed },
 }, { timestamps: true });
 orderSchema.index({ tenantId: 1, userId: 1, status: 1 });

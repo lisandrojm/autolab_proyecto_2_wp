@@ -29,6 +29,7 @@ export interface IOrder extends Document {
     signedAt?: Date;
     signedBy?: Types.ObjectId;
     pdfPreAprobacionUrl?: string;
+    customTextBlock?: string;
     metadata?: Record<string, any>;
     documents: any[];
     futureActions: any[];

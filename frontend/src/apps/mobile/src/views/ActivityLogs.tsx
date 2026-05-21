@@ -991,12 +991,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     return selectedProject?.activityLogConfig?.allowsAdditionalStaff ?? false;
   }, [selectedProject]);
 
-  // Get employees NOT assigned to the current project (for additional staff selection)
+  // Get employees for additional staff selection (shows all active users)
   const nonProjectEmployees = useMemo(() => {
     if (!selectedProjectId) return [];
-    const filtered = employees.filter((e) => !e.projectIds || !e.projectIds.includes(selectedProjectId));
-    return filtered;
-  }, [employees, selectedProjectId]);
+    return employees.filter((e) => !projectEmployees.some((pe) => pe.id === e.id));
+  }, [employees, selectedProjectId, projectEmployees]);
 
   const filteredNonProjectEmployees = useMemo(() => {
     const filtered = nonProjectEmployees.filter((emp) => {

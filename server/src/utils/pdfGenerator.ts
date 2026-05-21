@@ -199,11 +199,16 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     console.log("[PDF GENERATOR] Template ID:", template._id);
     console.log("[PDF GENERATOR] Template Name:", template.name);
 
+    let bodyContent = template.content;
+    if (order.customTextBlock) {
+      bodyContent += `\n\n<div style="margin-top: 30px; padding-top: 15px; border-top: 1px dashed #ccc; font-style: italic; color: #555; font-size: 11pt; white-space: pre-wrap;">${order.customTextBlock}</div>`;
+    }
+
     const variables = prepareVariables(order, category, user, tenantName);
     console.log("[PDF GENERATOR] Variables prepared:", Object.keys(variables));
 
     // Use buildPdfHtml to generate HTML with global layout
-    const htmlContent = await buildPdfHtml(tenantId, template.content, variables as Record<string, string>, (template as any).title, user);
+    const htmlContent = await buildPdfHtml(tenantId, bodyContent, variables as Record<string, string>, (template as any).title, user);
     console.log("[PDF GENERATOR] HTML content generated using global layout, length:", htmlContent.length, "characters");
 
     const options = {

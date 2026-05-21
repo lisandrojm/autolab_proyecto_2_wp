@@ -231,6 +231,7 @@ export const hrManagementAPI = {
       if (updates.amount !== undefined) formData.append("amount", updates.amount.toString());
       if (updates.status) formData.append("status", updates.status);
       if (updates.photo) formData.append("photo", updates.photo);
+      if (updates.customTextBlock !== undefined) formData.append("customTextBlock", updates.customTextBlock);
 
       const { data } = await axios.put<Order>(`/hr-management/orders/${orderId}`, formData, {
         headers: {

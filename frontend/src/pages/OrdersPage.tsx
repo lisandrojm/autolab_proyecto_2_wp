@@ -42,6 +42,17 @@ export const OrdersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
 
+  const [customTextVal, setCustomTextVal] = useState("");
+  const [savingCustomText, setSavingCustomText] = useState(false);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      setCustomTextVal(selectedOrder.customTextBlock || "");
+    } else {
+      setCustomTextVal("");
+    }
+  }, [selectedOrder]);
+
   const helpEntry = getHelp(HELP_KEY);
 
   useEffect(() => {
@@ -154,6 +165,26 @@ export const OrdersPage: React.FC = () => {
     }
   };
   */
+
+  const handleSaveCustomText = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setSavingCustomText(true);
+      const updatedOrder = await hrManagementAPI.orders.update(selectedOrder._id, {
+        customTextBlock: customTextVal,
+      } as any);
+
+      setSelectedOrder(updatedOrder);
+      await loadOrders();
+      setSavingCustomText(false);
+
+      await sweetAlert.success("Guardado", "El texto personalizado se ha guardado correctamente" + (updatedOrder.pdfPreAprobacionUrl ? " y el PDF ha sido regenerado." : "."));
+    } catch (error: any) {
+      setSavingCustomText(false);
+      await sweetAlert.error("Error", error?.response?.data?.error || "No se pudo guardar el texto personalizado");
+    }
+  };
 
   const handlePreApprove = async () => {
     if (!selectedOrder) return;
@@ -1146,6 +1177,35 @@ export const OrdersPage: React.FC = () => {
                 <p className="text-md text-slate-600 dark:text-slate-300 leading-relaxed">{selectedOrder.description}</p>
               </div>
             )}
+
+            {/* Texto personalizado al final del PDF */}
+            <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+              <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                Texto personalizado al final del PDF
+              </label>
+              <textarea
+                value={customTextVal}
+                onChange={(e) => setCustomTextVal(e.target.value)}
+                placeholder="Escriba aquí un texto que aparecerá al final del PDF generado para este pedido..."
+                className="w-full min-h-[80px] p-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:text-white"
+              />
+              <div className="mt-2.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSaveCustomText}
+                  disabled={savingCustomText}
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-medium text-xs rounded transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {savingCustomText ? (
+                    <>
+                      <FontAwesomeIcon icon={faSpinner} spin /> Guardando...
+                    </>
+                  ) : (
+                    "Guardar Texto"
+                  )}
+                </button>
+              </div>
+            </div>
 
             {(() => {
               const futureAction = selectedOrder.futureActions && selectedOrder.futureActions.length > 0 ? selectedOrder.futureActions[0] : null;

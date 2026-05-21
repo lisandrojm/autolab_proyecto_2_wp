@@ -92,6 +92,7 @@ const updateOrderSchema = z.object({
   amount: z.number().min(0).optional(),
   status: z.enum(["pending", "pre_approved", "approved", "rejected", "delivered", "cancelled"]).optional(),
   photoUrl: z.string().optional(),
+  customTextBlock: z.string().optional(),
 });
 
 router.get("/calendarevents", async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -437,6 +438,51 @@ router.put("/orders/:id", uploadOrderImage, async (req: AuthenticatedRequest & T
 
     Object.assign(order, data);
     await order.save();
+
+    if (req.body.customTextBlock !== undefined && order.pdfPreAprobacionUrl) {
+      // Regenerate the PDF automatically!
+      try {
+        console.log("[PDF REGENERATION] Automatically regenerating PDF due to customTextBlock update...");
+        const category = order.categoryId ? await OrderConfig.findById(order.categoryId) : null;
+        let template = null;
+        if (category) {
+          if (category.pdfId) {
+            template = await Pdf.findOne({ _id: category.pdfId, tenantId: req.tenantObjectId, isActive: true });
+          }
+          if (!template) {
+            let templateCode = "";
+            if (category.categoryType === "fecha") {
+              templateCode = category.dateMode === "range" ? "fechaRango" : "fechasMultiples";
+            } else if (category.categoryType === "dinero") {
+              templateCode = "dinero";
+            } else if (category.categoryType === "objeto") {
+              templateCode = "objeto";
+            } else {
+              templateCode = "otros";
+            }
+            template = await Pdf.findOne({ tenantId: req.tenantObjectId, code: templateCode, isActive: true });
+            if (!template && templateCode === "fechasMultiples") {
+              template = await Pdf.findOne({ tenantId: req.tenantObjectId, code: "fechaUnica", isActive: true });
+            }
+          }
+        }
+        if (template) {
+          const user = order.userId as any;
+          const tenant = await Tenant.findById(req.tenantObjectId);
+          const tenantName = tenant?.name || tenant?.slug || "Organización";
+          const pdfResult = await generateOrderPDF(order as any, category as any, template, user, req.tenantObjectId.toString(), tenantName);
+          if (pdfResult.success) {
+            order.pdfPreAprobacionUrl = pdfResult.pdfUrl;
+            await order.save();
+            console.log("[PDF REGENERATION] PDF automatically regenerated successfully:", pdfResult.pdfUrl);
+          } else {
+            console.error("[PDF REGENERATION ERROR] Failed to regenerate PDF:", pdfResult.error);
+          }
+        }
+      } catch (pdfError) {
+        console.error("[PDF REGENERATION ERROR] Error in automatic regeneration:", pdfError);
+      }
+    }
 
     if (req.body.status === "cancelled") {
       const categoryName = order.categoryId ? (await OrderConfig.findById(order.categoryId))?.name || order.category : order.category;
