@@ -998,9 +998,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       // Exclude if already in the checklist (projectEmployees)
       const isAlreadyChecklist = projectEmployees.some((pe) => pe.id === e.id);
       if (isAlreadyChecklist) return false;
-      // Exclude if assigned to this project
-      const isAssignedToProject = e.projectIds?.includes(selectedProjectId);
-      if (isAssignedToProject) return false;
       return true;
     });
   }, [employees, selectedProjectId, projectEmployees]);
