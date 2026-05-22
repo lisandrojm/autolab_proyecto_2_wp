@@ -448,9 +448,15 @@ export const UsersPage: React.FC = () => {
   const fetchAllRoleFrames = async () => {
     try {
       const roleFrames = await roleFrameAPI.list();
-      setAllRoleFrames(roleFrames);
+      const arrayData = Array.isArray(roleFrames)
+        ? roleFrames
+        : (roleFrames && Array.isArray((roleFrames as any).data))
+          ? (roleFrames as any).data
+          : [];
+      setAllRoleFrames(arrayData);
     } catch (error: any) {
       console.error("Error fetching role frames:", error);
+      setAllRoleFrames([]);
     }
   };
 
