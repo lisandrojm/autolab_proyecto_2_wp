@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isFuture, isToday, isBefore, isAfter, getDate, startOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isFuture, isToday, isBefore, isAfter, getDate, startOfDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfig";
 
@@ -259,6 +259,21 @@ const TIME_OPTIONS = (() => {
   }
   return options;
 })();
+
+const isTodayLocal = (d: Date): boolean => {
+  const today = new Date();
+  return d.getDate() === today.getDate() &&
+         d.getMonth() === today.getMonth() &&
+         d.getFullYear() === today.getFullYear();
+};
+
+const isYesterdayLocal = (d: Date): boolean => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return d.getDate() === yesterday.getDate() &&
+         d.getMonth() === yesterday.getMonth() &&
+         d.getFullYear() === yesterday.getFullYear();
+};
 
 export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
@@ -756,6 +771,15 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
 
+    // Always allow today and yesterday (1 day before) for reporting
+    if (reportDate) {
+      const [year, month, day] = reportDate.split("-").map(Number);
+      const date = new Date(year, month - 1, day);
+      if (isTodayLocal(date) || isYesterdayLocal(date)) {
+        return true;
+      }
+    }
+
     // Check reporting frequency config first
     const schedule = selectedProject.activityLogConfig?.schedule;
     if (schedule && schedule.days) {
@@ -1208,6 +1232,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const isProjectWorkDay = (day: Date) => {
     const project = userProjects.find((p) => p._id === selectedProjectId);
     if (!project) return false;
+
+    // Always allow today and yesterday (1 day before) for reporting
+    if (isTodayLocal(day) || isYesterdayLocal(day)) {
+      return true;
+    }
 
     const dateStr = format(day, "yyyy-MM-dd");
 
