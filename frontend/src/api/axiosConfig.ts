@@ -59,8 +59,13 @@ axiosInstance.interceptors.response.use(
     }
 
     if (!error.response) {
-      console.error("Network error:", error.message);
-      return Promise.reject(new Error("Error de conexión. Verifica tu conexión a internet."));
+      console.error("Network error / Server disconnected:", error.message);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login?error=connection";
+      }
+      return Promise.reject(new Error("Error de conexión. Redirigiendo al login..."));
     }
 
     return Promise.reject(error);

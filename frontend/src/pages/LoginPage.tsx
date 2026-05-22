@@ -114,6 +114,16 @@ export const LoginPage: React.FC = () => {
 
   const watchedEmail = watch("email");
 
+  // Verificar si hay errores de red/conexión previos en la URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "connection") {
+      setError("No se pudo conectar con el servidor. Verifica tu conexión a internet.");
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+
   // Cargar usuarios demo al montar el componente
   useEffect(() => {
     fetchDemoUsers();

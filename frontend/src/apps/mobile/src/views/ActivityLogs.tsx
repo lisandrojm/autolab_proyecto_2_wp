@@ -113,7 +113,7 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
 
 const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: string, employee?: EmployeeOption): string => {
   if (employee && employee.metadataProjects) {
-    const projMeta = employee.metadataProjects.find((m) => m.projectId === project._id);
+    const projMeta = employee.metadataProjects.find((m) => String(m.projectId) === String(project._id));
     if (projMeta && projMeta.contractEndTime) {
       return projMeta.contractEndTime;
     }
@@ -193,7 +193,7 @@ const getProjectStartTime = (project: Project, dateStr: string): string => {
 
 const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: string, employee?: EmployeeOption): string => {
   if (employee && employee.metadataProjects) {
-    const projMeta = employee.metadataProjects.find((m) => m.projectId === project._id);
+    const projMeta = employee.metadataProjects.find((m) => String(m.projectId) === String(project._id));
     if (projMeta && projMeta.contractStartTime) {
       return projMeta.contractStartTime;
     }
@@ -443,6 +443,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     return isActive;
                   }) ?? false;
 
+                if (!activeContract && p.contracts && p.contracts.length > 0) {
+                  activeContract = p.contracts[p.contracts.length - 1];
+                }
+
                 return {
                   projectId: pId,
                   roleFrame: p.nombre_rol_frame,
@@ -640,7 +644,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         return false;
       }
 
-      const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+      const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
 
       // Determine ALL of employee's area and shift combinations
       const employeeCombinations: { areaId: string; shiftId: string }[] = [];
@@ -1052,7 +1056,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     employees
       .filter((e) => e.projectIds?.includes(selectedProjectId))
       .forEach((e) => {
-        const role = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+        const role = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
         if (role) roles.add(role.trim());
       });
     return Array.from(roles).sort();
@@ -2224,7 +2228,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                           <div className="flex flex-wrap items-center gap-2 mt-1 ml-10">
                                             <span className="text-xs text-slate-500 dark:text-gray-400">{currentEmp.positionName || "Colaborador"}</span>
                                             {(() => {
-                                              const projMeta = currentEmp.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                                              const projMeta = currentEmp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
                                               const roleFrame = projMeta?.roleFrame;
                                               const empArea = projMeta?.areaId?.name || allAreas.find((a) => String(a._id) === String(projMeta?.areaId?._id || projMeta?.areaId || ""))?.name;
                                               const empShift = projMeta?.shiftId?.name || allShifts.find((s) => String(s._id) === String(projMeta?.shiftId?._id || projMeta?.shiftId || ""))?.name;
@@ -2399,7 +2403,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             const filteredByProject = selectedProjectId
                                               ? employees.filter((e) => {
                                                   if (!e.projectIds?.includes(selectedProjectId)) return false;
-                                                  const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                                                  const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
                                                   if (!projMeta || !projMeta.hasActiveContract) return false;
 
                                                   // Area/Shift filter
@@ -2416,7 +2420,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             // Handle Role Filter
                                             if (selectedRoleFilters.length > 0) {
                                               results = results.filter((e) => {
-                                                const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                const roleFrame = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
                                                 return roleFrame && selectedRoleFilters.includes(roleFrame);
                                               });
                                             }
@@ -2472,7 +2476,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 const filteredByProject = selectedProjectId
                                                   ? employees.filter((e) => {
                                                       if (!e.projectIds?.includes(selectedProjectId)) return false;
-                                                      const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                                                      const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
                                                       return projMeta ? projMeta.hasActiveContract : false;
                                                     })
                                                   : [];
@@ -2484,7 +2488,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 // Role Filtering
                                                 if (selectedRoleFilters.length > 0) {
                                                   results = results.filter((e) => {
-                                                    const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                    const roleFrame = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
                                                     return roleFrame && selectedRoleFilters.includes(roleFrame);
                                                   });
                                                 }
@@ -2518,7 +2522,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                         <div className="flex flex-col gap-1 items-start">
                                                           <div className="font-medium text-slate-800 dark:text-white truncate">{emp.name}</div>
                                                           {(() => {
-                                                            const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                            const roleFrame = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
                                                             return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
                                                           })()}
                                                         </div>
@@ -2547,7 +2551,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                 const projectRoles = employees
                                                   .filter((e) => e.projectIds?.includes(selectedProjectId))
                                                   .flatMap((e) => {
-                                                    const role = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                                                    const role = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
                                                     return role ? [role] : [];
                                                   })
                                                   .filter((role, index, self) => self.indexOf(role) === index) // Unique
@@ -4223,7 +4227,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 // 2. Contract Active Filter
                 let matchesContract = true;
                 if (replacementFilterContractActive) {
-                  const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                  const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
                   matchesContract = projMeta ? projMeta.hasActiveContract : false;
                 }
 
@@ -4237,7 +4241,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           // Role Filtering
           if (selectedReplacementRoleFilters.length > 0) {
             results = results.filter((e) => {
-              const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+              const roleFrame = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
               return roleFrame && selectedReplacementRoleFilters.includes(roleFrame);
             });
           }
@@ -4342,7 +4346,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     // 2. Contract Active Filter
                     let matchesContract = true;
                     if (replacementFilterContractActive) {
-                      const projMeta = e.metadataProjects?.find((m) => m.projectId === selectedProjectId);
+                      const projMeta = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
                       matchesContract = projMeta ? projMeta.hasActiveContract : false;
                     }
 
@@ -4356,7 +4360,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
               // Role Filtering
               if (selectedReplacementRoleFilters.length > 0) {
                 results = results.filter((e) => {
-                  const roleFrame = e.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                  const roleFrame = e.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
                   return roleFrame && selectedReplacementRoleFilters.includes(roleFrame);
                 });
               }
@@ -4394,7 +4398,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                           <div className={`font-medium text-slate-800 dark:text-white truncate ${isSelected ? "text-blue-900 dark:text-blue-100 font-semibold" : ""}`}>{emp.name}</div>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(() => {
-                              const roleFrame = emp.metadataProjects?.find((m) => m.projectId === selectedProjectId)?.roleFrame;
+                              const roleFrame = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
                               return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
                             })()}
                             {emp.isActive === false ? <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-red-900/30 dark:text-red-400 tracking-wider uppercase whitespace-nowrap">Inactivo</span> : <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-400 tracking-wider uppercase whitespace-nowrap">Activo</span>}
