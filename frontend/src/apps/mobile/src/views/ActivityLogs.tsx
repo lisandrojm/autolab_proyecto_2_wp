@@ -275,6 +275,14 @@ const isYesterdayLocal = (d: Date): boolean => {
          d.getFullYear() === yesterday.getFullYear();
 };
 
+const isTwoDaysAgoLocal = (d: Date): boolean => {
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  return d.getDate() === twoDaysAgo.getDate() &&
+         d.getMonth() === twoDaysAgo.getMonth() &&
+         d.getFullYear() === twoDaysAgo.getFullYear();
+};
+
 export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -771,11 +779,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
 
-    // Always allow today and yesterday (1 day before) for reporting
+    // Always allow today, yesterday, and two days ago (3 days total) for reporting
     if (reportDate) {
       const [year, month, day] = reportDate.split("-").map(Number);
       const date = new Date(year, month - 1, day);
-      if (isTodayLocal(date) || isYesterdayLocal(date)) {
+      if (isTodayLocal(date) || isYesterdayLocal(date) || isTwoDaysAgoLocal(date)) {
         return true;
       }
     }
@@ -1233,8 +1241,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
     const project = userProjects.find((p) => p._id === selectedProjectId);
     if (!project) return false;
 
-    // Always allow today and yesterday (1 day before) for reporting
-    if (isTodayLocal(day) || isYesterdayLocal(day)) {
+    // Always allow today, yesterday, and two days ago (3 days total) for reporting
+    if (isTodayLocal(day) || isYesterdayLocal(day) || isTwoDaysAgoLocal(day)) {
       return true;
     }
 
