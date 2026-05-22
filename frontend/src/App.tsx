@@ -111,8 +111,12 @@ function App() {
           });
 
           if (!response.ok) {
-            console.warn("Token validation failed (ping !ok) -> Logging out");
-            useAuthStore.getState().logout();
+            if (response.status === 401 || response.status === 403) {
+              console.warn("Token validation failed (expired/unauthorized) -> Logging out");
+              useAuthStore.getState().logout();
+            } else {
+              console.warn(`Server responded with HTTP ${response.status} during token validation. Keeping session.`);
+            }
           } else {
             // Token válido. Si faltaba el usuario, intentamos recuperarlo de localStorage o parsearlo.
             // Si ya lo teníamos, todo bien.
@@ -134,8 +138,8 @@ function App() {
             }
           }
         } catch (error) {
-          console.error("Token validation error (network/server) -> Logging out", error);
-          useAuthStore.getState().logout();
+          // Si es un error de conexión, CORS o servidor caído, NO deslogueamos al usuario de forma agresiva.
+          console.error("Token validation connection error (CORS / Network issue) -> Keeping session:", error);
         }
       };
 
