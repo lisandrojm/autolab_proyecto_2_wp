@@ -178,7 +178,7 @@ export async function generateOrderPDF(order, category, template, user, tenantId
         console.log("[PDF GENERATOR] Template ID:", template._id);
         console.log("[PDF GENERATOR] Template Name:", template.name);
         let bodyContent = template.content;
-        if (order.customTextBlock) {
+        if (order.customTextBlock && !bodyContent.includes("{{textoAdicional}}")) {
             bodyContent += `\n\n<div style="margin-top: 30px; padding-top: 15px; border-top: 1px dashed #ccc; font-style: italic; color: #555; font-size: 11pt; white-space: pre-wrap;">${order.customTextBlock}</div>`;
         }
         const variables = prepareVariables(order, category, user, tenantName);

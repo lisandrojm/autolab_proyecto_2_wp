@@ -97,17 +97,9 @@ app.use((_, res, next) => {
 });
 app.use(cors({
     origin: (origin, cb) => {
-        if (env.NODE_ENV === "development")
-            return cb(null, true); // Dev: permitir todo
-        if (!origin)
-            return cb(null, true); // SSR/curl/postman
-        if (origin.includes("local-credentialless.webcontainer-api.io"))
-            return cb(null, true);
-        if (origin.endsWith(".netlify.app"))
-            return cb(null, true);
-        if (ALLOWED.has(origin))
-            return cb(null, true);
-        return cb(null, false); // Browser bloqueará por CORS
+        // Permitimos cualquier origen de forma dinámica para evitar que Safari
+        // o dominios de Vercel/Netlify alternativos sean bloqueados por CORS.
+        cb(null, true);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
