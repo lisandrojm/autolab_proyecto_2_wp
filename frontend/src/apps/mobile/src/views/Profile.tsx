@@ -23,8 +23,8 @@ export default function Profile() {
   const getProjectDetails = (proj: any) => {
     if (!proj) return null;
 
-    const findArea = (id: string) => allAreas.find(a => a._id === id);
-    const findShift = (id: string) => allShifts.find(s => s._id === id);
+    const findArea = (id: string) => allAreas.find(a => String(a._id) === String(id));
+    const findShift = (id: string) => allShifts.find(s => String(s._id) === String(id));
 
     // Find active contract or just the first one
     const activeContract =
@@ -95,8 +95,8 @@ export default function Profile() {
             coordinatedKeys.add(`${areaId}-${shiftId}`);
           }
           
-          const areaObj = (asm.areaId && typeof asm.areaId === "object" && (asm.areaId.name || asm.areaId.nombre)) ? asm.areaId : findArea(areaId);
-          const shiftObj = (asm.shiftId && typeof asm.shiftId === "object" && (asm.shiftId.name || asm.shiftId.nombre)) ? asm.shiftId : findShift(shiftId);
+          const areaObj = findArea(areaId) || ((asm.areaId && typeof asm.areaId === "object" && (asm.areaId.name || asm.areaId.nombre)) ? asm.areaId : null);
+          const shiftObj = findShift(shiftId) || ((asm.shiftId && typeof asm.shiftId === "object" && (asm.shiftId.name || asm.shiftId.nombre)) ? asm.shiftId : null);
 
           const aIdStr = String(areaId);
           const areaName = areaObj?.name || areaObj?.nombre || "Área";
@@ -150,8 +150,6 @@ export default function Profile() {
           
           const uniqueKey = `${areaName}-${name}`.toLowerCase();
           
-          // CRITICAL: If this shift is already in Coordinated (match by ID), skip it
-          if (aId && shiftId && coordinatedKeys.has(`${aId}-${shiftId}`)) return;
           if (seenAssignments.has(uniqueKey)) return;
           
           seenAssignments.add(uniqueKey);
@@ -515,7 +513,7 @@ export default function Profile() {
                               {group.shifts.map((s, sidx) => (
                                 <span key={sidx} className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-500/15 flex items-center gap-1 font-bold uppercase">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
-                                  {s.name}
+                                  {s.name}{s.time && s.time !== "Sin horario" ? ` (${s.time})` : ""}
                                 </span>
                               ))}
                             </div>
@@ -541,14 +539,14 @@ export default function Profile() {
                         {selectedProjectInfo.coordinatedShifts.map((group: any, gidx: number) => (
                           <div key={gidx} className="space-y-1.5">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-[9px] bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
+                              <span className="text-[9px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1 font-black uppercase tracking-widest">
                                 <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
                                 {group.areaName}
                               </span>
                               {group.shifts.map((s: any, sidx: number) => (
-                                <span key={sidx} className="text-[9px] bg-purple-500/10 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded border border-purple-500/15 flex items-center gap-1 font-bold uppercase">
+                                <span key={sidx} className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-500/15 flex items-center gap-1 font-bold uppercase">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px] opacity-70" />
-                                  {s.name}
+                                  {s.name}{s.time && s.time !== "Sin horario" ? ` (${s.time})` : ""}
                                 </span>
                               ))}
                             </div>
