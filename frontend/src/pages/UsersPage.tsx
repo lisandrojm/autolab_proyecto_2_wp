@@ -2041,18 +2041,28 @@ export const UsersPage: React.FC = () => {
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell">
                           <div className="flex flex-wrap gap-1">
-                            {user.roles.map((r) => (
-                              <span key={r._id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 border border-blue-100">
-                                {r.name}
-                              </span>
-                            ))}
+                            {user.roles.map((r) => {
+                              const lower = r.name.toLowerCase();
+                              const isCoord = lower.includes("coordinador");
+
+                              let classes = "bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300";
+                              if (isCoord) {
+                                classes = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800";
+                              }
+
+                              return (
+                                <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${classes}`}>
+                                  {r.name}
+                                </span>
+                              );
+                            })}
                           </div>
                         </td>
                         <td className="py-4 px-6 hidden md:table-cell text-center">
-                          <span className="text-xs font-bold bg-gray-100 px-2 py-0.5 rounded">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
+                          <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
                         </td>
                         <td className="py-4 px-6">
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{user.metadata?.activo ? "Activo" : "Inactivo"}</span>
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{user.metadata?.activo ? "Activo" : "Inactivo"}</span>
                         </td>
                         <td className="py-4 px-6 text-right">
                           <div className="flex justify-end gap-1">
