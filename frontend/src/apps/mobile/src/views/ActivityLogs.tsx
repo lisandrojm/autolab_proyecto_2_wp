@@ -223,6 +223,42 @@ const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: str
   return getProjectStartTime(project, dateStr);
 };
 
+const isDayInFrequency = (project: Project, day: Date): boolean => {
+  // Frequency schedule check
+  const schedule = project.activityLogConfig?.schedule;
+  if (schedule && schedule.days) {
+    const dayIndex = day.getDay();
+    return schedule.days.includes(dayIndex);
+  }
+
+  // Fallback: check project general workSchedule via getProjectEndTime
+  const dateStr = format(day, "yyyy-MM-dd");
+  return getProjectEndTime(project, dateStr) !== "";
+};
+
+const isDayAllowedForReporting = (project: Project, day: Date): boolean => {
+  // A day is allowed only if it is in the frequency schedule
+  if (!isDayInFrequency(project, day)) return false;
+
+  // Cannot be in the future (excluding today)
+  const today = startOfDay(new Date());
+  if (isAfter(day, today)) return false;
+
+  // Compute the last 3 active reporting days from today going backward
+  const allowedDates: string[] = [];
+  let current = startOfDay(new Date());
+  for (let i = 0; i < 30; i++) {
+    if (isDayInFrequency(project, current)) {
+      allowedDates.push(format(current, "yyyy-MM-dd"));
+      if (allowedDates.length === 3) break;
+    }
+    current = subDays(current, 1);
+  }
+
+  const dayStr = format(day, "yyyy-MM-dd");
+  return allowedDates.includes(dayStr);
+};
+
 const formatToAMPM = (timeStr: string | null | undefined) => {
   if (!timeStr || timeStr === "—") return "—";
   const parts = timeStr.split(":");
@@ -778,28 +814,11 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
+    if (!reportDate) return true;
 
-    // Always allow today, yesterday, and two days ago (3 days total) for reporting
-    if (reportDate) {
-      const [year, month, day] = reportDate.split("-").map(Number);
-      const date = new Date(year, month - 1, day);
-      if (isTodayLocal(date) || isYesterdayLocal(date) || isTwoDaysAgoLocal(date)) {
-        return true;
-      }
-    }
-
-    // Check reporting frequency config first
-    const schedule = selectedProject.activityLogConfig?.schedule;
-    if (schedule && schedule.days) {
-      const [year, month, day] = reportDate.split("-").map(Number);
-      const date = new Date(year, month - 1, day);
-      const dayIndex = date.getDay(); // 0 is Sunday, 6 is Saturday
-      return schedule.days.includes(dayIndex);
-    }
-
-    // If no explicit frequency schedule is set for activity logs, fallback to allowing it
-    // because the default configuration UI assumes "Todos los días (Lunes a Domingo)".
-    return true;
+    const [year, month, day] = reportDate.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return isDayAllowedForReporting(selectedProject, date);
   }, [selectedProject, reportDate]);
 
   // Effect to auto-select a project once userProjects are loaded to prevent empty selects
@@ -1238,43 +1257,8 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   const isProjectWorkDay = (day: Date) => {
-    const project = userProjects.find((p) => p._id === selectedProjectId);
-    if (!project) return false;
-
-    // Always allow today, yesterday, and two days ago (3 days total) for reporting
-    if (isTodayLocal(day) || isYesterdayLocal(day) || isTwoDaysAgoLocal(day)) {
-      return true;
-    }
-
-    const dateStr = format(day, "yyyy-MM-dd");
-
-    // Project Duration Check
-    if (project.startDate) {
-      // Parse explicitly as local date YYYY-MM-DD
-      const [y, m, d] = project.startDate.split("T")[0].split("-").map(Number);
-      const pStart = startOfDay(new Date(y, m - 1, d));
-      if (isBefore(day, pStart)) return false;
-    }
-    if (project.endDate) {
-      const [y, m, d] = project.endDate.split("T")[0].split("-").map(Number);
-      const pEnd = startOfDay(new Date(y, m - 1, d));
-      // Use endOfDay logic or just compare?
-      // If today is 2026-01-31 and end is 2026-01-31, isAfter should handle it if we compare timestamps.
-      // Actually, if project ends at 2026-01-31, "day" (which represents 00:00 of that day) is NOT after.
-      // If day is 31st (00:00) and pEnd is 31st (00:00), isAfter is false. OK.
-      // If day is Feb 1st (00:00) and pEnd is 31st (00:00), isAfter is true. OK.
-      if (isAfter(day, pEnd)) return false;
-    }
-
-    // Work Schedule Check based on reporting frequency config
-    const schedule = project.activityLogConfig?.schedule;
-    if (schedule && schedule.days) {
-      const dayIndex = day.getDay();
-      return schedule.days.includes(dayIndex);
-    }
-
-    // Fallback logic
-    return getProjectEndTime(project, dateStr) !== "";
+    if (!selectedProject) return false;
+    return isDayAllowedForReporting(selectedProject, day);
   };
 
   const hasReport = (day: Date) => {
