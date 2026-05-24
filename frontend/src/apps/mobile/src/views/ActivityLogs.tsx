@@ -1401,6 +1401,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   };
 
   const handleConfirmSubmit = async () => {
+    const confirmRes = await sweetAlert.confirm(
+      "Importante",
+      "Recordá que tenés hasta 48hs de realizado el reporte para editarlo.",
+      "Confirmar",
+      "Volver"
+    );
+    if (!confirmRes.isConfirmed) return;
+
     setSubmitting(true);
 
     try {
@@ -1591,6 +1599,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const handleEditFromDetail = () => {
     if (viewingReport) {
+      const reportDate = startOfDay(parseISO(viewingReport.date));
+      const today = startOfDay(new Date());
+      const diffDays = Math.round((today.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays > 2) {
+        sweetAlert.error("Atención", "El máximo para editar son 48 horas de realizado el reporte.");
+        return;
+      }
       setShowDetailModal(false);
       handleEditReport(viewingReport);
     }
@@ -3895,9 +3910,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             <button onClick={() => setShowDetailModal(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 transition-colors text-sm">
               Cerrar
             </button>
-            <button onClick={handleEditFromDetail} className="flex-1 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors text-sm">
-              Editar
-            </button>
+            {(() => {
+              const isEditable = viewingReport
+                ? Math.round((startOfDay(new Date()).getTime() - startOfDay(parseISO(viewingReport.date)).getTime()) / (1000 * 60 * 60 * 24)) <= 2
+                : false;
+              return (
+                <button
+                  onClick={handleEditFromDetail}
+                  className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${
+                    isEditable
+                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                      : "bg-slate-300 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
+                  }`}
+                >
+                  Editar
+                </button>
+              );
+            })()}
           </div>
         }
       >
@@ -3924,6 +3953,13 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     return cName ? `${cName} | ${pName}` : pName;
                   })()}
                 </span>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 text-xs text-blue-800 dark:text-blue-200 flex items-start gap-2.5">
+              <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 text-blue-500 flex-shrink-0" />
+              <div>
+                EDITAR: Solo se puede editar hasta 48hs después de la fecha de la novedad.
               </div>
             </div>
 
