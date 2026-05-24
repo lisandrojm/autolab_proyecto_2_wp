@@ -576,6 +576,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
 
   const { profile, stats } = useProfile();
 
+  const filteredReports = useMemo(() => {
+    if (!profile) return [];
+    const myUserIds = [profile.userId, profile._id].filter(Boolean).map((id) => String(id));
+    return reports.filter((report) => {
+      const reportUserId = typeof report.userId === "object" && report.userId ? report.userId._id || report.userId.id : report.userId;
+      if (reportUserId && myUserIds.includes(String(reportUserId))) {
+        return true;
+      }
+      if (typeof report.userId === "object" && report.userId?.email && profile.email) {
+        if (String(report.userId.email).toLowerCase() === String(profile.email).toLowerCase()) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }, [reports, profile]);
+
   const isMyAssignment = useCallback(
     (asm: any) => {
       if (!profile) return false;
@@ -2913,7 +2930,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
             <LoadingSpinner size="md" message="Cargando novedades..." />
           ) : (
             <>
-              {reports.map((report) => (
+              {filteredReports.map((report) => (
                 <div key={report._id} onClick={() => handleViewReport(report)} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
                   <div className="flex justify-between items-start mb-2">
                     <span className="inline-block px-2 py-0.5 text-[12px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded">{report.reportNumber || `#${report._id.slice(-6).toUpperCase()}`}</span>
@@ -2962,7 +2979,7 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                   </div>
                 </div>
               ))}
-              {reports.length === 0 && <div className="text-center text-gray-500 py-8">No has enviado novedades recientes.</div>}
+              {filteredReports.length === 0 && <div className="text-center text-gray-500 py-8">No has enviado novedades recientes.</div>}
             </>
           )}
         </div>
