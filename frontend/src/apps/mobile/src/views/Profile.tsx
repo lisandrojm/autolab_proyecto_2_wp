@@ -184,7 +184,11 @@ export default function Profile() {
       name: proj.nombre_proyecto || proj.name || "Sin nombre",
       client: proj.nombre_cliente || "Sin cliente",
       sede: activeContract?.nombre_sede || "Sin sede",
-      roleFrame: activeContract?.nombre_rol_frame || proj.nombre_rol_frame || "Sin rol frame",
+      roleFrame: (proj.nombre_rol_frame && proj.nombre_rol_frame !== "Sin rol frame")
+        ? proj.nombre_rol_frame
+        : ((activeContract?.nombre_rol_frame && activeContract.nombre_rol_frame !== "Sin rol frame")
+          ? activeContract.nombre_rol_frame
+          : "Sin rol frame"),
       area: activeContract?.nombre_area || proj.nombre_area || "Sin área",
       schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : "Sin horario",
       isResponsable,
@@ -250,7 +254,13 @@ export default function Profile() {
 
   const projectToProcess = useMemo(() => {
     if (!currentProjectSummary) return null;
-    return currentFullProject || fullProjectDataFromCache || currentProjectSummary;
+    const baseProject = (currentFullProject || fullProjectDataFromCache || {}) as any;
+    return {
+      ...baseProject,
+      ...currentProjectSummary,
+      teamConfig: baseProject.teamConfig || currentProjectSummary.teamConfig,
+      coordinatorAssignments: baseProject.coordinatorAssignments || currentProjectSummary.coordinatorAssignments,
+    };
   }, [currentFullProject, fullProjectDataFromCache, currentProjectSummary]);
 
   const selectedProjectInfo = useMemo(() => {
@@ -427,7 +437,7 @@ export default function Profile() {
                   </div>
                 )}
                 
-                {profile?.roleNames?.map((role: string, idx: number) => {
+                {profile?.roleNames?.filter((role: string) => !role.toLowerCase().includes("responsable de proyecto")).map((role: string, idx: number) => {
                   const lowerRole = role.toLowerCase();
                   const isCoord = lowerRole.includes("coordinador");
                   const isColab = lowerRole.includes("colaborador");
