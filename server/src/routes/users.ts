@@ -768,6 +768,7 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
       // Check if a UserProject already exists for this combination
       let userProject = await UserProject.findOne({
         projectId: new Types.ObjectId(projId.toString()),
+        userId: new Types.ObjectId(userId),
         externalEmployeeId: 0,
         externalProjectId: 0,
       });
@@ -775,6 +776,7 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
       if (!userProject) {
         userProject = new UserProject({
           projectId: new Types.ObjectId(projId.toString()),
+          userId: new Types.ObjectId(userId),
           externalProjectId: 0,
           externalEmployeeId: 0,
           nombre_proyecto: nombreProyecto,

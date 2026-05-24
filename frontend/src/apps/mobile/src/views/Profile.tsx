@@ -26,13 +26,32 @@ export default function Profile() {
     const findArea = (id: string) => allAreas.find(a => String(a._id) === String(id));
     const findShift = (id: string) => allShifts.find(s => String(s._id) === String(id));
 
-    // Find active contract or just the first one
+    // Filter contracts to only those that match this project's ID or name
+    const matchedContracts = proj.contracts?.filter((c: any) => {
+      if (!c) return false;
+      
+      // Cross-reference project external/metadata ID if available
+      const extProjId = proj.externalProjectId || proj.metadata?.id;
+      if (extProjId && c.proyecto_id && Number(c.proyecto_id) !== Number(extProjId)) {
+        return false;
+      }
+      
+      // Cross-reference project name
+      const projName = proj.nombre_proyecto || proj.name;
+      if (projName && c.nombre_proyecto && String(c.nombre_proyecto).toLowerCase() !== String(projName).toLowerCase()) {
+        return false;
+      }
+      
+      return true;
+    }) || [];
+
+    // Find active contract or just the first one from the matched contracts
     const activeContract =
-      proj.contracts?.find((c: any) => {
+      matchedContracts.find((c: any) => {
         const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
         if (endDate) endDate.setHours(23, 59, 59, 999);
         return !endDate || endDate.getTime() >= new Date().getTime();
-      }) || proj.contracts?.[0];
+      }) || matchedContracts[0];
 
     const isResponsable = Number(proj.metadata?.responsableId) === Number(profile?.metadata?.id);
 
@@ -398,18 +417,23 @@ export default function Profile() {
 
       {/* Project Details Section - Compact version */}
       <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm space-y-4 border border-slate-100 dark:border-slate-800">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">Asignación</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">Asignación</h3>
+          </div>
           {userProjects.length > 1 && (
-            <div className="relative">
-              <select className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-[10px] font-black pr-8 text-primary focus:ring-2 focus:ring-primary/20 shadow-sm" value={selectedProjectIndex} onChange={(e) => setSelectedProjectIndex(Number(e.target.value))}>
-                {userProjects.map((p, idx) => (
-                  <option key={idx} value={idx}>
-                    {p.nombre_proyecto || p.name || `Proyecto ${idx + 1}`}
-                  </option>
-                ))}
-              </select>
-              <FontAwesomeIcon icon={faChevronDown} className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-slate-400 pointer-events-none" />
+            <div className="flex flex-col gap-1 max-w-[220px]">
+              <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Seleccionar proyecto</label>
+              <div className="relative">
+                <select className="w-full appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-[11px] font-bold pr-8 text-primary focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer" value={selectedProjectIndex} onChange={(e) => setSelectedProjectIndex(Number(e.target.value))}>
+                  {userProjects.map((p, idx) => (
+                    <option key={idx} value={idx}>
+                      {p.nombre_proyecto || p.name || `Proyecto ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <FontAwesomeIcon icon={faChevronDown} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] text-slate-400 pointer-events-none" />
+              </div>
             </div>
           )}
         </div>
