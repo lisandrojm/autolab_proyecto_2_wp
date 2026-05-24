@@ -3886,7 +3886,21 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       </Modal>
 
       {/* Detail Modal */}
-      <Modal isOpen={showDetailModal} onClose={() => setShowDetailModal(false)} title="Detalle del Reporte">
+      <Modal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        title="Detalle del Reporte"
+        footer={
+          <div className="flex gap-3 w-full">
+            <button onClick={() => setShowDetailModal(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 transition-colors text-sm">
+              Cerrar
+            </button>
+            <button onClick={handleEditFromDetail} className="flex-1 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors text-sm">
+              Editar
+            </button>
+          </div>
+        }
+      >
         {viewingReport && (
           <div className="space-y-4">
             <div className="font-medium text-sm text-gray-900 dark:text-white space-y-2 pb-4">
@@ -3946,15 +3960,6 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded italic">"{viewingReport.comments}"</p>
               </div>
             )}
-
-            <div className="flex gap-3 pt-4">
-              <button onClick={() => setShowDetailModal(false)} className="flex-1 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-300 transition-colors text-sm">
-                Cerrar
-              </button>
-              <button onClick={handleEditFromDetail} className="flex-1 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors text-sm">
-                Editar
-              </button>
-            </div>
           </div>
         )}
       </Modal>
