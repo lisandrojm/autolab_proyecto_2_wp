@@ -142,6 +142,40 @@ const isActiveContract = (contract: any, periodStart?: Date, periodEnd?: Date) =
   return today >= altaDate;
 };
 
+const getActiveContractForDate = (contracts: any[], dateStr: string) => {
+  if (!contracts || contracts.length === 0) return null;
+  const getLocalMidnight = (dateString: string) => {
+    if (!dateString) return null;
+    const isoDate = dateString.substring(0, 10);
+    const parts = isoDate.split("-");
+    if (parts.length === 3) {
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
+    }
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const targetDate = getLocalMidnight(dateStr);
+  if (!targetDate) return null;
+
+  return contracts.find((c) => {
+    const status = (c.nombre_estado_empleado || "").toLowerCase();
+    if (status.includes("baja") || status.includes("inactivo")) return false;
+
+    const altaDate = getLocalMidnight(c.fecha_alta_contrato);
+    if (!altaDate) return false;
+
+    const bajaDate = c.fecha_baja_contrato ? getLocalMidnight(c.fecha_baja_contrato) : null;
+
+    if (bajaDate && bajaDate < targetDate) return false;
+    if (altaDate > targetDate) return false;
+    return true;
+  });
+};
+
+
 const ContractDetailModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -546,7 +580,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   };
 
   // Helper to split overtime hours based on rules
-  const splitOvertime = (date: string, startTime: string, endTime: string, totalHours: number) => {
+  const splitOvertime = (date: string, startTime: string, endTime: string, totalHours: number, contractStart?: string, contractEnd?: string) => {
     const d = new Date(date + "T00:00:00");
     const dayOfWeek = d.getDay(); // 0 Sunday, 1-5 Mon-Fri, 6 Sat
 
@@ -582,11 +616,69 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       otEnd += 24 * 60; // Next day
     }
 
-    const overlap1 = Math.max(0, Math.min(otEnd, p50End) - Math.max(otStart, p50Start));
-    const overlap2 = Math.max(0, Math.min(otEnd, p50End + 1440) - Math.max(otStart, p50Start + 1440));
-    const mins50 = overlap1 + overlap2;
+    // If the overtime starts in the night shift (before the daytime 50% range starts),
+    // the entire overtime of that day is paid at the night rate (100% surcharge).
+    if (otStart < p50Start) {
+      return {
+        h50: 0,
+        h100: totalHours,
+        pct: glossary.pct100,
+      };
+    }
 
-    const computedTotalMins = otEnd - otStart;
+
+    const get50Overlap = (start: number, end: number) => {
+      if (end <= start) return 0;
+      const overlap1 = Math.max(0, Math.min(end, p50End) - Math.max(start, p50Start));
+      const overlap2 = Math.max(0, Math.min(end, p50End + 1440) - Math.max(start, p50Start + 1440));
+      const overlap3 = Math.max(0, Math.min(end, p50End - 1440) - Math.max(start, p50Start - 1440));
+      return overlap1 + overlap2 + overlap3;
+    };
+
+    let mins50 = 0;
+    let computedTotalMins = 0;
+
+    if (contractStart && contractEnd) {
+      const cStart = timeToMinutes(contractStart);
+      let cEnd = timeToMinutes(contractEnd);
+      if (cEnd < cStart) {
+        cEnd += 24 * 60;
+      }
+
+      let cStartAligned = cStart;
+      let cEndAligned = cEnd;
+
+      // Align contract start/end with overtime start/end to minimize absolute difference
+      const diff1 = Math.abs(cStartAligned - otStart);
+      const diff2 = Math.abs((cStartAligned - 1440) - otStart);
+      const diff3 = Math.abs((cStartAligned + 1440) - otStart);
+
+      if (diff2 < diff1 && diff2 < diff3) {
+        cStartAligned -= 1440;
+        cEndAligned -= 1440;
+      } else if (diff3 < diff1 && diff3 < diff2) {
+        cStartAligned += 1440;
+        cEndAligned += 1440;
+      }
+
+      // Calculate the overtime intervals (before contract start, and after contract end)
+      const minsBefore = Math.max(0, Math.min(otEnd, cStartAligned) - otStart);
+      const minsAfter = Math.max(0, otEnd - Math.max(otStart, cEndAligned));
+      computedTotalMins = minsBefore + minsAfter;
+
+      if (computedTotalMins > 0) {
+        const overlapBefore = get50Overlap(otStart, Math.min(otEnd, cStartAligned));
+        const overlapAfter = get50Overlap(Math.max(otStart, cEndAligned), otEnd);
+        mins50 = overlapBefore + overlapAfter;
+      }
+    }
+
+    // Fallback if no contract schedule or no overtime minutes calculated outside contract shift
+    if (computedTotalMins <= 0) {
+      mins50 = get50Overlap(otStart, otEnd);
+      computedTotalMins = otEnd - otStart;
+    }
+
     if (computedTotalMins <= 0) {
       if (dayOfWeek >= 1 && dayOfWeek <= 5) return { h50: totalHours, h100: 0, pct: glossary.pct50 };
       return { h50: 0, h100: totalHours, pct: glossary.pct100 };
@@ -602,6 +694,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       pct: h100 > h50 ? glossary.pct100 : glossary.pct50,
     };
   };
+
 
   // Build a map of userId -> User for quick lookup
   const usersMap = useMemo(() => {
@@ -915,7 +1008,26 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         // Track daily attendance with normalized key
         const dateKey = report.date.substring(0, 10);
         const ot = record.overtimeHours || 0;
-        const { h50, h100, pct } = splitOvertime(report.date, record.overtimeEntryTime, record.overtimeExitTime, ot);
+
+        // Retrieve active contract's schedule on report date to perform schedule-aware split
+        const userProjects = stats.userProjectsData || [];
+        const matchContracts: any[] = [];
+        userProjects.forEach((up) => {
+          if (normalizeProjectName(up.nombre_proyecto || "") === normReportProjName) {
+            if (up.contracts) matchContracts.push(...up.contracts);
+          }
+        });
+        const activeContract = getActiveContractForDate(matchContracts, report.date);
+
+        const { h50, h100, pct } = splitOvertime(
+          report.date,
+          record.overtimeEntryTime,
+          record.overtimeExitTime,
+          ot,
+          activeContract?.hora_inicio || undefined,
+          activeContract?.hora_fin || undefined
+        );
+
 
         stats.dailyAttendance[dateKey] = {
           status: record.status,
