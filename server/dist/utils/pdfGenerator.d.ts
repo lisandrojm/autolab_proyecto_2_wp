@@ -3,7 +3,7 @@ import { IOrderConfig } from "../models/OrderConfig.js";
 import { IPdf } from "../models/Pdf.js";
 import { IUser } from "../models/User.js";
 import { IVacation } from "../models/Vacation.js";
-export declare function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview?: boolean, title?: string): Promise<Buffer>;
+export declare function generatePreviewPDF(content: string, code: string, tenantId: string, isGlobalPreview?: boolean, title?: string, pdfText?: string): Promise<Buffer>;
 interface GeneratePdfResult {
     pdfUrl: string;
     success: boolean;

@@ -129,7 +129,7 @@ async function buildPdfHtml(tenantId, bodyContent, additionalVars = {}, title = 
     `;
     return html;
 }
-export async function generatePreviewPDF(content, code, tenantId, isGlobalPreview = false, title = "") {
+export async function generatePreviewPDF(content, code, tenantId, isGlobalPreview = false, title = "", pdfText) {
     try {
         console.log("[PDF PREVIEW] Starting generation...");
         console.log("[PDF PREVIEW] CWD:", process.cwd());
@@ -143,6 +143,9 @@ export async function generatePreviewPDF(content, code, tenantId, isGlobalPrevie
         let bodyContent = content;
         if (isGlobalPreview) {
             bodyContent = "<div style='text-align: center; color: #666; margin-top: 50px;'>Vista previa del membrete y firma.<br>El contenido de la plantilla iría aquí.</div>";
+        }
+        else if (pdfText) {
+            bodyContent += `\n\n<div style="margin-top: 20px; font-size: 11pt; white-space: pre-wrap; color: #333;">${sanitizeHtml(pdfText)}</div>`;
         }
         console.log("[PDF PREVIEW] Building HTML...");
         const html = await buildPdfHtml(tenantId, bodyContent, dummyVars, title);

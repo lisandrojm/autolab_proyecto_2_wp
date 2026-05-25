@@ -72,7 +72,7 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         },
       });
 
-      const blob = await pdfPreviewAPI.preview(content, code);
+      const blob = await pdfPreviewAPI.preview(content, code, undefined, formData.pdfText);
       Swal.close();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -486,14 +486,9 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
 
               if (matchingTemplate) {
                 return (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
-                    </div>
-                    <button type="button" onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)} className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 font-medium flex items-center gap-1" title="Previsualizar plantilla">
-                      <FontAwesomeIcon icon={faEye} /> Visualizar
-                    </button>
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
                   </div>
                 );
               } else {
@@ -526,12 +521,32 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
               value={formData.pdfText || ""}
               onChange={(e) => setFormData({ ...formData, pdfText: e.target.value })}
               rows={4}
-              className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm mb-3"
               placeholder="Escriba aquí el bloque de texto plano que se imprimirá al final del PDF, entre el cuerpo del pedido y las firmas..."
             />
-            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 mb-4">
               Este texto es plano (no soporta variables) y se incluirá únicamente en los PDFs generados para este tipo de pedido.
             </p>
+
+            {(() => {
+              const expectedCode = getExpectedTemplateCode();
+              const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
+              if (matchingTemplate) {
+                return (
+                  <div className="flex justify-end pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)}
+                      className="px-4 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium rounded transition-colors flex items-center gap-1.5"
+                      title="Previsualizar plantilla con el texto adicional"
+                    >
+                      <FontAwesomeIcon icon={faEye} /> Visualizar
+                    </button>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
 
