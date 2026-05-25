@@ -44,6 +44,7 @@ const orderConfigSchema = new Schema({
     requiresSignature: { type: Boolean, default: true },
     requiresUserConfirmation: { type: Boolean, default: false },
     pdfId: { type: Schema.Types.ObjectId, ref: "Pdf" },
+    pdfText: { type: String, trim: true },
 }, { timestamps: true, collection: "orders_configs" });
 orderConfigSchema.index({ tenantId: 1, isActive: 1, sortOrder: 1 });
 orderConfigSchema.index({ tenantId: 1, name: 1 }, { unique: true });

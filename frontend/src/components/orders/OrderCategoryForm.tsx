@@ -34,6 +34,7 @@ interface OrderCategoryFormProps {
     requiresSignature?: boolean;
     requiresUserConfirmation?: boolean;
     pdfId?: string;
+    pdfText?: string;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -472,47 +473,66 @@ export const OrderCategoryForm: React.FC<OrderCategoryFormProps> = ({ formData, 
         </div>
 
         {/* Plantilla PDF */}
-        <div className="border border-gray-200 dark:border-blue-600 p-4 rounded">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Plantilla PDF Asociada
-          </label>
-          {(() => {
-            const expectedCode = getExpectedTemplateCode();
-            const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
+        <div className="border border-gray-200 dark:border-blue-600 p-4 rounded space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Plantilla PDF Asociada
+            </label>
+            {(() => {
+              const expectedCode = getExpectedTemplateCode();
+              const matchingTemplate = pdfTemplates?.find((t) => t.code === expectedCode && t.isActive);
 
-            if (!expectedCode) return <p className="text-xs text-gray-500">Seleccione la categoría y el modo de fecha para ver la plantilla.</p>;
+              if (!expectedCode) return <p className="text-xs text-gray-500">Seleccione la categoría y el modo de fecha para ver la plantilla.</p>;
 
-            if (matchingTemplate) {
-              return (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
-                  </div>
-                  <button type="button" onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)} className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 font-medium flex items-center gap-1" title="Previsualizar plantilla">
-                    <FontAwesomeIcon icon={faEye} /> Visualizar
-                  </button>
-                </div>
-              );
-            } else {
-              return (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
-                  <div className="flex items-start gap-2">
-                    <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5" />
+              if (matchingTemplate) {
+                return (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Sin plantilla asignada</p>
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                        No existe una plantilla activa para este tipo de pedido (Código esperado: <strong>{expectedCode}</strong>). El PDF no se generará.
-                      </p>
-                      <Link to="/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
-                        Crear plantilla en Configuración &rarr;
-                      </Link>
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Plantilla asignada automáticamente</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">{matchingTemplate.name}</p>
+                    </div>
+                    <button type="button" onClick={() => handlePreview(matchingTemplate.code, matchingTemplate.content)} className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 font-medium flex items-center gap-1" title="Previsualizar plantilla">
+                      <FontAwesomeIcon icon={faEye} /> Visualizar
+                    </button>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
+                    <div className="flex items-start gap-2">
+                      <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Sin plantilla asignada</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                          No existe una plantilla activa para este tipo de pedido (Código esperado: <strong>{expectedCode}</strong>). El PDF no se generará.
+                        </p>
+                        <Link to="/pdfs" target="_blank" className="text-xs text-blue-600 hover:underline mt-1 block font-medium">
+                          Crear plantilla en Configuración &rarr;
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            }
-          })()}
+                );
+              }
+            })()}
+          </div>
+
+          {/* Texto adicional para el PDF */}
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Texto Adicional para el PDF (Opcional)
+            </label>
+            <textarea
+              value={formData.pdfText || ""}
+              onChange={(e) => setFormData({ ...formData, pdfText: e.target.value })}
+              rows={4}
+              className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="Escriba aquí el bloque de texto plano que se imprimirá al final del PDF, entre el cuerpo del pedido y las firmas..."
+            />
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              Este texto es plano (no soporta variables) y se incluirá únicamente en los PDFs generados para este tipo de pedido.
+            </p>
+          </div>
         </div>
 
         {/* Acción Futura */}

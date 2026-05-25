@@ -9,7 +9,7 @@ import { IVacation } from "../models/Vacation.js";
 import { savePdfToStorage, savePdfVacationToStorage } from "./pdfStorage.js";
 import { PdfConfig } from "../models/PdfConfig.js";
 import { ProjectPdfConfig } from "../models/ProjectPdfConfig.js";
-import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables } from "./pdfVariableReplacer.js";
+import { prepareVariables, prepareVacationVariables, replacePdfVariables, getDummyVariables, getSystemVariables, sanitizeHtml } from "./pdfVariableReplacer.js";
 
 // Helper function to build the full HTML with layout
 async function buildPdfHtml(tenantId: string, bodyContent: string, additionalVars: Record<string, string> = {}, title: string = "", user?: IUser): Promise<string> {
@@ -200,6 +200,9 @@ export async function generateOrderPDF(order: IOrder, category: IOrderConfig, te
     console.log("[PDF GENERATOR] Template Name:", template.name);
 
     let bodyContent = template.content;
+    if (category.pdfText) {
+      bodyContent += `\n\n<div style="margin-top: 20px; font-size: 11pt; white-space: pre-wrap; color: #333;">${sanitizeHtml(category.pdfText)}</div>`;
+    }
     if (order.customTextBlock && !bodyContent.includes("{{textoAdicional}}")) {
       bodyContent += `\n\n<div style="margin-top: 30px; padding-top: 15px; border-top: 1px dashed #ccc; font-style: italic; color: #555; font-size: 11pt; white-space: pre-wrap;">${order.customTextBlock}</div>`;
     }

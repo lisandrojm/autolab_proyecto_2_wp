@@ -55,6 +55,7 @@ export interface IOrderConfig extends Document {
   requiresSignature?: boolean;
   requiresUserConfirmation?: boolean;
   pdfId?: Types.ObjectId;
+  pdfText?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -105,6 +106,7 @@ const orderConfigSchema = new Schema<IOrderConfig>(
     requiresSignature: { type: Boolean, default: true },
     requiresUserConfirmation: { type: Boolean, default: false },
     pdfId: { type: Schema.Types.ObjectId, ref: "Pdf" },
+    pdfText: { type: String, trim: true },
   },
   { timestamps: true, collection: "orders_configs" },
 );

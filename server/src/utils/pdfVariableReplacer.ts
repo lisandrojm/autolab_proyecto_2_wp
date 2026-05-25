@@ -21,7 +21,7 @@ interface PdfVariables {
   [key: string]: string;
 }
 
-function sanitizeHtml(str: string): string {
+export function sanitizeHtml(str: string): string {
   if (!str) return "";
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }

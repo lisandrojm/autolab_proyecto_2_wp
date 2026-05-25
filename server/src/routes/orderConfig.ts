@@ -50,6 +50,7 @@ const createCategorySchema = z
     requiresSignature: z.boolean().default(true),
     requiresUserConfirmation: z.boolean().default(false),
     pdfId: z.string().optional(),
+    pdfText: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -137,6 +138,7 @@ const updateCategorySchema = z
     requiresSignature: z.boolean().optional(),
     requiresUserConfirmation: z.boolean().optional(),
     pdfId: z.string().optional(),
+    pdfText: z.string().optional(),
   })
   .refine(
     (data) => {

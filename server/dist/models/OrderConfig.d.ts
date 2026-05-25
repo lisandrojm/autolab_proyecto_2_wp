@@ -48,6 +48,7 @@ export interface IOrderConfig extends Document {
     requiresSignature?: boolean;
     requiresUserConfirmation?: boolean;
     pdfId?: Types.ObjectId;
+    pdfText?: string;
     createdAt: Date;
     updatedAt: Date;
 }

@@ -155,6 +155,7 @@ export const OrderTypesTab: React.FC = () => {
     requiresSignature: boolean;
     requiresUserConfirmation?: boolean;
     pdfId?: string;
+    pdfText?: string;
   }>({
     name: "",
     informacion: "",
@@ -178,6 +179,7 @@ export const OrderTypesTab: React.FC = () => {
     requiresSignature: true,
     requiresUserConfirmation: false,
     pdfId: undefined,
+    pdfText: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -262,6 +264,7 @@ export const OrderTypesTab: React.FC = () => {
       documentoRequerido: undefined,
       requiresSignature: true,
       requiresUserConfirmation: false,
+      pdfText: "",
     });
     setShowModal(true);
   };
@@ -291,6 +294,7 @@ export const OrderTypesTab: React.FC = () => {
       requiresSignature: orderType.requiresSignature ?? true,
       requiresUserConfirmation: orderType.requiresUserConfirmation ?? false,
       pdfId: orderType.pdfId,
+      pdfText: orderType.pdfText || "",
     });
     setShowModal(true);
   };
@@ -381,6 +385,7 @@ export const OrderTypesTab: React.FC = () => {
         deadlineMode: formData.requiresAction && formData.futureActionType ? formData.deadlineMode : undefined,
         requiresSignature: formData.requiresSignature,
         pdfId: formData.requiresSignature && formData.pdfId ? formData.pdfId : undefined,
+        pdfText: formData.pdfText || "",
         requiresUserConfirmation: formData.requiresAction ? formData.requiresUserConfirmation : false,
         config: validSubtipos.length > 0 ? { subtipos: validSubtipos } : undefined,
       };
