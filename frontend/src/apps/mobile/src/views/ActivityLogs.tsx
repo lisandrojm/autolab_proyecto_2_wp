@@ -332,6 +332,56 @@ const isTwoDaysAgoLocal = (d: Date): boolean => {
 
 export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
+
+  const resolveEmployeeAreaAndShift = (emp: EmployeeOption) => {
+    let areaId = "";
+    let shiftId = "";
+
+    const teamConfigMember = selectedProject?.teamConfig?.find((c: any) => {
+      const cUserId = typeof c.userId === "object" ? c.userId?._id : c.userId;
+      return String(cUserId) === String(emp.id);
+    });
+
+    if (teamConfigMember) {
+      if (teamConfigMember.areaId) {
+        areaId = String(teamConfigMember.areaId?._id || teamConfigMember.areaId);
+      }
+      if (teamConfigMember.shiftId) {
+        shiftId = String(teamConfigMember.shiftId?._id || teamConfigMember.shiftId);
+      }
+      if ((!areaId || !shiftId) && teamConfigMember.areaShiftAssignments?.length > 0) {
+        const firstAsa = teamConfigMember.areaShiftAssignments[0];
+        if (!areaId) {
+          areaId = String(firstAsa.areaId?._id || firstAsa.areaId || "");
+        }
+        if (!shiftId && firstAsa.shiftIds && firstAsa.shiftIds.length > 0) {
+          shiftId = String(firstAsa.shiftIds[0]?._id || firstAsa.shiftIds[0] || "");
+        }
+      }
+    }
+
+    const projMeta = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId));
+    if (projMeta) {
+      if (!areaId) {
+        areaId = String((projMeta.areaId as any)?._id || projMeta.areaId || "");
+      }
+      if (!shiftId) {
+        shiftId = String((projMeta.shiftId as any)?._id || projMeta.shiftId || "");
+      }
+      if (!shiftId && projMeta.contractStartTime && projMeta.contractEndTime) {
+        const matchingShift = allShifts.find((s) => s.startTime === projMeta.contractStartTime && s.endTime === projMeta.contractEndTime);
+        if (matchingShift) {
+          shiftId = String(matchingShift._id || matchingShift.id);
+        }
+      }
+    }
+
+    const areaName = allAreas.find((a) => String(a._id) === areaId)?.name || "";
+    const shiftName = allShifts.find((s) => String(s._id || s.id) === shiftId)?.name || "";
+
+    return { areaId, shiftId, areaName, shiftName };
+  };
+
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -981,8 +1031,24 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
       return true;
     });
 
-    console.log("DEBUG projectEmployees - Total accepted:", filtered.length);
-    return filtered;
+    const sorted = [...filtered].sort((a, b) => {
+      const shiftIdA = resolveEmployeeAreaAndShift(a).shiftId;
+      const shiftIdB = resolveEmployeeAreaAndShift(b).shiftId;
+
+      const indexA = allShifts.findIndex((s) => String(s._id || s.id) === shiftIdA);
+      const indexB = allShifts.findIndex((s) => String(s._id || s.id) === shiftIdB);
+
+      const valA = indexA === -1 ? 9999 : indexA;
+      const valB = indexB === -1 ? 9999 : indexB;
+
+      if (valA !== valB) {
+        return valA - valB;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    console.log("DEBUG projectEmployees - Total accepted & sorted:", sorted.length);
+    return sorted;
   }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts]);
 
   const isWorkDay = useMemo(() => {
@@ -2525,6 +2591,23 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                             <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
                                             <span>{currentEmp.name}</span>
                                             {renderVacationBadge(currentEmp.id, currentEmp.name)}
+                                            {(() => {
+                                              const { areaName, shiftName } = resolveEmployeeAreaAndShift(currentEmp);
+                                              return (
+                                                <>
+                                                  {areaName && (
+                                                    <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                                                      {areaName}
+                                                    </span>
+                                                  )}
+                                                  {shiftName && (
+                                                    <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                                                      {shiftName}
+                                                    </span>
+                                                  )}
+                                                </>
+                                              );
+                                            })()}
                                           </h3>
                                           <div className="flex flex-wrap items-center gap-2 mt-1 ml-10">
                                             <span className="text-xs text-slate-500 dark:text-gray-400">{currentEmp.positionName || "Colaborador"}</span>
