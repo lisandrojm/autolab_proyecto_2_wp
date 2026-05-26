@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
 // POST /api/v1/activity-log-types
 router.post("/", async (req, res) => {
     try {
-        const { name, requiresReplacement, status, order } = req.body;
+        const { name, requiresReplacement, status, isActive, order } = req.body;
         // Validate inputs
         if (!name)
             return res.status(400).json({ error: "Name is required" });
@@ -29,11 +29,12 @@ router.post("/", async (req, res) => {
             const lastItem = await RequestConfig.findOne({ tenantId: req.tenantObjectId }).sort({ order: -1 });
             newOrder = (lastItem?.order || 0) + 1;
         }
+        const statusVal = status !== undefined ? status : isActive;
         const newConfig = new RequestConfig({
             tenantId: req.tenantObjectId,
             name,
             requiresReplacement: !!requiresReplacement,
-            isActive: status === "Activa" || status === true, // Handle "Activa"/"Inactiva" string or boolean
+            isActive: statusVal === "Activa" || statusVal === true, // Handle "Activa"/"Inactiva" string or boolean
             order: newOrder,
             visibility: req.body.visibility || "all",
             allowedProjectIds: req.body.allowedProjectIds || [],
@@ -53,17 +54,18 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, requiresReplacement, status, order } = req.body;
+        const { name, requiresReplacement, status, isActive, order } = req.body;
         const updateData = {};
         if (name !== undefined)
             updateData.name = name;
         if (requiresReplacement !== undefined)
             updateData.requiresReplacement = requiresReplacement;
-        if (status !== undefined) {
-            if (typeof status === "string")
-                updateData.isActive = status === "Activa";
+        const statusVal = status !== undefined ? status : isActive;
+        if (statusVal !== undefined) {
+            if (typeof statusVal === "string")
+                updateData.isActive = statusVal === "Activa";
             else
-                updateData.isActive = !!status;
+                updateData.isActive = !!statusVal;
         }
         if (order !== undefined)
             updateData.order = order;

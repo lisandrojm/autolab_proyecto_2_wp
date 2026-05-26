@@ -184,6 +184,7 @@ export const RequestsConfigPage: React.FC = () => {
         name: currentType.type,
         requiresReplacement: currentType.requiresReplacement,
         isActive: currentType.status === "Activa",
+        status: currentType.status,
         order: currentType.order,
         visibility: currentType.visibility,
         allowedProjectIds: currentType.allowedProjectIds,
@@ -221,7 +222,7 @@ export const RequestsConfigPage: React.FC = () => {
     try {
       const newStatus = item.status === "Activa" ? "Inactiva" : "Activa";
       setActivityTypes((prev) => prev.map((p) => (p.id === item.id ? { ...p, status: newStatus } : p)));
-      await activityLogTypesAPI.update(item.id, { isActive: newStatus === "Activa" });
+      await activityLogTypesAPI.update(item.id, { isActive: newStatus === "Activa", status: newStatus });
     } catch (error) {
       fetchTypes();
     }
