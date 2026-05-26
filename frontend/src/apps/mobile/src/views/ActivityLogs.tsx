@@ -8,14 +8,16 @@ import { usersAPI } from "../../../../api/users";
 import { projectsAPI, Project } from "../../../../api/projects";
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
+import { vacationsAPI } from "../../../../api/vacations";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowLeft, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import { sweetAlert } from "../utils/sweetAlert";
 import { Modal } from "../components/Modal";
 import AdditionalStaffFiltersModal, { AdditionalStaffFilterValues } from "../components/AdditionalStaffFiltersModal";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
+import { InfoModal } from "../../../../components/ui/InfoModal";
 
 interface EmployeeOption {
   id: string;
@@ -332,6 +334,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isLoadingReports, setIsLoadingReports] = useState(true);
 
+  // vacation info modal
+  const [vacationModalOpen, setVacationModalOpen] = useState(false);
+  const [selectedVacationUser, setSelectedVacationUser] = useState<{ id: string; name: string } | null>(null);
+
   // Form State
   const [reportDate, setReportDate] = useState(() => {
     const d = new Date();
@@ -400,6 +406,76 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [reports, setReports] = useState<ActivityReport[]>([]);
   const [fullProjectData, setFullProjectData] = useState<Project | null>(null);
+  const [allVacations, setAllVacations] = useState<any[]>([]);
+
+  const getUserActiveVacation = (userId: string) => {
+    if (!allVacations || allVacations.length === 0) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return allVacations.find((v) => {
+      const vUserId = typeof v.userId === "object" && v.userId ? (v.userId as any)._id : v.userId;
+      if (vUserId !== userId) return false;
+
+      const statusUpper = v.status?.toUpperCase();
+      if (statusUpper !== "APPROVED" && statusUpper !== "DELIVERED") return false;
+
+      const start = new Date(v.startDate);
+      const end = new Date(v.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+
+      return today >= start && today <= end;
+    });
+  };
+
+  const formatDateString = (dateStr: string) => {
+    if (!dateStr) return "";
+    try {
+      if (dateStr.includes("-") && dateStr.length >= 10) {
+        const parts = dateStr.substring(0, 10).split("-");
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+      const d = new Date(dateStr);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const showVacationInfo = (empId: string, empName: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const activeVac = getUserActiveVacation(empId);
+    if (!activeVac) return;
+    setSelectedVacationUser({ id: empId, name: empName });
+    setVacationModalOpen(true);
+  };
+
+  const renderVacationBadge = (empId: string, empName: string) => {
+    const activeVac = getUserActiveVacation(empId);
+    if (!activeVac) return null;
+    const dateRangeStr = `Vac: desde ${formatDateString(activeVac.startDate)} hasta ${formatDateString(activeVac.endDate)}`;
+    return (
+      <button 
+        type="button"
+        onClick={(e) => showVacationInfo(empId, empName, e)}
+        className="inline-flex items-center gap-1 px-1.5 py-0 rounded text-[9px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-all shadow-sm whitespace-nowrap ml-1.5 cursor-pointer focus:outline-none"
+        title={dateRangeStr}
+      >
+        <FontAwesomeIcon icon={faUmbrellaBeach} className="text-[8px] mr-1" />
+        <span>VACACIONES</span>
+        <FontAwesomeIcon icon={faInfoCircle} className="text-[8px] ml-1 opacity-75 hover:opacity-100" />
+      </button>
+    );
+  };
 
   // Calendar State
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -537,6 +613,14 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
         setAllShifts(shifts);
       } catch (e) {
         console.error("Error loading areas/shifts", e);
+      }
+
+      // 5. Fetch Vacations
+      try {
+        const vacationsList = await vacationsAPI.getAll();
+        setAllVacations(vacationsList);
+      } catch (e) {
+        console.error("Error loading vacations in mobile ActivityLogs", e);
       }
 
       fetchReports();
@@ -2274,9 +2358,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               ))}
                                             </div>
                                           </div>
-                                          <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                          <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
                                             <div className="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">{currentEmp.name.charAt(0)}</div>
-                                            {currentEmp.name}
+                                            <span>{currentEmp.name}</span>
+                                            {renderVacationBadge(currentEmp.id, currentEmp.name)}
                                           </h3>
                                           <div className="flex flex-wrap items-center gap-2 mt-1 ml-10">
                                             <span className="text-xs text-slate-500 dark:text-gray-400">{currentEmp.positionName || "Colaborador"}</span>
@@ -2392,7 +2477,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                               return (
                                                 <div key={histEmp.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-3 flex justify-between items-center opacity-75 grayscale-[0.3]">
                                                   <div>
-                                                    <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                      <div className="font-bold text-slate-900 dark:text-white text-sm">{histEmp.name}</div>
+                                                      {renderVacationBadge(histEmp.id, histEmp.name)}
+                                                    </div>
                                                     <div className={`text-xs font-medium ${histIsPresent ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>{histIsPresent ? (histData?.overtimeHours ? `Presente + ${histData.overtimeHours}h Extra` : "Presente") : `${histType?.name || "Ausente"}${repString}`}</div>
                                                   </div>
                                                   <button onClick={() => setWizardIndex(projectEmployees.findIndex((e) => e.id === histEmp.id))} className="text-xs text-blue-500 hover:underline">
@@ -2573,7 +2661,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                                                         }}
                                                       >
                                                         <div className="flex flex-col gap-1 items-start">
-                                                          <div className="font-medium text-slate-800 dark:text-white truncate">{emp.name}</div>
+                                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <div className="font-medium text-slate-800 dark:text-white truncate">{emp.name}</div>
+                                                            {renderVacationBadge(emp.id, emp.name)}
+                                                          </div>
                                                           {(() => {
                                                             const roleFrame = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
                                                             return roleFrame ? <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider whitespace-nowrap">{roleFrame}</span> : null;
@@ -3833,7 +3924,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                     <div key={entry.tempId} className="flex flex-col pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
                       <div className="flex justify-between items-start">
                         <div>
-                          <span className="font-semibold text-gray-800 dark:text-white">{entry.employeeName}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-gray-800 dark:text-white">{entry.employeeName}</span>
+                            {renderVacationBadge(entry.employeeId, entry.employeeName)}
+                          </div>
                           <div className="text-xs text-blue-600 dark:text-blue-400 font-medium flex flex-wrap gap-2 items-center mt-0.5">
                             <span>{entry.typeName}</span>
                             {entry.overtimeHours ? (
@@ -3900,7 +3994,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 <div className="max-h-60 overflow-y-auto space-y-0.5 pr-1">
                   {projectEmployees.map((emp) => (
                     <div key={emp.id} className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded transition-colors group">
-                      <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-gray-700 dark:text-slate-200 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{emp.name}</span>
+                        {renderVacationBadge(emp.id, emp.name)}
+                      </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 uppercase tracking-wide border border-blue-200 dark:border-blue-900/50">Presente</span>
                     </div>
                   ))}
@@ -4474,7 +4571,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                         }}
                       >
                         <div className="flex flex-col gap-1 items-start">
-                          <div className={`font-medium text-slate-800 dark:text-white truncate ${isSelected ? "text-blue-900 dark:text-blue-100 font-semibold" : ""}`}>{emp.name}</div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className={`font-medium text-slate-800 dark:text-white truncate ${isSelected ? "text-blue-900 dark:text-blue-100 font-semibold" : ""}`}>{emp.name}</div>
+                            {renderVacationBadge(emp.id, emp.name)}
+                          </div>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(() => {
                               const roleFrame = emp.metadataProjects?.find((m) => String(m.projectId) === String(selectedProjectId))?.roleFrame;
@@ -4647,7 +4747,10 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
                 >
                   <div className="flex items-center gap-3">
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}</p>
+                        {renderVacationBadge(emp.id, emp.name)}
+                      </div>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
                         {(() => {
                           const roleFrame = emp.metadataProjects?.find((m) => m.roleFrame)?.roleFrame;
@@ -4750,6 +4853,39 @@ export default function ActivityLogs({ onNavigate }: ActivityLogsProps) {
           <FontAwesomeIcon icon={faPlus} className="w-6 h-6" />
         </button>
       </div>
+      {vacationModalOpen && selectedVacationUser && (
+        <InfoModal
+          isOpen={vacationModalOpen}
+          onClose={() => {
+            setVacationModalOpen(false);
+            setSelectedVacationUser(null);
+          }}
+          title={`Vacaciones de ${selectedVacationUser.name}`}
+          size="sm"
+        >
+          <div className="space-y-4 p-2 text-center">
+            <div className="w-16 h-16 bg-amber-500/10 dark:bg-amber-500/20 rounded-full flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30 shadow-sm">
+              <FontAwesomeIcon icon={faUmbrellaBeach} className="text-3xl animate-pulse text-amber-500" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-semibold text-slate-850 dark:text-slate-200">
+                Período de Vacaciones Activo
+              </p>
+              {(() => {
+                const activeVac = getUserActiveVacation(selectedVacationUser.id);
+                if (!activeVac) return <p className="text-sm text-slate-500">No se encontraron vacaciones activas para este colaborador.</p>;
+                return (
+                  <div className="inline-block bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-100 dark:border-slate-800 shadow-sm mt-1">
+                    <span className="text-lg font-black text-amber-600 dark:text-amber-400">
+                      Desde {formatDateString(activeVac.startDate)} Hasta {formatDateString(activeVac.endDate)}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </InfoModal>
+      )}
     </div>
   );
 }

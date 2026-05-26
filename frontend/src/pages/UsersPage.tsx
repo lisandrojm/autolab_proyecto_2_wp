@@ -12,6 +12,7 @@ import { infoAPI, InfoItem } from "../api/info";
 import { shiftsAPI, Shift } from "../api/shifts";
 import { vacationsAPI, VacationRequest } from "../api/vacations";
 import { PageLayout } from "../components/ui/PageLayout";
+import { InfoModal } from "../components/ui/InfoModal";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -19,7 +20,7 @@ import { UserCard } from "../components/users/UserCard";
 import { Card } from "../components/ui/Card";
 import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faMobileAlt, faSearch, faTimes, faLock } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserShield, faUserTie, faUserGraduate, faEdit, faTrash, faKey, faPlus, faEye, faEyeSlash, faLayerGroup, faHourglassHalf, faCalendar, faToggleOn, faToggleOff, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faMobileAlt, faSearch, faTimes, faLock, faUmbrellaBeach, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { useNavigate, useParams } from "react-router-dom";
 import { getImageUrl } from "../utils/imageHelpers";
@@ -119,6 +120,10 @@ export const UsersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isXXL, setIsXXL] = useState(window.innerWidth >= 1200);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+
+  // vacation info modal
+  const [vacationModalOpen, setVacationModalOpen] = useState(false);
+  const [selectedVacationUser, setSelectedVacationUser] = useState<{ id: string; name: string } | null>(null);
 
   // modal create/edit/password
   const [showModal, setShowModal] = useState(false);
@@ -270,6 +275,57 @@ export const UsersPage: React.FC = () => {
     } catch (error) {
       console.error("Error fetching vacations:", error);
     }
+  };
+
+  const getUserActiveVacation = (userId: string) => {
+    if (!allVacations || allVacations.length === 0) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return allVacations.find((v) => {
+      const vUserId = typeof v.userId === "object" && v.userId ? (v.userId as any)._id : v.userId;
+      if (vUserId !== userId) return false;
+
+      const statusUpper = v.status?.toUpperCase();
+      if (statusUpper !== "APPROVED" && statusUpper !== "DELIVERED") return false;
+
+      const start = new Date(v.startDate);
+      const end = new Date(v.endDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+
+      return today >= start && today <= end;
+    });
+  };
+
+  const formatDateString = (dateStr: string) => {
+    if (!dateStr) return "";
+    try {
+      if (dateStr.includes("-") && dateStr.length >= 10) {
+        const parts = dateStr.substring(0, 10).split("-");
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+      const d = new Date(dateStr);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const showVacationInfo = (empId: string, empName: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const activeVac = getUserActiveVacation(empId);
+    if (!activeVac) return;
+    setSelectedVacationUser({ id: empId, name: empName });
+    setVacationModalOpen(true);
   };
 
   // Debounce para refrescar la lista cuando cambian searchTerm / filterActive / fechas
@@ -2034,7 +2090,27 @@ export const UsersPage: React.FC = () => {
                           <div className="flex items-center gap-3">
                             <FontAwesomeIcon icon={faUser} className="text-blue-600" />
                             <div>
-                              <p className="text-sm font-semibold">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold">{user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0]}</p>
+                                {(() => {
+                                  const activeVac = getUserActiveVacation(user._id);
+                                  if (!activeVac) return null;
+                                  const dateRangeStr = `Vacaciones: del ${formatDateString(activeVac.startDate)} al ${formatDateString(activeVac.endDate)}`;
+                                  const fullName = user.firstName || user.lastName ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : user.email.split("@")[0];
+                                  return (
+                                    <button 
+                                      type="button"
+                                      onClick={(e) => showVacationInfo(user._id, fullName, e)}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-all shadow-sm cursor-pointer focus:outline-none"
+                                      title={dateRangeStr}
+                                    >
+                                      <FontAwesomeIcon icon={faUmbrellaBeach} className="text-[9px] mr-1" />
+                                      <span>VACACIONES</span>
+                                      <FontAwesomeIcon icon={faInfoCircle} className="text-[9px] ml-1 opacity-75 hover:opacity-100" />
+                                    </button>
+                                  );
+                                })()}
+                              </div>
                               <p className="text-xs text-gray-500">{user.email}</p>
                             </div>
                           </div>
@@ -2136,6 +2212,39 @@ export const UsersPage: React.FC = () => {
             </div>
           )}
         </>
+      )}
+      {vacationModalOpen && selectedVacationUser && (
+        <InfoModal
+          isOpen={vacationModalOpen}
+          onClose={() => {
+            setVacationModalOpen(false);
+            setSelectedVacationUser(null);
+          }}
+          title={`Vacaciones de ${selectedVacationUser.name}`}
+          size="sm"
+        >
+          <div className="space-y-4 p-2 text-center">
+            <div className="w-16 h-16 bg-amber-500/10 dark:bg-amber-500/20 rounded-full flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30 shadow-sm">
+              <FontAwesomeIcon icon={faUmbrellaBeach} className="text-3xl animate-pulse text-amber-500" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-base font-semibold text-slate-850 dark:text-slate-200">
+                Período de Vacaciones Activo
+              </p>
+              {(() => {
+                const activeVac = getUserActiveVacation(selectedVacationUser.id);
+                if (!activeVac) return <p className="text-sm text-slate-500">No se encontraron vacaciones activas para este colaborador.</p>;
+                return (
+                  <div className="inline-block bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-100 dark:border-slate-800 shadow-sm mt-1">
+                    <span className="text-lg font-black text-amber-600 dark:text-amber-400">
+                      del {formatDateString(activeVac.startDate)} al {formatDateString(activeVac.endDate)}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </InfoModal>
       )}
     </PageLayout>
   );
