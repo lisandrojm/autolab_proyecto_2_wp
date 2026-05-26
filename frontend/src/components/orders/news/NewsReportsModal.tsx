@@ -1532,7 +1532,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   </th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Contrato: Cant | Fecha | Tipo</th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Asistencias: Pres | Aus</th>
-                  <th className="py-2.5 px-2 text-center text-[10px] leading-tight text-nowrap">Horario Extra</th>
+                  <th className="py-2.5 px-2 text-left text-[10px] leading-tight text-nowrap">Horario Extra</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 50%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 100%</th>
                   <th className="py-2.5 px-2 text-right text-[10px] leading-tight whitespace-nowrap">Extras Total</th>
@@ -1657,14 +1657,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                             </button>
                           </div>
                         </td>
-                        <td className="py-2.5 px-2 text-center">
-                          <div className="flex flex-col gap-0.5 max-w-[120px] mx-auto">
+                        <td className="py-2.5 px-2 text-left">
+                          <div className="flex flex-col gap-0.5 max-w-[120px]">
                             {s.overtimeEntries.length > 0 ? (
                               s.overtimeEntries.map((entry, eIdx) => (
-                                <div key={eIdx} className="flex items-center gap-1 justify-center border-b border-gray-100/5 dark:border-gray-800/30 pb-0.5 last:border-0 last:pb-0">
+                                <div key={eIdx} className="flex items-center gap-1 justify-start border-b border-gray-100/5 dark:border-gray-800/30 pb-0.5 last:border-0 last:pb-0">
                                   <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500">{entry.date}</span>
                                   {((entry.h50 || 0) > 0 || (entry.h100 || 0) > 0) ? (
-                                    <div className="flex flex-col items-center">
+                                    <div className="flex flex-col items-start">
                                       <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap bg-gray-100/70 dark:bg-gray-800/80 px-1 py-0.5 rounded leading-none">
                                         {entry.schedule}
                                       </span>
@@ -1696,7 +1696,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         {/* Hs 50% */}
                         <td className="py-2.5 px-2 text-right font-medium text-gray-600 dark:text-gray-400">{s.overtime50 > 0 ? `${s.overtime50}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* Hs 100% */}
-                        <td className="py-2.5 px-2 text-right font-medium text-amber-700 dark:text-amber-500">{s.overtime100 > 0 ? `${s.overtime100}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
+                        <td className="py-2.5 px-2 text-right font-medium text-gray-600 dark:text-gray-400">{s.overtime100 > 0 ? `${s.overtime100}h` : <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
                         {/* $ Extras */}
                         <td className="py-2.5 px-2 text-right font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
                           {(() => {

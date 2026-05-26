@@ -12,6 +12,10 @@ const attendanceRecordSchema = new Schema({
     replacementId: { type: Schema.Types.ObjectId, ref: "User" },
     overtimeHours: { type: Number, default: 0 },
     replacementOvertimeHours: { type: Number, default: 0 },
+    overtimeHours50: { type: Number, default: 0 },
+    overtimeHours100: { type: Number, default: 0 },
+    replacementOvertimeHours50: { type: Number, default: 0 },
+    replacementOvertimeHours100: { type: Number, default: 0 },
     inTime: { type: String }, // Real Entry Time
     outTime: { type: String }, // Real Exit Time
     replacementInTime: { type: String }, // Real Entry Time for Replacement
